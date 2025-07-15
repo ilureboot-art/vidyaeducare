@@ -37,7 +37,11 @@ import { useToast } from "@/hooks/use-toast";
 // Mock data
 const walletData = {
   balance: 450.50,
-  adminUpi: "admin-upi@okhdfcbank",
+  adminPaymentMethods: {
+    upiId: "admin-upi@okhdfcbank",
+    gpayNumber: "+91 98765 43210",
+    phonepeNumber: "+91 98765 43210",
+  },
   transactions: [
     { id: 1, type: "deposit", description: "Referral Commission", amount: 50.00, date: "2024-07-28", status: "Completed" },
     { id: 2, type: "withdrawal", description: "Ticket Purchase (15)", amount: -25.00, date: "2024-07-27", status: "Completed" },
@@ -130,13 +134,16 @@ export default function WalletPage() {
                 <DialogHeader>
                   <DialogTitle>Add Funds</DialogTitle>
                   <DialogDescription>
-                    Send payment to the admin UPI ID and enter the details below.
+                    Send payment to the admin details below and enter the transaction reference ID.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
-                    <div className="p-3 bg-muted rounded-md text-sm">
+                    <div className="p-3 bg-muted rounded-md text-sm space-y-2">
                         <p className="font-semibold flex items-center gap-2"><Info className="w-4 h-4" />Admin Payment Details</p>
-                        <p>UPI ID: <span className="font-mono">{walletData.adminUpi}</span></p>
+                        <p>UPI ID: <span className="font-mono">{walletData.adminPaymentMethods.upiId}</span></p>
+                        <p>GPay: <span className="font-mono">{walletData.adminPaymentMethods.gpayNumber}</span></p>
+                        <p>PhonePe: <span className="font-mono">{walletData.adminPaymentMethods.phonepeNumber}</span></p>
+                         <p className="text-xs pt-2 text-muted-foreground">You can also scan a QR code if provided by the admin.</p>
                     </div>
                     <form onSubmit={handleAddFunds} className="space-y-4">
                         <div>

@@ -22,6 +22,7 @@ import {
   Star,
   Ticket,
   Trophy,
+  ArrowLeft,
 } from "lucide-react";
 
 const MAX_ATTEMPTS = 5;
@@ -45,6 +46,13 @@ export default function PlayPage() {
   const [gamesLeft, setGamesLeft] = useState(tickets * GAMES_PER_TICKET);
   
   const { toast } = useToast();
+
+  const goBackToMenu = () => {
+    setGameState('idle');
+    setFeedback("Start a new game to play!");
+    // clear the url params
+    router.push('/play');
+  };
 
   const resetGame = useCallback((isDemo = false) => {
     setSecretNumber(Math.floor(Math.random() * 100) + 1);
@@ -186,7 +194,7 @@ export default function PlayPage() {
             <p className="text-muted-foreground mt-2">Guess the secret number between 1 and 100 in 5 tries!</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Button size="lg" onClick={() => startGame(false)}><Star className="mr-2 h-5 w-5"/> Play Real Game</Button>
+            <Button size="lg" onClick={() => startGame(false)}><Star className="mr-2 h-5 w-5"/> Start Game</Button>
             <Button size="lg" variant="secondary" onClick={() => startGame(true)}><Sprout className="mr-2 h-5 w-5"/> Play Demo</Button>
         </div>
         <Button variant="ghost" onClick={handleShare} className="w-full">
@@ -234,6 +242,12 @@ export default function PlayPage() {
             </ul>
           </div>
         )}
+         <div className="pt-4">
+            <Button variant="outline" className="w-full" onClick={goBackToMenu}>
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Menu
+            </Button>
+        </div>
     </div>
   );
 
@@ -250,7 +264,7 @@ export default function PlayPage() {
         )}
         <div className="flex gap-4 pt-4">
             <Button onClick={() => startGame(gameState === 'demo')}><RefreshCw className="mr-2 h-4 w-4"/> Play Again</Button>
-            <Button variant="outline" onClick={() => { setGameState('idle'); router.push('/'); }}>Exit to Home</Button>
+            <Button variant="outline" onClick={goBackToMenu}>Exit to Home</Button>
         </div>
     </div>
   );
@@ -300,3 +314,5 @@ export default function PlayPage() {
     </div>
   );
 }
+
+    

@@ -15,7 +15,7 @@ const referralData = {
   subscribed: true,
   referralCode: "REF-A1B2C3",
   autoSubscribe: false,
-  currentCycleReferrals: 2,
+  currentCycleReferrals: 0,
   totalCycles: 1,
   totalEarnings: 100,
   walletBalance: 150, // Let's assume user has some balance
@@ -23,6 +23,8 @@ const referralData = {
 
 const REFERRAL_CYCLE_TARGET = 3;
 const SUBSCRIPTION_COST = 100;
+const REFERRAL_COMMISSION = 50;
+
 
 export default function ReferBoltPage() {
   const { toast } = useToast();
@@ -87,6 +89,22 @@ export default function ReferBoltPage() {
     setCycleProgress(0); // Reset progress for new cycle
   };
 
+  const handleSimulateReferral = () => {
+    if (cycleProgress >= REFERRAL_CYCLE_TARGET) {
+      toast({
+        variant: "destructive",
+        title: "Cycle Complete",
+        description: "Please re-subscribe to start a new cycle and earn more.",
+      });
+      return;
+    }
+    setCycleProgress(prev => prev + 1);
+    toast({
+      title: "Commission Earned!",
+      description: `A referral subscribed! ₹${REFERRAL_COMMISSION} has been added to your wallet.`,
+    })
+  }
+
 
   const renderSubscriptionView = () => (
     <div className="text-center space-y-4">
@@ -138,6 +156,15 @@ export default function ReferBoltPage() {
         />
       </div>
 
+       <div className="pt-4">
+          <Button variant="secondary" className="w-full" onClick={handleSimulateReferral}>
+            Simulate a Referral Sign-up
+          </Button>
+          <p className="text-xs text-muted-foreground text-center mt-2">
+            Click to test the commission earning flow.
+          </p>
+        </div>
+
     </div>
   );
 
@@ -145,8 +172,8 @@ export default function ReferBoltPage() {
     <div className="space-y-3">
         <h3 className="font-semibold text-lg text-center">ReferBolt Benefits</h3>
         <ul className="space-y-2 text-sm">
-            <li className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span>Earn <span className="font-bold">₹50 commission</span> per referral (direct & indirect).</span></li>
-            <li className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span>Each cycle consists of <span className="font-bold">3 referrals</span>.</span></li>
+            <li className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span>Earn <span className="font-bold">₹{REFERRAL_COMMISSION} commission</span> per referral (direct & indirect).</span></li>
+            <li className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span>Each cycle consists of <span className="font-bold">{REFERRAL_CYCLE_TARGET} referrals</span>.</span></li>
             <li className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span>Receive <span className="font-bold">4 bonus tickets</span> (8 games) instantly upon subscribing.</span></li>
             <li className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span><span className="font-bold">Unlimited earning potential</span> with continuous cycles.</span></li>
         </ul>

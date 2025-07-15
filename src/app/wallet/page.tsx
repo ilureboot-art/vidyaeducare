@@ -43,12 +43,13 @@ const walletData = {
     phonepeNumber: "+91 98765 43210",
   },
   transactions: [
-    { id: 1, type: "deposit", description: "Referral Commission", amount: 50.00, date: "2024-07-28", status: "Completed" },
-    { id: 2, type: "withdrawal", description: "Ticket Purchase (15)", amount: -25.00, date: "2024-07-27", status: "Completed" },
-    { id: 3, type: "deposit", description: "Game Won Reward", amount: 75.00, date: "2024-07-27", status: "Completed" },
-    { id: 4, type: "withdrawal", description: "ReferBolt Subscription", amount: -100.00, date: "2024-07-26", status: "Completed" },
-    { id: 5, type: "deposit", description: "Fund Deposit", amount: 100.00, date: "2024-07-25", status: "Pending", referenceId: "UPIREF12345" },
-    { id: 6, type: "withdrawal", description: "Withdrawal Request", amount: -200.00, date: "2024-07-24", status: "Completed", paymentMethod: "user@upi" },
+    { id: 1, type: "deposit", description: "Game Won Reward", amount: 75.00, date: "2024-07-29", status: "Completed" },
+    { id: 2, type: "deposit", description: "Referral Commission", amount: 50.00, date: "2024-07-28", status: "Completed" },
+    { id: 3, type: "deposit", description: "Referral Bonus", amount: 50.00, date: "2024-07-28", status: "Completed" },
+    { id: 4, type: "withdrawal", description: "Ticket Purchase (15)", amount: -25.00, date: "2024-07-27", status: "Completed" },
+    { id: 5, type: "withdrawal", description: "ReferBolt Subscription", amount: -100.00, date: "2024-07-26", status: "Completed" },
+    { id: 6, type: "deposit", description: "Fund Deposit", amount: 100.00, date: "2024-07-25", status: "Pending", referenceId: "UPIREF12345" },
+    { id: 7, type: "withdrawal", description: "Withdrawal Request", amount: -200.00, date: "2024-07-24", status: "Completed", paymentMethod: "user@upi" },
   ],
 };
 

@@ -22,7 +22,7 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <Navbar />
-        <main className="min-h-screen bg-background flex flex-col items-center justify-center p-4 font-body">
+        <main className="min-h-screen bg-background flex flex-col items-center p-4 pt-8 md:pt-4 pb-24 md:pb-4">
           {children}
         </main>
         <Toaster />

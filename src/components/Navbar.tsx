@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Gamepad2, Trophy, HelpCircle, Store } from "lucide-react";
+import { Gamepad2, Trophy, HelpCircle, Store, Zap, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -10,6 +10,8 @@ const navItems = [
   { href: "/how-to-play", label: "How to Play", icon: HelpCircle },
   { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
   { href: "/store", label: "Store", icon: Store },
+  { href: "/referbolt", label: "ReferBolt", icon: Zap },
+  { href: "/wallet", label: "Wallet", icon: Wallet },
 ];
 
 export function Navbar() {
@@ -49,12 +51,12 @@ export function Navbar() {
                             key={item.href}
                             href={item.href}
                             className={cn(
-                                "flex flex-col items-center justify-center w-16 h-12 rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
+                                "flex flex-col items-center justify-center w-16 h-14 rounded-md text-xs font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
                                 pathname === item.href ? "bg-accent text-accent-foreground" : "text-muted-foreground"
                             )}
                         >
                             <Icon className="h-5 w-5 mb-1" />
-                            <span>{item.label}</span>
+                            <span className="text-center">{item.label}</span>
                         </Link>
                     )
                 })}

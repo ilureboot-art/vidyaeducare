@@ -72,10 +72,14 @@ export default function PlayPage() {
   }, [gamesLeft, resetGame, toast]);
   
   useEffect(() => {
-    if (searchParams.get('demo') === 'true') {
-      startGame(true);
+    const isDemo = searchParams.get('demo') === 'true';
+    const start = searchParams.get('start') === 'true';
+
+    if (isDemo || start) {
+      startGame(isDemo);
     }
   }, [searchParams, startGame]);
+
 
   const handleGuessSubmit = async () => {
     const guessNum = parseInt(currentGuess);

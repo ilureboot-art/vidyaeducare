@@ -41,7 +41,7 @@ export default function HomePage() {
             <p>Guess a secret number between 1 and 100. You have 5 attempts. With each guess, you get a hint: is the number higher or lower? The fewer attempts you take, the bigger the prize!</p>
             <div className="flex gap-4">
                 <Button asChild className="w-full">
-                    <Link href="/play"><Star className="mr-2"/> Play Real Game</Link>
+                    <Link href="/play?start=true"><Star className="mr-2"/> Play Real Game</Link>
                 </Button>
                 <Button asChild variant="secondary" className="w-full">
                     <Link href="/play?demo=true"><Sprout className="mr-2"/> Play Demo</Link>

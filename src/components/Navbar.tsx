@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Gamepad2, Trophy, HelpCircle, Store, Zap, Wallet, Settings, Home } from "lucide-react";
+import { Gamepad2, Trophy, HelpCircle, Store, Zap, Wallet, Settings, Home, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -14,6 +14,7 @@ const navItems = [
   { href: "/store", label: "Store", icon: Store },
   { href: "/referbolt", label: "ReferBolt", icon: Zap },
   { href: "/wallet", label: "Wallet", icon: Wallet },
+  { href: "/profile", label: "Profile", icon: User },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
@@ -35,7 +36,7 @@ export function Navbar() {
                 href={item.href}
                 className={cn(
                   "transition-colors hover:text-foreground/80",
-                   pathname === item.href || (pathname.startsWith(item.href) && item.href !== "/")
+                   (pathname === item.href || (pathname.startsWith(item.href) && item.href !== "/"))
                     ? "text-foreground"
                     : "text-foreground/60"
                 )}
@@ -57,7 +58,7 @@ export function Navbar() {
                             key={item.href}
                             href={item.href}
                             className={cn(
-                                "flex flex-col items-center justify-center w-14 h-14 rounded-md text-xs font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
+                                "flex flex-col items-center justify-center w-16 h-14 rounded-md text-xs font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
                                 isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground"
                             )}
                         >

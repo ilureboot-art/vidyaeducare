@@ -9,7 +9,7 @@ export default function HowToPlayPage() {
     <div className="w-full max-w-2xl mx-auto">
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="text-3xl font-bold text-center text-primary">How to Play GuessMaster</CardTitle>
+          <CardTitle className="text-3xl font-bold text-center text-primary">How to Play NumberAce</CardTitle>
           <CardDescription className="text-center">
             Your guide to becoming a master guesser!
           </CardDescription>
@@ -21,7 +21,7 @@ export default function HowToPlayPage() {
               The Basics
             </h2>
             <p>
-              GuessMaster is a simple number guessing game. The goal is to guess a secret number between <Badge>1</Badge> and <Badge>100</Badge>.
+              NumberAce is a simple number guessing game. The goal is to guess a secret number between <Badge>1</Badge> and <Badge>100</Badge>.
             </p>
             <p>
               You have a limited number of attempts to guess the correct number.
@@ -46,9 +46,9 @@ export default function HowToPlayPage() {
               <Award className="text-accent" />
               Winning & Rewards
             </h2>
-            <p>
+            <span>
               You win the game by guessing the secret number within your 5 attempts. The faster you guess, the higher your reward!
-            </p>
+            </span>
             <ul className="list-disc list-inside space-y-2 pl-4">
               <li><span className="font-bold">1st Attempt:</span> ₹100</li>
               <li><span className="font-bold">2nd Attempt:</span> ₹75</li>

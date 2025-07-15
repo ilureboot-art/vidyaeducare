@@ -5,11 +5,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { User, Mail, Calendar, TrendingUp, Gamepad2, Percent, Edit } from "lucide-react";
+import { User, Mail, Calendar, TrendingUp, Gamepad2, Percent, Edit, Fingerprint } from "lucide-react";
 
 // Mock data for the user profile
 const userProfile = {
   name: "Alex Doe",
+  playerId: "PLYR-8D7F6E5C",
   email: "alex.doe@example.com",
   avatarUrl: "https://placehold.co/100x100.png",
   joinDate: "2024-07-01",
@@ -43,6 +44,13 @@ export default function ProfilePage() {
             <div className="space-y-4">
                 <h3 className="font-semibold text-lg flex items-center gap-2"><User className="w-5 h-5 text-accent"/> Personal Information</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                        <Fingerprint className="w-5 h-5 text-muted-foreground"/>
+                        <div>
+                            <p className="text-muted-foreground">Player ID</p>
+                            <p className="font-medium">{userProfile.playerId}</p>
+                        </div>
+                    </div>
                     <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
                         <Mail className="w-5 h-5 text-muted-foreground"/>
                         <div>

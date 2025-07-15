@@ -60,15 +60,15 @@ export function AdminSidebar() {
         <SidebarContent>
             <SidebarMenu>
                 {adminNavItems.map((item) => {
-                    const isActive = pathname === item.href || (pathname.startsWith(item.href) && item.href !== "/admin");
+                    const isActive = item.href === '/admin' ? pathname === item.href : pathname.startsWith(item.href);
                     return (
                         <SidebarMenuItem key={item.href}>
-                            <SidebarMenuButton tooltip={item.label} isActive={isActive}>
-                                <Link href={item.href} className="flex items-center gap-2 w-full">
+                            <Link href={item.href}>
+                                <SidebarMenuButton tooltip={item.label} isActive={isActive}>
                                     <item.icon/>
                                     <span>{item.label}</span>
-                                </Link>
-                            </SidebarMenuButton>
+                                </SidebarMenuButton>
+                            </Link>
                         </SidebarMenuItem>
                     );
                 })}
@@ -77,20 +77,20 @@ export function AdminSidebar() {
         <SidebarFooter>
             <SidebarMenu>
                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip="Exit Admin">
-                        <Link href="/">
-                            <LogOut />
-                            <span>Exit Admin</span>
-                        </Link>
-                    </SidebarMenuButton>
+                    <Link href="/">
+                        <SidebarMenuButton asChild tooltip="Exit Admin">
+                                <LogOut />
+                                <span>Exit Admin</span>
+                        </SidebarMenuButton>
+                    </Link>
                 </SidebarMenuItem>
                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip="Your Profile">
-                        <Link href="/profile">
-                            <Home />
-                            <span>Back to App</span>
-                        </Link>
-                    </SidebarMenuButton>
+                    <Link href="/profile">
+                        <SidebarMenuButton asChild tooltip="Your Profile">
+                                <Home />
+                                <span>Back to App</span>
+                        </SidebarMenuButton>
+                    </Link>
                 </SidebarMenuItem>
             </SidebarMenu>
         </SidebarFooter>

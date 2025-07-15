@@ -35,20 +35,20 @@ export function Navbar() {
             <span className="hidden font-bold sm:inline-block">GuessMaster</span>
           </Link>
           <nav className="flex items-center space-x-6 text-sm font-medium">
-            {navItems.map((item) => (
+            {navItems.map((item) => {
+              const isActive = item.href === '/' ? pathname === item.href : pathname.startsWith(item.href);
+              return (
               <Link
                 key={item.href}
                 href={item.href}
                 className={cn(
                   "transition-colors hover:text-foreground/80",
-                   (pathname === item.href || (pathname.startsWith(item.href) && item.href !== "/"))
-                    ? "text-foreground"
-                    : "text-foreground/60"
+                   isActive ? "text-foreground" : "text-foreground/60"
                 )}
               >
                 {item.label}
               </Link>
-            ))}
+            )})}
           </nav>
         </div>
         
@@ -57,7 +57,7 @@ export function Navbar() {
              <nav className="flex justify-around">
                 {navItems.map((item) => {
                     const Icon = item.icon;
-                    const isActive = pathname === item.href || (pathname.startsWith(item.href) && item.href !== "/");
+                    const isActive = item.href === '/' ? pathname === item.href : pathname.startsWith(item.href);
                     return (
                         <Link
                             key={item.href}

@@ -4,101 +4,47 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Share2, Copy, CheckCircle, Zap } from "lucide-react";
-
-// Mock data - in a real app, this would come from a backend
-const referralData = {
-  referralCode: "ALEX-D7F6E5",
-  referralBonus: 5,
-  welcomeBonus: 5,
-};
+import { CheckCircle, Zap } from "lucide-react";
+import Link from "next/link";
 
 export default function ReferBoltPage() {
   const { toast } = useToast();
 
-  const handleCopyToClipboard = () => {
-    navigator.clipboard.writeText(referralData.referralCode);
+  const handleSimulateReferral = () => {
     toast({
-      title: "Copied!",
-      description: "Referral code copied to clipboard.",
+      title: "Commission Earned!",
+      description: "You've earned ₹50 commission from a new subscriber in your network!",
     });
   };
 
-  const handleShare = async () => {
-    const shareUrl = `https://guessmaster.app/join?ref=${referralData.referralCode}`;
-    const message = `Join me on GuessMaster! Use my code ${referralData.referralCode} when you sign up, and we both get a ₹${referralData.welcomeBonus} bonus!`;
-    const fullMessage = `${message}\n${shareUrl}`;
-
-    const fallbackCopy = () => {
-      navigator.clipboard.writeText(fullMessage);
-      toast({
-          title: "Link Copied!",
-          description: "Referral link copied to clipboard.",
-      });
-    }
-
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'Join me on GuessMaster!',
-          text: message,
-          url: shareUrl,
-        });
-      } catch (error) {
-         if ((error as DOMException).name !== 'AbortError') {
-          console.error("Share failed:", error);
-          fallbackCopy();
-        }
-      }
-    } else {
-      fallbackCopy();
-    }
-  };
-
-  const renderDashboardView = () => (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold text-center">Your Unique Referral Code</h3>
-        <div className="flex items-center gap-2 mt-2">
-          <p className="text-2xl font-mono p-3 bg-muted rounded-md w-full text-center tracking-widest">{referralData.referralCode}</p>
-        </div>
-      </div>
-       <div className="flex items-center gap-2">
-          <Button variant="outline" className="w-full" onClick={handleCopyToClipboard}><Copy className="w-4 h-4" /> Copy Code</Button>
-          <Button className="w-full" onClick={handleShare}><Share2 className="w-4 h-4" /> Share Link</Button>
-        </div>
-    </div>
-  );
-
-  const renderBenefits = () => (
-    <div className="space-y-3">
-        <h3 className="font-semibold text-lg text-center">Referral Benefits</h3>
-        <ul className="space-y-2 text-sm">
-            <li className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span>You get <span className="font-bold">₹{referralData.referralBonus}</span> for every friend who joins.</span></li>
-            <li className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span>Your friend gets a <span className="font-bold">₹{referralData.welcomeBonus} welcome bonus</span>.</span></li>
-            <li className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span>There's no limit to how many friends you can invite!</span></li>
-        </ul>
-    </div>
-  )
-
   return (
-    <div className="w-full max-w-md mx-auto">
+    <div className="w-full max-w-2xl mx-auto space-y-6">
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="text-3xl font-bold text-center text-primary flex items-center justify-center gap-2">
-            <Zap /> Refer & Earn
+            <Zap /> ReferBolt System
           </CardTitle>
           <CardDescription className="text-center">
-            Invite friends and you both get rewarded!
+            The advanced referral system for earning continuous commissions.
           </CardDescription>
         </CardHeader>
-        <CardContent className="min-h-[150px] flex items-center justify-center">
-          {renderDashboardView()}
+        <CardContent className="space-y-4">
+          <p className="text-center">
+            ReferBolt is our premium referral program. Once you subscribe, you unlock the ability to earn commissions not just from your direct referrals, but from their referrals too, creating a cycle of passive income.
+          </p>
+          <ul className="space-y-2 text-sm p-4 bg-muted/50 rounded-lg">
+              <li className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span>Earn a <span className="font-bold">₹50 commission</span> for every direct referral who subscribes.</span></li>
+              <li className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span>Unlock multi-level commissions as your network grows.</span></li>
+              <li className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span>Requires a one-time subscription to activate.</span></li>
+          </ul>
         </CardContent>
-        <CardFooter className="flex-col !items-start gap-4">
-            <div className="w-full p-4 bg-muted/50 rounded-lg">
-                {renderBenefits()}
-            </div>
+        <CardFooter className="flex-col gap-4">
+            <Button asChild className="w-full">
+                <Link href="/store">Subscribe to ReferBolt Now</Link>
+            </Button>
+            <Button variant="secondary" className="w-full" onClick={handleSimulateReferral}>
+                Simulate Referral Commission
+            </Button>
         </CardFooter>
       </Card>
     </div>

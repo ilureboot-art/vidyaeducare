@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Gamepad2, Trophy, HelpCircle, Store, Zap, Wallet, Settings, Home, User, Shield } from "lucide-react";
+import { Gamepad2, Trophy, HelpCircle, Store, Gift, Wallet, Settings, Home, User, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -12,7 +12,7 @@ const navItems = [
   { href: "/how-to-play", label: "How to Play", icon: HelpCircle },
   { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
   { href: "/store", label: "Store", icon: Store },
-  { href: "/referbolt", label: "ReferBolt", icon: Zap },
+  { href: "/refer", label: "Refer & Earn", icon: Gift },
   { href: "/wallet", label: "Wallet", icon: Wallet },
   { href: "/profile", label: "Profile", icon: User },
   { href: "/settings", label: "Settings", icon: Settings },

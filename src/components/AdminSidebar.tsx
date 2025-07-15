@@ -7,7 +7,6 @@ import {
     LayoutDashboard, 
     Users, 
     Gamepad2, 
-    Settings,
     CreditCard,
     Shield,
     LogOut,
@@ -78,7 +77,7 @@ export function AdminSidebar() {
             <SidebarMenu>
                  <SidebarMenuItem>
                     <Link href="/">
-                        <SidebarMenuButton asChild tooltip="Exit Admin">
+                        <SidebarMenuButton tooltip="Exit Admin">
                                 <LogOut />
                                 <span>Exit Admin</span>
                         </SidebarMenuButton>
@@ -86,7 +85,7 @@ export function AdminSidebar() {
                 </SidebarMenuItem>
                  <SidebarMenuItem>
                     <Link href="/profile">
-                        <SidebarMenuButton asChild tooltip="Your Profile">
+                        <SidebarMenuButton tooltip="Your Profile">
                                 <Home />
                                 <span>Back to App</span>
                         </SidebarMenuButton>

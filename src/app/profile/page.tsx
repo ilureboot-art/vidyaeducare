@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { User, Mail, Calendar, TrendingUp, Gamepad2, Percent, Edit, Fingerprint, HelpCircle, Trophy, Store as StoreIcon, Zap, Wallet, Settings as SettingsIcon, Compass, ChevronRight } from "lucide-react";
+import { User, Mail, Calendar, TrendingUp, Gamepad2, Percent, Edit, Fingerprint, HelpCircle, Trophy, Store as StoreIcon, Zap, Wallet, Settings as SettingsIcon, Compass, ChevronRight, Gift } from "lucide-react";
 import Link from "next/link";
 import {
   Accordion,
@@ -34,7 +34,8 @@ const profileNavItems = [
     { href: "/how-to-play", label: "How to Play", icon: HelpCircle },
     { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
     { href: "/store", label: "Store", icon: StoreIcon },
-    { href: "/referbolt", label: "ReferBolt", icon: Zap },
+    { href: "/refer", label: "Refer & Earn", icon: Gift },
+    { href: "/referbolt", label: "ReferBolt System", icon: Zap },
     { href: "/wallet", label: "Wallet", icon: Wallet },
     { href: "/settings", label: "Settings", icon: SettingsIcon },
 ];

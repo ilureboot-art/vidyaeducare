@@ -40,7 +40,7 @@ export default function ReferBoltPage() {
 
   const handleShare = async () => {
     const shareUrl = `https://guessmaster.app/join?ref=${referralData.referralCode}`;
-    const message = `Join me on GuessMaster! Use my code ${referralData.referralCode} to sign up. You can earn ₹50 for each referral through the ReferBolt system and get 4 bonus tickets just for subscribing!`;
+    const message = `I'm earning rewards on GuessMaster with ReferBolt! You should join too. Use my code ${referralData.referralCode} when you sign up. When you subscribe, you get 4 bonus tickets, and I get a commission. It's a win-win!`;
     const fullMessage = `${message}\n${shareUrl}`;
 
     const fallbackCopy = () => {

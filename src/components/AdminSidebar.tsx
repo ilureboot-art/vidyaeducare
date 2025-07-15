@@ -12,7 +12,11 @@ import {
     CreditCard,
     Shield,
     LogOut,
-    LifeBuoy
+    LifeBuoy,
+    Zap,
+    BarChart3,
+    Server,
+    MessageSquare
 } from "lucide-react";
 
 const adminNavItems = [
@@ -20,6 +24,10 @@ const adminNavItems = [
   { href: "/admin/users", label: "User Management", icon: Users },
   { href: "/admin/game-settings", label: "Game Settings", icon: Gamepad2 },
   { href: "/admin/transactions", label: "Transactions", icon: CreditCard },
+  { href: "/admin/referbolt", label: "ReferBolt Mgt.", icon: Zap },
+  { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/admin/system-status", label: "System Status", icon: Server },
+  { href: "/admin/chat", label: "Chat Management", icon: MessageSquare },
   { href: "/admin/security", label: "Security", icon: Shield },
   { href: "/admin/support", label: "Support", icon: LifeBuoy },
 ];

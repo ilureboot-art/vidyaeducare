@@ -32,11 +32,16 @@ export default function ReferBoltPage() {
           <p className="text-center">
             ReferBolt is our premium referral program. Once you subscribe, you unlock the ability to earn commissions not just from your direct referrals, but from their referrals too, creating a cycle of passive income.
           </p>
-          <ul className="space-y-2 text-sm p-4 bg-muted/50 rounded-lg">
-              <li className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span>Earn a <span className="font-bold">₹50 commission</span> for every direct referral who subscribes.</span></li>
-              <li className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span>Unlock multi-level commissions as your network grows.</span></li>
-              <li className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span>Requires a one-time subscription to activate.</span></li>
-          </ul>
+          <div className="p-4 bg-muted/50 rounded-lg">
+            <h3 className="font-semibold text-lg mb-2 text-center">ReferBolt Benefits</h3>
+            <ul className="space-y-2 text-sm">
+                <li className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span>Earn a <span className="font-bold">₹50 commission</span> for every referral who subscribes.</span></li>
+                <li className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span>Complete a cycle with just <span className="font-bold">3 referrals</span>.</span></li>
+                <li className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span>Earn from both <span className="font-bold">direct & indirect referrals</span> as your network grows.</span></li>
+                <li className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span>Get a bonus of <span className="font-bold">4 game tickets</span> (worth 8 games) upon subscribing.</span></li>
+                <li className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span><span className="font-bold">Unlimited earning potential</span> through continuous cycles.</span></li>
+            </ul>
+          </div>
         </CardContent>
         <CardFooter className="flex-col gap-4">
             <Button asChild className="w-full">

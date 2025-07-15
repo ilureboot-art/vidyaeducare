@@ -101,9 +101,10 @@ export default function StorePage() {
                   <Zap className="text-accent" />
                   ReferBolt
                 </CardTitle>
-                <CardDescription>Subscription</CardDescription>
+                <CardDescription className="font-semibold">Subscription</CardDescription>
               </CardHeader>
-              <CardContent className="flex-grow flex flex-col justify-center items-center space-y-4">
+              <CardContent className="flex-grow flex flex-col justify-center items-center space-y-2">
+                 <p className="text-sm px-2">{referboltSubscription.description}</p>
                 <p className="text-4xl font-bold">₹{referboltSubscription.price}</p>
                 <Button 
                   size="lg" 

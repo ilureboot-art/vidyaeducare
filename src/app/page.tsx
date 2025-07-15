@@ -111,18 +111,25 @@ export default function Home() {
     const message = `Check out GuessMaster! It's a fun number guessing game where you can win real rewards. Join now and test your luck!`;
     const fullMessage = `${message}\n${shareUrl}`;
 
+    const fallbackCopy = () => {
+        navigator.clipboard.writeText(fullMessage);
+        toast({
+            title: "Link Copied!",
+            description: "Promotional message copied to clipboard.",
+        });
+    }
+
     if (navigator.share) {
       navigator.share({
         title: 'Join me on GuessMaster!',
         text: message,
         url: shareUrl,
-      }).catch(console.error);
-    } else {
-      navigator.clipboard.writeText(fullMessage);
-      toast({
-        title: "Link Copied!",
-        description: "Promotional message copied to clipboard.",
+      }).catch((error) => {
+        console.error("Share failed:", error);
+        fallbackCopy();
       });
+    } else {
+      fallbackCopy();
     }
   };
 

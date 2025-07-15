@@ -43,18 +43,25 @@ export default function ReferBoltPage() {
     const message = `Use my code ${referralData.referralCode} to sign up for GuessMaster and get rewards! Plus, check out the ReferBolt system to earn even more.`;
     const fullMessage = `${message}\n${shareUrl}`;
 
+    const fallbackCopy = () => {
+      navigator.clipboard.writeText(fullMessage);
+      toast({
+          title: "Link Copied!",
+          description: "ReferBolt referral link copied to clipboard.",
+      });
+    }
+
     if (navigator.share) {
       navigator.share({
         title: 'Join me on GuessMaster!',
         text: message,
         url: shareUrl,
-      }).catch(console.error);
-    } else {
-      navigator.clipboard.writeText(fullMessage);
-      toast({
-        title: "Link Copied!",
-        description: "ReferBolt referral link copied to clipboard.",
+      }).catch((error) => {
+        console.error("Share failed:", error);
+        fallbackCopy();
       });
+    } else {
+      fallbackCopy();
     }
   };
 

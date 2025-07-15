@@ -1,17 +1,35 @@
 
+"use client";
+
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Archive, Search, MessageSquare } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Archive, Search, Send } from "lucide-react";
 
 // Mock data for chat management
-const activeChats = [
-    { id: "CHAT001", user: "Alice", lastMessage: "I have a problem with my withdrawal...", unread: true },
-    { id: "CHAT002", user: "Bob", lastMessage: "Thank you for your help!", unread: false },
-    { id: "CHAT003", user: "Charlie", lastMessage: "My referral code isn't working.", unread: true },
+const initialChats = [
+    { id: "CHAT001", user: "Alice", lastMessage: "I have a problem with my withdrawal...", unread: true, avatar: "A", messages: [
+        { from: 'user', text: "I have a problem with my withdrawal, it's been pending for 3 days." },
+        { from: 'admin', text: "Hi Alice, I'm looking into this for you right now." },
+    ]},
+    { id: "CHAT002", user: "Bob", lastMessage: "Thank you for your help!", unread: false, avatar: "B", messages: [
+         { from: 'user', text: "My game crashed mid-way, can I get a ticket refund?" },
+         { from: 'admin', text: "Of course, Bob. I've credited a ticket back to your account." },
+         { from: 'user', text: "Thank you for your help!" },
+    ] },
+    { id: "CHAT003", user: "Charlie", lastMessage: "My referral code isn't working.", unread: true, avatar: "C", messages: [
+        { from: 'user', text: "My referral code isn't working. Can you check REF-XYZ789?" },
+    ] },
+     { id: "CHAT004", user: "New User", lastMessage: "How do I start playing?", unread: true, avatar: "N", messages: [
+        { from: 'user', text: "Hi, I just signed up. How do I start playing the game?" },
+    ] },
 ];
 
 export default function ChatManagementPage() {
+    const [activeChat, setActiveChat] = useState(initialChats[0]);
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-8rem)]">
         {/* Left column for chat list */}
@@ -25,8 +43,8 @@ export default function ChatManagementPage() {
                     </div>
                 </CardHeader>
                 <CardContent className="flex-1 overflow-y-auto space-y-2">
-                    {activeChats.map(chat => (
-                        <div key={chat.id} className={`p-3 rounded-lg cursor-pointer transition-colors ${chat.unread ? 'bg-primary/10 border-l-4 border-primary' : 'hover:bg-muted/50'}`}>
+                    {initialChats.map(chat => (
+                        <div key={chat.id} onClick={() => setActiveChat(chat)} className={`p-3 rounded-lg cursor-pointer transition-colors ${activeChat?.id === chat.id ? 'bg-primary/20' : 'hover:bg-muted/50'} ${chat.unread ? 'border-l-4 border-primary' : ''}`}>
                             <div className="flex justify-between">
                                 <p className="font-semibold">{chat.user}</p>
                                 {chat.unread && <span className="w-2.5 h-2.5 bg-primary rounded-full mt-1.5"></span>}
@@ -43,7 +61,7 @@ export default function ChatManagementPage() {
              <Card className="flex-1 flex flex-col">
                 <CardHeader className="flex flex-row items-center justify-between border-b">
                     <div>
-                        <CardTitle>Alice</CardTitle>
+                        <CardTitle>{activeChat.user}</CardTitle>
                         <CardDescription>Online</CardDescription>
                     </div>
                     <Button variant="outline" size="icon">
@@ -51,13 +69,34 @@ export default function ChatManagementPage() {
                         <span className="sr-only">Archive Chat</span>
                     </Button>
                 </CardHeader>
-                <CardContent className="flex-1 flex flex-col justify-center items-center text-center p-6 space-y-2">
-                    <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
-                        <MessageSquare className="w-8 h-8 text-muted-foreground" />
-                    </div>
-                    <h3 className="text-xl font-semibold">Chat Management</h3>
-                    <p className="text-muted-foreground">This is a placeholder for the live chat interface. Select a chat on the left to view the conversation and reply.</p>
+                <CardContent className="flex-1 p-4 space-y-4 overflow-y-auto bg-muted/20">
+                    {activeChat.messages.map((msg, index) => (
+                        <div key={index} className={`flex items-end gap-2 ${msg.from === 'admin' ? 'justify-end' : ''}`}>
+                            {msg.from === 'user' && (
+                                <Avatar className="w-8 h-8">
+                                    <AvatarFallback>{activeChat.avatar}</AvatarFallback>
+                                </Avatar>
+                            )}
+                            <div className={`max-w-xs md:max-w-md p-3 rounded-lg ${msg.from === 'admin' ? 'bg-primary text-primary-foreground' : 'bg-background border'}`}>
+                                <p className="text-sm">{msg.text}</p>
+                            </div>
+                             {msg.from === 'admin' && (
+                                <Avatar className="w-8 h-8">
+                                    <AvatarFallback>AD</AvatarFallback>
+                                </Avatar>
+                            )}
+                        </div>
+                    ))}
                 </CardContent>
+                 <CardContent className="py-4 border-t">
+                     <form className="flex items-center gap-2">
+                        <Input placeholder="Type your reply..." />
+                        <Button type="submit">
+                            <Send className="mr-2"/>
+                            Send
+                        </Button>
+                    </form>
+                 </CardContent>
              </Card>
         </div>
     </div>

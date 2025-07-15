@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Gamepad2, Zap, HelpCircle, Trophy, Star, Sprout } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import { ChatWidget } from "@/components/ChatWidget";
 
 export default function HomePage() {
   return (
@@ -95,7 +96,7 @@ export default function HomePage() {
             </CardContent>
           </Card>
       </section>
-
+      <ChatWidget />
     </div>
   );
 }

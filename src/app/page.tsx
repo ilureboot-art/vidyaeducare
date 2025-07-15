@@ -127,7 +127,6 @@ export default function Home() {
           url: shareUrl,
         });
       } catch (error) {
-        // Silently fail if user cancels share dialog or permission is denied
         if ((error as DOMException).name !== 'AbortError') {
           console.error("Share failed:", error);
           fallbackCopy();

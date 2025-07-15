@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
-import { PlusCircle, Trash2 } from "lucide-react";
+import { PlusCircle, Trash2, Zap } from "lucide-react";
 
 // Mock data for ticket packages
 const initialPackages = [
@@ -73,14 +73,37 @@ export default function AdminStoreSettingsPage() {
         <Card className="mt-6">
             <CardHeader>
                 <CardTitle>Referral System</CardTitle>
-                <CardDescription>Configure the bonus for referrals.</CardDescription>
+                <CardDescription>Configure the bonus for simple referrals.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                         <Label htmlFor="referralBonus">Referral & Welcome Bonus (₹)</Label>
                         <Input id="referralBonus" type="number" defaultValue="5" />
                          <p className="text-xs text-muted-foreground">This amount is given to both the referrer and the new user.</p>
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+
+         <Card className="mt-6">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Zap /> ReferBolt System</CardTitle>
+                <CardDescription>Configure the ReferBolt subscription and commissions.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                        <Label htmlFor="referboltCost">Subscription Cost (₹)</Label>
+                        <Input id="referboltCost" type="number" defaultValue="100" />
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="referboltCommission">Referral Commission (₹)</Label>
+                        <Input id="referboltCommission" type="number" defaultValue="50" />
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="referboltTickets">Ticket Bonus (on subscribe)</Label>
+                        <Input id="referboltTickets" type="number" defaultValue="4" />
                     </div>
                 </div>
             </CardContent>

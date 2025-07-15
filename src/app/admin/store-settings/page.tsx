@@ -17,8 +17,8 @@ export default function AdminStoreSettingsPage() {
   const [packages, setPackages] = useState<TicketPackage[]>(initialPackages);
   const [referralBonus, setReferralBonus] = useState(initialReferralBonus);
   const [referboltCost, setReferboltCost] = useState(initialReferboltSubscription.price);
-  const [referboltCommission, setReferboltCommission] = useState(50); // Assuming this is a static value for now
-  const [referboltTickets, setReferboltTickets] = useState(4); // Assuming this is a static value for now
+  const [referboltCommission, setReferboltCommission] = useState(50);
+  const [referboltTickets, setReferboltTickets] = useState(4);
 
   const handlePackageChange = (index: number, field: keyof TicketPackage, value: string | number | boolean) => {
     const newPackages = [...packages];
@@ -30,7 +30,6 @@ export default function AdminStoreSettingsPage() {
     
     (pkg as any)[field] = value;
 
-    // Ensure only one package is best value
     if (field === 'bestValue' && value === true) {
         newPackages.forEach((p, i) => {
             if (i !== index) {
@@ -53,11 +52,11 @@ export default function AdminStoreSettingsPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, this data would be sent to a backend to be saved.
     console.log("Saving store settings:", { packages, referralBonus, referboltCost, referboltCommission, referboltTickets });
     toast({
-      title: "Settings Saved!",
-      description: "Store settings have been successfully updated.",
+      title: "Settings Saved (Simulation)!",
+      description: "In a real app, these changes would be persisted. To see changes reflected in the user store, please modify src/lib/store-config.ts.",
+      duration: 8000
     });
   };
 

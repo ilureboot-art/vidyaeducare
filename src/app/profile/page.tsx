@@ -5,15 +5,15 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { User, Mail, Calendar, TrendingUp, Gamepad2, Percent, Edit, Fingerprint, HelpCircle, Trophy, Store as StoreIcon, Zap, Wallet, Settings as SettingsIcon, Compass } from "lucide-react";
+import { User, Mail, Calendar, TrendingUp, Gamepad2, Percent, Edit, Fingerprint, HelpCircle, Trophy, Store as StoreIcon, Zap, Wallet, Settings as SettingsIcon, Compass, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "@/components/ui/carousel"
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
+
 
 // Mock data for the user profile
 const userProfile = {
@@ -112,35 +112,30 @@ export default function ProfilePage() {
 
             <Separator />
 
-            <div className="space-y-4">
-                <h3 className="font-semibold text-lg flex items-center gap-2"><Compass className="w-5 h-5 text-accent"/> Navigate</h3>
-                <Carousel
-                    opts={{
-                        align: "start",
-                        loop: true,
-                    }}
-                    className="w-full"
-                >
-                    <CarouselContent>
-                        {profileNavItems.map((item, index) => {
-                            const Icon = item.icon;
-                            return(
-                            <CarouselItem key={index} className="basis-1/3 md:basis-1/4 lg:basis-1/5">
-                                <Link href={item.href}>
-                                <Card className="h-full hover:bg-muted/50 transition-colors">
-                                    <CardContent className="flex flex-col items-center justify-center aspect-square p-2">
-                                    <Icon className="w-8 h-8 text-primary mb-2" />
-                                    <span className="text-sm font-medium text-center">{item.label}</span>
-                                    </CardContent>
-                                </Card>
-                                </Link>
-                            </CarouselItem>
-                        )})}
-                    </CarouselContent>
-                    <CarouselPrevious className="hidden sm:flex"/>
-                    <CarouselNext className="hidden sm:flex"/>
-                </Carousel>
-            </div>
+            <Accordion type="single" collapsible className="w-full">
+              <AccordionItem value="item-1">
+                <AccordionTrigger>
+                   <h3 className="font-semibold text-lg flex items-center gap-2"><Compass className="w-5 h-5 text-accent"/> Navigate</h3>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="divide-y divide-border">
+                    {profileNavItems.map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <Link key={item.href} href={item.href} className="flex items-center justify-between p-3 hover:bg-muted/50 transition-colors rounded-lg">
+                            <div className="flex items-center gap-4">
+                                <Icon className="w-5 h-5 text-primary" />
+                                <span className="font-medium">{item.label}</span>
+                            </div>
+                            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                        </Link>
+                      )
+                    })}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+            
 
             <div className="pt-4 flex justify-end">
                 <Button variant="outline" disabled>

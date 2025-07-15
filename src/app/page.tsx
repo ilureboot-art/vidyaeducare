@@ -106,7 +106,7 @@ export default function Home() {
     setIsChecking(false);
   };
 
-  const handleShare = () => {
+  const handleShare = async () => {
     const shareUrl = `https://guessmaster.app/`;
     const message = `Check out GuessMaster! It's a fun number guessing game where you can win real rewards. Join now and test your luck!`;
     const fullMessage = `${message}\n${shareUrl}`;
@@ -120,14 +120,19 @@ export default function Home() {
     }
 
     if (navigator.share) {
-      navigator.share({
-        title: 'Join me on GuessMaster!',
-        text: message,
-        url: shareUrl,
-      }).catch((error) => {
-        console.error("Share failed:", error);
-        fallbackCopy();
-      });
+      try {
+        await navigator.share({
+          title: 'Join me on GuessMaster!',
+          text: message,
+          url: shareUrl,
+        });
+      } catch (error) {
+        // Silently fail if user cancels share dialog or permission is denied
+        if ((error as DOMException).name !== 'AbortError') {
+          console.error("Share failed:", error);
+          fallbackCopy();
+        }
+      }
     } else {
       fallbackCopy();
     }

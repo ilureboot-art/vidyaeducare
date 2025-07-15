@@ -38,7 +38,7 @@ export default function ReferBoltPage() {
     });
   };
 
-  const handleShare = () => {
+  const handleShare = async () => {
     const shareUrl = `https://guessmaster.app/join?ref=${referralData.referralCode}`;
     const message = `Use my code ${referralData.referralCode} to sign up for GuessMaster and get rewards! Plus, check out the ReferBolt system to earn even more.`;
     const fullMessage = `${message}\n${shareUrl}`;
@@ -52,14 +52,18 @@ export default function ReferBoltPage() {
     }
 
     if (navigator.share) {
-      navigator.share({
-        title: 'Join me on GuessMaster!',
-        text: message,
-        url: shareUrl,
-      }).catch((error) => {
-        console.error("Share failed:", error);
-        fallbackCopy();
-      });
+      try {
+        await navigator.share({
+          title: 'Join me on GuessMaster!',
+          text: message,
+          url: shareUrl,
+        });
+      } catch (error) {
+         if ((error as DOMException).name !== 'AbortError') {
+          console.error("Share failed:", error);
+          fallbackCopy();
+        }
+      }
     } else {
       fallbackCopy();
     }

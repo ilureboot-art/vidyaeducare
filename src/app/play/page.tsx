@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { getAiHint } from "@/ai/flows/numberace-ai-hint";
+import { getAiHint } from "@/ai/flows/guessmaster-ai-hint";
 import {
   Award,
   CircleHelp,
@@ -105,6 +105,12 @@ export default function PlayPage() {
       setGameState("won");
       setFeedback(`Congratulations! You guessed the number in ${attemptsUsed} ${attemptsUsed > 1 ? 'attempts' : 'attempt'}.`);
       setGuessHistory([...guessHistory, { guess: guessNum, hint: 'Correct!' }]);
+      if (gameState !== 'demo') {
+          toast({
+            title: "You Won!",
+            description: `₹${earnedReward} has been added to your wallet.`,
+          });
+      }
     } else {
       const direction = guessNum < secretNumber ? "higher" : "lower";
       
@@ -236,14 +242,14 @@ export default function PlayPage() {
         {gameState === 'won' ? <Trophy className="w-16 h-16 text-yellow-500" /> : <HeartCrack className="w-16 h-16 text-destructive" />}
         <h2 className="text-2xl font-bold font-headline">{gameState === 'won' ? "You Won!" : "Game Over"}</h2>
         <p className="text-muted-foreground">{feedback}</p>
-        {gameState === 'won' && (
+        {gameState === 'won' && reward > 0 && (
             <div className="flex items-center gap-2 p-3 bg-green-100 dark:bg-green-900/50 rounded-lg">
                 <Award className="w-6 h-6 text-green-600 dark:text-green-400"/>
                 <span className="font-semibold text-green-700 dark:text-green-300">You earned ₹{reward}!</span>
             </div>
         )}
         <div className="flex gap-4 pt-4">
-            <Button onClick={() => startGame(gameState !== 'won')}><RefreshCw className="mr-2 h-4 w-4"/> Play Again</Button>
+            <Button onClick={() => startGame(gameState === 'demo')}><RefreshCw className="mr-2 h-4 w-4"/> Play Again</Button>
             <Button variant="outline" onClick={() => { setGameState('idle'); router.push('/'); }}>Exit to Home</Button>
         </div>
     </div>
@@ -294,5 +300,3 @@ export default function PlayPage() {
     </div>
   );
 }
-
-    

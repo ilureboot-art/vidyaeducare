@@ -18,25 +18,44 @@ const AiHintInputSchema = z.object({
 });
 export type AiHintInput = z.infer<typeof AiHintInputSchema>;
 
+
+const hintPrompt = ai.definePrompt({
+    name: "hintPrompt",
+    input: { schema: AiHintInputSchema },
+    output: { schema: z.string() },
+    prompt: `You are a witty and clever game show host for a number guessing game called GuessMaster. The user is trying to guess a secret number. Their last guess was {{{guess}}}. The secret number is actually {{{direction}}} than that.
+
+Give them a short, creative, and fun hint to guide them. Be encouraging and a bit playful.
+
+Here are the rules for your hint:
+- **Do not** mention the words "higher", "lower", "up", or "down".
+- **Do not** reveal the secret number.
+- Keep the hint under 15 words.
+- Your personality is charming and slightly mysterious.
+
+Examples:
+- If the secret is higher than 25: "You're in the right ballpark, but think a bit grander."
+- If the secret is lower than 75: "A little less ambition might be the key!"
+- If the secret is higher than 50: "You're past the halfway mark, keep climbing!"
+- If the secret is lower than 10: "Think smaller, humbler thoughts."
+
+Now, give a hint for a guess of {{{guess}}} where the answer is {{{direction}}}.`
+});
+
+
+const hintFlow = ai.defineFlow(
+  {
+    name: 'hintFlow',
+    inputSchema: AiHintInputSchema,
+    outputSchema: z.string(),
+  },
+  async (input) => {
+    const { output } = await hintPrompt(input);
+    return output!;
+  }
+);
+
+
 export async function getAiHint(input: AiHintInput): Promise<string> {
-    const hintFlow = ai.defineFlow(
-      {
-        name: 'hintFlow',
-        inputSchema: AiHintInputSchema,
-        outputSchema: z.string(),
-      },
-      async ({ guess, direction }) => {
-        const prompt = `The user is playing a number guessing game. The secret number is ${direction} than their guess of ${guess}. Give them a short, creative, and slightly cryptic hint. Don't mention the words "higher" or "lower". Keep it under 15 words.`;
-
-        const { output } = await ai.generate({
-          prompt: prompt,
-        });
-
-        return output!;
-      }
-    );
-
     return await hintFlow(input);
 }
-
-    

@@ -65,8 +65,8 @@ export function AdminSidebar() {
                     const isActive = pathname === item.href || (pathname.startsWith(item.href) && item.href !== "/admin");
                     return (
                         <SidebarMenuItem key={item.href}>
-                             <Link href={item.href} legacyBehavior passHref>
-                                <SidebarMenuButton tooltip={item.label} isActive={isActive}>
+                             <Link href={item.href} passHref>
+                                <SidebarMenuButton asChild tooltip={item.label} isActive={isActive}>
                                     <item.icon/>
                                     <span>{item.label}</span>
                                 </SidebarMenuButton>
@@ -79,16 +79,16 @@ export function AdminSidebar() {
         <SidebarFooter>
             <SidebarMenu>
                  <SidebarMenuItem>
-                    <Link href="/" legacyBehavior passHref>
-                        <SidebarMenuButton tooltip="Exit Admin">
+                    <Link href="/" passHref>
+                        <SidebarMenuButton asChild tooltip="Exit Admin">
                             <LogOut />
                             <span>Exit Admin</span>
                         </SidebarMenuButton>
                     </Link>
                 </SidebarMenuItem>
                  <SidebarMenuItem>
-                    <Link href="/profile" legacyBehavior passHref>
-                        <SidebarMenuButton tooltip="Your Profile">
+                    <Link href="/profile" passHref>
+                        <SidebarMenuButton asChild tooltip="Your Profile">
                             <Home />
                             <span>Back to App</span>
                         </SidebarMenuButton>

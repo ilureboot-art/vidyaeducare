@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Gamepad2, Trophy, HelpCircle, Store, Zap, Wallet, Settings, Home, User } from "lucide-react";
+import { Gamepad2, Trophy, HelpCircle, Store, Zap, Wallet, Settings, Home, User, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -16,10 +16,15 @@ const navItems = [
   { href: "/wallet", label: "Wallet", icon: Wallet },
   { href: "/profile", label: "Profile", icon: User },
   { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/admin", label: "Admin", icon: Shield },
 ];
 
 export function Navbar() {
   const pathname = usePathname();
+  
+  if (pathname.startsWith('/admin')) {
+    return null; // Don't render the main navbar in the admin section
+  }
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">

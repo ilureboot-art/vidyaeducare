@@ -16,7 +16,7 @@ const ticketPackages = [
 const referboltSubscription = {
     name: "ReferBolt Subscription",
     price: 100,
-    description: "Activate to earn commissions and get 4 bonus tickets.",
+    description: "Activate to earn commissions and get 4 bonus tickets (8 games).",
 };
 
 export default function StorePage() {
@@ -41,7 +41,7 @@ export default function StorePage() {
     setTimeout(() => {
         toast({
             title: "Subscription Activated!",
-            description: "You are now subscribed to ReferBolt and have received 4 bonus tickets."
+            description: "You've received a bonus of 4 tickets (8 games) worth ₹100!"
         });
         setIsPurchasingReferbolt(false);
     }, 1500);

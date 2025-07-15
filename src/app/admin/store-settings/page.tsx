@@ -72,31 +72,16 @@ export default function AdminStoreSettingsPage() {
 
         <Card className="mt-6">
             <CardHeader>
-                <CardTitle>ReferBolt System</CardTitle>
-                <CardDescription>Configure the referral system parameters.</CardDescription>
+                <CardTitle>Referral System</CardTitle>
+                <CardDescription>Configure the bonus for referrals.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                        <Label htmlFor="subscriptionCost">Subscription Cost (₹)</Label>
-                        <Input id="subscriptionCost" type="number" defaultValue="100" />
+                        <Label htmlFor="referralBonus">Referral & Welcome Bonus (₹)</Label>
+                        <Input id="referralBonus" type="number" defaultValue="5" />
+                         <p className="text-xs text-muted-foreground">This amount is given to both the referrer and the new user.</p>
                     </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="referralCommission">Referral Commission (₹)</Label>
-                        <Input id="referralCommission" type="number" defaultValue="50" />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="cycleTarget">Referrals per Cycle</Label>
-                        <Input id="cycleTarget" type="number" defaultValue="3" />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="bonusTickets">Bonus Tickets on Subscription</Label>
-                        <Input id="bonusTickets" type="number" defaultValue="4" />
-                    </div>
-                </div>
-                 <div className="flex items-center space-x-2 pt-2">
-                    <Checkbox id="auto-subscribe-default" />
-                    <Label htmlFor="auto-subscribe-default">Enable 'Auto-Subscribe' feature by default for new users</Label>
                 </div>
             </CardContent>
         </Card>

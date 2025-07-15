@@ -1,36 +1,20 @@
 
 "use client";
 
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { Share2, Copy, Gift, Users, Zap, RefreshCw, CheckCircle } from "lucide-react";
+import { Share2, Copy, CheckCircle, Zap } from "lucide-react";
 
 // Mock data - in a real app, this would come from a backend
 const referralData = {
-  subscribed: true,
-  referralCode: "REF-A1B2C3",
-  autoSubscribe: false,
-  currentCycleReferrals: 0,
-  totalCycles: 1,
-  totalEarnings: 100,
-  walletBalance: 150, // Let's assume user has some balance
+  referralCode: "ALEX-D7F6E5",
+  referralBonus: 5,
+  welcomeBonus: 5,
 };
-
-const REFERRAL_CYCLE_TARGET = 3;
-const SUBSCRIPTION_COST = 100;
-const REFERRAL_COMMISSION = 50;
-
 
 export default function ReferBoltPage() {
   const { toast } = useToast();
-  const [isSubscribed, setIsSubscribed] = useState(referralData.subscribed);
-  const [autoSubscribe, setAutoSubscribe] = useState(referralData.autoSubscribe);
-  const [cycleProgress, setCycleProgress] = useState(referralData.currentCycleReferrals);
 
   const handleCopyToClipboard = () => {
     navigator.clipboard.writeText(referralData.referralCode);
@@ -42,14 +26,14 @@ export default function ReferBoltPage() {
 
   const handleShare = async () => {
     const shareUrl = `https://guessmaster.app/join?ref=${referralData.referralCode}`;
-    const message = `I'm earning rewards on GuessMaster with ReferBolt! You should join too. Use my code ${referralData.referralCode} when you sign up. When you subscribe, you get 4 bonus tickets, and I get a commission. It's a win-win!`;
+    const message = `Join me on GuessMaster! Use my code ${referralData.referralCode} when you sign up, and we both get a ₹${referralData.welcomeBonus} bonus!`;
     const fullMessage = `${message}\n${shareUrl}`;
 
     const fallbackCopy = () => {
       navigator.clipboard.writeText(fullMessage);
       toast({
           title: "Link Copied!",
-          description: "ReferBolt referral link copied to clipboard.",
+          description: "Referral link copied to clipboard.",
       });
     }
 
@@ -71,111 +55,28 @@ export default function ReferBoltPage() {
     }
   };
 
-  const handleSubscribe = () => {
-    if (referralData.walletBalance < SUBSCRIPTION_COST) {
-        toast({
-            variant: "destructive",
-            title: "Insufficient Balance",
-            description: `You need at least ₹${SUBSCRIPTION_COST} in your wallet to subscribe.`,
-        });
-        return;
-    }
-    // Simulate subscription
-    toast({
-        title: "Subscribed Successfully!",
-        description: `₹${SUBSCRIPTION_COST} deducted. You received 4 bonus tickets!`,
-    });
-    setIsSubscribed(true);
-    setCycleProgress(0); // Reset progress for new cycle
-  };
-
-  const handleSimulateReferral = () => {
-    if (cycleProgress >= REFERRAL_CYCLE_TARGET) {
-      toast({
-        variant: "destructive",
-        title: "Cycle Complete",
-        description: "Please re-subscribe to start a new cycle and earn more.",
-      });
-      return;
-    }
-    setCycleProgress(prev => prev + 1);
-    toast({
-      title: "Commission Earned!",
-      description: `A referral subscribed! ₹${REFERRAL_COMMISSION} has been added to your wallet.`,
-    })
-  }
-
-
-  const renderSubscriptionView = () => (
-    <div className="text-center space-y-4">
-      <Zap className="w-16 h-16 text-primary mx-auto" />
-      <h2 className="text-2xl font-bold">Activate ReferBolt</h2>
-      <p className="text-muted-foreground">Subscribe for just ₹{SUBSCRIPTION_COST} to start earning commissions and get bonus tickets!</p>
-      <Button size="lg" onClick={handleSubscribe}>
-        Subscribe Now
-      </Button>
-    </div>
-  );
-
   const renderDashboardView = () => (
     <div className="space-y-6">
       <div>
-        <Label htmlFor="referral-code" className="text-sm font-medium">Your Referral Code</Label>
-        <div className="flex items-center gap-2 mt-1">
-          <p id="referral-code" className="text-lg font-mono p-2 bg-muted rounded-md w-full">{referralData.referralCode}</p>
-          <Button variant="outline" size="icon" onClick={handleCopyToClipboard}><Copy className="w-4 h-4" /></Button>
-          <Button size="icon" onClick={handleShare}><Share2 className="w-4 h-4" /></Button>
+        <h3 className="text-lg font-semibold text-center">Your Unique Referral Code</h3>
+        <div className="flex items-center gap-2 mt-2">
+          <p className="text-2xl font-mono p-3 bg-muted rounded-md w-full text-center tracking-widest">{referralData.referralCode}</p>
         </div>
       </div>
-
-      <div>
-        <Label className="text-sm font-medium">Cycle Progress</Label>
-        <div className="mt-1 space-y-2">
-            <Progress value={(cycleProgress / REFERRAL_CYCLE_TARGET) * 100} className="w-full" />
-            <p className="text-sm text-muted-foreground text-center">
-                {cycleProgress} of {REFERRAL_CYCLE_TARGET} referrals in this cycle.
-            </p>
+       <div className="flex items-center gap-2">
+          <Button variant="outline" className="w-full" onClick={handleCopyToClipboard}><Copy className="w-4 h-4" /> Copy Code</Button>
+          <Button className="w-full" onClick={handleShare}><Share2 className="w-4 h-4" /> Share Link</Button>
         </div>
-        {cycleProgress >= REFERRAL_CYCLE_TARGET && (
-            <div className="text-center mt-4 p-3 bg-yellow-100 dark:bg-yellow-900/50 rounded-lg">
-                <p className="font-semibold text-yellow-700 dark:text-yellow-300">Cycle complete! Re-subscribe to start a new one.</p>
-                <Button size="sm" className="mt-2" onClick={handleSubscribe}><RefreshCw className="mr-2"/> Re-subscribe</Button>
-            </div>
-        )}
-      </div>
-      
-      <div className="flex items-center justify-between p-4 border rounded-lg">
-        <div className="space-y-1">
-            <Label htmlFor="auto-subscribe" className="font-semibold">Auto-Subscribe</Label>
-            <p className="text-xs text-muted-foreground">Automatically use wallet funds to start a new cycle.</p>
-        </div>
-        <Switch
-            id="auto-subscribe"
-            checked={autoSubscribe}
-            onCheckedChange={setAutoSubscribe}
-        />
-      </div>
-
-       <div className="pt-4">
-          <Button variant="secondary" className="w-full" onClick={handleSimulateReferral}>
-            Simulate a Referral Sign-up
-          </Button>
-          <p className="text-xs text-muted-foreground text-center mt-2">
-            Click to test the commission earning flow.
-          </p>
-        </div>
-
     </div>
   );
 
   const renderBenefits = () => (
     <div className="space-y-3">
-        <h3 className="font-semibold text-lg text-center">ReferBolt Benefits</h3>
+        <h3 className="font-semibold text-lg text-center">Referral Benefits</h3>
         <ul className="space-y-2 text-sm">
-            <li className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span>Earn <span className="font-bold">₹{REFERRAL_COMMISSION} commission</span> per referral (direct & indirect).</span></li>
-            <li className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span>Each cycle consists of <span className="font-bold">{REFERRAL_CYCLE_TARGET} referrals</span>.</span></li>
-            <li className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span>Receive <span className="font-bold">4 bonus tickets</span> (8 games) instantly upon subscribing.</span></li>
-            <li className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span><span className="font-bold">Unlimited earning potential</span> with continuous cycles.</span></li>
+            <li className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span>You get <span className="font-bold">₹{referralData.referralBonus}</span> for every friend who joins.</span></li>
+            <li className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span>Your friend gets a <span className="font-bold">₹{referralData.welcomeBonus} welcome bonus</span>.</span></li>
+            <li className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span>There's no limit to how many friends you can invite!</span></li>
         </ul>
     </div>
   )
@@ -185,14 +86,14 @@ export default function ReferBoltPage() {
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="text-3xl font-bold text-center text-primary flex items-center justify-center gap-2">
-            <Zap /> ReferBolt
+            <Zap /> Refer & Earn
           </CardTitle>
           <CardDescription className="text-center">
-            Invite friends, earn commissions.
+            Invite friends and you both get rewarded!
           </CardDescription>
         </CardHeader>
-        <CardContent className="min-h-[250px] flex items-center justify-center">
-          {isSubscribed ? renderDashboardView() : renderSubscriptionView()}
+        <CardContent className="min-h-[150px] flex items-center justify-center">
+          {renderDashboardView()}
         </CardContent>
         <CardFooter className="flex-col !items-start gap-4">
             <div className="w-full p-4 bg-muted/50 rounded-lg">

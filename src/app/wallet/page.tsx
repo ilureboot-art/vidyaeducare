@@ -44,8 +44,8 @@ const walletData = {
   },
   transactions: [
     { id: 1, type: "deposit", description: "Game Won Reward", amount: 75.00, date: "2024-07-29", status: "Completed" },
-    { id: 2, type: "deposit", description: "Referral Commission", amount: 50.00, date: "2024-07-28", status: "Completed" },
-    { id: 3, type: "deposit", description: "Referral Bonus", amount: 50.00, date: "2024-07-28", status: "Completed" },
+    { id: 2, type: "deposit", description: "Referral Bonus", amount: 5.00, date: "2024-07-28", status: "Completed" },
+    { id: 3, type: "deposit", description: "Welcome Bonus", amount: 5.00, date: "2024-07-28", status: "Completed" },
     { id: 4, type: "withdrawal", description: "Ticket Purchase (15)", amount: -25.00, date: "2024-07-27", status: "Completed" },
     { id: 5, type: "withdrawal", description: "ReferBolt Subscription", amount: -100.00, date: "2024-07-26", status: "Completed" },
     { id: 6, type: "deposit", description: "Fund Deposit", amount: 100.00, date: "2024-07-25", status: "Pending", referenceId: "UPIREF12345" },

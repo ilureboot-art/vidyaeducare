@@ -108,7 +108,7 @@ export default function Home() {
 
   const handleShare = async () => {
     const shareUrl = `https://guessmaster.app/`;
-    const message = `Check out GuessMaster! It's a fun number guessing game where you can win real rewards. Join now and test your luck!`;
+    const message = `Think you can guess the secret number? I'm playing GuessMaster and you can win up to ₹100 on your first try! Come play and see if you can beat my score.`;
     const fullMessage = `${message}\n${shareUrl}`;
 
     const fallbackCopy = () => {

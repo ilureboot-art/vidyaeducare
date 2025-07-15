@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -14,6 +15,7 @@ import {
   Lightbulb,
   Loader2,
   RefreshCw,
+  Share2,
   Sprout,
   Star,
   Ticket,
@@ -104,6 +106,26 @@ export default function Home() {
     setIsChecking(false);
   };
 
+  const handleShare = () => {
+    const shareUrl = `https://guessmaster.app/`;
+    const message = `Check out GuessMaster! It's a fun number guessing game where you can win real rewards. Join now and test your luck!`;
+    const fullMessage = `${message}\n${shareUrl}`;
+
+    if (navigator.share) {
+      navigator.share({
+        title: 'Join me on GuessMaster!',
+        text: message,
+        url: shareUrl,
+      }).catch(console.error);
+    } else {
+      navigator.clipboard.writeText(fullMessage);
+      toast({
+        title: "Link Copied!",
+        description: "Promotional message copied to clipboard.",
+      });
+    }
+  };
+
   const renderGameInfo = () => (
     <div className="flex items-center justify-between text-sm text-muted-foreground">
         <div className="flex items-center gap-2">
@@ -120,13 +142,17 @@ export default function Home() {
   const renderIdleState = () => (
     <div className="text-center space-y-6">
         <div className="flex flex-col items-center text-center">
-            <h1 className="text-4xl font-bold font-headline text-primary">NumberAce</h1>
+            <h1 className="text-4xl font-bold font-headline text-primary">GuessMaster</h1>
             <p className="text-muted-foreground mt-2">Guess the secret number between 1 and 100 in 5 tries!</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Button size="lg" onClick={() => startGame(false)}><Star className="mr-2 h-5 w-5"/> Play Real Game</Button>
             <Button size="lg" variant="secondary" onClick={() => startGame(true)}><Sprout className="mr-2 h-5 w-5"/> Play Demo</Button>
         </div>
+        <Button variant="ghost" onClick={handleShare} className="w-full">
+            <Share2 className="mr-2 h-4 w-4"/>
+            Share & Promote GuessMaster
+        </Button>
     </div>
   );
 

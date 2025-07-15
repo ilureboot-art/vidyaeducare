@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { Navbar } from '@/components/Navbar';
 
 export const metadata: Metadata = {
-  title: 'NumberAce',
+  title: 'GuessMaster',
   description: 'Guess the number and win big!',
 };
 

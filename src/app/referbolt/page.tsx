@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -38,18 +39,21 @@ export default function ReferBoltPage() {
   };
 
   const handleShare = () => {
-    const shareUrl = `https://numberace.app/join?ref=${referralData.referralCode}`;
+    const shareUrl = `https://guessmaster.app/join?ref=${referralData.referralCode}`;
+    const message = `Use my code ${referralData.referralCode} to sign up for GuessMaster and get rewards! Plus, check out the ReferBolt system to earn even more.`;
+    const fullMessage = `${message}\n${shareUrl}`;
+
     if (navigator.share) {
       navigator.share({
-        title: 'Join me on NumberAce!',
-        text: `Use my code ${referralData.referralCode} to sign up for NumberAce and get rewards!`,
+        title: 'Join me on GuessMaster!',
+        text: message,
         url: shareUrl,
       }).catch(console.error);
     } else {
-      navigator.clipboard.writeText(shareUrl);
+      navigator.clipboard.writeText(fullMessage);
       toast({
         title: "Link Copied!",
-        description: "Referral link copied to clipboard.",
+        description: "ReferBolt referral link copied to clipboard.",
       });
     }
   };

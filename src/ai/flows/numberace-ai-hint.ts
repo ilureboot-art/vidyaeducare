@@ -14,12 +14,12 @@ import {z} from 'genkit';
 
 const GetHintInputSchema = z.object({
   secretNumber: z.number().describe('The secret number the player is trying to guess, between 1 and 100.'),
-  guess: z.number().describe('The player\u0027s current guess.'),
+  guess: z.number().describe('The player\'s current guess.'),
 });
 export type GetHintInput = z.infer<typeof GetHintInputSchema>;
 
 const GetHintOutputSchema = z.object({
-  hint: z.string().describe('A hint to the player, either \"higher\" or \"lower\".'),
+  hint: z.string().describe('A hint to the player, either "higher" or "lower".'),
 });
 export type GetHintOutput = z.infer<typeof GetHintOutputSchema>;
 
@@ -45,6 +45,6 @@ const getHintFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await prompt(input);
-    return {hint: output!.hint as 'higher' | 'lower'};
+    return output!;
   }
 );

@@ -2,25 +2,98 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowUpRight, ArrowDownLeft, Banknote, PlusCircle, MinusCircle } from "lucide-react";
+import { 
+  Card, 
+  CardContent, 
+  CardHeader, 
+  CardTitle, 
+  CardDescription,
+  CardFooter
+} from "@/components/ui/card";
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { ArrowUpRight, ArrowDownLeft, PlusCircle, MinusCircle, Info } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 
 // Mock data
 const walletData = {
   balance: 450.50,
+  adminUpi: "admin-upi@okhdfcbank",
   transactions: [
-    { id: 1, type: "deposit", description: "Referral Commission from user_X", amount: 50.00, date: "2024-07-28" },
-    { id: 2, type: "withdrawal", description: "Ticket Package Purchase (15)", amount: -25.00, date: "2024-07-27" },
-    { id: 3, type: "deposit", description: "Game Won Reward", amount: 75.00, date: "2024-07-27" },
-    { id: 4, type: "withdrawal", description: "ReferBolt Subscription", amount: -100.00, date: "2024-07-26" },
-    { id: 5, type: "deposit", description: "Referral Commission from user_Y", amount: 50.00, date: "2024-07-25" },
-    { id: 6, type: "deposit", description: "Initial Deposit", amount: 400.50, date: "2024-07-24" },
+    { id: 1, type: "deposit", description: "Referral Commission", amount: 50.00, date: "2024-07-28", status: "Completed" },
+    { id: 2, type: "withdrawal", description: "Ticket Purchase (15)", amount: -25.00, date: "2024-07-27", status: "Completed" },
+    { id: 3, type: "deposit", description: "Game Won Reward", amount: 75.00, date: "2024-07-27", status: "Completed" },
+    { id: 4, type: "withdrawal", description: "ReferBolt Subscription", amount: -100.00, date: "2024-07-26", status: "Completed" },
+    { id: 5, type: "deposit", description: "Fund Deposit", amount: 100.00, date: "2024-07-25", status: "Pending" },
+    { id: 6, type: "withdrawal", description: "Withdrawal Request", amount: -200.00, date: "2024-07-24", status: "Completed" },
   ],
 };
 
+const getStatusBadgeVariant = (status: string) => {
+    switch (status.toLowerCase()) {
+        case 'completed':
+            return 'default';
+        case 'pending':
+            return 'secondary';
+        case 'rejected':
+            return 'destructive';
+        default:
+            return 'outline';
+    }
+}
+
 export default function WalletPage() {
+  const { toast } = useToast();
+  const [addFundsOpen, setAddFundsOpen] = useState(false);
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
+
+  const handleAddFunds = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    // In a real app, you would send this to your backend
+    toast({
+      title: "Request Submitted",
+      description: "Your fund deposit request has been sent for admin approval.",
+    });
+    setAddFundsOpen(false);
+  }
+  
+  const handleWithdraw = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const amount = parseFloat((event.currentTarget.elements.namedItem('amount') as HTMLInputElement).value);
+    if (amount < 200) {
+        toast({
+            variant: "destructive",
+            title: "Invalid Amount",
+            description: "Minimum withdrawal amount is ₹200.",
+        });
+        return;
+    }
+    // In a real app, you would send this to your backend
+    toast({
+      title: "Request Submitted",
+      description: "Your withdrawal request has been sent for admin approval.",
+    });
+    setWithdrawOpen(false);
+  }
+
   return (
     <div className="w-full max-w-2xl mx-auto space-y-6">
       <Card className="shadow-lg">
@@ -34,8 +107,65 @@ export default function WalletPage() {
             <p className="text-5xl font-bold text-primary">₹{walletData.balance.toFixed(2)}</p>
           </Card>
           <div className="grid grid-cols-2 gap-4">
-            <Button size="lg" variant="outline"><PlusCircle className="mr-2"/> Add Funds</Button>
-            <Button size="lg" variant="outline"><MinusCircle className="mr-2"/> Withdraw</Button>
+            <Dialog open={addFundsOpen} onOpenChange={setAddFundsOpen}>
+              <DialogTrigger asChild>
+                <Button size="lg" variant="outline"><PlusCircle className="mr-2"/> Add Funds</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add Funds</DialogTitle>
+                  <DialogDescription>
+                    Send payment to the admin UPI ID and enter the details below.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                    <div className="p-3 bg-muted rounded-md text-sm">
+                        <p className="font-semibold flex items-center gap-2"><Info className="w-4 h-4" />Admin Payment Details</p>
+                        <p>UPI ID: <span className="font-mono">{walletData.adminUpi}</span></p>
+                    </div>
+                    <form onSubmit={handleAddFunds} className="space-y-4">
+                        <div>
+                            <Label htmlFor="amount-add">Amount (INR)</Label>
+                            <Input id="amount-add" type="number" placeholder="e.g., 500" required />
+                        </div>
+                        <div>
+                            <Label htmlFor="txnId">Transaction Reference ID</Label>
+                            <Input id="txnId" placeholder="Enter the UPI transaction ID" required />
+                        </div>
+                        <DialogFooter>
+                            <Button type="submit">Submit Request</Button>
+                        </DialogFooter>
+                    </form>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={withdrawOpen} onOpenChange={setWithdrawOpen}>
+              <DialogTrigger asChild>
+                <Button size="lg" variant="outline"><MinusCircle className="mr-2"/> Withdraw</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Withdraw Funds</DialogTitle>
+                  <DialogDescription>
+                    Request a withdrawal to your payment account. Minimum ₹200.
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleWithdraw} className="space-y-4">
+                    <div>
+                        <Label htmlFor="amount-withdraw">Amount (INR)</Label>
+                        <Input id="amount" name="amount" type="number" placeholder="e.g., 250" required min="200" />
+                    </div>
+                    <div>
+                        <Label htmlFor="upiId">Your UPI / GPay / PhonePe ID</Label>
+                        <Input id="upiId" placeholder="Enter your payment ID" required />
+                    </div>
+                    <DialogFooter>
+                        <Button type="submit">Submit Request</Button>
+                    </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
           </div>
         </CardContent>
       </Card>
@@ -49,6 +179,7 @@ export default function WalletPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Description</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
               </TableRow>
             </TableHeader>
@@ -67,6 +198,9 @@ export default function WalletPage() {
                         <p className="text-xs text-muted-foreground">{new Date(tx.date).toLocaleDateString()}</p>
                       </div>
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={getStatusBadgeVariant(tx.status)}>{tx.status}</Badge>
                   </TableCell>
                   <TableCell className={`text-right font-bold ${tx.type === 'deposit' ? 'text-green-600' : 'text-red-600'}`}>
                     {tx.type === 'deposit' ? '+' : ''}₹{Math.abs(tx.amount).toFixed(2)}

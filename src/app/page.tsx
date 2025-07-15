@@ -1,14 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { getHint } from "@/ai/flows/numberace-ai-hint";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import {
-  AlertCircle,
   Award,
   CircleHelp,
   Gamepad2,
@@ -221,20 +219,18 @@ export default function Home() {
   );
 
   return (
-    <main className="min-h-screen bg-background flex flex-col items-center justify-center p-4 font-body">
-      <div className="w-full max-w-md mx-auto">
-        <Card className="shadow-2xl shadow-primary/10">
-          <CardHeader>
-            {gameState !== 'idle' ? renderGameInfo() : <CardTitle className="text-center">Welcome!</CardTitle>}
-          </CardHeader>
-          <CardContent className="min-h-[300px] flex items-center justify-center">
-            {renderCardContent()}
-          </CardContent>
-          <CardFooter>
-            { (gameState === 'idle' || gameState === 'playing' || gameState === 'demo') && renderRewardTiers() }
-          </CardFooter>
-        </Card>
-      </div>
-    </main>
+    <div className="w-full max-w-md mx-auto">
+      <Card className="shadow-2xl shadow-primary/10">
+        <CardHeader>
+          {gameState !== 'idle' ? renderGameInfo() : <CardTitle className="text-center">Welcome!</CardTitle>}
+        </CardHeader>
+        <CardContent className="min-h-[300px] flex items-center justify-center">
+          {renderCardContent()}
+        </CardContent>
+        <CardFooter>
+          { (gameState === 'idle' || gameState === 'playing' || gameState === 'demo') && renderRewardTiers() }
+        </CardFooter>
+      </Card>
+    </div>
   );
 }

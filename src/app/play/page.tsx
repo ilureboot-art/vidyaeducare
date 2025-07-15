@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { getAiHint } from "@/ai/flows/numberace-ai-hint";
 import {
   Award,
   CircleHelp,
@@ -105,9 +106,18 @@ export default function PlayPage() {
       setFeedback(`Congratulations! You guessed the number in ${attemptsUsed} ${attemptsUsed > 1 ? 'attempts' : 'attempt'}.`);
       setGuessHistory([...guessHistory, { guess: guessNum, hint: 'Correct!' }]);
     } else {
-      const hint = guessNum < secretNumber ? "higher" : "lower";
-      setFeedback(`Hint: Try a ${hint} number!`);
-      setGuessHistory([...guessHistory, { guess: guessNum, hint }]);
+      const direction = guessNum < secretNumber ? "higher" : "lower";
+      
+      try {
+        const aiHint = await getAiHint({ guess: guessNum, direction });
+        setFeedback(aiHint);
+        setGuessHistory([...guessHistory, { guess: guessNum, hint: `AI: "${aiHint}"` }]);
+      } catch (error) {
+        console.error("AI hint failed, falling back to simple hint", error);
+        const hint = `Hint: Try a ${direction} number!`;
+        setFeedback(hint);
+        setGuessHistory([...guessHistory, { guess: guessNum, hint: `Try ${direction}` }]);
+      }
       
       if (newAttemptsLeft === 0) {
         setGameState("lost");
@@ -212,7 +222,7 @@ export default function PlayPage() {
                 {guessHistory.map((item, index) => (
                     <li key={index} className="flex justify-between items-center bg-background p-2 rounded-md">
                         <span>Guess #{index + 1}: <span className="font-bold text-foreground">{item.guess}</span></span>
-                        <Badge variant={item.hint === 'Correct!' ? 'default' : 'outline'}>{item.hint}</Badge>
+                        <Badge variant={item.hint === 'Correct!' ? 'default' : 'outline'} className="text-right">{item.hint}</Badge>
                     </li>
                 ))}
             </ul>
@@ -284,3 +294,5 @@ export default function PlayPage() {
     </div>
   );
 }
+
+    

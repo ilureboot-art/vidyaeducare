@@ -2,7 +2,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Archive, Search } from "lucide-react";
+import { Archive, Search, MessageSquare } from "lucide-react";
 
 // Mock data for chat management
 const activeChats = [

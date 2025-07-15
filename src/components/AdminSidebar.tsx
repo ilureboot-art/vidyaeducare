@@ -17,7 +17,8 @@ import {
     BarChart3,
     Server,
     MessageSquare,
-    ShoppingCart
+    ShoppingCart,
+    Landmark
 } from "lucide-react";
 
 const adminNavItems = [
@@ -26,6 +27,7 @@ const adminNavItems = [
   { href: "/admin/transactions", label: "Transactions", icon: CreditCard },
   { href: "/admin/game-settings", label: "Game Settings", icon: Gamepad2 },
   { href: "/admin/store-settings", label: "Store Settings", icon: ShoppingCart },
+  { href: "/admin/payment-settings", label: "Payment Settings", icon: Landmark },
   { href: "/admin/referbolt", label: "ReferBolt Mgt.", icon: Zap },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/admin/system-status", label: "System Status", icon: Server },

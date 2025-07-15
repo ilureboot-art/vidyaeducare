@@ -6,18 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { ShoppingCart, Ticket, Sparkles, Zap } from "lucide-react";
-
-const ticketPackages = [
-  { tickets: 5, price: 10, bestValue: false, games: 10 },
-  { tickets: 15, price: 25, bestValue: true, games: 30 },
-  { tickets: 30, price: 45, bestValue: false, games: 60 },
-];
-
-const referboltSubscription = {
-    name: "ReferBolt Subscription",
-    price: 100,
-    description: "Activate to earn commissions and get 4 bonus tickets (8 games).",
-};
+import { initialPackages as ticketPackages, initialReferboltSubscription } from "@/lib/store-config";
 
 export default function StorePage() {
   const { toast } = useToast();
@@ -41,11 +30,11 @@ export default function StorePage() {
     setTimeout(() => {
         toast({
             title: "Subscription Activated!",
-            description: "You've received a bonus of 4 tickets (8 games) worth ₹100!"
+            description: "You've received a bonus of 4 tickets (8 games) worth ₹100!",
         });
         setIsPurchasingReferbolt(false);
     }, 1500);
-  }
+  };
 
   return (
     <div className="w-full max-w-4xl mx-auto">
@@ -99,13 +88,13 @@ export default function StorePage() {
               <CardHeader>
                 <CardTitle className="text-2xl font-bold flex items-center justify-center gap-2">
                   <Zap className="text-accent" />
-                  ReferBolt
+                  {initialReferboltSubscription.name}
                 </CardTitle>
                 <CardDescription className="font-semibold">Subscription</CardDescription>
               </CardHeader>
               <CardContent className="flex-grow flex flex-col justify-center items-center space-y-2">
-                 <p className="text-sm px-2">{referboltSubscription.description}</p>
-                <p className="text-4xl font-bold">₹{referboltSubscription.price}</p>
+                 <p className="text-sm px-2">{initialReferboltSubscription.description}</p>
+                <p className="text-4xl font-bold">₹{initialReferboltSubscription.price}</p>
                 <Button 
                   size="lg" 
                   className="w-full bg-accent text-accent-foreground hover:bg-accent/90"

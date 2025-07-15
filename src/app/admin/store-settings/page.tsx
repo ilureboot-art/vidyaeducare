@@ -9,34 +9,37 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PlusCircle, Trash2, Zap } from "lucide-react";
-
-type TicketPackage = {
-  tickets: number;
-  price: number;
-  bestValue: boolean;
-  games: number;
-};
-
-const initialPackages: TicketPackage[] = [
-  { tickets: 5, price: 10, bestValue: false, games: 10 },
-  { tickets: 15, price: 25, bestValue: true, games: 30 },
-  { tickets: 30, price: 45, bestValue: false, games: 60 },
-];
+import type { TicketPackage } from "@/lib/store-config";
+import { initialPackages, initialReferboltSubscription, initialReferralBonus } from "@/lib/store-config";
 
 export default function AdminStoreSettingsPage() {
   const { toast } = useToast();
   const [packages, setPackages] = useState<TicketPackage[]>(initialPackages);
-  const [referralBonus, setReferralBonus] = useState(5);
-  const [referboltCost, setReferboltCost] = useState(100);
-  const [referboltCommission, setReferboltCommission] = useState(50);
-  const [referboltTickets, setReferboltTickets] = useState(4);
+  const [referralBonus, setReferralBonus] = useState(initialReferralBonus);
+  const [referboltCost, setReferboltCost] = useState(initialReferboltSubscription.price);
+  const [referboltCommission, setReferboltCommission] = useState(50); // Assuming this is a static value for now
+  const [referboltTickets, setReferboltTickets] = useState(4); // Assuming this is a static value for now
 
   const handlePackageChange = (index: number, field: keyof TicketPackage, value: string | number | boolean) => {
     const newPackages = [...packages];
-    if (typeof newPackages[index][field] === 'number') {
-        value = Number(value);
+    const pkg = { ...newPackages[index] };
+
+    if (typeof pkg[field] === 'number') {
+      value = Number(value);
     }
-    (newPackages[index] as any)[field] = value;
+    
+    (pkg as any)[field] = value;
+
+    // Ensure only one package is best value
+    if (field === 'bestValue' && value === true) {
+        newPackages.forEach((p, i) => {
+            if (i !== index) {
+                p.bestValue = false;
+            }
+        });
+    }
+
+    newPackages[index] = pkg;
     setPackages(newPackages);
   };
 
@@ -50,6 +53,8 @@ export default function AdminStoreSettingsPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    // In a real app, this data would be sent to a backend to be saved.
+    console.log("Saving store settings:", { packages, referralBonus, referboltCost, referboltCommission, referboltTickets });
     toast({
       title: "Settings Saved!",
       description: "Store settings have been successfully updated.",
@@ -92,7 +97,7 @@ export default function AdminStoreSettingsPage() {
                 </Button>
               </div>
             ))}
-            <Button variant="outline" className="w-full" onClick={addPackage}>
+            <Button type="button" variant="outline" className="w-full" onClick={addPackage}>
               <PlusCircle className="mr-2 h-4 w-4" />
               Add New Package
             </Button>

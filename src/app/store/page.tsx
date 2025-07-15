@@ -1,10 +1,11 @@
+
 "use client";
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { ShoppingCart, Ticket, Sparkles } from "lucide-react";
+import { ShoppingCart, Ticket, Sparkles, Zap } from "lucide-react";
 
 const ticketPackages = [
   { tickets: 5, price: 10, bestValue: false, games: 10 },
@@ -12,9 +13,16 @@ const ticketPackages = [
   { tickets: 30, price: 45, bestValue: false, games: 60 },
 ];
 
+const referboltSubscription = {
+    name: "ReferBolt Subscription",
+    price: 100,
+    description: "Activate to earn commissions and get 4 bonus tickets.",
+};
+
 export default function StorePage() {
   const { toast } = useToast();
   const [isPurchasing, setIsPurchasing] = useState<number | null>(null);
+  const [isPurchasingReferbolt, setIsPurchasingReferbolt] = useState(false);
 
   const handlePurchase = (index: number) => {
     setIsPurchasing(index);
@@ -28,19 +36,30 @@ export default function StorePage() {
     }, 1500);
   };
 
+  const handleReferboltPurchase = () => {
+    setIsPurchasingReferbolt(true);
+    setTimeout(() => {
+        toast({
+            title: "Subscription Activated!",
+            description: "You are now subscribed to ReferBolt and have received 4 bonus tickets."
+        });
+        setIsPurchasingReferbolt(false);
+    }, 1500);
+  }
+
   return (
     <div className="w-full max-w-4xl mx-auto">
       <Card className="shadow-lg">
         <CardHeader className="text-center">
           <CardTitle className="text-3xl font-bold text-primary flex items-center justify-center gap-2">
             <ShoppingCart />
-            Ticket Store
+            Store
           </CardTitle>
           <CardDescription>
-            Need more games? Stock up on tickets here!
+            Stock up on tickets or activate your ReferBolt subscription!
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6">
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pt-6">
           {ticketPackages.map((pkg, index) => (
             <Card
               key={index}
@@ -67,13 +86,35 @@ export default function StorePage() {
                   size="lg" 
                   className="w-full"
                   onClick={() => handlePurchase(index)}
-                  disabled={isPurchasing !== null}
+                  disabled={isPurchasing !== null || isPurchasingReferbolt}
                 >
                   {isPurchasing === index ? "Processing..." : "Buy Now"}
                 </Button>
               </CardContent>
             </Card>
           ))}
+            <Card
+              className="flex flex-col text-center transition-all border-accent border-2 shadow-accent/20 shadow-lg"
+            >
+              <CardHeader>
+                <CardTitle className="text-2xl font-bold flex items-center justify-center gap-2">
+                  <Zap className="text-accent" />
+                  ReferBolt
+                </CardTitle>
+                <CardDescription>Subscription</CardDescription>
+              </CardHeader>
+              <CardContent className="flex-grow flex flex-col justify-center items-center space-y-4">
+                <p className="text-4xl font-bold">₹{referboltSubscription.price}</p>
+                <Button 
+                  size="lg" 
+                  className="w-full bg-accent text-accent-foreground hover:bg-accent/90"
+                  onClick={handleReferboltPurchase}
+                  disabled={isPurchasing !== null || isPurchasingReferbolt}
+                >
+                  {isPurchasingReferbolt ? "Processing..." : "Subscribe Now"}
+                </Button>
+              </CardContent>
+            </Card>
         </CardContent>
       </Card>
     </div>

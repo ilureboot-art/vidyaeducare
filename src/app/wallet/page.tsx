@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -42,8 +43,8 @@ const walletData = {
     { id: 2, type: "withdrawal", description: "Ticket Purchase (15)", amount: -25.00, date: "2024-07-27", status: "Completed" },
     { id: 3, type: "deposit", description: "Game Won Reward", amount: 75.00, date: "2024-07-27", status: "Completed" },
     { id: 4, type: "withdrawal", description: "ReferBolt Subscription", amount: -100.00, date: "2024-07-26", status: "Completed" },
-    { id: 5, type: "deposit", description: "Fund Deposit", amount: 100.00, date: "2024-07-25", status: "Pending" },
-    { id: 6, type: "withdrawal", description: "Withdrawal Request", amount: -200.00, date: "2024-07-24", status: "Completed" },
+    { id: 5, type: "deposit", description: "Fund Deposit", amount: 100.00, date: "2024-07-25", status: "Pending", referenceId: "UPIREF12345" },
+    { id: 6, type: "withdrawal", description: "Withdrawal Request", amount: -200.00, date: "2024-07-24", status: "Completed", paymentMethod: "user@upi" },
   ],
 };
 

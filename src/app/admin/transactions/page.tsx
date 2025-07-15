@@ -13,16 +13,17 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Download, ArrowUpRight, ArrowDownLeft } from "lucide-react";
+import { Search, Download, ArrowUpRight, ArrowDownLeft, Info } from "lucide-react";
 
-// Mock data for transactions
+// Mock data for transactions, now including reference/payment IDs
 const transactions = [
-  { id: "TXN001", user: "Alice", type: "Withdrawal", amount: 200.00, date: "2024-07-29", status: "Pending" },
-  { id: "TXN002", user: "Bob", type: "Deposit", amount: 100.00, date: "2024-07-29", status: "Completed" },
+  { id: "TXN001", user: "Alice", type: "Withdrawal", amount: 200.00, date: "2024-07-29", status: "Pending", paymentMethod: "alice@upi" },
+  { id: "TXN002", user: "Bob", type: "Deposit", amount: 100.00, date: "2024-07-29", status: "Completed", referenceId: "UPIREF12345" },
   { id: "TXN003", user: "Charlie", type: "Game Reward", amount: 50.00, date: "2024-07-28", status: "Completed" },
   { id: "TXN004", user: "Alice", type: "Ticket Purchase", amount: -25.00, date: "2024-07-28", status: "Completed" },
-  { id: "TXN005", user: "David", type: "Withdrawal", amount: 500.00, date: "2024-07-27", status: "Rejected" },
+  { id: "TXN005", user: "David", type: "Withdrawal", amount: 500.00, date: "2024-07-27", status: "Rejected", paymentMethod: "david@upi" },
   { id: "TXN006", user: "Eve", type: "Referral Bonus", amount: 50.00, date: "2024-07-27", status: "Completed" },
+  { id: "TXN007", user: "Frank", type: "Deposit", amount: 300.00, date: "2024-07-30", status: "Pending", referenceId: "UPIREF67890" },
 ];
 
 const getStatusBadgeVariant = (status: string) => {
@@ -70,9 +71,9 @@ export default function TransactionsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Transaction ID</TableHead>
                 <TableHead>User</TableHead>
                 <TableHead>Type</TableHead>
+                <TableHead>Details</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
@@ -82,13 +83,16 @@ export default function TransactionsPage() {
             <TableBody>
               {transactions.map((tx) => (
                 <TableRow key={tx.id}>
-                  <TableCell className="font-mono">{tx.id}</TableCell>
                   <TableCell className="font-medium">{tx.user}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                         {getTypeIcon(tx.type)}
                         <span>{tx.type}</span>
                     </div>
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground font-mono">
+                    {tx.type === "Deposit" && tx.referenceId && `Ref: ${tx.referenceId}`}
+                    {tx.type === "Withdrawal" && tx.paymentMethod && `To: ${tx.paymentMethod}`}
                   </TableCell>
                   <TableCell>{tx.date}</TableCell>
                   <TableCell>

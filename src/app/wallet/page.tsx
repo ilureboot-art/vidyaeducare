@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { 
   Card, 
@@ -58,6 +58,20 @@ const getStatusBadgeVariant = (status: string) => {
         default:
             return 'outline';
     }
+}
+
+function FormattedDate({ dateString }: { dateString: string }) {
+  const [formattedDate, setFormattedDate] = useState("");
+
+  useEffect(() => {
+    setFormattedDate(new Date(dateString).toLocaleDateString());
+  }, [dateString]);
+
+  if (!formattedDate) {
+    return null; // or a placeholder
+  }
+
+  return <>{formattedDate}</>;
 }
 
 export default function WalletPage() {
@@ -195,7 +209,7 @@ export default function WalletPage() {
                       </div>
                       <div>
                         <p className="font-medium">{tx.description}</p>
-                        <p className="text-xs text-muted-foreground">{new Date(tx.date).toLocaleDateString()}</p>
+                        <p className="text-xs text-muted-foreground"><FormattedDate dateString={tx.date} /></p>
                       </div>
                     </div>
                   </TableCell>

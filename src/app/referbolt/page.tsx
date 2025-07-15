@@ -4,7 +4,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, Zap } from "lucide-react";
+import { CheckCircle, Zap, Share2 } from "lucide-react";
 import Link from "next/link";
 
 export default function ReferBoltPage() {
@@ -15,6 +15,45 @@ export default function ReferBoltPage() {
       title: "Commission Earned!",
       description: "You've earned ₹50 commission from a new subscriber in your network!",
     });
+  };
+
+  const handleShare = async () => {
+    const shareUrl = `https://guessmaster.app/referbolt`;
+    const benefits = [
+        "Referral commission INR 50/- per referral",
+        "1 cycle of 3 referrals",
+        "Direct & indirect referrals commission",
+        "Get bonus of 4 game tickets (8 games worth INR 100/-)",
+        "Unlimited earning potential"
+    ].join("\n- ");
+
+    const message = `Check out the ReferBolt system on GuessMaster!\n\nHere are the benefits:\n- ${benefits}`;
+    const fullMessage = `${message}\n\nLearn more here: ${shareUrl}`;
+
+    const fallbackCopy = () => {
+        navigator.clipboard.writeText(fullMessage);
+        toast({
+            title: "Link Copied!",
+            description: "ReferBolt benefits message copied to clipboard.",
+        });
+    }
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Unlock Your Earnings with GuessMaster ReferBolt!',
+          text: message,
+          url: shareUrl,
+        });
+      } catch (error) {
+        if ((error as DOMException).name !== 'AbortError') {
+          console.error("Share failed:", error);
+          fallbackCopy();
+        }
+      }
+    } else {
+      fallbackCopy();
+    }
   };
 
   return (
@@ -46,6 +85,10 @@ export default function ReferBoltPage() {
         <CardFooter className="flex-col gap-4">
             <Button asChild className="w-full">
                 <Link href="/store">Subscribe to ReferBolt Now</Link>
+            </Button>
+            <Button variant="outline" className="w-full" onClick={handleShare}>
+                <Share2 className="mr-2" />
+                Share Benefits
             </Button>
             <Button variant="secondary" className="w-full" onClick={handleSimulateReferral}>
                 Simulate Referral Commission

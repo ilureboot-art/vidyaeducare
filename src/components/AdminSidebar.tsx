@@ -65,10 +65,10 @@ export function AdminSidebar() {
                         <SidebarMenuItem key={item.href}>
                              <Link href={item.href}>
                                 <SidebarMenuButton asChild tooltip={item.label} isActive={isActive}>
-                                    <>
+                                    <span>
                                         <item.icon/>
                                         <span>{item.label}</span>
-                                    </>
+                                    </span>
                                 </SidebarMenuButton>
                             </Link>
                         </SidebarMenuItem>
@@ -81,20 +81,20 @@ export function AdminSidebar() {
                  <SidebarMenuItem>
                     <Link href="/">
                         <SidebarMenuButton asChild tooltip="Exit Admin">
-                            <>
+                            <span>
                                 <LogOut />
                                 <span>Exit Admin</span>
-                            </>
+                            </span>
                         </SidebarMenuButton>
                     </Link>
                 </SidebarMenuItem>
                  <SidebarMenuItem>
                     <Link href="/profile">
                         <SidebarMenuButton asChild tooltip="Your Profile">
-                           <>
+                           <span>
                                 <Home />
                                 <span>Back to App</span>
-                           </>
+                           </span>
                         </SidebarMenuButton>
                     </Link>
                 </SidebarMenuItem>

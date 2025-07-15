@@ -92,19 +92,13 @@ export default function Home() {
       setFeedback(`Congratulations! You guessed the number in ${attemptsUsed} ${attemptsUsed > 1 ? 'attempts' : 'attempt'}.`);
       setGuessHistory([...guessHistory, { guess: guessNum, hint: 'Correct!' }]);
     } else {
-      try {
-        const { hint } = await getHint({ secretNumber, guess: guessNum });
-        setFeedback(`Hint: Try a ${hint} number!`);
-        setGuessHistory([...guessHistory, { guess: guessNum, hint }]);
-        
-        if (newAttemptsLeft === 0) {
-          setGameState("lost");
-          setFeedback(`Game Over! The correct number was ${secretNumber}.`);
-        }
-      } catch (error) {
-        console.error("Error getting hint:", error);
-        toast({ variant: "destructive", title: "AI Error", description: "Could not get a hint." });
-        setFeedback("Error getting hint. Please try again.");
+      const hint = guessNum < secretNumber ? "higher" : "lower";
+      setFeedback(`Hint: Try a ${hint} number!`);
+      setGuessHistory([...guessHistory, { guess: guessNum, hint }]);
+      
+      if (newAttemptsLeft === 0) {
+        setGameState("lost");
+        setFeedback(`Game Over! The correct number was ${secretNumber}.`);
       }
     }
     

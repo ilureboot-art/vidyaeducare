@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Gamepad2, Trophy, HelpCircle, Store, Zap, Wallet } from "lucide-react";
+import { Gamepad2, Trophy, HelpCircle, Store, Zap, Wallet, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -12,6 +12,7 @@ const navItems = [
   { href: "/store", label: "Store", icon: Store },
   { href: "/referbolt", label: "ReferBolt", icon: Zap },
   { href: "/wallet", label: "Wallet", icon: Wallet },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 export function Navbar() {
@@ -23,7 +24,7 @@ export function Navbar() {
         <div className="mr-4 hidden md:flex">
           <Link href="/" className="mr-6 flex items-center space-x-2">
             <Gamepad2 className="h-6 w-6 text-primary" />
-            <span className="hidden font-bold sm:inline-block">NumberAce</span>
+            <span className="hidden font-bold sm:inline-block">GuessMaster</span>
           </Link>
           <nav className="flex items-center space-x-6 text-sm font-medium">
             {navItems.map((item) => (
@@ -56,7 +57,7 @@ export function Navbar() {
                             )}
                         >
                             <Icon className="h-5 w-5 mb-1" />
-                            <span className="text-center">{item.label}</span>
+                            <span className="text-center text-[10px] leading-tight">{item.label}</span>
                         </Link>
                     )
                 })}

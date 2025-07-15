@@ -120,7 +120,7 @@ export default function Home() {
   const renderIdleState = () => (
     <div className="text-center space-y-6">
         <div className="flex flex-col items-center text-center">
-            <h1 className="text-4xl font-bold font-headline text-primary">NumberAce</h1>
+            <h1 className="text-4xl font-bold font-headline text-primary">GuessMaster</h1>
             <p className="text-muted-foreground mt-2">Guess the secret number between 1 and 100 in 5 tries!</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

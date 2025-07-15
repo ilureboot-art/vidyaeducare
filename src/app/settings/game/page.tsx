@@ -41,23 +41,23 @@ export default function GameSettingsPage() {
             <p className="text-muted-foreground">Note: These settings are for display purposes. An admin panel would be required to modify them.</p>
             <div className="space-y-2">
                 <Label htmlFor="maxAttempts">Max Attempts</Label>
-                <Input id="maxAttempts" defaultValue={gameSettings.maxAttempts} disabled />
+                <Input id="maxAttempts" defaultValue={gameSettings.maxAttempts}  />
             </div>
             <div className="space-y-2">
                 <Label>Reward Tiers (₹)</Label>
                 <div className="grid grid-cols-5 gap-2">
                     {gameSettings.rewardTiers.map((reward, index) => (
-                        <Input key={index} defaultValue={reward} disabled />
+                        <Input key={index} defaultValue={reward}  />
                     ))}
                 </div>
             </div>
              <div className="space-y-2">
                 <Label htmlFor="welcomeBonus">Welcome Bonus (Tickets)</Label>
-                <Input id="welcomeBonus" defaultValue={gameSettings.welcomeBonus} disabled />
+                <Input id="welcomeBonus" defaultValue={gameSettings.welcomeBonus}  />
             </div>
 
              <div className="flex justify-end pt-4">
-                <Button onClick={handleSave} disabled>Save Changes</Button>
+                <Button onClick={handleSave}>Save Changes</Button>
              </div>
         </CardContent>
       </Card>

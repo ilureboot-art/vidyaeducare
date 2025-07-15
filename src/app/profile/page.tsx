@@ -139,7 +139,7 @@ export default function ProfilePage() {
             
 
             <div className="pt-4 flex justify-end">
-                <Button variant="outline" disabled>
+                <Button variant="outline">
                     <Edit className="mr-2"/>
                     Edit Profile
                 </Button>

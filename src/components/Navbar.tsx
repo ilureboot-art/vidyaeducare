@@ -1,12 +1,14 @@
+
 "use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Gamepad2, Trophy, HelpCircle, Store, Zap, Wallet, Settings } from "lucide-react";
+import { Gamepad2, Trophy, HelpCircle, Store, Zap, Wallet, Settings, Home } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { href: "/", label: "Play", icon: Gamepad2 },
+  { href: "/", label: "Home", icon: Home },
+  { href: "/play", label: "Play", icon: Gamepad2 },
   { href: "/how-to-play", label: "How to Play", icon: HelpCircle },
   { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
   { href: "/store", label: "Store", icon: Store },
@@ -33,7 +35,9 @@ export function Navbar() {
                 href={item.href}
                 className={cn(
                   "transition-colors hover:text-foreground/80",
-                  pathname === item.href ? "text-foreground" : "text-foreground/60"
+                   pathname === item.href || (pathname.startsWith(item.href) && item.href !== "/")
+                    ? "text-foreground"
+                    : "text-foreground/60"
                 )}
               >
                 {item.label}
@@ -47,13 +51,14 @@ export function Navbar() {
              <nav className="flex justify-around">
                 {navItems.map((item) => {
                     const Icon = item.icon;
+                    const isActive = pathname === item.href || (pathname.startsWith(item.href) && item.href !== "/");
                     return (
                         <Link
                             key={item.href}
                             href={item.href}
                             className={cn(
-                                "flex flex-col items-center justify-center w-16 h-14 rounded-md text-xs font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
-                                pathname === item.href ? "bg-accent text-accent-foreground" : "text-muted-foreground"
+                                "flex flex-col items-center justify-center w-14 h-14 rounded-md text-xs font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
+                                isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground"
                             )}
                         >
                             <Icon className="h-5 w-5 mb-1" />

@@ -56,7 +56,7 @@ export default function LoginPage() {
         </Link>
       </div>
        <div className="text-center text-sm">
-            <Link href="/login?admin=true" passHref>
+            <Link href="/admin" passHref>
                 <Button variant="link" size="sm" className="text-muted-foreground">
                     <Shield className="mr-2"/> Admin Login
                 </Button>

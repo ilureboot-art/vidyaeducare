@@ -15,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Gamepad2 } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 
 export default function SignupPage() {
   const searchParams = useSearchParams();
@@ -46,15 +47,19 @@ export default function SignupPage() {
           <div className="space-y-2">
             <Label htmlFor="name">Full Name</Label>
             <Input id="name" placeholder="Alex Doe" required />
+            <p className="text-xs text-muted-foreground">Your full name as it appears on your documents.</p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="phone">WhatsApp Number</Label>
             <Input id="phone" type="tel" placeholder="+91 12345 67890" required />
+            <p className="text-xs text-muted-foreground">We'll use this for login and important notifications.</p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
             <Input id="password" type="password" required />
+            <p className="text-xs text-muted-foreground">Choose a strong password with at least 8 characters.</p>
           </div>
+          <Separator />
            <div className="space-y-2">
             <Label htmlFor="referral">Referral Code (Optional)</Label>
             <Input 
@@ -65,6 +70,7 @@ export default function SignupPage() {
               readOnly={!!searchParams.get('ref')}
               className={!!searchParams.get('ref') ? 'bg-muted/50' : ''}
             />
+            {referralCode && <p className="text-xs text-green-500">Referral code applied! You'll receive a welcome bonus.</p>}
           </div>
         </CardContent>
         <CardContent>

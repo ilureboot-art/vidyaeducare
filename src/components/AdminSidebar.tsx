@@ -78,16 +78,16 @@ export function AdminSidebar() {
                  <SidebarMenuItem>
                     <Link href="/">
                         <SidebarMenuButton tooltip="Exit Admin">
-                                <LogOut />
-                                <span>Exit Admin</span>
+                                <Home />
+                                <span>Back to App</span>
                         </SidebarMenuButton>
                     </Link>
                 </SidebarMenuItem>
                  <SidebarMenuItem>
-                    <Link href="/profile">
-                        <SidebarMenuButton tooltip="Your Profile">
-                                <Home />
-                                <span>Back to App</span>
+                    <Link href="/login">
+                        <SidebarMenuButton tooltip="Sign Out">
+                                <LogOut />
+                                <span>Sign Out</span>
                         </SidebarMenuButton>
                     </Link>
                 </SidebarMenuItem>

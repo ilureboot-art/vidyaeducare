@@ -42,6 +42,7 @@ export default function PlayPage() {
   const [guessHistory, setGuessHistory] = useState<{ guess: number; hint: string }[]>([]);
   const [attemptsLeft, setAttemptsLeft] = useState(MAX_ATTEMPTS);
   const [gameState, setGameState] = useState<GameState>("idle");
+  const [isDemoMode, setIsDemoMode] = useState(false);
   const [feedback, setFeedback] = useState("Start a new game to play!");
   const [isChecking, setIsChecking] = useState(false);
   const [reward, setReward] = useState(0);
@@ -64,6 +65,7 @@ export default function PlayPage() {
     setReward(0);
     setFeedback("Guess a number between 1 and 100.");
     setGameState(isDemo ? "demo" : "playing");
+    setIsDemoMode(isDemo);
   }, []);
 
   const startGame = useCallback((isDemo = false) => {
@@ -110,12 +112,12 @@ export default function PlayPage() {
 
     if (guessNum === secretNumber) {
       const attemptsUsed = MAX_ATTEMPTS - newAttemptsLeft;
-      const earnedReward = gameState === 'demo' ? 0 : REWARDS[attemptsUsed - 1] || 0;
+      const earnedReward = isDemoMode ? 0 : REWARDS[attemptsUsed - 1] || 0;
       setReward(earnedReward);
       setGameState("won");
       setFeedback(`Congratulations! You guessed the number in ${attemptsUsed} ${attemptsUsed > 1 ? 'attempts' : 'attempt'}.`);
       setGuessHistory([...guessHistory, { guess: guessNum, hint: 'Correct!' }]);
-      if (gameState !== 'demo') {
+      if (!isDemoMode) {
           toast({
             title: "You Won!",
             description: `₹${earnedReward} has been added to your wallet.`,
@@ -218,11 +220,11 @@ Join now: ${shareUrl}
   const renderPlayingState = () => (
     <div className="space-y-4">
         <div className="flex justify-between items-center">
-            <h2 className="text-lg font-semibold">{gameState === 'demo' ? 'Demo Game' : 'Real Game'}</h2>
+            <h2 className="text-lg font-semibold">{isDemoMode ? 'Demo Game' : 'Real Game'}</h2>
             <Badge variant="secondary">Attempt {MAX_ATTEMPTS - attemptsLeft + 1} of {MAX_ATTEMPTS}</Badge>
         </div>
-        <div className="p-4 bg-muted/50 rounded-lg text-center font-medium flex items-center justify-center gap-2">
-            <Lightbulb className="w-5 h-5 text-accent"/>
+        <div className="p-4 bg-muted/50 rounded-lg text-center font-medium flex items-center justify-center gap-2 min-h-[64px]">
+            <Lightbulb className="w-5 h-5 text-accent shrink-0"/>
             <span>{feedback}</span>
         </div>
         <form onSubmit={(e) => { e.preventDefault(); handleGuessSubmit(); }} className="flex gap-2">
@@ -274,7 +276,7 @@ Join now: ${shareUrl}
             </div>
         )}
         <div className="flex gap-4 pt-4">
-            <Button onClick={() => startGame(gameState === 'demo')}><RefreshCw className="mr-2 h-4 w-4"/> Play Again</Button>
+            <Button onClick={() => startGame(isDemoMode)}><RefreshCw className="mr-2 h-4 w-4"/> Play Again</Button>
             <Button variant="outline" onClick={goBackToMenu}>Exit to Home</Button>
         </div>
     </div>

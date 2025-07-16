@@ -5,7 +5,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, Gamepad2, HelpCircle, Trophy, Store, Gift, Zap, Wallet, Settings, ChevronRight, X } from "lucide-react";
+import { Menu, Gamepad2, HelpCircle, Trophy, Store, Gift, Zap, Wallet, Settings, ChevronRight, X, LogOut } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 const navItems = [
@@ -32,7 +32,7 @@ export function AppHeader() {
                         <span className="sr-only">Open Menu</span>
                     </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="w-72 p-0">
+                <SheetContent side="left" className="w-72 p-0 flex flex-col">
                     <SheetHeader className="p-4">
                          <div className="flex justify-between items-center">
                             <SheetTitle asChild>
@@ -44,9 +44,9 @@ export function AppHeader() {
                         </div>
                         <SheetDescription className="sr-only">Main navigation menu for the application.</SheetDescription>
                     </SheetHeader>
-                    <div className="p-4 pt-0">
+                    <div className="p-4 pt-0 flex-1 flex flex-col">
                         <Separator />
-                        <nav className="mt-6">
+                        <nav className="mt-6 flex-1">
                             <ul className="space-y-1">
                                 {navItems.map((item) => {
                                     const Icon = item.icon;
@@ -68,6 +68,19 @@ export function AppHeader() {
                                 })}
                             </ul>
                         </nav>
+                        <Separator />
+                        <div className="mt-4">
+                             <Link
+                                href="/login"
+                                onClick={() => setIsOpen(false)}
+                                className="flex items-center justify-between p-3 text-lg font-medium rounded-lg hover:bg-muted"
+                            >
+                                <div className="flex items-center gap-4">
+                                    <LogOut className="w-6 h-6 text-destructive" />
+                                    <span>Sign Out</span>
+                                </div>
+                            </Link>
+                        </div>
                     </div>
                 </SheetContent>
             </Sheet>

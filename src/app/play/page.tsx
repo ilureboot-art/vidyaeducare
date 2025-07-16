@@ -164,15 +164,12 @@ export default function PlayPage() {
           url: shareUrl,
         });
       } catch (error) {
-        // If the user cancels the share sheet, it's not an error.
-        // Otherwise, if sharing fails (e.g., permission denied), use the fallback.
         if ((error as DOMException).name !== 'AbortError') {
           console.error("Web Share API failed, falling back to clipboard:", error);
           fallbackCopy();
         }
       }
     } else {
-      // Fallback for browsers that don't support the Web Share API.
       fallbackCopy();
     }
   };
@@ -306,7 +303,7 @@ export default function PlayPage() {
       <Card className="shadow-2xl shadow-primary/10">
         <CardHeader>
           {gameState !== 'idle' ? renderGameInfo() : <CardTitle className="text-center">Welcome!</CardTitle>}
-        </_CardHeader>
+        </CardHeader>
         <CardContent className="min-h-[300px] flex items-center justify-center">
           {renderCardContent()}
         </CardContent>

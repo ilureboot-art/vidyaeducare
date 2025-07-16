@@ -50,7 +50,7 @@ const hintFlow = ai.defineFlow(
   },
   async (input) => {
     const { output } = await hintPrompt(input);
-    return output!;
+    return output || '';
   }
 );
 

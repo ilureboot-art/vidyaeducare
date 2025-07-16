@@ -33,7 +33,7 @@ export default function AdminGameSettingsPage() {
         <Card>
             <CardHeader>
                 <CardTitle>Core Gameplay</CardTitle>
-                <CardDescription>Adjust the fundamental rules of the NumberAce game.</CardDescription>
+                <CardDescription>Adjust the fundamental rules of the GuessMaster game.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

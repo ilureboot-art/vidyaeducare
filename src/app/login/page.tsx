@@ -1,0 +1,67 @@
+
+"use client";
+
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Gamepad2, Shield } from "lucide-react";
+
+export default function LoginPage() {
+  return (
+    <div className="w-full max-w-md mx-auto flex flex-col items-center justify-center min-h-screen space-y-4">
+      <div className="text-center space-y-2">
+        <h1 className="text-4xl font-bold text-primary flex items-center gap-2 justify-center">
+            <Gamepad2 className="w-10 h-10" /> GuessMaster
+        </h1>
+        <p className="text-muted-foreground">Welcome back! Please login to your account.</p>
+      </div>
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle>Login</CardTitle>
+          <CardDescription>
+            Enter your WhatsApp number and password to access your account.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="phone">WhatsApp Number</Label>
+            <Input id="phone" type="tel" placeholder="+91 12345 67890" required />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <Input id="password" type="password" required />
+          </div>
+        </CardContent>
+        <CardContent>
+          <Button className="w-full">Login</Button>
+          <div className="mt-4 text-center text-sm">
+            <Link href="/forgot-password" passHref>
+                <Button variant="link" className="px-1">Forgot password?</Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+      <div className="text-center text-sm">
+        Don't have an account?{" "}
+        <Link href="/signup" passHref>
+            <Button variant="link" className="px-1">Sign up</Button>
+        </Link>
+      </div>
+       <div className="text-center text-sm">
+            <Link href="/login?admin=true" passHref>
+                <Button variant="link" size="sm" className="text-muted-foreground">
+                    <Shield className="mr-2"/> Admin Login
+                </Button>
+            </Link>
+      </div>
+    </div>
+  );
+}

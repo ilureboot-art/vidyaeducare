@@ -72,7 +72,7 @@ export function AppHeader() {
                 </SheetContent>
             </Sheet>
             <Link href="/" className="text-2xl font-bold text-primary tracking-tighter">
-                NumberAce
+                GuessMaster
             </Link>
              <div className="w-10"></div>
         </div>

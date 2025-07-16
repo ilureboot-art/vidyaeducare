@@ -3,7 +3,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Gamepad2, Zap, HelpCircle, Trophy, Star, Sprout } from "lucide-react";
+import { Gamepad2, Zap, HelpCircle, Trophy, Star, Sprout, LogIn } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { ChatWidget } from "@/components/ChatWidget";
@@ -12,14 +12,14 @@ export default function HomePage() {
   return (
     <div className="w-full max-w-4xl mx-auto space-y-8">
       <section className="text-center py-8">
-        <h1 className="text-5xl font-bold text-primary tracking-tighter">Welcome to NumberAce!</h1>
+        <h1 className="text-5xl font-bold text-primary tracking-tighter">Welcome to GuessMaster!</h1>
         <p className="text-xl text-muted-foreground mt-2">The ultimate number guessing challenge where your intuition can win you real rewards.</p>
         <div className="mt-6 flex gap-4 justify-center">
             <Button asChild size="lg">
                 <Link href="/play"><Star className="mr-2"/> Play Now</Link>
             </Button>
             <Button asChild size="lg" variant="secondary">
-                 <Link href="/how-to-play"><HelpCircle className="mr-2"/> How to Play</Link>
+                 <Link href="/login"><LogIn className="mr-2"/> Login / Signup</Link>
             </Button>
         </div>
       </section>
@@ -33,7 +33,7 @@ export default function HomePage() {
           <CardContent className="space-y-4">
             <Image 
                 src="https://placehold.co/600x400.png"
-                alt="NumberAce game screenshot"
+                alt="GuessMaster game screenshot"
                 width={600}
                 height={400}
                 className="rounded-md"
@@ -78,7 +78,7 @@ export default function HomePage() {
             <CardContent className="p-6 grid md:grid-cols-2 gap-6 items-center">
                  <div>
                     <h3 className="text-2xl font-bold text-primary flex items-center gap-2"><Trophy /> Compete on the Leaderboard!</h3>
-                    <p className="text-muted-foreground mt-2">Think you're the best NumberAce around? Prove it! Climb the ranks on our global leaderboard and claim bragging rights and exclusive rewards. Every game counts towards your total score.</p>
+                    <p className="text-muted-foreground mt-2">Think you're the best GuessMaster around? Prove it! Climb the ranks on our global leaderboard and claim bragging rights and exclusive rewards. Every game counts towards your total score.</p>
                      <Button asChild className="mt-4">
                         <Link href="/leaderboard">View Leaderboard</Link>
                      </Button>

@@ -3,24 +3,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Gamepad2, Trophy, HelpCircle, Store, Gift, Wallet, Settings, Home, User, Shield } from "lucide-react";
+import { Gamepad2, Store, Gift, Wallet, User, Home, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/", label: "Home", icon: Home },
   { href: "/play", label: "Play", icon: Gamepad2 },
-  { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
-  { href: "/store", label: "Store", icon: Store },
+  { href: "/refer", label: "Refer", icon: Gift },
+  { href: "/referbolt", label: "ReferBolt", icon: Zap },
+  { href: "/wallet", label: "Wallet", icon: Wallet },
   { href: "/profile", label: "Profile", icon: User },
 ];
-
-const mobileOnlyItems = [
-    { href: "/refer", label: "Refer", icon: Gift },
-    { href: "/wallet", label: "Wallet", icon: Wallet },
-    { href: "/settings", label: "Settings", icon: Settings },
-    { href: "/admin", label: "Admin", icon: Shield },
-    { href: "/how-to-play", label: "Guide", icon: HelpCircle },
-]
 
 export function Navbar() {
   const pathname = usePathname();

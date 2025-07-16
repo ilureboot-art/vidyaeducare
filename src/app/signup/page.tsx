@@ -1,0 +1,63 @@
+
+"use client";
+
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Gamepad2 } from "lucide-react";
+
+export default function SignupPage() {
+  return (
+    <div className="w-full max-w-md mx-auto flex flex-col items-center justify-center min-h-screen space-y-4">
+       <div className="text-center space-y-2">
+        <h1 className="text-4xl font-bold text-primary flex items-center gap-2 justify-center">
+            <Gamepad2 className="w-10 h-10" /> GuessMaster
+        </h1>
+        <p className="text-muted-foreground">Create your account to start playing.</p>
+      </div>
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle>Sign Up</CardTitle>
+          <CardDescription>
+            Enter your information to create an account.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="name">Full Name</Label>
+            <Input id="name" placeholder="Alex Doe" required />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="phone">WhatsApp Number</Label>
+            <Input id="phone" type="tel" placeholder="+91 12345 67890" required />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <Input id="password" type="password" required />
+          </div>
+           <div className="space-y-2">
+            <Label htmlFor="referral">Referral Code (Optional)</Label>
+            <Input id="referral" placeholder="Enter referral code" />
+          </div>
+        </CardContent>
+        <CardContent>
+          <Button className="w-full">Create Account</Button>
+        </CardContent>
+      </Card>
+      <div className="text-center text-sm">
+        Already have an account?{" "}
+         <Link href="/login" passHref>
+            <Button variant="link" className="px-1">Login</Button>
+        </Link>
+      </div>
+    </div>
+  );
+}

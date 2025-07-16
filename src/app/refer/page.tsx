@@ -25,8 +25,8 @@ export default function ReferPage() {
   };
 
   const handleShare = async () => {
-    const shareUrl = `https://numberace.app/join?ref=${referralData.referralCode}`;
-    const message = `Join me on NumberAce! Use my code ${referralData.referralCode} when you sign up, and we both get a ₹${referralData.welcomeBonus} bonus!`;
+    const shareUrl = `https://guessmaster.app/join?ref=${referralData.referralCode}`;
+    const message = `Join me on GuessMaster! Use my code ${referralData.referralCode} when you sign up, and we both get a ₹${referralData.welcomeBonus} bonus!`;
     const fullMessage = `${message}\n${shareUrl}`;
 
     const fallbackCopy = () => {
@@ -40,7 +40,7 @@ export default function ReferPage() {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'Join me on NumberAce!',
+          title: 'Join me on GuessMaster!',
           text: message,
           url: shareUrl,
         });

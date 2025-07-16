@@ -5,15 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { User, Mail, Calendar, TrendingUp, Gamepad2, Percent, Edit, Fingerprint, HelpCircle, Trophy, Store as StoreIcon, Zap, Wallet, Settings as SettingsIcon, Compass, ChevronRight, Gift } from "lucide-react";
-import Link from "next/link";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion"
-
+import { User, Mail, Calendar, TrendingUp, Gamepad2, Percent, Edit, Fingerprint } from "lucide-react";
 
 // Mock data for the user profile
 const userProfile = {
@@ -28,18 +20,6 @@ const userProfile = {
     winRate: 45,
   },
 };
-
-const profileNavItems = [
-    { href: "/play", label: "Play", icon: Gamepad2 },
-    { href: "/how-to-play", label: "How to Play", icon: HelpCircle },
-    { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
-    { href: "/store", label: "Store", icon: StoreIcon },
-    { href: "/refer", label: "Refer & Earn", icon: Gift },
-    { href: "/referbolt", label: "ReferBolt System", icon: Zap },
-    { href: "/wallet", label: "Wallet", icon: Wallet },
-    { href: "/settings", label: "Settings", icon: SettingsIcon },
-];
-
 
 export default function ProfilePage() {
     const formattedJoinDate = new Date(userProfile.joinDate).toLocaleDateString('en-US', {
@@ -110,34 +90,7 @@ export default function ProfilePage() {
                     </div>
                 </div>
             </div>
-
-            <Separator />
-
-            <Accordion type="single" collapsible className="w-full">
-              <AccordionItem value="item-1">
-                <AccordionTrigger>
-                   <h3 className="font-semibold text-lg flex items-center gap-2"><Compass className="w-5 h-5 text-accent"/> Navigate</h3>
-                </AccordionTrigger>
-                <AccordionContent>
-                  <div className="divide-y divide-border">
-                    {profileNavItems.map((item) => {
-                      const Icon = item.icon;
-                      return (
-                        <Link key={item.href} href={item.href} className="flex items-center justify-between p-3 hover:bg-muted/50 transition-colors rounded-lg">
-                            <div className="flex items-center gap-4">
-                                <Icon className="w-5 h-5 text-primary" />
-                                <span className="font-medium">{item.label}</span>
-                            </div>
-                            <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                        </Link>
-                      )
-                    })}
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
             
-
             <div className="pt-4 flex justify-end">
                 <Button variant="outline">
                     <Edit className="mr-2"/>

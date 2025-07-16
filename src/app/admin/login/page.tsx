@@ -26,9 +26,9 @@ export default function AdminLoginPage() {
   const { toast } = useToast();
   const router = useRouter();
 
+  // Shared function to "send" OTP
   const handleSendOtp = (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, you would call your backend to send an OTP
     setIsOtpSent(true);
     toast({
       title: "OTP Sent (Demo)",
@@ -36,23 +36,18 @@ export default function AdminLoginPage() {
     });
   };
 
+  // Admin Login Handler
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (otp === DEMO_OTP) {
-        toast({
-            title: "Login Successful!",
-            description: "Redirecting to admin dashboard...",
-        });
-        router.push("/admin");
-    } else {
-        toast({
-            variant: "destructive",
-            title: "Invalid OTP",
-            description: "The OTP you entered is incorrect.",
-        });
-    }
+    // In a real app, you would verify credentials against your backend.
+    toast({
+        title: "Login Successful!",
+        description: "Redirecting to admin dashboard...",
+    });
+    router.push("/admin/analytics");
   };
 
+  // Admin Signup Handler
   const handleSignup = (e: React.FormEvent) => {
      e.preventDefault();
     if (otp === DEMO_OTP) {
@@ -60,7 +55,7 @@ export default function AdminLoginPage() {
             title: "Account Created Successfully!",
             description: "Redirecting to admin dashboard...",
         });
-        router.push("/admin");
+        router.push("/admin/analytics");
     } else {
         toast({
             variant: "destructive",
@@ -85,33 +80,24 @@ export default function AdminLoginPage() {
                 <TabsTrigger value="signup">Sign Up</TabsTrigger>
             </TabsList>
             <TabsContent value="login">
-                <form onSubmit={isOtpSent ? handleLogin : handleSendOtp}>
+                <form onSubmit={handleLogin}>
                     <CardHeader>
                         <CardTitle>Admin Login</CardTitle>
                         <CardDescription>
-                            {isOtpSent ? "Enter the OTP we 'sent' to your number." : "Enter your WhatsApp number to receive a login OTP."}
+                            Enter your credentials to access the admin panel.
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                             <div className="space-y-2">
                                 <Label htmlFor="phone-login">WhatsApp Number</Label>
-                                <Input id="phone-login" type="tel" placeholder="+91 12345 67890" required disabled={isOtpSent} />
+                                <Input id="phone-login" type="tel" placeholder="+91 12345 67890" required />
                             </div>
-                            {isOtpSent && (
-                                <div className="space-y-2">
-                                    <Label htmlFor="otp-login">Enter OTP</Label>
-                                    <Input 
-                                        id="otp-login" 
-                                        type="text" 
-                                        placeholder="123456" 
-                                        required 
-                                        value={otp}
-                                        onChange={(e) => setOtp(e.target.value)}
-                                        />
-                                </div>
-                            )}
+                            <div className="space-y-2">
+                                <Label htmlFor="password-login">Password</Label>
+                                <Input id="password-login" type="password" required />
+                            </div>
                             <Button type="submit" className="w-full">
-                                {isOtpSent ? 'Login with OTP' : 'Send OTP'}
+                                Login
                             </Button>
                     </CardContent>
                 </form>
@@ -132,6 +118,10 @@ export default function AdminLoginPage() {
                             <div className="space-y-2">
                                 <Label htmlFor="phone-signup">WhatsApp Number</Label>
                                 <Input id="phone-signup" type="tel" placeholder="+91 12345 67890" required disabled={isOtpSent}/>
+                            </div>
+                             <div className="space-y-2">
+                                <Label htmlFor="password-signup">Password</Label>
+                                <Input id="password-signup" type="password" required disabled={isOtpSent}/>
                             </div>
                             {isOtpSent && (
                                 <div className="space-y-2">

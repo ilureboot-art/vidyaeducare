@@ -89,13 +89,13 @@ export default function SignupPage() {
               <Input id="phone" type="tel" placeholder="+91 12345 67890" required disabled={isOtpSent} />
               <p className="text-xs text-muted-foreground">We'll use this for login and important notifications.</p>
             </div>
+            <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input id="password" type="password" required disabled={isOtpSent}/>
+                <p className="text-xs text-muted-foreground">Choose a strong password with at least 8 characters.</p>
+            </div>
             {!isOtpSent && (
               <>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input id="password" type="password" required />
-                  <p className="text-xs text-muted-foreground">Choose a strong password with at least 8 characters.</p>
-                </div>
                 <Separator />
                 <div className="space-y-2">
                   <Label htmlFor="referral">Referral Code (Optional)</Label>
@@ -127,7 +127,7 @@ export default function SignupPage() {
           </CardContent>
           <CardContent>
             <Button className="w-full" type="submit">
-              {isOtpSent ? "Verify & Create Account" : "Send OTP"}
+              {isOtpSent ? "Verify & Create Account" : "Send Verification OTP"}
             </Button>
           </CardContent>
         </form>

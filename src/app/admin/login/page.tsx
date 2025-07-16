@@ -13,16 +13,61 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Shield, Gamepad2, ArrowLeft } from "lucide-react";
+import { Shield, ArrowLeft } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
+
+const DEMO_OTP = "123456";
 
 export default function AdminLoginPage() {
   const [isOtpSent, setIsOtpSent] = useState(false);
+  const [otp, setOtp] = useState("");
+  const { toast } = useToast();
+  const router = useRouter();
 
   const handleSendOtp = (e: React.FormEvent) => {
     e.preventDefault();
     // In a real app, you would call your backend to send an OTP
     setIsOtpSent(true);
+    toast({
+      title: "OTP Sent (Demo)",
+      description: `For demonstration purposes, your OTP is ${DEMO_OTP}`,
+    });
+  };
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (otp === DEMO_OTP) {
+        toast({
+            title: "Login Successful!",
+            description: "Redirecting to admin dashboard...",
+        });
+        router.push("/admin");
+    } else {
+        toast({
+            variant: "destructive",
+            title: "Invalid OTP",
+            description: "The OTP you entered is incorrect.",
+        });
+    }
+  };
+
+  const handleSignup = (e: React.FormEvent) => {
+     e.preventDefault();
+    if (otp === DEMO_OTP) {
+        toast({
+            title: "Account Created Successfully!",
+            description: "Redirecting to admin dashboard...",
+        });
+        router.push("/admin");
+    } else {
+        toast({
+            variant: "destructive",
+            title: "Invalid OTP",
+            description: "The OTP you entered is incorrect.",
+        });
+    }
   }
 
   return (
@@ -40,58 +85,72 @@ export default function AdminLoginPage() {
                 <TabsTrigger value="signup">Sign Up</TabsTrigger>
             </TabsList>
             <TabsContent value="login">
-                <CardHeader>
-                    <CardTitle>Admin Login</CardTitle>
-                    <CardDescription>
-                        Enter your WhatsApp number to receive a login OTP.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                     <form onSubmit={handleSendOtp} className="space-y-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="phone-login">WhatsApp Number</Label>
-                            <Input id="phone-login" type="tel" placeholder="+91 12345 67890" required />
-                        </div>
-                        {isOtpSent && (
+                <form onSubmit={isOtpSent ? handleLogin : handleSendOtp}>
+                    <CardHeader>
+                        <CardTitle>Admin Login</CardTitle>
+                        <CardDescription>
+                            {isOtpSent ? "Enter the OTP we 'sent' to your number." : "Enter your WhatsApp number to receive a login OTP."}
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
                             <div className="space-y-2">
-                                <Label htmlFor="otp-login">Enter OTP</Label>
-                                <Input id="otp-login" type="text" placeholder="123456" required />
+                                <Label htmlFor="phone-login">WhatsApp Number</Label>
+                                <Input id="phone-login" type="tel" placeholder="+91 12345 67890" required disabled={isOtpSent} />
                             </div>
-                        )}
-                        <Button type="submit" className="w-full">
-                            {isOtpSent ? 'Login with OTP' : 'Send OTP'}
-                        </Button>
-                    </form>
-                </CardContent>
+                            {isOtpSent && (
+                                <div className="space-y-2">
+                                    <Label htmlFor="otp-login">Enter OTP</Label>
+                                    <Input 
+                                        id="otp-login" 
+                                        type="text" 
+                                        placeholder="123456" 
+                                        required 
+                                        value={otp}
+                                        onChange={(e) => setOtp(e.target.value)}
+                                        />
+                                </div>
+                            )}
+                            <Button type="submit" className="w-full">
+                                {isOtpSent ? 'Login with OTP' : 'Send OTP'}
+                            </Button>
+                    </CardContent>
+                </form>
             </TabsContent>
             <TabsContent value="signup">
-                 <CardHeader>
-                    <CardTitle>Admin Sign Up</CardTitle>
-                    <CardDescription>
-                        Create a new administrator account.
-                    </CardDescription>
-                </CardHeader>
-                 <CardContent className="space-y-4">
-                     <form onSubmit={handleSendOtp} className="space-y-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="name-signup">Full Name</Label>
-                            <Input id="name-signup" placeholder="Admin Name" required />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="phone-signup">WhatsApp Number</Label>
-                            <Input id="phone-signup" type="tel" placeholder="+91 12345 67890" required />
-                        </div>
-                        {isOtpSent && (
-                             <div className="space-y-2">
-                                <Label htmlFor="otp-signup">Enter OTP</Label>
-                                <Input id="otp-signup" type="text" placeholder="123456" required />
+                 <form onSubmit={isOtpSent ? handleSignup : handleSendOtp}>
+                    <CardHeader>
+                        <CardTitle>Admin Sign Up</CardTitle>
+                        <CardDescription>
+                           {isOtpSent ? "Enter the OTP to verify your account." : "Create a new administrator account."}
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="name-signup">Full Name</Label>
+                                <Input id="name-signup" placeholder="Admin Name" required disabled={isOtpSent}/>
                             </div>
-                        )}
-                        <Button type="submit" className="w-full">
-                           {isOtpSent ? 'Create Account & Login' : 'Send Verification OTP'}
-                        </Button>
-                    </form>
-                </CardContent>
+                            <div className="space-y-2">
+                                <Label htmlFor="phone-signup">WhatsApp Number</Label>
+                                <Input id="phone-signup" type="tel" placeholder="+91 12345 67890" required disabled={isOtpSent}/>
+                            </div>
+                            {isOtpSent && (
+                                <div className="space-y-2">
+                                    <Label htmlFor="otp-signup">Enter OTP</Label>
+                                    <Input 
+                                        id="otp-signup" 
+                                        type="text" 
+                                        placeholder="123456" 
+                                        required 
+                                        value={otp}
+                                        onChange={(e) => setOtp(e.target.value)}
+                                        />
+                                </div>
+                            )}
+                            <Button type="submit" className="w-full">
+                            {isOtpSent ? 'Create Account & Login' : 'Send Verification OTP'}
+                            </Button>
+                    </CardContent>
+                 </form>
             </TabsContent>
         </Tabs>
       </Card>

@@ -125,17 +125,9 @@ export default function PlayPage() {
       }
     } else {
       const direction = guessNum < secretNumber ? "higher" : "lower";
-      
-      try {
-        const aiHint = await getAiHint({ guess: guessNum, direction });
-        setFeedback(aiHint);
-        setGuessHistory([...guessHistory, { guess: guessNum, hint: `AI: "${aiHint}"` }]);
-      } catch (error) {
-        console.error("AI hint failed, falling back to simple hint", error);
-        const hint = `Hint: Try a ${direction} number!`;
-        setFeedback(hint);
-        setGuessHistory([...guessHistory, { guess: guessNum, hint: `Try ${direction}` }]);
-      }
+      const hint = `The secret number is ${direction}.`;
+      setFeedback(hint);
+      setGuessHistory([...guessHistory, { guess: guessNum, hint: `Try ${direction}` }]);
       
       if (newAttemptsLeft === 0) {
         setGameState("lost");

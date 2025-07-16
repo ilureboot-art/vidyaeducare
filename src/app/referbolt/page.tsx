@@ -18,20 +18,28 @@ export default function ReferBoltPage() {
   };
 
   const handleShare = async () => {
-    const shareUrl = `https://guessmaster.app/referbolt`;
+    // In a real app, this code would be fetched for the logged-in user
+    const referralCode = "ALEX-D7F6E5";
+    const shareUrl = `${window.location.origin}/signup?ref=${referralCode}`;
     const benefits = [
-        "Referral commission INR 50/- per referral",
-        "1 cycle of 3 referrals",
-        "Direct & indirect referrals commission",
-        "Get bonus of 4 game tickets (8 games worth INR 100/-)",
-        "Unlimited earning potential"
+        "Earn a ₹50 commission for every referral who subscribes.",
+        "Complete a cycle with just 3 referrals.",
+        "Earn from both direct & indirect referrals as your network grows.",
+        "Get a bonus of 4 game tickets (8 games worth ₹100/-) upon subscribing.",
+        "Unlimited earning potential through continuous cycles."
     ].join("\n- ");
 
-    const message = `Check out the ReferBolt system on GuessMaster!\n\nHere are the benefits:\n- ${benefits}`;
-    const fullMessage = `${message}\n\nLearn more here: ${shareUrl}`;
+    const message = `🤝 Join Referbolt - India's Best Skill Gaming Platform! 🤝
+🚀 Use my referral code: ${referralCode}
+ReferBolt Benefits
+- ${benefits}
+
+💸 Earn real cash through referbolt
+Join now: ${shareUrl}
+#GuessMaster #SkillGaming #CashPrizes #ReferralBonus #Referbolt`;
 
     const fallbackCopy = () => {
-        navigator.clipboard.writeText(fullMessage);
+        navigator.clipboard.writeText(message);
         toast({
             title: "Link Copied!",
             description: "ReferBolt benefits message copied to clipboard.",

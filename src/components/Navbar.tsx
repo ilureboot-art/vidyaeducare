@@ -30,7 +30,7 @@ export function Navbar() {
   }
 
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-2 z-50">
+    <div className="fixed bottom-0 left-0 right-0 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-2 z-50">
          <nav className="flex justify-around">
             {navItems.map((item) => {
                 const Icon = item.icon;

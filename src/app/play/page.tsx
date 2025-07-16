@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { getAiHint } from "@/ai/flows/guessmaster-ai-hint";
+import { getAiHint } from "@/ai/flows/numberace-ai-hint";
 import {
   Award,
   CircleHelp,
@@ -144,8 +144,8 @@ export default function PlayPage() {
   };
 
   const handleShare = async () => {
-    const shareUrl = `https://guessmaster.app/`;
-    const message = `Think you can guess the secret number? I'm playing GuessMaster and you can win up to ₹100 on your first try! Come play and see if you can beat my score.`;
+    const shareUrl = `https://numberace.app/`;
+    const message = `Think you can guess the secret number? I'm playing NumberAce and you can win up to ₹100 on your first try! Come play and see if you can beat my score.`;
     const fullMessage = `${message}\n${shareUrl}`;
 
     const fallbackCopy = () => {
@@ -159,7 +159,7 @@ export default function PlayPage() {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'Join me on GuessMaster!',
+          title: 'Join me on NumberAce!',
           text: message,
           url: shareUrl,
         });
@@ -190,7 +190,7 @@ export default function PlayPage() {
   const renderIdleState = () => (
     <div className="text-center space-y-6">
         <div className="flex flex-col items-center text-center">
-            <h1 className="text-4xl font-bold font-headline text-primary">GuessMaster</h1>
+            <h1 className="text-4xl font-bold font-headline text-primary">NumberAce</h1>
             <p className="text-muted-foreground mt-2">Guess the secret number between 1 and 100 in 5 tries!</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -199,7 +199,7 @@ export default function PlayPage() {
         </div>
         <Button variant="ghost" onClick={handleShare} className="w-full">
             <Share2 className="mr-2 h-4 w-4"/>
-            Share & Promote GuessMaster
+            Share & Promote NumberAce
         </Button>
     </div>
   );

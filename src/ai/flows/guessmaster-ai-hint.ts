@@ -1,7 +1,7 @@
 
 'use server';
 /**
- * @fileOverview An AI flow for providing hints in the GuessMaster game.
+ * @fileOverview An AI flow for providing hints in the NumberAce game.
  *
  * - getAiHint - A function that returns a creative hint.
  * - AiHintInput - The input type for the getAiHint function.
@@ -22,7 +22,7 @@ const hintPrompt = ai.definePrompt({
     name: "hintPrompt",
     input: { schema: AiHintInputSchema },
     output: { schema: z.string() },
-    prompt: `You are a witty and clever game show host for a number guessing game called GuessMaster. The user is trying to guess a secret number. Their last guess was {{{guess}}}. The secret number is actually {{{direction}}} than that.
+    prompt: `You are a witty and clever game show host for a number guessing game called NumberAce. The user is trying to guess a secret number. Their last guess was {{{guess}}}. The secret number is actually {{{direction}}} than that.
 
 Give them a short, creative, and fun hint to guide them. Be encouraging and a bit playful.
 
@@ -58,5 +58,3 @@ const hintFlow = ai.defineFlow(
 export async function getAiHint(input: AiHintInput): Promise<string> {
     return await hintFlow(input);
 }
-
-    

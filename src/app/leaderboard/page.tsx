@@ -35,7 +35,7 @@ export default function LeaderboardPage() {
             Top Players
           </CardTitle>
           <CardDescription className="text-center">
-            See who is leading the charts in GuessMaster!
+            See who is leading the charts in NumberAce!
           </CardDescription>
         </CardHeader>
         <CardContent>

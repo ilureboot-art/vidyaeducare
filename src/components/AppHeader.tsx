@@ -4,7 +4,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "@/components/ui/sheet";
 import { Menu, Gamepad2, HelpCircle, Trophy, Store, Gift, Zap, Wallet, Settings, ChevronRight, X } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
@@ -32,14 +32,19 @@ export function AppHeader() {
                         <span className="sr-only">Open Menu</span>
                     </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="w-72">
-                    <div className="p-4">
-                         <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-xl font-bold text-primary">Menu</h2>
+                <SheetContent side="left" className="w-72 p-0">
+                    <SheetHeader className="p-4">
+                         <div className="flex justify-between items-center">
+                            <SheetTitle asChild>
+                               <h2 className="text-xl font-bold text-primary">Menu</h2>
+                            </SheetTitle>
                             <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)}>
                                 <X/>
                             </Button>
                         </div>
+                        <SheetDescription className="sr-only">Main navigation menu for the application.</SheetDescription>
+                    </SheetHeader>
+                    <div className="p-4 pt-0">
                         <Separator />
                         <nav className="mt-6">
                             <ul className="space-y-1">
@@ -67,7 +72,7 @@ export function AppHeader() {
                 </SheetContent>
             </Sheet>
             <Link href="/" className="text-2xl font-bold text-primary tracking-tighter">
-                GuessMaster
+                NumberAce
             </Link>
              <div className="w-10"></div>
         </div>

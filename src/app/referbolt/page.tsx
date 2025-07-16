@@ -18,7 +18,7 @@ export default function ReferBoltPage() {
   };
 
   const handleShare = async () => {
-    const shareUrl = `https://guessmaster.app/referbolt`;
+    const shareUrl = `https://numberace.app/referbolt`;
     const benefits = [
         "Referral commission INR 50/- per referral",
         "1 cycle of 3 referrals",
@@ -27,7 +27,7 @@ export default function ReferBoltPage() {
         "Unlimited earning potential"
     ].join("\n- ");
 
-    const message = `Check out the ReferBolt system on GuessMaster!\n\nHere are the benefits:\n- ${benefits}`;
+    const message = `Check out the ReferBolt system on NumberAce!\n\nHere are the benefits:\n- ${benefits}`;
     const fullMessage = `${message}\n\nLearn more here: ${shareUrl}`;
 
     const fallbackCopy = () => {
@@ -41,7 +41,7 @@ export default function ReferBoltPage() {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'Unlock Your Earnings with GuessMaster ReferBolt!',
+          title: 'Unlock Your Earnings with NumberAce ReferBolt!',
           text: message,
           url: shareUrl,
         });

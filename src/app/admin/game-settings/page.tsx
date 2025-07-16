@@ -6,9 +6,17 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 export default function AdminGameSettingsPage() {
     const { toast } = useToast();
+    const [rewards, setRewards] = useState([100, 75, 50, 25, 15]);
+
+    const handleRewardChange = (index: number, value: string) => {
+        const newRewards = [...rewards];
+        newRewards[index] = Number(value);
+        setRewards(newRewards);
+    }
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -25,7 +33,7 @@ export default function AdminGameSettingsPage() {
         <Card>
             <CardHeader>
                 <CardTitle>Core Gameplay</CardTitle>
-                <CardDescription>Adjust the fundamental rules of the GuessMaster game.</CardDescription>
+                <CardDescription>Adjust the fundamental rules of the NumberAce game.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -41,11 +49,15 @@ export default function AdminGameSettingsPage() {
                 <div className="space-y-2">
                     <Label>Reward Tiers (by attempt)</Label>
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-                        <Input type="number" defaultValue="100" aria-label="Reward for 1st attempt" />
-                        <Input type="number" defaultValue="75" aria-label="Reward for 2nd attempt" />
-                        <Input type="number" defaultValue="50" aria-label="Reward for 3rd attempt" />
-                        <Input type="number" defaultValue="25" aria-label="Reward for 4th attempt" />
-                        <Input type="number" defaultValue="15" aria-label="Reward for 5th attempt" />
+                        {rewards.map((reward, index) => (
+                            <Input 
+                                key={index}
+                                type="number" 
+                                value={reward}
+                                onChange={(e) => handleRewardChange(index, e.target.value)}
+                                aria-label={`Reward for ${index + 1}st attempt`} 
+                            />
+                        ))}
                     </div>
                 </div>
             </CardContent>

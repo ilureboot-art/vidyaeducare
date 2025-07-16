@@ -25,7 +25,7 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet" />
         <title>GuessMaster</title>
       </head>
-      <body className="font-body antialiased flex flex-col min-h-screen">
+      <body className={`font-body antialiased ${isAdminPage ? '' : 'flex flex-col min-h-screen'}`}>
         {isAdminPage ? (
             <>
                 {children}

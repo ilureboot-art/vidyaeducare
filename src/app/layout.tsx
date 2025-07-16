@@ -18,13 +18,13 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased">
-        <Navbar />
-        <main className="min-h-screen bg-background flex flex-col items-center p-4 pt-8 md:pt-4 pb-24 md:pb-4">
+        <main className="min-h-screen bg-background flex flex-col items-center p-4 pb-24 md:pb-24">
           {children}
         </main>
+        <Navbar />
         <Toaster />
       </body>
     </html>

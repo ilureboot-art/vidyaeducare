@@ -1,13 +1,13 @@
 
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Share2, Copy, CheckCircle, Gift } from "lucide-react";
 
-// Mock data - in a real app, this would come from a backend
-const referralData = {
+const initialReferralData = {
   referralCode: "ALEX-D7F6E5",
   referralBonus: 5,
   welcomeBonus: 5,
@@ -15,6 +15,7 @@ const referralData = {
 
 export default function ReferPage() {
   const { toast } = useToast();
+  const [referralData] = useState(initialReferralData);
 
   const handleCopyToClipboard = () => {
     navigator.clipboard.writeText(referralData.referralCode);

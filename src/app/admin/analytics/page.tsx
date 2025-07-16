@@ -1,6 +1,7 @@
 
 "use client"
 
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BarChart, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Line, Bar, ResponsiveContainer } from "recharts";
 import { Users, Gamepad2, IndianRupee } from "lucide-react";
@@ -27,6 +28,11 @@ const revenueData = [
 ];
 
 export default function AnalyticsPage() {
+  // In a real app, this data would be fetched and updated
+  const [activeUsers] = useState(1245);
+  const [gamesPlayed] = useState(5678);
+  const [todaysRevenue] = useState(12450);
+
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Analytics Dashboard</h1>
@@ -36,7 +42,7 @@ export default function AnalyticsPage() {
             <CardTitle className="flex items-center gap-2"><Users className="text-primary"/> Daily Active Users</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">1,245</p>
+            <p className="text-3xl font-bold">{activeUsers.toLocaleString()}</p>
             <p className="text-xs text-muted-foreground">+5% from yesterday</p>
           </CardContent>
         </Card>
@@ -45,7 +51,7 @@ export default function AnalyticsPage() {
             <CardTitle className="flex items-center gap-2"><Gamepad2 className="text-primary"/> Games Played Today</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">5,678</p>
+            <p className="text-3xl font-bold">{gamesPlayed.toLocaleString()}</p>
             <p className="text-xs text-muted-foreground">Average 4.5 games per user</p>
           </CardContent>
         </Card>
@@ -54,7 +60,7 @@ export default function AnalyticsPage() {
             <CardTitle className="flex items-center gap-2"><IndianRupee className="text-primary"/> Today's Revenue</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">₹12,450</p>
+            <p className="text-3xl font-bold">₹{todaysRevenue.toLocaleString()}</p>
             <p className="text-xs text-muted-foreground">+12% from yesterday</p>
           </CardContent>
         </Card>

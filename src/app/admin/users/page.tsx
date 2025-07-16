@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useState } from "react";
 import {
   Table,
   TableBody,
@@ -16,10 +17,19 @@ import { Button } from "@/components/ui/button";
 import { Search, UserPlus, MoreHorizontal } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useToast } from "@/hooks/use-toast";
 
+type UserStatus = "Active" | "Banned" | "Inactive";
+type User = {
+  id: string;
+  name: string;
+  email: string;
+  joinDate: string;
+  status: UserStatus;
+  wallet: number;
+};
 
-// Mock data for users
-const users = [
+const initialUsers: User[] = [
   { id: "USR001", name: "Alice", email: "alice@example.com", joinDate: "2024-07-29", status: "Active", wallet: 150.00 },
   { id: "USR002", name: "Bob", email: "bob@example.com", joinDate: "2024-07-28", status: "Active", wallet: 75.50 },
   { id: "USR003", name: "Charlie", email: "charlie@example.com", joinDate: "2024-07-27", status: "Banned", wallet: 0.00 },
@@ -32,6 +42,28 @@ const getStatusBadgeVariant = (status: string) => {
 }
 
 export default function UserManagementPage() {
+  const [users, setUsers] = useState<User[]>(initialUsers);
+  const [searchTerm, setSearchTerm] = useState("");
+  const { toast } = useToast();
+
+  const handleStatusChange = (userId: string, newStatus: UserStatus) => {
+    setUsers(
+      users.map((user) =>
+        user.id === userId ? { ...user, status: newStatus } : user
+      )
+    );
+    toast({
+      title: `User ${newStatus}`,
+      description: `User ${userId} has been ${newStatus.toLowerCase()}.`,
+    });
+  };
+
+  const filteredUsers = users.filter(
+    (user) =>
+      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">User Management</h1>
@@ -44,7 +76,12 @@ export default function UserManagementPage() {
           <div className="flex items-center justify-between pt-4">
             <div className="relative w-full max-w-sm">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search users by name or email..." className="pl-8" />
+                <Input 
+                  placeholder="Search users by name or email..." 
+                  className="pl-8"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
             </div>
             <Button>
               <UserPlus className="mr-2 h-4 w-4" />
@@ -64,12 +101,12 @@ export default function UserManagementPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((user) => (
+              {filteredUsers.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell>
                     <div className="flex items-center gap-3">
                         <Avatar>
-                            <AvatarImage src={`https://placehold.co/40x40.png`} data-ai-hint="profile avatar" />
+                            <AvatarImage src={`https://placehold.co/40x40.png?text=${user.name.charAt(0)}`} data-ai-hint="profile avatar" />
                             <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
                         </Avatar>
                         <div>
@@ -97,7 +134,16 @@ export default function UserManagementPage() {
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuItem>View Profile</DropdownMenuItem>
                         <DropdownMenuItem>Edit Wallet</DropdownMenuItem>
-                        <DropdownMenuItem className="text-red-600">Ban User</DropdownMenuItem>
+                        {user.status !== "Banned" && (
+                            <DropdownMenuItem className="text-red-600" onClick={() => handleStatusChange(user.id, "Banned")}>
+                                Ban User
+                            </DropdownMenuItem>
+                        )}
+                        {user.status === "Banned" && (
+                            <DropdownMenuItem onClick={() => handleStatusChange(user.id, "Active")}>
+                                Unban User
+                            </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { User, Mail, Calendar, TrendingUp, Gamepad2, Percent, Edit, Fingerprint } from "lucide-react";
 
 // Mock data for the user profile
-const userProfile = {
+const initialUserProfile = {
   name: "Alex Doe",
   playerId: "PLYR-8D7F6E5C",
   email: "alex.doe@example.com",
@@ -22,6 +23,8 @@ const userProfile = {
 };
 
 export default function ProfilePage() {
+    const [userProfile, setUserProfile] = useState(initialUserProfile);
+
     const formattedJoinDate = new Date(userProfile.joinDate).toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'long',

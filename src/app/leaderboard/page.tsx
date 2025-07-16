@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useState } from "react";
 import {
   Table,
   TableBody,
@@ -12,8 +13,15 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Trophy } from "lucide-react";
 
+type Player = {
+  rank: number;
+  name: string;
+  score: number;
+  gamesPlayed: number;
+};
+
 // Mock data for the leaderboard
-const leaderboardData = [
+const initialLeaderboardData: Player[] = [
   { rank: 1, name: "Alice", score: 5400, gamesPlayed: 60 },
   { rank: 2, name: "Bob", score: 4800, gamesPlayed: 55 },
   { rank: 3, name: "Charlie", score: 4250, gamesPlayed: 50 },
@@ -27,6 +35,11 @@ const leaderboardData = [
 ];
 
 export default function LeaderboardPage() {
+  const [leaderboardData, setLeaderboardData] = useState<Player[]>(initialLeaderboardData);
+
+  // In a real app, this data would be fetched from a server.
+  // For now, we use state to make it conceptually ready for real data.
+
   return (
     <div className="w-full max-w-2xl mx-auto">
       <Card className="shadow-lg">

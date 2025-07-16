@@ -26,14 +26,20 @@ export default function ReferPage() {
 
   const handleShare = async () => {
     const shareUrl = `https://guessmaster.app/join?ref=${referralData.referralCode}`;
-    const message = `Join me on GuessMaster! Use my code ${referralData.referralCode} when you sign up, and we both get a ₹${referralData.welcomeBonus} bonus!`;
-    const fullMessage = `${message}\n${shareUrl}`;
+    const benefits = [
+        `You get ₹${referralData.referralBonus} for every friend who joins.`,
+        `Your friend gets a ₹${referralData.welcomeBonus} welcome bonus.`,
+        `There's no limit to how many friends you can invite!`
+    ].join('\n- ');
+
+    const message = `Join me on GuessMaster and get rewarded!\n\nHere are the benefits:\n- ${benefits}\n\nUse my code when you sign up: ${referralData.referralCode}`;
+    const fullMessage = `${message}\n\nJoin here: ${shareUrl}`;
 
     const fallbackCopy = () => {
       navigator.clipboard.writeText(fullMessage);
       toast({
           title: "Link Copied!",
-          description: "Referral link copied to clipboard.",
+          description: "Referral link and message copied to clipboard.",
       });
     };
 

@@ -31,14 +31,9 @@ export default function HomePage() {
             <CardDescription>Simple to learn, thrilling to master.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Image 
-                src="https://placehold.co/600x400.png"
-                alt="GuessMaster game screenshot"
-                width={600}
-                height={400}
-                className="rounded-md"
-                data-ai-hint="gameplay abstract"
-            />
+            <div className="bg-muted/50 rounded-lg p-6 flex justify-center items-center h-[250px]">
+              <Gamepad2 className="w-32 h-32 text-primary opacity-20" />
+            </div>
             <p>Guess a secret number between 1 and 100. You have 5 attempts. With each guess, you get a hint: is the number higher or lower? The fewer attempts you take, the bigger the prize!</p>
             <div className="flex gap-4">
                 <Button asChild className="w-full">
@@ -57,14 +52,9 @@ export default function HomePage() {
             <CardDescription>Invite friends, earn commissions.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Image 
-                src="https://placehold.co/600x400.png"
-                alt="Referral network graphic"
-                width={600}
-                height={400}
-                className="rounded-md"
-                data-ai-hint="social network"
-            />
+            <div className="bg-muted/50 rounded-lg p-6 flex justify-center items-center h-[250px]">
+                <Zap className="w-32 h-32 text-primary opacity-20" />
+            </div>
             <p>Activate our ReferBolt system to earn cash for every friend who joins and subscribes. With our unique cycle system, you can earn from both direct and indirect referrals, creating a continuous stream of income.</p>
              <Button asChild className="w-full">
                 <Link href="/referbolt">Learn More & Start Earning</Link>
@@ -84,14 +74,9 @@ export default function HomePage() {
                      </Button>
                  </div>
                  <div className="flex justify-center">
-                    <Image 
-                        src="https://placehold.co/600x400.png"
-                        alt="Trophy and leaderboard"
-                        width={300}
-                        height={200}
-                        className="rounded-md"
-                        data-ai-hint="trophy leaderboard"
-                     />
+                    <div className="bg-muted/50 rounded-lg p-6 flex justify-center items-center w-[300px] h-[200px]">
+                        <Trophy className="w-24 h-24 text-primary opacity-20" />
+                    </div>
                  </div>
             </CardContent>
           </Card>

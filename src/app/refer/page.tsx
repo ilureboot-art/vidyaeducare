@@ -25,7 +25,7 @@ export default function ReferPage() {
   };
 
   const handleShare = async () => {
-    const shareUrl = `https://guessmaster.app/join?ref=${referralData.referralCode}`;
+    const shareUrl = `${window.location.origin}/signup?ref=${referralData.referralCode}`;
     const benefits = [
         `You get ₹${referralData.referralBonus} for every friend who joins.`,
         `Your friend gets a ₹${referralData.welcomeBonus} welcome bonus.`,

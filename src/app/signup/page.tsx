@@ -1,6 +1,8 @@
 
 "use client";
 
+import { useEffect, useState } from "react";
+import { useSearchParams } from 'next/navigation';
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +17,16 @@ import { Label } from "@/components/ui/label";
 import { Gamepad2 } from "lucide-react";
 
 export default function SignupPage() {
+  const searchParams = useSearchParams();
+  const [referralCode, setReferralCode] = useState('');
+
+  useEffect(() => {
+    const refCode = searchParams.get('ref');
+    if (refCode) {
+      setReferralCode(refCode);
+    }
+  }, [searchParams]);
+
   return (
     <div className="w-full max-w-md mx-auto flex flex-col items-center justify-center min-h-screen space-y-4">
        <div className="text-center space-y-2">
@@ -45,7 +57,14 @@ export default function SignupPage() {
           </div>
            <div className="space-y-2">
             <Label htmlFor="referral">Referral Code (Optional)</Label>
-            <Input id="referral" placeholder="Enter referral code" />
+            <Input 
+              id="referral" 
+              placeholder="Enter referral code"
+              value={referralCode}
+              onChange={(e) => setReferralCode(e.target.value)}
+              readOnly={!!searchParams.get('ref')}
+              className={!!searchParams.get('ref') ? 'bg-muted/50' : ''}
+            />
           </div>
         </CardContent>
         <CardContent>

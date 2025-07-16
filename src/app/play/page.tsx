@@ -168,10 +168,9 @@ Join now: ${shareUrl}
           url: shareUrl,
         });
       } catch (error) {
-        if ((error as DOMException).name !== 'AbortError') {
-          console.error("Web Share API failed, falling back to clipboard:", error);
-          fallbackCopy();
-        }
+        // If share fails for any reason, fall back to copy
+        console.error("Web Share API failed, falling back to clipboard:", error);
+        fallbackCopy();
       }
     } else {
       fallbackCopy();

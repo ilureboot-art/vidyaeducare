@@ -14,7 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, UserPlus, MoreHorizontal } from "lucide-react";
+import { Search, UserPlus, MoreHorizontal, Trash2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
@@ -57,6 +57,15 @@ export default function UserManagementPage() {
       description: `User ${userId} has been ${newStatus.toLowerCase()}.`,
     });
   };
+
+  const handleDeleteUser = (userId: string) => {
+    const userToDelete = users.find(user => user.id === userId);
+    setUsers(users.filter(user => user.id !== userId));
+    toast({
+        title: "User Deleted",
+        description: `User account for ${userToDelete?.name} has been deleted.`
+    });
+  }
 
   const filteredUsers = users.filter(
     (user) =>
@@ -135,7 +144,7 @@ export default function UserManagementPage() {
                         <DropdownMenuItem>View Profile</DropdownMenuItem>
                         <DropdownMenuItem>Edit Wallet</DropdownMenuItem>
                         {user.status !== "Banned" && (
-                            <DropdownMenuItem className="text-red-600" onClick={() => handleStatusChange(user.id, "Banned")}>
+                            <DropdownMenuItem className="text-yellow-600 focus:text-yellow-500" onClick={() => handleStatusChange(user.id, "Banned")}>
                                 Ban User
                             </DropdownMenuItem>
                         )}
@@ -144,6 +153,10 @@ export default function UserManagementPage() {
                                 Unban User
                             </DropdownMenuItem>
                         )}
+                         <DropdownMenuItem className="text-red-600 focus:text-red-500 focus:bg-red-950/50" onClick={() => handleDeleteUser(user.id)}>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete User
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

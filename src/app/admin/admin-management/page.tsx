@@ -13,7 +13,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { UserCog, UserPlus, MoreHorizontal } from "lucide-react";
+import { UserCog, UserPlus, MoreHorizontal, Trash2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -68,10 +68,8 @@ export default function AdminManagementPage() {
     const requestToProcess = requests.find(req => req.id === requestId);
     if (!requestToProcess) return;
 
-    // Remove from requests
     setRequests(requests.filter(req => req.id !== requestId));
     
-    // Update status and add to admins list if approved
     const updatedAdmin: Admin = { ...requestToProcess, status: newStatus };
 
     if (newStatus === "Active") {
@@ -114,11 +112,26 @@ export default function AdminManagementPage() {
     setIsCreateDialogOpen(false);
   }
 
+  const handleDeleteAdmin = (adminId: string) => {
+    const adminToDelete = admins.find(admin => admin.id === adminId);
+    if (!adminToDelete) return;
+
+    if (adminToDelete.role === "Head Admin") {
+        toast({ variant: 'destructive', title: 'Action Not Allowed', description: 'Head Admins cannot be deleted.'});
+        return;
+    }
+
+    setAdmins(admins.filter(admin => admin.id !== adminId));
+    toast({
+        title: "Admin Deleted",
+        description: `Admin account for ${adminToDelete.name} has been deleted.`,
+    })
+  }
+
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold flex items-center gap-2"><UserCog /> Admin Management</h1>
 
-      {/* Sub-admin Requests Card */}
        <Card>
         <CardHeader>
           <CardTitle>Sub-admin Requests</CardTitle>
@@ -159,7 +172,6 @@ export default function AdminManagementPage() {
         </CardContent>
       </Card>
       
-      {/* All Admins Card */}
       <Card>
         <CardHeader>
             <div className="flex items-center justify-between">
@@ -255,7 +267,8 @@ export default function AdminManagementPage() {
                         <DropdownMenuItem>Edit Details</DropdownMenuItem>
                         <DropdownMenuItem>Reset Password</DropdownMenuItem>
                          {admin.role !== "Head Admin" && (
-                            <DropdownMenuItem className="text-red-600">
+                            <DropdownMenuItem className="text-red-600 focus:text-red-500 focus:bg-red-950/50" onClick={() => handleDeleteAdmin(admin.id)}>
+                                <Trash2 className="mr-2 h-4 w-4"/>
                                 Delete Admin
                             </DropdownMenuItem>
                         )}

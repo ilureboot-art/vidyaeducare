@@ -2,10 +2,9 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Gamepad2, Zap, HelpCircle, Trophy, Star, Sprout, LogIn } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Gamepad2, Zap, HelpCircle, Trophy, Star, Sprout, LogIn, Gift, CheckCircle } from "lucide-react";
 import Link from "next/link";
-import Image from "next/image";
 import { ChatWidget } from "@/components/ChatWidget";
 
 export default function HomePage() {
@@ -16,71 +15,102 @@ export default function HomePage() {
         <p className="text-xl text-muted-foreground mt-2">The ultimate number guessing challenge where your intuition can win you real rewards.</p>
         <div className="mt-6 flex gap-4 justify-center">
             <Button asChild size="lg">
-                <Link href="/play"><Star className="mr-2"/> Play Now</Link>
+                <Link href="/play?start=true"><Star className="mr-2"/> Play Real Game</Link>
             </Button>
-            <Button asChild size="lg" variant="secondary">
-                 <Link href="/login"><LogIn className="mr-2"/> Login / Signup</Link>
+             <Button asChild size="lg" variant="secondary">
+                <Link href="/play?demo=true"><Sprout className="mr-2"/> Play Demo</Link>
             </Button>
         </div>
       </section>
 
-      <section className="grid md:grid-cols-2 gap-8">
-        <Card className="hover:shadow-lg transition-shadow">
+      <section className="grid md:grid-cols-2 gap-8 items-start">
+        <Card className="hover:shadow-lg transition-shadow flex flex-col h-full">
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Gamepad2 className="text-accent" /> The Game</CardTitle>
             <CardDescription>Simple to learn, thrilling to master.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="bg-muted/50 rounded-lg p-6 flex justify-center items-center h-[250px]">
-              <Gamepad2 className="w-32 h-32 text-primary opacity-20" />
-            </div>
+          <CardContent className="space-y-4 flex-grow">
             <p>Guess a secret number between 1 and 100. You have 5 attempts. With each guess, you get a hint: is the number higher or lower? The fewer attempts you take, the bigger the prize!</p>
-            <div className="flex gap-4">
+             <div className="p-4 bg-muted/50 rounded-lg">
+                <h3 className="font-semibold text-base mb-2 text-center">GuessMaster Benefits</h3>
+                <ul className="space-y-2 text-sm">
+                    <li className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span>Win up to <span className="font-bold">₹100 on your first guess!</span></span></li>
+                    <li className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span>A true test of skill, logic, and intuition.</span></li>
+                    <li className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span><span className="font-bold">Instant rewards</span> credited to your wallet.</span></li>
+                </ul>
+            </div>
+          </CardContent>
+           <CardFooter>
                 <Button asChild className="w-full">
-                    <Link href="/play?start=true"><Star className="mr-2"/> Play Real Game</Link>
+                    <Link href="/how-to-play">Learn How to Play</Link>
                 </Button>
-                <Button asChild variant="secondary" className="w-full">
-                    <Link href="/play?demo=true"><Sprout className="mr-2"/> Play Demo</Link>
-                </Button>
-            </div>
-          </CardContent>
+           </CardFooter>
         </Card>
-
-        <Card className="hover:shadow-lg transition-shadow">
+        
+        <Card className="hover:shadow-lg transition-shadow flex flex-col h-full">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Zap className="text-accent" /> ReferBolt System</CardTitle>
-            <CardDescription>Invite friends, earn commissions.</CardDescription>
+            <CardTitle className="flex items-center gap-2"><Trophy className="text-accent" /> Leaderboard</CardTitle>
+            <CardDescription>Compete and climb the ranks.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="bg-muted/50 rounded-lg p-6 flex justify-center items-center h-[250px]">
-                <Zap className="w-32 h-32 text-primary opacity-20" />
-            </div>
-            <p>Activate our ReferBolt system to earn cash for every friend who joins and subscribes. With our unique cycle system, you can earn from both direct and indirect referrals, creating a continuous stream of income.</p>
-             <Button asChild className="w-full">
-                <Link href="/referbolt">Learn More & Start Earning</Link>
-             </Button>
+          <CardContent className="space-y-4 flex-grow">
+             <p>Think you're the best GuessMaster around? Prove it! Climb the ranks on our global leaderboard and claim bragging rights and exclusive rewards. Every game counts towards your total score.</p>
           </CardContent>
+           <CardFooter>
+             <Button asChild className="w-full">
+                <Link href="/leaderboard">View Leaderboard</Link>
+             </Button>
+          </CardFooter>
         </Card>
       </section>
       
-       <section>
-          <Card>
-            <CardContent className="p-6 grid md:grid-cols-2 gap-6 items-center">
-                 <div>
-                    <h3 className="text-2xl font-bold text-primary flex items-center gap-2"><Trophy /> Compete on the Leaderboard!</h3>
-                    <p className="text-muted-foreground mt-2">Think you're the best GuessMaster around? Prove it! Climb the ranks on our global leaderboard and claim bragging rights and exclusive rewards. Every game counts towards your total score.</p>
-                     <Button asChild className="mt-4">
-                        <Link href="/leaderboard">View Leaderboard</Link>
-                     </Button>
-                 </div>
-                 <div className="flex justify-center">
-                    <div className="bg-muted/50 rounded-lg p-6 flex justify-center items-center w-[300px] h-[200px]">
-                        <Trophy className="w-24 h-24 text-primary opacity-20" />
-                    </div>
-                 </div>
-            </CardContent>
-          </Card>
+       <section className="grid md:grid-cols-2 gap-8 items-start">
+        <Card className="hover:shadow-lg transition-shadow flex flex-col h-full">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><Gift className="text-accent" /> Refer & Earn</CardTitle>
+            <CardDescription>Invite friends, get instant rewards.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4 flex-grow">
+            <p>Our simple referral program is an easy way to boost your wallet. Share your code and earn every time a friend signs up.</p>
+             <div className="p-4 bg-muted/50 rounded-lg">
+                <h3 className="font-semibold text-base mb-2 text-center">Refer & Earn Benefits</h3>
+                <ul className="space-y-2 text-sm">
+                    <li className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span>You get <span className="font-bold">₹5 for every friend</span> who joins.</span></li>
+                    <li className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span>Your friend gets a <span className="font-bold">₹5 welcome bonus</span>.</span></li>
+                    <li className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span><span className="font-bold">No limit</span> to how many friends you can invite.</span></li>
+                </ul>
+            </div>
+          </CardContent>
+           <CardFooter>
+             <Button asChild className="w-full">
+                <Link href="/refer">Get Your Referral Code</Link>
+             </Button>
+           </CardFooter>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow flex flex-col h-full">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><Zap className="text-accent" /> ReferBolt System</CardTitle>
+            <CardDescription>Unlock continuous commissions.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4 flex-grow">
+             <p>Activate our ReferBolt system to earn cash for every friend who joins and subscribes. Create a continuous stream of income from your network.</p>
+             <div className="p-4 bg-muted/50 rounded-lg">
+                <h3 className="font-semibold text-base mb-2 text-center">ReferBolt Benefits</h3>
+                <ul className="space-y-2 text-sm">
+                    <li className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span>Earn a <span className="font-bold">₹50 commission</span> per subscriber.</span></li>
+                    <li className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span><span className="font-bold">Unlimited earning potential</span> through cycles.</span></li>
+                     <li className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span>Get <span className="font-bold">4 bonus tickets</span> upon subscribing.</span></li>
+                </ul>
+            </div>
+          </CardContent>
+           <CardFooter>
+             <Button asChild className="w-full">
+                <Link href="/referbolt">Learn More & Start Earning</Link>
+             </Button>
+           </CardFooter>
+        </Card>
       </section>
+
       <ChatWidget />
     </div>
   );

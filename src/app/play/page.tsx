@@ -31,6 +31,9 @@ const GAMES_PER_TICKET = 2;
 
 type GameState = "idle" | "playing" | "demo" | "won" | "lost";
 
+// Mock user data for referral code
+const MOCK_USER_REFERRAL_CODE = "ALEX-D7F6E5";
+
 export default function PlayPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -50,7 +53,6 @@ export default function PlayPage() {
   const goBackToMenu = () => {
     setGameState('idle');
     setFeedback("Start a new game to play!");
-    // clear the url params
     router.push('/play');
   };
 
@@ -144,12 +146,21 @@ export default function PlayPage() {
   };
 
   const handleShare = async () => {
-    const shareUrl = `https://guessmaster.app/`;
-    const message = `Think you can guess the secret number? I'm playing GuessMaster and you can win up to ₹100 on your first try! Come play and see if you can beat my score.`;
-    const fullMessage = `${message}\n${shareUrl}`;
+    const referralCode = MOCK_USER_REFERRAL_CODE;
+    const shareUrl = `${window.location.origin}/signup?ref=${referralCode}`;
+    const rewardsList = REWARDS.map((r, i) => `${i+1}${i === 0 ? 'st' : i === 1 ? 'nd' : i === 2 ? 'rd' : 'th'} Attempt: ₹${r}`).join('\n');
+    const message = `🎮 Join GuessMaster - India's Best Skill Gaming Platform! 🎮
+🚀 Use my referral code: ${referralCode}
+💰 Get ₹5 instant bonus on signup
+🎯 Play exciting skill-based number guessing games.
+💰 Rewards prize for correct guess:
+${rewardsList}
+💸 Win real cash prizes through strategic thinking
+Join now: ${shareUrl}
+#GuessMaster #SkillGaming #CashPrizes #ReferralBonus`;
 
     const fallbackCopy = () => {
-        navigator.clipboard.writeText(fullMessage);
+        navigator.clipboard.writeText(message);
         toast({
             title: "Link Copied!",
             description: "Promotional message copied to clipboard.",

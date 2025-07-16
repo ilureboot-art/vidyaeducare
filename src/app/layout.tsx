@@ -17,10 +17,6 @@ export default function RootLayout({
   const isAdminPage = pathname.startsWith('/admin');
   const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup') || pathname.startsWith('/forgot-password');
 
-  const mainClass = isAdminPage
-    ? "flex flex-col flex-1"
-    : `min-h-screen bg-background flex flex-col items-center p-4 pb-24 ${!isAuthPage ? 'pt-20' : ''}`;
-
   return (
     <html lang="en">
       <head>
@@ -30,11 +26,19 @@ export default function RootLayout({
         <title>GuessMaster</title>
       </head>
       <body className="font-body antialiased flex flex-col min-h-screen">
-        {!isAdminPage && !isAuthPage && <AppHeader />}
-        <main className={mainClass}>
-          {children}
-        </main>
-        {!isAdminPage && !isAuthPage && <Navbar />}
+        {isAdminPage ? (
+            <>
+                {children}
+            </>
+        ) : (
+            <>
+                {!isAuthPage && <AppHeader />}
+                <main className={`min-h-screen bg-background flex flex-col items-center p-4 pb-24 ${!isAuthPage ? 'pt-20' : ''}`}>
+                    {children}
+                </main>
+                {!isAuthPage && <Navbar />}
+            </>
+        )}
         <Toaster />
       </body>
     </html>

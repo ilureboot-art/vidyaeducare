@@ -9,7 +9,6 @@ import {
   CardHeader, 
   CardTitle, 
   CardDescription,
-  CardFooter
 } from "@/components/ui/card";
 import { 
   Table, 
@@ -44,11 +43,11 @@ const walletData = {
   },
   transactions: [
     { id: 1, type: "deposit", description: "Game Won Reward", amount: 75.00, date: "2024-07-29", status: "Completed" },
-    { id: 2, type: "deposit", description: "Referral Bonus", amount: 5.00, date: "2024-07-28", status: "Completed" },
-    { id: 3, type: "deposit", description: "Welcome Bonus", amount: 5.00, date: "2024-07-28", status: "Completed" },
+    { id: 2, type: "withdrawal", description: "Withdrawal Request", amount: -150.00, date: "2024-07-30", status: "Pending", paymentMethod: "user@upi" },
+    { id: 3, type: "deposit", description: "Fund Deposit", amount: 100.00, date: "2024-07-29", status: "Completed", referenceId: "UPIREF12345" },
     { id: 4, type: "withdrawal", description: "Ticket Purchase (15)", amount: -25.00, date: "2024-07-27", status: "Completed" },
     { id: 5, type: "withdrawal", description: "ReferBolt Subscription", amount: -100.00, date: "2024-07-26", status: "Completed" },
-    { id: 6, type: "deposit", description: "Fund Deposit", amount: 100.00, date: "2024-07-25", status: "Pending", referenceId: "UPIREF12345" },
+    { id: 6, type: "deposit", description: "Fund Deposit", amount: 200.00, date: "2024-07-25", status: "Rejected", referenceId: "UPIREFFAIL" },
     { id: 7, type: "withdrawal", description: "Withdrawal Request", amount: -200.00, date: "2024-07-24", status: "Completed", paymentMethod: "user@upi" },
   ],
 };
@@ -211,8 +210,8 @@ export default function WalletPage() {
                 <TableRow key={tx.id}>
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-full ${tx.type === 'deposit' ? 'bg-green-100 dark:bg-green-900' : 'bg-red-100 dark:bg-red-900'}`}>
-                        {tx.type === 'deposit' 
+                      <div className={`p-2 rounded-full ${tx.amount > 0 ? 'bg-green-100 dark:bg-green-900' : 'bg-red-100 dark:bg-red-900'}`}>
+                        {tx.amount > 0 
                           ? <ArrowDownLeft className="w-4 h-4 text-green-600 dark:text-green-400" /> 
                           : <ArrowUpRight className="w-4 h-4 text-red-600 dark:text-red-400" />}
                       </div>
@@ -225,8 +224,8 @@ export default function WalletPage() {
                   <TableCell>
                     <Badge variant={getStatusBadgeVariant(tx.status)}>{tx.status}</Badge>
                   </TableCell>
-                  <TableCell className={`text-right font-bold ${tx.type === 'deposit' ? 'text-green-600' : 'text-red-600'}`}>
-                    {tx.type === 'deposit' ? '+' : ''}₹{Math.abs(tx.amount).toFixed(2)}
+                  <TableCell className={`text-right font-bold ${tx.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {tx.amount > 0 ? '+' : ''}₹{Math.abs(tx.amount).toFixed(2)}
                   </TableCell>
                 </TableRow>
               ))}

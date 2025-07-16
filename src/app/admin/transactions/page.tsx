@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Download, ArrowUpRight, ArrowDownLeft, Info } from "lucide-react";
+import { Search, Download, ArrowUpRight, ArrowDownLeft } from "lucide-react";
 
 // Mock data for transactions, now including reference/payment IDs
 const transactions = [

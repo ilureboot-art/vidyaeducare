@@ -30,7 +30,7 @@ export default function SupportPage() {
           </CardHeader>
           <CardContent>
              <p className="text-muted-foreground">
-              Find guides, tutorials, and API references to help you manage your NumberAce application effectively.
+              Find guides, tutorials, and API references to help you manage your GuessMaster application effectively.
             </p>
              <Button variant="outline" className="mt-4 w-full">
                 View Documentation

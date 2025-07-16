@@ -21,7 +21,7 @@ export type AiHintInput = z.infer<typeof AiHintInputSchema>;
 const hintPrompt = ai.definePrompt({
     name: "hintPrompt",
     input: { schema: AiHintInputSchema },
-    output: { schema: z.string() },
+    output: { schema: z.string().nullable() },
     prompt: `You are a witty and clever game show host for a number guessing game called GuessMaster. The user is trying to guess a secret number. Their last guess was {{{guess}}}. The secret number is actually {{{direction}}} than that.
 
 Give them a short, creative, and fun hint to guide them. Be encouraging and a bit playful.

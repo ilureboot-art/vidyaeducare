@@ -17,7 +17,8 @@ import {
     MessageSquare,
     ShoppingCart,
     Landmark,
-    Home
+    Home,
+    UserCog
 } from "lucide-react";
 import {
     Sidebar,
@@ -32,15 +33,16 @@ import {
 
 const adminNavItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/admin/users", label: "User Management", icon: Users },
   { href: "/admin/transactions", label: "Transactions", icon: CreditCard },
+  { href: "/admin/chat", label: "Chat Management", icon: MessageSquare },
   { href: "/admin/game-settings", label: "Game Settings", icon: Gamepad2 },
   { href: "/admin/store-settings", label: "Store Settings", icon: ShoppingCart },
   { href: "/admin/payment-settings", label: "Payment Settings", icon: Landmark },
   { href: "/admin/referbolt", label: "ReferBolt Mgt.", icon: Zap },
-  { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/admin/system-status", label: "System Status", icon: Server },
-  { href: "/admin/chat", label: "Chat Management", icon: MessageSquare },
+  { href: "/admin/admin-management", label: "Admin Management", icon: UserCog },
   { href: "/admin/security", label: "Security", icon: Shield },
   { href: "/admin/support", label: "Support", icon: LifeBuoy },
 ];

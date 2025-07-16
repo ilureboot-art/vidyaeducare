@@ -52,10 +52,11 @@ export default function AdminLoginPage() {
      e.preventDefault();
     if (otp === DEMO_OTP) {
         toast({
-            title: "Account Created Successfully!",
-            description: "Redirecting to admin dashboard...",
+            title: "Request Sent!",
+            description: "Your request to become a sub-admin has been sent to the Head Admin for approval.",
         });
-        router.push("/admin/analytics");
+        // In a real app, this might redirect to a pending page or back to the main site.
+        router.push("/");
     } else {
         toast({
             variant: "destructive",
@@ -105,9 +106,9 @@ export default function AdminLoginPage() {
             <TabsContent value="signup">
                  <form onSubmit={isOtpSent ? handleSignup : handleSendOtp}>
                     <CardHeader>
-                        <CardTitle>Admin Sign Up</CardTitle>
+                        <CardTitle>Request Sub-admin Access</CardTitle>
                         <CardDescription>
-                           {isOtpSent ? "Enter the OTP to verify your account." : "Create a new administrator account."}
+                           {isOtpSent ? "Enter the OTP to verify your request." : "New admins must be approved by a Head Admin."}
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -137,7 +138,7 @@ export default function AdminLoginPage() {
                                 </div>
                             )}
                             <Button type="submit" className="w-full">
-                            {isOtpSent ? 'Create Account & Login' : 'Send Verification OTP'}
+                            {isOtpSent ? 'Submit Request' : 'Send Verification OTP'}
                             </Button>
                     </CardContent>
                  </form>

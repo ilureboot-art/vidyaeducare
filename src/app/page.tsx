@@ -13,11 +13,11 @@ export default function HomePage() {
       <section className="text-center py-8">
         <h1 className="text-5xl font-bold text-primary tracking-tighter">Welcome to GuessMaster!</h1>
         <p className="text-xl text-muted-foreground mt-2">The ultimate number guessing challenge where your intuition can win you real rewards.</p>
-        <div className="mt-6 flex gap-4 justify-center">
-            <Button asChild size="lg">
-                <Link href="/play?start=true"><Star className="mr-2"/> Play Real Game</Link>
+        <div className="mt-6 flex gap-4 justify-center flex-wrap">
+            <Button asChild size="lg" className="bg-primary/90 hover:bg-primary">
+                <Link href="/login"><LogIn className="mr-2"/> Login / Sign Up</Link>
             </Button>
-             <Button asChild size="lg" variant="secondary">
+            <Button asChild size="lg" variant="secondary">
                 <Link href="/play?demo=true"><Sprout className="mr-2"/> Play Demo</Link>
             </Button>
         </div>
@@ -59,7 +59,7 @@ export default function HomePage() {
              <Button asChild className="w-full">
                 <Link href="/leaderboard">View Leaderboard</Link>
              </Button>
-          </CardFooter>
+           </CardFooter>
         </Card>
       </section>
       

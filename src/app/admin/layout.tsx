@@ -13,7 +13,7 @@ export default function AdminLayout({
         <AdminSidebar />
         <SidebarInset className="flex-1 flex flex-col">
             <header className="p-4 border-b flex items-center gap-4">
-                
+                <SidebarTrigger className="md:hidden" />
                 <h1 className="text-xl font-semibold">Admin Panel</h1>
             </header>
             <main className="flex-1 p-8 bg-muted/40">

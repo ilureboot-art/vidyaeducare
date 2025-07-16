@@ -55,7 +55,7 @@ Join now: ${shareUrl}
         });
       } catch (error) {
         if ((error as DOMException).name !== 'AbortError') {
-          console.error("Share failed:", error);
+          console.error("Share failed, falling back to clipboard:", error);
           fallbackCopy();
         }
       }

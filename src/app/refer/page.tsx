@@ -35,7 +35,7 @@ export default function ReferPage() {
           title: "Link Copied!",
           description: "Referral link copied to clipboard.",
       });
-    }
+    };
 
     if (navigator.share) {
       try {
@@ -46,7 +46,7 @@ export default function ReferPage() {
         });
       } catch (error) {
          if ((error as DOMException).name !== 'AbortError') {
-          console.error("Share failed:", error);
+          console.error("Share failed, falling back to clipboard:", error);
           fallbackCopy();
         }
       }

@@ -54,12 +54,13 @@ Join now: ${shareUrl}
           url: shareUrl,
         });
       } catch (error) {
-        if ((error as DOMException).name !== 'AbortError') {
-          console.error("Share failed, falling back to clipboard:", error);
-          fallbackCopy();
-        }
+        // Fallback to clipboard if share API fails
+        // This can happen if the user denies permission or if the API is not supported
+        console.error("Share failed, falling back to clipboard:", error);
+        fallbackCopy();
       }
     } else {
+      // Fallback for browsers that do not support the Share API
       fallbackCopy();
     }
   };

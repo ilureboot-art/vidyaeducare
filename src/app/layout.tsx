@@ -15,8 +15,10 @@ export default function RootLayout({
 }>) {
   const pathname = usePathname();
   const isAdminPage = pathname.startsWith('/admin');
-  const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup') || pathname.startsWith('/forgot-password');
+  const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup') || pathname.startsWith('/forgot-password') || pathname.startsWith('/admin/login');
 
+  const bodyClassName = `font-body antialiased ${isAdminPage ? '' : 'flex flex-col min-h-screen'}`;
+  
   return (
     <html lang="en">
       <head>
@@ -25,7 +27,7 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet" />
         <title>GuessMaster</title>
       </head>
-      <body className={`font-body antialiased ${isAdminPage ? '' : 'flex flex-col min-h-screen'}`}>
+      <body className={bodyClassName}>
         {isAdminPage ? (
             <>
                 {children}
@@ -33,7 +35,7 @@ export default function RootLayout({
         ) : (
             <>
                 {!isAuthPage && <AppHeader />}
-                <main className={`min-h-screen bg-background flex flex-col items-center p-4 pb-24 ${!isAuthPage ? 'pt-20' : ''}`}>
+                <main className={`flex-1 flex flex-col items-center w-full p-4 pb-24 ${!isAuthPage ? 'pt-20' : ''}`}>
                     {children}
                 </main>
                 {!isAuthPage && <Navbar />}

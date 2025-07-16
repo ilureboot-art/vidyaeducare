@@ -1,12 +1,26 @@
 
+"use client";
+
 import { AdminSidebar } from "@/components/AdminSidebar";
 import { SidebarProvider, Sidebar, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
+import { usePathname } from 'next/navigation';
 
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
+  const isLoginPage = pathname === '/admin/login';
+
+  if (isLoginPage) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-muted/40">
+        {children}
+      </div>
+    );
+  }
+
   return (
     <SidebarProvider>
       <div className="flex min-h-screen">

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { 
   Card, 
@@ -22,42 +22,37 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { PlusCircle, MinusCircle, Info, History } from "lucide-react";
+import { PlusCircle, MinusCircle, Info, History, ArrowUpRight, ArrowDownLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
+import { walletData, addTransaction, type Transaction } from "@/lib/user-data";
+import { Badge } from "@/components/ui/badge";
 
-type Transaction = {
-  id: number;
-  type: 'deposit' | 'withdrawal';
-  description: string;
-  amount: number;
-  date: string;
-  status: 'Completed' | 'Pending' | 'Rejected';
-  paymentMethod?: string;
-  referenceId?: string;
-};
-
-// Mock data
-const initialWalletData = {
-  balance: 450.50,
-  adminPaymentMethods: {
-    upiId: "admin-upi@okhdfcbank",
-    gpayNumber: "+91 98765 43210",
-    phonepeNumber: "+91 98765 43210",
-  },
-  transactions: [
-    { id: 2, type: "withdrawal" as const, description: "Withdrawal Request", amount: -150.00, date: "2024-07-30", status: "Pending" as const, paymentMethod: "user@upi" },
-    { id: 3, type: "deposit" as const, description: "Fund Deposit", amount: 100.00, date: "2024-07-29", status: "Completed" as const, referenceId: "UPIREF12345" },
-  ],
-};
-
+const getStatusBadgeVariant = (status: string) => {
+    switch (status.toLowerCase()) {
+        case 'completed':
+            return 'default';
+        case 'pending':
+            return 'secondary';
+        case 'rejected':
+            return 'destructive';
+        default:
+            return 'outline';
+    }
+}
 
 export default function WalletPage() {
   const { toast } = useToast();
-  const [balance, setBalance] = useState(initialWalletData.balance);
-  const [transactions, setTransactions] = useState<Transaction[]>(initialWalletData.transactions);
+  const [balance, setBalance] = useState(walletData.balance);
+  const [transactions, setTransactions] = useState<Transaction[]>(walletData.transactions);
   const [addFundsOpen, setAddFundsOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
+
+  useEffect(() => {
+    // This effect will re-sync the component state if the underlying shared data changes
+    setBalance(walletData.balance);
+    setTransactions(walletData.transactions);
+  }, []);
 
   const handleAddFunds = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -80,7 +75,8 @@ export default function WalletPage() {
         referenceId: txnId,
     };
     
-    setTransactions([newTransaction, ...transactions]);
+    addTransaction(newTransaction);
+    setTransactions([...walletData.transactions]);
 
     toast({
       title: "Request Submitted",
@@ -101,7 +97,7 @@ export default function WalletPage() {
         return;
     }
 
-    if (amount > balance) {
+    if (amount > walletData.balance) {
         toast({
             variant: "destructive",
             title: "Insufficient Balance",
@@ -119,6 +115,8 @@ export default function WalletPage() {
         return;
     }
     
+    walletData.balance -= amount; // Deduct balance from the central store
+    
     const newTransaction: Transaction = {
         id: Date.now(),
         type: 'withdrawal',
@@ -129,12 +127,13 @@ export default function WalletPage() {
         paymentMethod: upiId,
     };
 
-    setTransactions([newTransaction, ...transactions]);
-    setBalance(prev => prev - amount); // Optimistically update balance
+    addTransaction(newTransaction);
+    setBalance(walletData.balance); // Update local state for re-render
+    setTransactions([...walletData.transactions]);
 
     toast({
       title: "Request Submitted",
-      description: "Your withdrawal request has been sent for admin approval.",
+      description: `Your withdrawal request for ₹${amount} has been sent for admin approval.`,
     });
     setWithdrawOpen(false);
     form.reset();
@@ -145,7 +144,7 @@ export default function WalletPage() {
       <Card className="shadow-lg">
         <CardHeader className="text-center">
           <CardTitle className="text-3xl font-bold text-primary">My Wallet</CardTitle>
-          <CardDescription>Your balance and transaction history.</CardDescription>
+          <CardDescription>Your balance and recent activity.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <Card className="text-center p-6 bg-primary/10">
@@ -167,9 +166,9 @@ export default function WalletPage() {
                 <div className="space-y-4">
                     <div className="p-3 bg-muted rounded-md text-sm space-y-2">
                         <p className="font-semibold flex items-center gap-2"><Info className="w-4 h-4" />Admin Payment Details</p>
-                        <p>UPI ID: <span className="font-mono">{initialWalletData.adminPaymentMethods.upiId}</span></p>
-                        <p>GPay: <span className="font-mono">{initialWalletData.adminPaymentMethods.gpayNumber}</span></p>
-                        <p>PhonePe: <span className="font-mono">{initialWalletData.adminPaymentMethods.phonepeNumber}</span></p>
+                        <p>UPI ID: <span className="font-mono">{walletData.adminPaymentMethods.upiId}</span></p>
+                        <p>GPay: <span className="font-mono">{walletData.adminPaymentMethods.gpayNumber}</span></p>
+                        <p>PhonePe: <span className="font-mono">{walletData.adminPaymentMethods.phonepeNumber}</span></p>
                          <p className="text-xs pt-2 text-muted-foreground">You can also scan a QR code if provided by the admin.</p>
                     </div>
                     <form onSubmit={handleAddFunds} className="space-y-4">
@@ -215,6 +214,37 @@ export default function WalletPage() {
                 </form>
               </DialogContent>
             </Dialog>
+          </div>
+
+          <div className="space-y-4 pt-4">
+            <h3 className="font-semibold text-lg text-center">Recent Activity</h3>
+            {transactions.length > 0 ? (
+                <div className="space-y-2">
+                    {transactions.slice(0, 3).map((tx) => (
+                         <div key={tx.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                            <div className="flex items-center gap-3">
+                                <div className={`p-2 rounded-full ${tx.amount > 0 ? 'bg-green-100 dark:bg-green-900' : 'bg-red-100 dark:bg-red-900'}`}>
+                                    {tx.amount > 0 
+                                    ? <ArrowDownLeft className="w-4 h-4 text-green-600 dark:text-green-400" /> 
+                                    : <ArrowUpRight className="w-4 h-4 text-red-600 dark:text-red-400" />}
+                                </div>
+                                <div>
+                                    <p className="font-medium">{tx.description}</p>
+                                    <p className="text-xs text-muted-foreground">{new Date(tx.date).toLocaleDateString()}</p>
+                                </div>
+                            </div>
+                            <div className="text-right">
+                                <p className={`font-bold ${tx.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                     {tx.amount > 0 ? '+' : ''}₹{Math.abs(tx.amount).toFixed(2)}
+                                </p>
+                                <Badge variant={getStatusBadgeVariant(tx.status)} className="mt-1">{tx.status}</Badge>
+                            </div>
+                         </div>
+                    ))}
+                </div>
+            ) : (
+                <p className="text-sm text-muted-foreground text-center">No recent transactions.</p>
+            )}
           </div>
         </CardContent>
          <CardFooter>

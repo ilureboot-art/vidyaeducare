@@ -1,74 +1,64 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { ShoppingCart, Ticket, Sparkles, Zap, Loader2 } from "lucide-react";
 import { initialPackages as ticketPackages, initialReferboltSubscription } from "@/lib/store-config";
-
-// Mock user wallet data - In a real app, this would come from a global state/context or backend
-const mockWallet = {
-  balance: 450.50,
-  transactions: [],
-};
-
-// A custom hook to simulate a centralized wallet state
-const useUserWallet = () => {
-    const [balance, setBalance] = useState(mockWallet.balance);
-
-    const purchase = (cost: number, description: string) => {
-        if (balance < cost) {
-            return false;
-        }
-        // Simulate the deduction
-        const newBalance = balance - cost;
-        setBalance(newBalance);
-        mockWallet.balance = newBalance; // Update the mock "database"
-
-        // Simulate adding a transaction record
-        const newTransaction = {
-            id: Date.now(),
-            type: 'withdrawal',
-            description,
-            amount: -cost,
-            date: new Date().toISOString().split('T')[0],
-            status: 'Completed',
-        };
-        (mockWallet.transactions as any).unshift(newTransaction);
-        
-        return true;
-    };
-
-    return { balance, purchase };
-};
-
+import { walletData, addTransaction } from "@/lib/user-data";
 
 export default function StorePage() {
   const { toast } = useToast();
   const [isPurchasing, setIsPurchasing] = useState<number | null>(null);
   const [isPurchasingReferbolt, setIsPurchasingReferbolt] = useState(false);
-  const { balance, purchase } = useUserWallet();
+  const [balance, setBalance] = useState(walletData.balance);
+
+  // This effect keeps the local balance in sync with the central data store
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (walletData.balance !== balance) {
+        setBalance(walletData.balance);
+      }
+    }, 500); // Check for updates periodically
+    return () => clearInterval(interval);
+  }, [balance]);
 
   const handlePurchase = (index: number) => {
     setIsPurchasing(index);
     const pkg = ticketPackages[index];
 
     setTimeout(() => {
-      const success = purchase(pkg.price, `Ticket Purchase (${pkg.tickets})`);
-      if (success) {
-        toast({
-          title: "Purchase Successful!",
-          description: `You've bought ${pkg.tickets} tickets. Your new balance is ₹${(mockWallet.balance).toFixed(2)}.`,
-        });
-      } else {
+      if (walletData.balance < pkg.price) {
         toast({
           variant: "destructive",
           title: "Purchase Failed",
           description: "Insufficient wallet balance.",
         });
+        setIsPurchasing(null);
+        return;
       }
+      
+      // Update central data store
+      walletData.balance -= pkg.price;
+      addTransaction({
+        id: Date.now(),
+        type: 'withdrawal',
+        description: `Ticket Purchase (${pkg.tickets})`,
+        amount: -pkg.price,
+        date: new Date().toISOString().split('T')[0],
+        status: 'Completed',
+      });
+      
+      // Update local state to trigger re-render
+      setBalance(walletData.balance);
+
+      toast({
+        title: "Purchase Successful!",
+        description: `You've bought ${pkg.tickets} tickets. Your new balance is ₹${walletData.balance.toFixed(2)}.`,
+      });
+
       setIsPurchasing(null);
     }, 1500);
   };
@@ -77,19 +67,43 @@ export default function StorePage() {
     setIsPurchasingReferbolt(true);
     const cost = initialReferboltSubscription.price;
     setTimeout(() => {
-      const success = purchase(cost, "ReferBolt Subscription");
-      if (success) {
+      if (walletData.balance < cost) {
         toast({
-            title: "Subscription Activated!",
-            description: `You've received a bonus of 4 tickets! Your new balance is ₹${(mockWallet.balance).toFixed(2)}.`,
-        });
-      } else {
-         toast({
           variant: "destructive",
           title: "Purchase Failed",
           description: "Insufficient wallet balance.",
         });
+        setIsPurchasingReferbolt(false);
+        return;
       }
+
+      // Update central data store
+      walletData.balance -= cost;
+      addTransaction({
+        id: Date.now(),
+        type: 'withdrawal',
+        description: 'ReferBolt Subscription',
+        amount: -cost,
+        date: new Date().toISOString().split('T')[0],
+        status: 'Completed',
+      });
+      addTransaction({
+        id: Date.now() + 1,
+        type: 'deposit',
+        description: 'ReferBolt Ticket Bonus (4)',
+        amount: 0, // No monetary value, just tickets
+        date: new Date().toISOString().split('T')[0],
+        status: 'Completed',
+      });
+
+      // Update local state to trigger re-render
+      setBalance(walletData.balance);
+
+      toast({
+          title: "Subscription Activated!",
+          description: `You've received a bonus of 4 tickets! Your new balance is ₹${walletData.balance.toFixed(2)}.`,
+      });
+      
       setIsPurchasingReferbolt(false);
     }, 1500);
   };
@@ -103,7 +117,7 @@ export default function StorePage() {
             Store
           </CardTitle>
           <CardDescription>
-            Stock up on tickets or activate your ReferBolt subscription!
+            Stock up on tickets or activate your ReferBolt subscription! Your balance: <span className="font-bold">₹{balance.toFixed(2)}</span>
           </CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pt-6">

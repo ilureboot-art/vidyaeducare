@@ -49,7 +49,7 @@ function FormattedDate({ dateString }: { dateString: string }) {
 }
 
 export default function TransactionsPage() {
-  const [transactions, setTransactions] = useState<Transaction[]>(walletData.transactions);
+  const [transactions, setTransactions] = useState<Transaction[]>([...walletData.transactions]);
 
   useEffect(() => {
     // This effect ensures the page re-renders if the shared data changes

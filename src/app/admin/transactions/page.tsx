@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -16,27 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Download, ArrowUpRight, ArrowDownLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-type Transaction = {
-  id: string;
-  user: string;
-  type: string;
-  amount: number;
-  date: string;
-  status: "Completed" | "Pending" | "Rejected";
-  paymentMethod?: string;
-  referenceId?: string;
-};
-
-const initialTransactions: Transaction[] = [
-  { id: "TXN001", user: "Alice", type: "Withdrawal", amount: 200.00, date: "2024-07-29", status: "Pending", paymentMethod: "alice@upi" },
-  { id: "TXN002", user: "Bob", type: "Deposit", amount: 100.00, date: "2024-07-29", status: "Completed", referenceId: "UPIREF12345" },
-  { id: "TXN003", user: "Charlie", type: "Game Reward", amount: 50.00, date: "2024-07-28", status: "Completed" },
-  { id: "TXN004", user: "Alice", type: "Ticket Purchase", amount: -25.00, date: "2024-07-28", status: "Completed" },
-  { id: "TXN005", user: "David", type: "Withdrawal", amount: 500.00, date: "2024-07-27", status: "Rejected", paymentMethod: "david@upi" },
-  { id: "TXN006", user: "Eve", type: "Referral Bonus", amount: 50.00, date: "2024-07-27", status: "Completed" },
-  { id: "TXN007", user: "Frank", type: "Deposit", amount: 300.00, date: "2024-07-30", status: "Pending", referenceId: "UPIREF67890" },
-];
+import { walletData, type Transaction } from "@/lib/user-data";
 
 const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -59,16 +39,37 @@ const getTypeIcon = (type: string, amount: number) => {
 }
 
 export default function TransactionsPage() {
-  const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
+  const [transactions, setTransactions] = useState<Transaction[]>([...walletData.transactions]);
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
 
-  const handleTransactionStatus = (id: string, newStatus: "Completed" | "Rejected") => {
-    setTransactions(
-      transactions.map((tx) =>
-        tx.id === id ? { ...tx, status: newStatus } : tx
-      )
-    );
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (walletData.transactions.length !== transactions.length) {
+        setTransactions([...walletData.transactions]);
+      }
+    }, 500);
+    return () => clearInterval(interval);
+  }, [transactions]);
+
+  const handleTransactionStatus = (id: number, newStatus: "Completed" | "Rejected") => {
+    const txIndex = walletData.transactions.findIndex((tx) => tx.id === id);
+    if (txIndex === -1) return;
+
+    const tx = walletData.transactions[txIndex];
+
+    // If approving a deposit, add funds to the wallet
+    if (tx.type === 'deposit' && newStatus === 'Completed' && tx.status === 'Pending') {
+      walletData.balance += tx.amount;
+    }
+    // If rejecting a withdrawal, refund the user
+    if (tx.type === 'withdrawal' && newStatus === 'Rejected' && tx.status === 'Pending') {
+        walletData.balance += Math.abs(tx.amount);
+    }
+    
+    walletData.transactions[txIndex].status = newStatus;
+    setTransactions([...walletData.transactions]);
+
     toast({
       title: "Transaction Updated",
       description: `Transaction ${id} has been marked as ${newStatus}.`,
@@ -77,8 +78,8 @@ export default function TransactionsPage() {
 
   const filteredTransactions = transactions.filter(
     (tx) =>
-      tx.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      tx.id.toLowerCase().includes(searchTerm.toLowerCase())
+      tx.user?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      String(tx.id).toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -122,16 +123,16 @@ export default function TransactionsPage() {
             <TableBody>
               {filteredTransactions.map((tx) => (
                 <TableRow key={tx.id}>
-                  <TableCell className="font-medium">{tx.user}</TableCell>
+                  <TableCell className="font-medium">{tx.user || 'System'}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                         {getTypeIcon(tx.type, tx.amount)}
-                        <span>{tx.type}</span>
+                        <span>{tx.description}</span>
                     </div>
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground font-mono">
-                    {(tx.type === "Deposit" || tx.type.includes("Bonus")) && tx.referenceId && `Ref: ${tx.referenceId}`}
-                    {tx.type === "Withdrawal" && tx.paymentMethod && `To: ${tx.paymentMethod}`}
+                    {(tx.type === "deposit" && tx.referenceId) && `Ref: ${tx.referenceId}`}
+                    {(tx.type === "withdrawal" && tx.paymentMethod) && `To: ${tx.paymentMethod}`}
                   </TableCell>
                   <TableCell>{tx.date}</TableCell>
                   <TableCell>

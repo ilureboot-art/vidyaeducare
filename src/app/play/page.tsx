@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { walletData, addTransaction } from "@/lib/user-data";
+import { initialPackages, initialReferboltSubscription, initialReferralBonus } from "@/lib/store-config";
 
 
 const MAX_ATTEMPTS = 5;
@@ -213,12 +214,12 @@ export default function PlayPage() {
   };
 
   const handleShare = async () => {
-    const referralCode = MOCK_USER_REFERRAL_CODE;
+    const referralCode = "ALEX-D7F6E5";
     const shareUrl = `${window.location.origin}/signup?ref=${referralCode}`;
     const rewardsList = REWARDS.map((r, i) => `${i+1}${i === 0 ? 'st' : i === 1 ? 'nd' : i === 2 ? 'rd' : 'th'} Attempt: ₹${r}`).join('\n');
     const message = `🎮 Join GuessMaster - India's Best Skill Gaming Platform! 🎮
 🚀 Use my referral code: ${referralCode}
-💰 Get ₹5 instant bonus on signup
+💰 Get ₹${initialReferralBonus} instant bonus on signup
 🎯 Play exciting skill-based number guessing games.
 💰 Rewards prize for correct guess:
 ${rewardsList}

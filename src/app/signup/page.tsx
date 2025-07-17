@@ -17,6 +17,9 @@ import { Label } from "@/components/ui/label";
 import { Gamepad2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { initialReferralBonus } from "@/lib/store-config";
+import { addTransaction } from "@/lib/user-data";
+
 
 const DEMO_OTP = "123456";
 
@@ -48,6 +51,27 @@ export default function SignupPage() {
   const handleSignup = (e: React.FormEvent) => {
     e.preventDefault();
     if (otp === DEMO_OTP) {
+        if (referralCode) {
+            // In a real app, this logic would live on the backend.
+            // Here, we just add the transaction for the new user.
+             addTransaction({
+                id: Date.now(),
+                type: 'deposit',
+                description: 'Welcome Bonus (from referral)',
+                amount: initialReferralBonus,
+                date: new Date().toISOString().split('T')[0],
+                status: 'Completed',
+            });
+             addTransaction({
+                id: Date.now() + 1, // To avoid key collision
+                type: 'deposit',
+                description: `Referral Bonus for inviting new user`,
+                amount: initialReferralBonus,
+                date: new Date().toISOString().split('T')[0],
+                status: 'Completed',
+                user: "Referred By " + referralCode, // For admin tracking
+            });
+        }
         toast({
             title: "Account Created Successfully!",
             description: "Welcome to GuessMaster! Redirecting you to login.",

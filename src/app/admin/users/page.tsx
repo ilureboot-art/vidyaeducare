@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -18,6 +18,7 @@ import { Search, UserPlus, MoreHorizontal, Trash2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
+import { walletData } from "@/lib/user-data";
 
 type UserStatus = "Active" | "Banned" | "Inactive";
 type User = {
@@ -37,6 +38,18 @@ const initialUsers: User[] = [
   { id: "USR005", name: "Ethan", email: "ethan@example.com", joinDate: "2024-07-25", status: "Inactive", wallet: 10.00 },
 ];
 
+// Add the main user to this list for demonstration purposes
+const mainUser: User = {
+    id: "PLYR-8D7F6E5C",
+    name: "Alex Doe",
+    email: "alex.doe@example.com",
+    joinDate: "2024-07-01",
+    status: "Active",
+    wallet: walletData.balance,
+}
+
+initialUsers.unshift(mainUser);
+
 const getStatusBadgeVariant = (status: string) => {
     return status === "Active" ? "default" : status === "Banned" ? "destructive" : "secondary";
 }
@@ -45,6 +58,22 @@ export default function UserManagementPage() {
   const [users, setUsers] = useState<User[]>(initialUsers);
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
+
+  useEffect(() => {
+    // Keep the main user's wallet balance updated
+    const interval = setInterval(() => {
+        setUsers(prevUsers => {
+            const userIndex = prevUsers.findIndex(u => u.id === mainUser.id);
+            if (userIndex !== -1 && prevUsers[userIndex].wallet !== walletData.balance) {
+                const newUsers = [...prevUsers];
+                newUsers[userIndex] = { ...newUsers[userIndex], wallet: walletData.balance };
+                return newUsers;
+            }
+            return prevUsers;
+        });
+    }, 500);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleStatusChange = (userId: string, newStatus: UserStatus) => {
     setUsers(

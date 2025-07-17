@@ -44,15 +44,23 @@ const getStatusBadgeVariant = (status: string) => {
 export default function WalletPage() {
   const { toast } = useToast();
   const [balance, setBalance] = useState(walletData.balance);
-  const [transactions, setTransactions] = useState<Transaction[]>(walletData.transactions);
+  const [transactions, setTransactions] = useState<Transaction[]>([...walletData.transactions]);
   const [addFundsOpen, setAddFundsOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
 
   useEffect(() => {
     // This effect will re-sync the component state if the underlying shared data changes
-    setBalance(walletData.balance);
-    setTransactions(walletData.transactions);
-  }, []);
+    const interval = setInterval(() => {
+      if (walletData.balance !== balance) {
+        setBalance(walletData.balance);
+      }
+      if (walletData.transactions.length !== transactions.length) {
+        setTransactions([...walletData.transactions]);
+      }
+    }, 500); // Poll for changes
+
+    return () => clearInterval(interval);
+  }, [balance, transactions.length]);
 
   const handleAddFunds = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -223,8 +231,8 @@ export default function WalletPage() {
                     {transactions.slice(0, 3).map((tx) => (
                          <div key={tx.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                             <div className="flex items-center gap-3">
-                                <div className={`p-2 rounded-full ${tx.amount > 0 ? 'bg-green-100 dark:bg-green-900' : 'bg-red-100 dark:bg-red-900'}`}>
-                                    {tx.amount > 0 
+                                <div className={`p-2 rounded-full ${tx.amount >= 0 ? 'bg-green-100 dark:bg-green-900' : 'bg-red-100 dark:bg-red-900'}`}>
+                                    {tx.amount >= 0 
                                     ? <ArrowDownLeft className="w-4 h-4 text-green-600 dark:text-green-400" /> 
                                     : <ArrowUpRight className="w-4 h-4 text-red-600 dark:text-red-400" />}
                                 </div>
@@ -234,8 +242,8 @@ export default function WalletPage() {
                                 </div>
                             </div>
                             <div className="text-right">
-                                <p className={`font-bold ${tx.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                     {tx.amount > 0 ? '+' : ''}₹{Math.abs(tx.amount).toFixed(2)}
+                                <p className={`font-bold ${tx.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                     {tx.amount >= 0 ? '+' : ''}₹{Math.abs(tx.amount).toFixed(2)}
                                 </p>
                                 <Badge variant={getStatusBadgeVariant(tx.status)} className="mt-1">{tx.status}</Badge>
                             </div>

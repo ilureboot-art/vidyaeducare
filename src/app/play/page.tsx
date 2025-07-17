@@ -273,7 +273,6 @@ Join now: ${shareUrl}
         </div>
         <div className="grid grid-cols-1 gap-4">
             <Button size="lg" onClick={() => startGame("real")}><Star className="mr-2 h-5 w-5"/> Start New Game</Button>
-            <Button size="lg" variant="secondary" onClick={() => startGame("demo")}><Sprout className="mr-2 h-5 w-5"/> Play Demo Game</Button>
         </div>
         <Button variant="ghost" onClick={handleShare} className="w-full">
             <Share2 className="mr-2 h-4 w-4"/>

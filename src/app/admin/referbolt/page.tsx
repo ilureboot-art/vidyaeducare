@@ -142,7 +142,7 @@ export default function ReferBoltManagementPage() {
                   <TableCell>{referral.date}</TableCell>
                   <TableCell>₹{referral.commission}</TableCell>
                   <TableCell>
-                    <Badge variant={referral.status === "Paid" ? "default" : "secondary"}>
+                    <Badge variant={referral.status === "Paid" ? "default" : "destructive"}>
                       {referral.status}
                     </Badge>
                   </TableCell>

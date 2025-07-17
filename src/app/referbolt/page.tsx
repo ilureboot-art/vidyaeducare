@@ -1,38 +1,54 @@
 
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, Zap, Share2 } from "lucide-react";
+import { Zap, Share2, IndianRupee, Users, CheckCircle } from "lucide-react";
 import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
+
+// Mock user data for ReferBolt
+const initialReferboltData = {
+  isSubscribed: true,
+  totalCommissions: 250,
+  totalReferrals: 5,
+  cycleProgress: 2,
+  cycleGoal: 3,
+  referralHistory: [
+    { id: 1, name: "Charlie", date: "2024-07-28", commission: 50 },
+    { id: 2, name: "Diana", date: "2024-07-29", commission: 50 },
+    { id: 3, name: "Frank", date: "2024-08-01", commission: 50 },
+    { id: 4, name: "Grace", date: "2024-08-02", commission: 50 },
+    { id: 5, name: "Heidi", date: "2024-08-03", commission: 50 },
+  ]
+};
+
+const benefits = [
+    { text: "Earn a ₹50 commission for every referral who subscribes." },
+    { text: "Complete a cycle with just 3 referrals." },
+    { text: "Earn from both direct & indirect referrals as your network grows." },
+    { text: "Get a bonus of 4 game tickets (worth 8 games) upon subscribing." },
+    { text: "Unlimited earning potential through continuous cycles." },
+];
 
 export default function ReferBoltPage() {
   const { toast } = useToast();
-
-  const handleSimulateReferral = () => {
-    toast({
-      title: "Commission Earned!",
-      description: "You've earned ₹50 commission from a new subscriber in your network!",
-    });
-  };
+  const [data, setData] = useState(initialReferboltData);
 
   const handleShare = async () => {
     // In a real app, this code would be fetched for the logged-in user
     const referralCode = "ALEX-D7F6E5";
     const shareUrl = `${window.location.origin}/signup?ref=${referralCode}`;
-    const benefits = [
-        "Earn a ₹50 commission for every referral who subscribes.",
-        "Complete a cycle with just 3 referrals.",
-        "Earn from both direct & indirect referrals as your network grows.",
-        "Get a bonus of 4 game tickets (8 games worth ₹100/-) upon subscribing.",
-        "Unlimited earning potential through continuous cycles."
-    ].join("\n- ");
+    const benefitsText = benefits.map(b => `- ${b.text}`).join("\n");
 
     const message = `🤝 Join Referbolt - India's Best Skill Gaming Platform! 🤝
 🚀 Use my referral code: ${referralCode}
 ReferBolt Benefits
-- ${benefits}
+${benefitsText}
 
 💸 Earn real cash through referbolt
 Join now: ${shareUrl}
@@ -54,53 +70,133 @@ Join now: ${shareUrl}
           url: shareUrl,
         });
       } catch (error) {
-        // Fallback to clipboard if share API fails
-        // This can happen if the user denies permission or if the API is not supported
-        console.error("Share failed, falling back to clipboard:", error);
-        fallbackCopy();
+        if ((error as DOMException).name !== 'AbortError') {
+          console.error("Share failed, falling back to clipboard:", error);
+          fallbackCopy();
+        }
       }
     } else {
-      // Fallback for browsers that do not support the Share API
       fallbackCopy();
     }
   };
 
+  if (!data.isSubscribed) {
+    return (
+        <div className="w-full max-w-2xl mx-auto space-y-6">
+            <Card className="shadow-lg">
+                <CardHeader>
+                <CardTitle className="text-3xl font-bold text-center text-primary flex items-center justify-center gap-2">
+                    <Zap /> ReferBolt System
+                </CardTitle>
+                <CardDescription className="text-center">
+                    The advanced referral system for earning continuous commissions.
+                </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                <p className="text-center">
+                    ReferBolt is our premium referral program. Once you subscribe, you unlock the ability to earn commissions not just from your direct referrals, but from their referrals too, creating a cycle of passive income.
+                </p>
+                <div className="p-4 bg-muted/50 rounded-lg">
+                    <h3 className="font-semibold text-lg mb-2 text-center">ReferBolt Benefits</h3>
+                    <ul className="space-y-2 text-sm">
+                        {benefits.map((benefit, index) => (
+                             <li key={index} className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span>{benefit.text}</span></li>
+                        ))}
+                    </ul>
+                </div>
+                </CardContent>
+                <CardFooter className="flex-col gap-4">
+                    <Button asChild className="w-full">
+                        <Link href="/store">Subscribe to ReferBolt Now</Link>
+                    </Button>
+                    <Button variant="outline" className="w-full" onClick={handleShare}>
+                        <Share2 className="mr-2" />
+                        Share Benefits
+                    </Button>
+                </CardFooter>
+            </Card>
+        </div>
+    )
+  }
+
   return (
-    <div className="w-full max-w-2xl mx-auto space-y-6">
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-3xl font-bold text-center text-primary flex items-center justify-center gap-2">
-            <Zap /> ReferBolt System
-          </CardTitle>
-          <CardDescription className="text-center">
-            The advanced referral system for earning continuous commissions.
-          </CardDescription>
+    <div className="w-full max-w-4xl mx-auto space-y-6">
+      <Card>
+         <CardHeader>
+            <CardTitle className="text-3xl font-bold text-center text-primary flex items-center justify-center gap-2">
+                <Zap /> ReferBolt Dashboard
+            </CardTitle>
+            <CardDescription className="text-center">
+                Track your earnings, performance, and referral cycles.
+            </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-center">
-            ReferBolt is our premium referral program. Once you subscribe, you unlock the ability to earn commissions not just from your direct referrals, but from their referrals too, creating a cycle of passive income.
-          </p>
-          <div className="p-4 bg-muted/50 rounded-lg">
-            <h3 className="font-semibold text-lg mb-2 text-center">ReferBolt Benefits</h3>
-            <ul className="space-y-2 text-sm">
-                <li className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span>Earn a <span className="font-bold">₹50 commission</span> for every referral who subscribes.</span></li>
-                <li className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span>Complete a cycle with just <span className="font-bold">3 referrals</span>.</span></li>
-                <li className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span>Earn from both <span className="font-bold">direct & indirect referrals</span> as your network grows.</span></li>
-                <li className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span>Get a bonus of <span className="font-bold">4 game tickets</span> (worth 8 games) upon subscribing.</span></li>
-                <li className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span><span className="font-bold">Unlimited earning potential</span> through continuous cycles.</span></li>
-            </ul>
-          </div>
+        <CardContent className="space-y-6">
+            <div className="grid gap-6 md:grid-cols-2">
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Total Commissions</CardTitle>
+                        <IndianRupee className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">₹{data.totalCommissions.toLocaleString()}</div>
+                        <p className="text-xs text-muted-foreground">+₹50 this week</p>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Total Referrals</CardTitle>
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{data.totalReferrals}</div>
+                         <p className="text-xs text-muted-foreground">+1 this week</p>
+                    </CardContent>
+                </Card>
+            </div>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Current Cycle Progress</CardTitle>
+                </CardHeader>
+                <CardContent>
+                     <div className="flex items-center gap-4">
+                        <Progress value={(data.cycleProgress / data.cycleGoal) * 100} className="w-full" />
+                        <span className="font-bold text-lg text-primary">{data.cycleProgress}/{data.cycleGoal}</span>
+                    </div>
+                    <p className="text-center mt-2 text-muted-foreground">Complete the cycle to earn a bonus and start a new one!</p>
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Referral History</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>New User</TableHead>
+                                <TableHead>Date</TableHead>
+                                <TableHead className="text-right">Commission</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {data.referralHistory.map((ref) => (
+                                <TableRow key={ref.id}>
+                                    <TableCell className="font-medium">{ref.name}</TableCell>
+                                    <TableCell>{ref.date}</TableCell>
+                                    <TableCell className="text-right font-bold text-green-600">₹{ref.commission}</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
         </CardContent>
-        <CardFooter className="flex-col gap-4">
-            <Button asChild className="w-full">
-                <Link href="/store">Subscribe to ReferBolt Now</Link>
-            </Button>
-            <Button variant="outline" className="w-full" onClick={handleShare}>
+        <CardFooter>
+             <Button variant="outline" className="w-full" onClick={handleShare}>
                 <Share2 className="mr-2" />
-                Share Benefits
-            </Button>
-            <Button variant="secondary" className="w-full" onClick={handleSimulateReferral}>
-                Simulate Referral Commission
+                Share Your Referral Link
             </Button>
         </CardFooter>
       </Card>

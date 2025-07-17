@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { AppHeader } from '@/components/AppHeader';
 import { usePathname } from 'next/navigation';
 import { Navbar } from '@/components/Navbar';
+import { ChatWidget } from '@/components/ChatWidget';
 
 export default function RootLayout({
   children,
@@ -29,17 +30,18 @@ export default function RootLayout({
       </head>
       <body className={bodyClassName}>
         {isAdminPage ? (
-            <>
-                {children}
-            </>
+          <>{children}</>
+        ) : isAuthPage ? (
+          <main className="flex-1 flex flex-col w-full">{children}</main>
         ) : (
-            <>
-                {!isAuthPage && <AppHeader />}
-                <main className={`flex-1 flex flex-col items-center w-full p-4 pb-24 ${!isAuthPage ? 'pt-20' : ''}`}>
-                    {children}
-                </main>
-                {!isAuthPage && <Navbar />}
-            </>
+          <>
+            <AppHeader />
+            <main className="flex-1 flex flex-col items-center w-full p-4 pb-24 pt-20">
+              {children}
+            </main>
+            <Navbar />
+            <ChatWidget />
+          </>
         )}
         <Toaster />
       </body>

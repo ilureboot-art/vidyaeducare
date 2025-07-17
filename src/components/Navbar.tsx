@@ -3,16 +3,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Gamepad2, Store, Gift, Wallet, User, Home, Zap } from "lucide-react";
+import { Gamepad2, Store, Gift, Wallet, Home, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/", label: "Home", icon: Home },
   { href: "/play", label: "Play", icon: Gamepad2 },
   { href: "/refer", label: "Refer", icon: Gift },
-  { href: "/referbolt", label: "ReferBolt", icon: Zap },
+  { href: "/store", label: "Store", icon: Store },
   { href: "/wallet", label: "Wallet", icon: Wallet },
-  { href: "/profile", label: "Profile", icon: User },
 ];
 
 export function Navbar() {

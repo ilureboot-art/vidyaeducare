@@ -5,34 +5,86 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { ShoppingCart, Ticket, Sparkles, Zap } from "lucide-react";
+import { ShoppingCart, Ticket, Sparkles, Zap, Loader2 } from "lucide-react";
 import { initialPackages as ticketPackages, initialReferboltSubscription } from "@/lib/store-config";
+
+// This is a placeholder for a real user state management solution (e.g., Context, Redux, Zustand)
+// For now, we simulate the user's wallet.
+const useUserWallet = () => {
+  const [balance, setBalance] = useState(450.50); // Initial balance
+  const [transactions, setTransactions] = useState<any[]>([]);
+
+  const addTransaction = (description: string, amount: number) => {
+    const newTransaction = {
+      id: Date.now(),
+      type: "withdrawal",
+      description,
+      amount: -amount,
+      date: new Date().toISOString().split('T')[0],
+      status: "Completed",
+    };
+    setTransactions(prev => [newTransaction, ...prev]);
+  };
+
+  const purchase = (cost: number, description: string) => {
+    if (balance >= cost) {
+      setBalance(prev => prev - cost);
+      addTransaction(description, cost);
+      return true;
+    }
+    return false;
+  };
+
+  return { balance, purchase };
+};
+
 
 export default function StorePage() {
   const { toast } = useToast();
   const [isPurchasing, setIsPurchasing] = useState<number | null>(null);
   const [isPurchasingReferbolt, setIsPurchasingReferbolt] = useState(false);
+  const { balance, purchase } = useUserWallet();
 
   const handlePurchase = (index: number) => {
     setIsPurchasing(index);
-    // Simulate a purchase delay
+    const pkg = ticketPackages[index];
+
     setTimeout(() => {
-      toast({
-        title: "Purchase Successful!",
-        description: `You've bought ${ticketPackages[index].tickets} tickets. Happy guessing!`,
-      });
+      const success = purchase(pkg.price, `Ticket Purchase (${pkg.tickets})`);
+      if (success) {
+        toast({
+          title: "Purchase Successful!",
+          description: `You've bought ${pkg.tickets} tickets. Your new balance is ₹${(balance - pkg.price).toFixed(2)}.`,
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Purchase Failed",
+          description: "Insufficient wallet balance.",
+        });
+      }
       setIsPurchasing(null);
     }, 1500);
   };
 
   const handleReferboltPurchase = () => {
     setIsPurchasingReferbolt(true);
+    const cost = initialReferboltSubscription.price;
     setTimeout(() => {
+      const success = purchase(cost, "ReferBolt Subscription");
+      if (success) {
         toast({
             title: "Subscription Activated!",
             description: "You've received a bonus of 4 tickets (8 games) worth ₹100!",
         });
-        setIsPurchasingReferbolt(false);
+      } else {
+         toast({
+          variant: "destructive",
+          title: "Purchase Failed",
+          description: "Insufficient wallet balance.",
+        });
+      }
+      setIsPurchasingReferbolt(false);
     }, 1500);
   };
 
@@ -77,7 +129,7 @@ export default function StorePage() {
                   onClick={() => handlePurchase(index)}
                   disabled={isPurchasing !== null || isPurchasingReferbolt}
                 >
-                  {isPurchasing === index ? "Processing..." : "Buy Now"}
+                  {isPurchasing === index ? <Loader2 className="animate-spin" /> : "Buy Now"}
                 </Button>
               </CardContent>
             </Card>
@@ -101,7 +153,7 @@ export default function StorePage() {
                   onClick={handleReferboltPurchase}
                   disabled={isPurchasing !== null || isPurchasingReferbolt}
                 >
-                  {isPurchasingReferbolt ? "Processing..." : "Subscribe Now"}
+                  {isPurchasingReferbolt ? <Loader2 className="animate-spin"/> : "Subscribe Now"}
                 </Button>
               </CardContent>
             </Card>

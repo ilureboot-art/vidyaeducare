@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Gamepad2, Zap, HelpCircle, Trophy, Star, Sprout, LogIn, Gift, CheckCircle } from "lucide-react";
 import Link from "next/link";
-import { ChatWidget } from "@/components/ChatWidget";
 
 export default function HomePage() {
   return (
@@ -66,13 +65,13 @@ export default function HomePage() {
        <section className="grid md:grid-cols-2 gap-8 items-start">
         <Card className="hover:shadow-lg transition-shadow flex flex-col h-full">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Gift className="text-accent" /> Refer & Earn</CardTitle>
+            <CardTitle className="flex items-center gap-2"><Gift className="text-accent" /> Refer &amp; Earn</CardTitle>
             <CardDescription>Invite friends, get instant rewards.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 flex-grow">
             <p>Our simple referral program is an easy way to boost your wallet. Share your code and earn every time a friend signs up.</p>
              <div className="p-4 bg-muted/50 rounded-lg">
-                <h3 className="font-semibold text-base mb-2 text-center">Refer & Earn Benefits</h3>
+                <h3 className="font-semibold text-base mb-2 text-center">Refer &amp; Earn Benefits</h3>
                 <ul className="space-y-2 text-sm">
                     <li className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span>You get <span className="font-bold">₹5 for every friend</span> who joins.</span></li>
                     <li className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span>Your friend gets a <span className="font-bold">₹5 welcome bonus</span>.</span></li>
@@ -105,13 +104,11 @@ export default function HomePage() {
           </CardContent>
            <CardFooter>
              <Button asChild className="w-full">
-                <Link href="/referbolt">Learn More & Start Earning</Link>
+                <Link href="/referbolt">Learn More &amp; Start Earning</Link>
              </Button>
            </CardFooter>
         </Card>
       </section>
-
-      <ChatWidget />
     </div>
   );
 }

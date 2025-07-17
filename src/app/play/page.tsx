@@ -44,7 +44,6 @@ const GAMES_PER_TICKET = 2;
 type GameState = "idle" | "playing" | "demo" | "won" | "lost";
 
 // Mock user data
-const MOCK_USER_REFERRAL_CODE = "ALEX-D7F6E5";
 const playerStats = {
     winRate: 45,
     totalEarnings: 1250,

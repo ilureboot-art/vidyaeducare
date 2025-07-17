@@ -8,34 +8,40 @@ import { useToast } from "@/hooks/use-toast";
 import { ShoppingCart, Ticket, Sparkles, Zap, Loader2 } from "lucide-react";
 import { initialPackages as ticketPackages, initialReferboltSubscription } from "@/lib/store-config";
 
-// This is a placeholder for a real user state management solution (e.g., Context, Redux, Zustand)
-// For now, we simulate the user's wallet.
+// Mock user wallet data - In a real app, this would come from a global state/context or backend
+const mockWallet = {
+  balance: 450.50,
+  transactions: [],
+};
+
+// A custom hook to simulate a centralized wallet state
 const useUserWallet = () => {
-  const [balance, setBalance] = useState(450.50); // Initial balance
-  const [transactions, setTransactions] = useState<any[]>([]);
+    const [balance, setBalance] = useState(mockWallet.balance);
 
-  const addTransaction = (description: string, amount: number) => {
-    const newTransaction = {
-      id: Date.now(),
-      type: "withdrawal",
-      description,
-      amount: -amount,
-      date: new Date().toISOString().split('T')[0],
-      status: "Completed",
+    const purchase = (cost: number, description: string) => {
+        if (balance < cost) {
+            return false;
+        }
+        // Simulate the deduction
+        const newBalance = balance - cost;
+        setBalance(newBalance);
+        mockWallet.balance = newBalance; // Update the mock "database"
+
+        // Simulate adding a transaction record
+        const newTransaction = {
+            id: Date.now(),
+            type: 'withdrawal',
+            description,
+            amount: -cost,
+            date: new Date().toISOString().split('T')[0],
+            status: 'Completed',
+        };
+        (mockWallet.transactions as any).unshift(newTransaction);
+        
+        return true;
     };
-    setTransactions(prev => [newTransaction, ...prev]);
-  };
 
-  const purchase = (cost: number, description: string) => {
-    if (balance >= cost) {
-      setBalance(prev => prev - cost);
-      addTransaction(description, cost);
-      return true;
-    }
-    return false;
-  };
-
-  return { balance, purchase };
+    return { balance, purchase };
 };
 
 
@@ -54,7 +60,7 @@ export default function StorePage() {
       if (success) {
         toast({
           title: "Purchase Successful!",
-          description: `You've bought ${pkg.tickets} tickets. Your new balance is ₹${(balance - pkg.price).toFixed(2)}.`,
+          description: `You've bought ${pkg.tickets} tickets. Your new balance is ₹${(mockWallet.balance).toFixed(2)}.`,
         });
       } else {
         toast({
@@ -75,7 +81,7 @@ export default function StorePage() {
       if (success) {
         toast({
             title: "Subscription Activated!",
-            description: "You've received a bonus of 4 tickets (8 games) worth ₹100!",
+            description: `You've received a bonus of 4 tickets! Your new balance is ₹${(mockWallet.balance).toFixed(2)}.`,
         });
       } else {
          toast({

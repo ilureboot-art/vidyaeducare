@@ -65,6 +65,11 @@ export default function WalletPage() {
     const amount = parseFloat((form.elements.namedItem('amount-add') as HTMLInputElement).value);
     const txnId = (form.elements.namedItem('txnId') as HTMLInputElement).value;
 
+    if (!amount || !txnId) {
+        toast({ variant: 'destructive', title: 'Missing Information', description: 'Please fill out all fields.'});
+        return;
+    }
+
     const newTransaction: Transaction = {
         id: Date.now(),
         type: 'deposit',
@@ -91,6 +96,11 @@ export default function WalletPage() {
     const amount = parseFloat((form.elements.namedItem('amount-withdraw') as HTMLInputElement).value);
     const upiId = (form.elements.namedItem('upiId') as HTMLInputElement).value;
     
+    if (!amount || !upiId) {
+        toast({ variant: 'destructive', title: 'Missing Information', description: 'Please fill out all fields.'});
+        return;
+    }
+
     if (amount > balance) {
         toast({
             variant: "destructive",
@@ -193,7 +203,7 @@ export default function WalletPage() {
                 <form onSubmit={handleWithdraw} className="space-y-4">
                     <div>
                         <Label htmlFor="amount-withdraw">Amount (INR)</Label>
-                        <Input id="amount-withdraw" name="amount" type="number" placeholder="e.g., 250" required min="200" />
+                        <Input id="amount-withdraw" name="amount-withdraw" type="number" placeholder="e.g., 250" required min="200" />
                     </div>
                     <div>
                         <Label htmlFor="upiId">Your UPI / GPay / PhonePe ID</Label>

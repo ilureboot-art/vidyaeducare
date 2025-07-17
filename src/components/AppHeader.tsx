@@ -5,12 +5,13 @@ import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, Gamepad2, HelpCircle, Trophy, Store, Gift, Zap, Wallet, Settings, ChevronRight, X, LogOut, User, BarChart, History } from "lucide-react";
+import { Menu, Gamepad2, HelpCircle, Trophy, Store, Gift, Zap, Wallet, Settings, ChevronRight, X, LogOut, User, BarChart, History, BrainCircuit } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { UserNotifications } from "@/components/UserNotifications";
 
 const navItems = [
     { href: "/play", label: "Play", icon: Gamepad2 },
+    { href: "/vidya-edurank", label: "Vidya Edurank", icon: BrainCircuit },
     { href: "/how-to-play", label: "How to Play", icon: HelpCircle },
     { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
     { href: "/store", label: "Store", icon: Store },

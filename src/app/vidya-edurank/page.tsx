@@ -9,15 +9,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { BrainCircuit, Loader2, Sparkles } from "lucide-react";
+import { BrainCircuit, Loader2, Sparkles, Upload } from "lucide-react";
 import { generateEducationalContent, type VidyaEdurankInput, type VidyaEdurankOutput } from '@/ai/flows/vidya-edurank-flow';
 import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function VidyaEdurankPage() {
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(false);
     const [output, setOutput] = useState<VidyaEdurankOutput | null>(null);
-    const [formState, setFormState] = useState<VidyaEdurankInput>({
+    const [formState, setFormState] = useState<Omit<VidyaEdurankInput, 'studyMaterial'>>({
         language: 'English',
         grade: '10th',
         subject: 'Science',
@@ -30,10 +31,13 @@ export default function VidyaEdurankPage() {
             animationScript: false,
             studyPlan: false,
         },
-        studyMaterial: ''
     });
+    const [studyMaterialText, setStudyMaterialText] = useState('');
+    const [studyMaterialFile, setStudyMaterialFile] = useState<string | null>(null);
+    const [fileName, setFileName] = useState('');
+    const [activeTab, setActiveTab] = useState('text');
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setFormState(prevState => ({ ...prevState, [name]: value }));
     };
@@ -47,22 +51,45 @@ export default function VidyaEdurankPage() {
             }
         }));
     };
+    
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (loadEvent) => {
+                const dataUri = loadEvent.target?.result as string;
+                setStudyMaterialFile(dataUri);
+                setFileName(file.name);
+                toast({ title: "File Ready", description: `${file.name} has been selected.`});
+            };
+            reader.readAsDataURL(file);
+        }
+    }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!formState.studyMaterial.trim() || !formState.topic.trim()) {
+        
+        const studyMaterial = activeTab === 'file' ? studyMaterialFile : studyMaterialText;
+
+        if (!studyMaterial || !formState.topic.trim()) {
             toast({
                 variant: 'destructive',
                 title: "Missing Information",
-                description: "Please provide the Topic/Chapter and the study material."
+                description: "Please provide the Topic/Chapter and the study material (either text or a file)."
             });
             return;
         }
+
         setIsLoading(true);
         setOutput(null);
 
+        const input: VidyaEdurankInput = {
+            ...formState,
+            studyMaterial: studyMaterial,
+        };
+
         try {
-            const result = await generateEducationalContent(formState);
+            const result = await generateEducationalContent(input);
             setOutput(result);
         } catch (error) {
             console.error("Error generating content:", error);
@@ -131,7 +158,7 @@ export default function VidyaEdurankPage() {
                         <BrainCircuit /> Vidya Edurank AI Agent
                     </CardTitle>
                     <CardDescription>
-                        Your AI assistant for generating educational materials from any text.
+                        Your AI assistant for generating educational materials from any text or file.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -154,18 +181,40 @@ export default function VidyaEdurankPage() {
                                 <Input id="curriculum" name="curriculum" value={formState.curriculum} onChange={handleInputChange} placeholder="e.g., CBSE, ICSE" />
                             </div>
                         </div>
+                        
                         <div className="space-y-2">
-                            <Label htmlFor="studyMaterial">Study Material / Prompt</Label>
-                            <Textarea
-                                id="studyMaterial"
-                                name="studyMaterial"
-                                value={formState.studyMaterial}
-                                onChange={handleInputChange}
-                                placeholder="Paste textbook paragraph, chapter summary, or key points here..."
-                                className="min-h-[150px]"
-                                required
-                            />
+                            <Label>Study Material</Label>
+                             <Tabs defaultValue="text" onValueChange={setActiveTab} className="w-full">
+                                <TabsList className="grid w-full grid-cols-2">
+                                    <TabsTrigger value="text">Paste Text</TabsTrigger>
+                                    <TabsTrigger value="file">Upload File</TabsTrigger>
+                                </TabsList>
+                                <TabsContent value="text" className="pt-2">
+                                    <Textarea
+                                        value={studyMaterialText}
+                                        onChange={(e) => setStudyMaterialText(e.target.value)}
+                                        placeholder="Paste textbook paragraph, chapter summary, or key points here..."
+                                        className="min-h-[150px]"
+                                    />
+                                </TabsContent>
+                                <TabsContent value="file" className="pt-2">
+                                    <div className="relative border-dashed border-2 border-muted-foreground/50 rounded-lg p-6 text-center hover:border-primary transition-colors">
+                                        <Upload className="mx-auto h-12 w-12 text-muted-foreground" />
+                                        <p className="mt-2 text-sm text-muted-foreground">Click to browse or drag & drop</p>
+                                        <p className="text-xs text-muted-foreground">PDF, PNG, or JPG</p>
+                                        <Input 
+                                            id="fileUpload" 
+                                            type="file"
+                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                            onChange={handleFileChange}
+                                            accept=".pdf,.png,.jpg,.jpeg"
+                                        />
+                                    </div>
+                                    {fileName && <p className="text-sm text-center mt-2 text-muted-foreground">Selected file: <span className="font-semibold">{fileName}</span></p>}
+                                </TabsContent>
+                            </Tabs>
                         </div>
+
 
                         <Separator />
 

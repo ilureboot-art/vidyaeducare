@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, Users, IndianRupee } from "lucide-react";
+import { RefreshCw, Users, IndianRupee, Repeat } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
 // Mock data for ReferBolt management
@@ -23,17 +23,25 @@ const initialStats = {
   activeReferrers: 89,
 };
 
-const initialCycles = [
-  { id: "CYCLE01", referrer: "Alice", referrals: 3, status: "Completed" },
-  { id: "CYCLE02", referrer: "Bob", referrals: 2, status: "In Progress" },
-  { id: "CYCLE03", referrer: "David", referrals: 1, status: "In Progress" },
-  { id: "CYCLE04", referrer: "Mallory", referrals: 3, status: "Completed" },
+type Cycle = {
+  id: string;
+  referrer: string;
+  referrals: number;
+  status: "Completed" | "In Progress";
+  subscriptionType: "Manual" | "Auto-Renewed";
+}
+
+const initialCycles: Cycle[] = [
+  { id: "CYCLE01", referrer: "Alice", referrals: 3, status: "Completed", subscriptionType: "Manual" },
+  { id: "CYCLE02", referrer: "Bob", referrals: 2, status: "In Progress", subscriptionType: "Manual" },
+  { id: "CYCLE03", referrer: "David", referrals: 1, status: "In Progress", subscriptionType: "Manual" },
+  { id: "CYCLE04", referrer: "Mallory", referrals: 3, status: "Completed", subscriptionType: "Auto-Renewed" },
 ]
 
 export default function ReferBoltManagementPage() {
   const [referrals, setReferrals] = useState(initialReferrals);
   const [stats, setStats] = useState(initialStats);
-  const [cycles, setCycles] = useState(initialCycles);
+  const [cycles, setCycles] = useState<Cycle[]>(initialCycles);
 
   // In a real app, this data would be fetched and updated dynamically
   // For simulation, we can just display the state.
@@ -97,6 +105,7 @@ export default function ReferBoltManagementPage() {
                 <TableHead className="w-[200px]">Cycle Progress</TableHead>
                 <TableHead className="text-center">Total Referrals</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Subscription Type</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -111,6 +120,16 @@ export default function ReferBoltManagementPage() {
                     <Badge variant={cycle.status === "Completed" ? "default" : "secondary"}>
                       {cycle.status}
                     </Badge>
+                  </TableCell>
+                   <TableCell>
+                    {cycle.subscriptionType === "Auto-Renewed" ? (
+                      <Badge variant="outline" className="flex items-center gap-1.5 w-fit">
+                        <Repeat className="h-3 w-3 text-primary"/>
+                        {cycle.subscriptionType}
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary">{cycle.subscriptionType}</Badge>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}

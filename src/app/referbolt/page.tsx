@@ -7,13 +7,17 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { Zap, Share2, IndianRupee, Users, CheckCircle } from "lucide-react";
+import { Zap, Share2, IndianRupee, Users, CheckCircle, Repeat } from "lucide-react";
 import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { walletData, addTransaction } from "@/lib/user-data";
+import { initialReferboltSubscription } from "@/lib/store-config";
 
 // Mock user data for ReferBolt
 const initialReferboltData = {
   isSubscribed: true,
+  autoRenew: false,
   totalCommissions: 250,
   totalReferrals: 5,
   cycleProgress: 2,
@@ -38,6 +42,50 @@ const benefits = [
 export default function ReferBoltPage() {
   const { toast } = useToast();
   const [data, setData] = useState(initialReferboltData);
+  const [autoRenew, setAutoRenew] = useState(data.autoRenew);
+
+  const handleCompleteCycle = () => {
+    // This is a simulation function. In a real app, this would be triggered by a backend event.
+    if (autoRenew) {
+      const cost = initialReferboltSubscription.price;
+      if (walletData.balance < cost) {
+        toast({
+          variant: "destructive",
+          title: "Auto-Renewal Failed",
+          description: "Insufficient wallet balance to start a new cycle.",
+        });
+        return;
+      }
+      
+      // 1. Deduct fee from wallet
+      walletData.balance -= cost;
+
+      // 2. Add transaction
+      addTransaction({
+        id: Date.now(),
+        type: 'withdrawal',
+        description: 'ReferBolt Auto-Renewal',
+        amount: -cost,
+        date: new Date().toISOString().split('T')[0],
+        status: 'Completed',
+      });
+      
+      // 3. Reset cycle
+      setData(prev => ({ ...prev, cycleProgress: 0, totalCommissions: prev.totalCommissions + 100 })); // Assuming a cycle completion bonus
+
+      toast({
+        title: "Cycle Complete & Renewed!",
+        description: `₹${cost} has been deducted for your new cycle. Your new balance is ₹${walletData.balance.toFixed(2)}.`,
+      });
+
+    } else {
+       setData(prev => ({ ...prev, cycleProgress: prev.cycleGoal }));
+       toast({
+        title: "Cycle Complete!",
+        description: "Go to the store to manually start a new cycle.",
+      });
+    }
+  }
 
   const handleShare = async () => {
     // In a real app, this code would be fetched for the logged-in user
@@ -156,7 +204,13 @@ Join now: ${shareUrl}
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Current Cycle Progress</CardTitle>
+                    <div className="flex justify-between items-center">
+                        <CardTitle>Current Cycle Progress</CardTitle>
+                         <div className="flex items-center space-x-2">
+                            <Switch id="auto-renew" checked={autoRenew} onCheckedChange={setAutoRenew} />
+                            <Label htmlFor="auto-renew" className="flex items-center gap-1.5"><Repeat className="w-4 h-4" /> Enable Auto-Renewal</Label>
+                        </div>
+                    </div>
                 </CardHeader>
                 <CardContent>
                      <div className="flex items-center gap-4">
@@ -165,6 +219,9 @@ Join now: ${shareUrl}
                     </div>
                     <p className="text-center mt-2 text-muted-foreground">Complete the cycle to earn a bonus and start a new one!</p>
                 </CardContent>
+                 <CardFooter>
+                    <Button onClick={handleCompleteCycle} disabled={data.cycleProgress >= data.cycleGoal} className="w-full">Simulate Cycle Completion</Button>
+                 </CardFooter>
             </Card>
 
             <Card>

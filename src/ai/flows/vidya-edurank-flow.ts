@@ -11,7 +11,7 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
-export const VidyaEdurankInputSchema = z.object({
+const VidyaEdurankInputSchema = z.object({
   language: z.string().describe('The input language (e.g., English, Hindi, Marathi).'),
   grade: z.string().describe('The target grade for the content (e.g., 6th, 10th).'),
   subject: z.string().describe('The subject of the study material (e.g., Science, Mathematics).'),
@@ -28,7 +28,7 @@ export const VidyaEdurankInputSchema = z.object({
 });
 export type VidyaEdurankInput = z.infer<typeof VidyaEdurankInputSchema>;
 
-export const VidyaEdurankOutputSchema = z.object({
+const VidyaEdurankOutputSchema = z.object({
   chapterName: z.string().optional(),
   summaryNotes: z.string().optional().describe('Concept-wise summary notes in bullet points or short paragraphs.'),
   mcqs: z.string().optional().describe('Multiple Choice Questions (with 4 options and the correct answer marked).'),

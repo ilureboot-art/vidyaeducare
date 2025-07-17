@@ -2,10 +2,11 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw, Users, IndianRupee } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 
 // Mock data for ReferBolt management
 const initialReferrals = [
@@ -22,9 +23,17 @@ const initialStats = {
   activeReferrers: 89,
 };
 
+const initialCycles = [
+  { id: "CYCLE01", referrer: "Alice", referrals: 3, status: "Completed" },
+  { id: "CYCLE02", referrer: "Bob", referrals: 2, status: "In Progress" },
+  { id: "CYCLE03", referrer: "David", referrals: 1, status: "In Progress" },
+  { id: "CYCLE04", referrer: "Mallory", referrals: 3, status: "Completed" },
+]
+
 export default function ReferBoltManagementPage() {
   const [referrals, setReferrals] = useState(initialReferrals);
   const [stats, setStats] = useState(initialStats);
+  const [cycles, setCycles] = useState(initialCycles);
 
   // In a real app, this data would be fetched and updated dynamically
   // For simulation, we can just display the state.
@@ -74,6 +83,42 @@ export default function ReferBoltManagementPage() {
           </CardContent>
         </Card>
       </div>
+
+       <Card>
+        <CardHeader>
+          <CardTitle>Referral Cycle Status</CardTitle>
+          <CardDescription>Track the progress of active referral cycles (3 referrals per cycle).</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Referrer</TableHead>
+                <TableHead className="w-[200px]">Cycle Progress</TableHead>
+                <TableHead className="text-center">Total Referrals</TableHead>
+                <TableHead>Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {cycles.map((cycle) => (
+                <TableRow key={cycle.id}>
+                  <TableCell className="font-medium">{cycle.referrer}</TableCell>
+                  <TableCell>
+                    <Progress value={(cycle.referrals / 3) * 100} className="w-full" />
+                  </TableCell>
+                  <TableCell className="text-center">{cycle.referrals} / 3</TableCell>
+                  <TableCell>
+                    <Badge variant={cycle.status === "Completed" ? "default" : "secondary"}>
+                      {cycle.status}
+                    </Badge>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>Recent Referral Activity</CardTitle>

@@ -5,12 +5,11 @@ import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, Gamepad2, HelpCircle, Trophy, Store, Gift, Zap, Wallet, Settings, ChevronRight, X, LogOut, CreditCard, User } from "lucide-react";
+import { Menu, Gamepad2, HelpCircle, Trophy, Store, Gift, Zap, Wallet, Settings, ChevronRight, X, LogOut, User } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 const navItems = [
     { href: "/play", label: "Play", icon: Gamepad2 },
-    { href: "/transactions", label: "Transactions", icon: CreditCard },
     { href: "/how-to-play", label: "How to Play", icon: HelpCircle },
     { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
     { href: "/store", label: "Store", icon: Store },
@@ -34,7 +33,7 @@ export function AppHeader() {
                         <span className="sr-only">Open Menu</span>
                     </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="w-72 p-0 flex flex-col">
+                <SheetContent side="left" className="w-64 p-0 flex flex-col">
                     <SheetHeader className="p-4">
                          <div className="flex justify-between items-center">
                             <SheetTitle asChild>

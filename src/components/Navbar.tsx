@@ -10,6 +10,7 @@ const navItems = [
   { href: "/", label: "Home", icon: Home },
   { href: "/play", label: "Play", icon: Gamepad2 },
   { href: "/refer", label: "Refer", icon: Gift },
+  { href: "/referbolt", label: "ReferBolt", icon: Zap },
   { href: "/store", label: "Store", icon: Store },
   { href: "/wallet", label: "Wallet", icon: Wallet },
 ];

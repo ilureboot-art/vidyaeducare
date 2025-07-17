@@ -88,7 +88,7 @@ export default function WalletPage() {
   const handleWithdraw = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = event.currentTarget;
-    const amount = parseFloat((form.elements.namedItem('amount') as HTMLInputElement).value);
+    const amount = parseFloat((form.elements.namedItem('amount-withdraw') as HTMLInputElement).value);
     const upiId = (form.elements.namedItem('upiId') as HTMLInputElement).value;
     
     if (amount > balance) {
@@ -193,7 +193,7 @@ export default function WalletPage() {
                 <form onSubmit={handleWithdraw} className="space-y-4">
                     <div>
                         <Label htmlFor="amount-withdraw">Amount (INR)</Label>
-                        <Input id="amount" name="amount" type="number" placeholder="e.g., 250" required min="200" />
+                        <Input id="amount-withdraw" name="amount" type="number" placeholder="e.g., 250" required min="200" />
                     </div>
                     <div>
                         <Label htmlFor="upiId">Your UPI / GPay / PhonePe ID</Label>

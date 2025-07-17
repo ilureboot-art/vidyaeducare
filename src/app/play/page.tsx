@@ -14,7 +14,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
-import { BarChart, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Line, Bar, ResponsiveContainer } from "recharts";
+import { LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Line, ResponsiveContainer, RadialBarChart, RadialBar, PolarAngleAxis } from "recharts";
 import {
   Award,
   CircleHelp,
@@ -58,6 +58,10 @@ const playerStats = {
         { name: 'Game 7', earnings: 100 },
     ],
 };
+
+const winRateData = [
+  { name: 'Win Rate', value: playerStats.winRate, fill: 'hsl(var(--primary))' },
+];
 
 
 const Confetti = () => (
@@ -389,45 +393,83 @@ Join now: ${shareUrl}
                 <span className="font-semibold">Your Performance</span>
             </div>
           </AccordionTrigger>
-          <AccordionContent>
+          <AccordionContent className="space-y-4">
             <Card>
                 <CardHeader>
                     <CardTitle className="text-lg">Lifetime Stats</CardTitle>
                 </CardHeader>
                 <CardContent className="grid grid-cols-3 gap-4 text-center">
-                    <div className="p-2 bg-muted/50 rounded-lg">
-                        <Percent className="w-5 h-5 mx-auto text-primary mb-1"/>
+                    <div className="p-3 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
+                        <Percent className="w-5 h-5 mx-auto text-blue-600 dark:text-blue-400 mb-1"/>
                         <p className="text-xl font-bold">{playerStats.winRate}%</p>
                         <p className="text-xs text-muted-foreground">Win Rate</p>
                     </div>
-                     <div className="p-2 bg-muted/50 rounded-lg">
-                        <IndianRupee className="w-5 h-5 mx-auto text-primary mb-1"/>
+                     <div className="p-3 bg-green-100 dark:bg-green-900/50 rounded-lg">
+                        <IndianRupee className="w-5 h-5 mx-auto text-green-600 dark:text-green-400 mb-1"/>
                         <p className="text-xl font-bold">₹{playerStats.totalEarnings}</p>
-                        <p className="text-xs text-muted-foreground">Total Earnings</p>
+                        <p className="text-xs text-muted-foreground">Earnings</p>
                     </div>
-                     <div className="p-2 bg-muted/50 rounded-lg">
-                        <Gamepad2 className="w-5 h-5 mx-auto text-primary mb-1"/>
+                     <div className="p-3 bg-pink-100 dark:bg-pink-900/50 rounded-lg">
+                        <Gamepad2 className="w-5 h-5 mx-auto text-pink-600 dark:text-pink-400 mb-1"/>
                         <p className="text-xl font-bold">{playerStats.gamesPlayed}</p>
                         <p className="text-xs text-muted-foreground">Games Played</p>
                     </div>
                 </CardContent>
             </Card>
-             <Card className="mt-4">
-                <CardHeader>
-                    <CardTitle className="text-lg">Recent Earnings (Last 7 Games)</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <ResponsiveContainer width="100%" height={200}>
-                        <LineChart data={playerStats.earningsHistory}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="name" fontSize={12} />
-                            <YAxis fontSize={12} />
-                            <Tooltip />
-                            <Line type="monotone" dataKey="earnings" name="Earnings (₹)" stroke="hsl(var(--primary))" strokeWidth={2} activeDot={{ r: 8 }} />
-                        </LineChart>
-                    </ResponsiveContainer>
-                </CardContent>
-            </Card>
+
+            <div className="grid md:grid-cols-2 gap-4">
+                 <Card>
+                    <CardHeader>
+                        <CardTitle className="text-lg">Win Rate</CardTitle>
+                        <CardDescription>Your winning performance.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex items-center justify-center">
+                        <ResponsiveContainer width="100%" height={200}>
+                            <RadialBarChart 
+                                innerRadius="70%" 
+                                outerRadius="100%" 
+                                data={winRateData} 
+                                startAngle={90} 
+                                endAngle={-270}
+                            >
+                                <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
+                                <RadialBar background dataKey='value' angleAxisId={0} data={[{ value: 100 }]} fill="hsl(var(--muted))" cornerRadius={10} />
+                                <RadialBar dataKey='value' cornerRadius={10} />
+                                <Tooltip 
+                                    contentStyle={{
+                                        border: 'none',
+                                        background: 'transparent',
+                                        padding: 0,
+                                    }}
+                                    cursor={false}
+                                    formatter={(value) => `${value}%`}
+                                />
+                                <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="text-2xl font-bold fill-foreground">
+                                    {`${playerStats.winRate}%`}
+                                </text>
+                            </RadialBarChart>
+                        </ResponsiveContainer>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-lg">Recent Earnings</CardTitle>
+                        <CardDescription>Last 7 games.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <ResponsiveContainer width="100%" height={200}>
+                            <LineChart data={playerStats.earningsHistory}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="name" fontSize={12} tick={false}/>
+                                <YAxis fontSize={12} />
+                                <Tooltip formatter={(value) => `₹${value}`} />
+                                <Line type="monotone" dataKey="earnings" name="Earnings" stroke="hsl(var(--primary))" strokeWidth={2} activeDot={{ r: 8 }} />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </CardContent>
+                </Card>
+            </div>
           </AccordionContent>
         </AccordionItem>
       </Accordion>

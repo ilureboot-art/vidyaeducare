@@ -19,6 +19,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { initialReferralBonus } from "@/lib/store-config";
 import { addTransaction } from "@/lib/user-data";
+import { addNotification } from "@/lib/notifications";
 
 export default function SignupPage() {
   const searchParams = useSearchParams();
@@ -49,6 +50,12 @@ export default function SignupPage() {
     e.preventDefault();
     // In a real app, you would verify the OTP against your backend
     if (otp) {
+        addNotification({
+          type: "new_user",
+          message: `A new user just signed up!`,
+          userId: 'admin'
+        });
+
         if (referralCode) {
             // In a real app, this logic would live on the backend.
             // Here, we just add the transaction for the new user.
@@ -57,17 +64,29 @@ export default function SignupPage() {
                 type: 'deposit',
                 description: 'Welcome Bonus (from referral)',
                 amount: initialReferralBonus,
-                date: new Date().toISOString().split('T')[0],
+                date: new Date().toISOString(),
                 status: 'Completed',
             });
+            addNotification({
+              type: 'deposit_received',
+              message: `You received a ₹${initialReferralBonus} Welcome Bonus!`,
+              userId: 'user-alex-doe'
+            });
+
+             // In a real app, you would look up the referrer and credit them.
+             // Here we simulate it for the main user for demo purposes.
              addTransaction({
                 id: Date.now() + 1, // To avoid key collision
                 type: 'deposit',
-                description: `Referral Bonus for inviting new user`,
+                description: `Referral Bonus for new user`,
                 amount: initialReferralBonus,
-                date: new Date().toISOString().split('T')[0],
+                date: new Date().toISOString(),
                 status: 'Completed',
-                user: "Referred By " + referralCode, // For admin tracking
+            });
+             addNotification({
+              type: 'deposit_received',
+              message: `You received a ₹${initialReferralBonus} bonus for referring a new user.`,
+              userId: 'user-alex-doe'
             });
         }
         toast({

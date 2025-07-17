@@ -18,7 +18,8 @@ import {
     ShoppingCart,
     Landmark,
     Home,
-    UserCog
+    UserCog,
+    Bell
 } from "lucide-react";
 import {
     Sidebar,
@@ -34,6 +35,7 @@ import {
 const adminNavItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/admin/notifications", label: "Notifications", icon: Bell },
   { href: "/admin/users", label: "User Management", icon: Users },
   { href: "/admin/transactions", label: "Transactions", icon: CreditCard },
   { href: "/admin/chat", label: "Chat Management", icon: MessageSquare },

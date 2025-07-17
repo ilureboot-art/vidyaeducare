@@ -31,10 +31,12 @@ import {
   BarChart2,
   Percent,
   IndianRupee,
+  Sprout,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { walletData, addTransaction } from "@/lib/user-data";
 import { initialReferralBonus } from "@/lib/store-config";
+import { addNotification } from "@/lib/notifications";
 
 
 const MAX_ATTEMPTS = 5;
@@ -42,6 +44,7 @@ const REWARDS = [100, 75, 50, 25, 15];
 const GAMES_PER_TICKET = 2;
 
 type GameState = "idle" | "playing" | "won" | "lost";
+type GameMode = "real" | "demo";
 
 const playerStats = {
     winRate: 0,
@@ -90,6 +93,7 @@ export default function PlayPage() {
   const [guessHistory, setGuessHistory] = useState<{ guess: number; hint: string }[]>([]);
   const [attemptsLeft, setAttemptsLeft] = useState(MAX_ATTEMPTS);
   const [gameState, setGameState] = useState<GameState>("idle");
+  const [gameMode, setGameMode] = useState<GameMode>("real");
   const [feedback, setFeedback] = useState("Start a new game to play!");
   const [isChecking, setIsChecking] = useState(false);
   const [reward, setReward] = useState(0);
@@ -115,25 +119,26 @@ export default function PlayPage() {
     setGameState("playing");
   }, []);
 
-  const startGame = useCallback(() => {
-    if (gamesLeft <= 0) {
-      toast({
-        variant: "destructive",
-        title: "No Games Left",
-        description: "You need to buy more tickets to play.",
-      });
-      return;
+  const startGame = useCallback((mode: GameMode) => {
+    setGameMode(mode);
+    if (mode === "real") {
+        if (gamesLeft <= 0) {
+            toast({
+                variant: "destructive",
+                title: "No Games Left",
+                description: "You need to buy more tickets to play.",
+            });
+            return;
+        }
+        setGamesLeft((prev) => prev - 1);
     }
-
-    setGamesLeft((prev) => prev - 1);
     resetGame();
   }, [gamesLeft, resetGame, toast]);
   
   useEffect(() => {
-    const start = searchParams.get('start') === 'true';
-
-    if (start) {
-      startGame();
+    const startMode = searchParams.get('mode');
+    if (startMode === 'demo') {
+      startGame('demo');
     }
   }, [searchParams, startGame]);
 
@@ -165,19 +170,30 @@ export default function PlayPage() {
       setGameState("won");
       setFeedback(`Congratulations! You guessed the number in ${attemptsUsed} ${attemptsUsed > 1 ? 'attempts' : 'attempt'}.`);
       setGuessHistory([...guessHistory, { guess: guessNum, hint: 'Correct!' }]);
-      if (earnedReward > 0) {
+
+      if (gameMode === "real" && earnedReward > 0) {
           walletData.balance += earnedReward;
           addTransaction({
             id: Date.now(),
             type: 'deposit',
             description: 'Game Won Reward',
             amount: earnedReward,
-            date: new Date().toISOString().split('T')[0],
+            date: new Date().toISOString(),
             status: 'Completed',
+          });
+          addNotification({
+              type: "deposit_received",
+              message: `You won ₹${earnedReward} in GuessMaster!`,
+              userId: 'user-alex-doe',
           });
           toast({
             title: "You Won!",
             description: `₹${earnedReward} has been added to your wallet.`,
+          });
+      } else if (gameMode === "demo") {
+          toast({
+            title: "You Won!",
+            description: `You guessed the number! This was a demo game, so no real money was awarded.`,
           });
       }
     } else {
@@ -198,7 +214,7 @@ export default function PlayPage() {
   };
 
   const handleShare = async () => {
-    const referralCode = "ALEX-D7F6E5";
+    const referralCode = "ALEX-D7F6E5C";
     const shareUrl = `${window.location.origin}/signup?ref=${referralCode}`;
     const rewardsList = REWARDS.map((r, i) => `${i+1}${i === 0 ? 'st' : i === 1 ? 'nd' : i === 2 ? 'rd' : 'th'} Attempt: ₹${r}`).join('\n');
     const message = `🎮 Join GuessMaster - India's Best Skill Gaming Platform! 🎮
@@ -241,6 +257,7 @@ Join now: ${shareUrl}
             <Ticket className="w-5 h-5 text-primary" />
             <span>Tickets: {tickets}</span>
         </div>
+         {gameMode === 'demo' && <Badge variant="outline">Demo Game</Badge>}
         <div className="flex items-center gap-2">
             <Gamepad2 className="w-5 h-5 text-primary" />
             <span>Games Left: {gamesLeft}</span>
@@ -255,7 +272,8 @@ Join now: ${shareUrl}
             <p className="text-muted-foreground mt-2">Guess the secret number between 1 and 100 in 5 tries!</p>
         </div>
         <div className="grid grid-cols-1 gap-4">
-            <Button size="lg" onClick={() => startGame()}><Star className="mr-2 h-5 w-5"/> Start New Game</Button>
+            <Button size="lg" onClick={() => startGame("real")}><Star className="mr-2 h-5 w-5"/> Start New Game</Button>
+            <Button size="lg" variant="secondary" onClick={() => startGame("demo")}><Sprout className="mr-2 h-5 w-5"/> Play Demo Game</Button>
         </div>
         <Button variant="ghost" onClick={handleShare} className="w-full">
             <Share2 className="mr-2 h-4 w-4"/>
@@ -267,7 +285,7 @@ Join now: ${shareUrl}
   const renderPlayingState = () => (
     <div className="space-y-4">
         <div className="flex justify-between items-center">
-            <h2 className="text-lg font-semibold">Real Game</h2>
+            <h2 className="text-lg font-semibold">{gameMode === 'real' ? 'Real Game' : 'Demo Game'}</h2>
             <Badge variant="secondary">Attempt {MAX_ATTEMPTS - attemptsLeft + 1} of {MAX_ATTEMPTS}</Badge>
         </div>
         <div className="p-4 bg-muted/50 rounded-lg text-center font-medium flex items-center justify-center gap-2 min-h-[64px]">
@@ -317,14 +335,14 @@ Join now: ${shareUrl}
         {gameState === 'won' ? <Trophy className="w-16 h-16 text-yellow-500" /> : <HeartCrack className="w-16 h-16 text-destructive" />}
         <h2 className="text-2xl font-bold">{gameState === 'won' ? "You Won!" : "Game Over"}</h2>
         <p className="text-muted-foreground">{feedback}</p>
-        {gameState === 'won' && reward > 0 && (
+        {gameState === 'won' && reward > 0 && gameMode === 'real' && (
             <div className="flex items-center gap-2 p-3 bg-green-100 dark:bg-green-900/50 rounded-lg">
                 <Award className="w-6 h-6 text-green-600 dark:text-green-400"/>
                 <span className="font-semibold text-green-700 dark:text-green-300">You earned ₹{reward}!</span>
             </div>
         )}
         <div className="flex gap-4 pt-4">
-            <Button onClick={() => startGame()}><RefreshCw className="mr-2 h-4 w-4"/> Play Again</Button>
+            <Button onClick={() => startGame(gameMode)}><RefreshCw className="mr-2 h-4 w-4"/> Play Again</Button>
             <Button variant="outline" onClick={goBackToMenu}>Exit to Home</Button>
         </div>
     </div>

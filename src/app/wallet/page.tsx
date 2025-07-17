@@ -27,6 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { walletData, addTransaction, type Transaction } from "@/lib/user-data";
 import { Badge } from "@/components/ui/badge";
+import { addNotification } from "@/lib/notifications";
 
 const getStatusBadgeVariant = (status: string) => {
     switch (status.toLowerCase()) {
@@ -49,7 +50,6 @@ export default function WalletPage() {
   const [withdrawOpen, setWithdrawOpen] = useState(false);
 
   useEffect(() => {
-    // This effect will re-sync the component state if the underlying shared data changes
     const interval = setInterval(() => {
       if (walletData.balance !== balance) {
         setBalance(walletData.balance);
@@ -57,7 +57,7 @@ export default function WalletPage() {
       if (walletData.transactions.length !== transactions.length) {
         setTransactions([...walletData.transactions]);
       }
-    }, 500); // Poll for changes
+    }, 500); 
 
     return () => clearInterval(interval);
   }, [balance, transactions.length]);
@@ -78,12 +78,18 @@ export default function WalletPage() {
         type: 'deposit',
         description: 'Fund Deposit Request',
         amount: amount,
-        date: new Date().toISOString().split('T')[0],
+        date: new Date().toISOString(),
         status: 'Pending',
         referenceId: txnId,
+        user: "Alex Doe",
     };
     
     addTransaction(newTransaction);
+    addNotification({
+        type: "deposit_request",
+        message: `Alex Doe requested to deposit ₹${amount} (Ref: ${txnId}).`,
+        userId: 'admin',
+    });
     setTransactions([...walletData.transactions]);
 
     toast({
@@ -123,20 +129,26 @@ export default function WalletPage() {
         return;
     }
     
-    walletData.balance -= amount; // Deduct balance from the central store
+    walletData.balance -= amount; 
     
     const newTransaction: Transaction = {
         id: Date.now(),
         type: 'withdrawal',
         description: 'Withdrawal Request',
         amount: -amount,
-        date: new Date().toISOString().split('T')[0],
+        date: new Date().toISOString(),
         status: 'Pending',
         paymentMethod: upiId,
+        user: "Alex Doe",
     };
 
     addTransaction(newTransaction);
-    setBalance(walletData.balance); // Update local state for re-render
+    addNotification({
+        type: "withdrawal_request",
+        message: `Alex Doe requested to withdraw ₹${amount}.`,
+        userId: 'admin'
+    });
+    setBalance(walletData.balance); 
     setTransactions([...walletData.transactions]);
 
     toast({

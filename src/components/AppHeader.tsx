@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "@/components/ui/sheet";
 import { Menu, Gamepad2, HelpCircle, Trophy, Store, Gift, Zap, Wallet, Settings, ChevronRight, X, LogOut, User, BarChart, History } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { UserNotifications } from "@/components/UserNotifications";
 
 const navItems = [
     { href: "/play", label: "Play", icon: Gamepad2 },
@@ -34,7 +35,7 @@ export function AppHeader() {
                         <span className="sr-only">Open Menu</span>
                     </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="w-60 p-0 flex flex-col">
+                <SheetContent side="left" className="w-64 p-0 flex flex-col">
                     <SheetHeader className="p-4">
                          <div className="flex justify-between items-center">
                             <SheetTitle asChild>
@@ -89,7 +90,7 @@ export function AppHeader() {
             <Link href="/" className="text-2xl font-bold text-primary tracking-tighter">
                 GuessMaster
             </Link>
-             <div className="w-10"></div>
+             <UserNotifications />
         </div>
     </header>
   );

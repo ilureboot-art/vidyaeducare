@@ -113,6 +113,10 @@ export default function AdminLoginPage() {
                                 <Input id="name-signup" placeholder="Admin Name" required disabled={isOtpSent}/>
                             </div>
                             <div className="space-y-2">
+                                <Label htmlFor="email-signup">Email Address</Label>
+                                <Input id="email-signup" type="email" placeholder="you@example.com" required disabled={isOtpSent}/>
+                            </div>
+                            <div className="space-y-2">
                                 <Label htmlFor="phone-signup">WhatsApp Number</Label>
                                 <Input id="phone-signup" type="tel" placeholder="+91 12345 67890" required disabled={isOtpSent}/>
                             </div>

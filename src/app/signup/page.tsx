@@ -126,6 +126,11 @@ export default function SignupPage() {
               <p className="text-xs text-muted-foreground">Your full name as it appears on your documents.</p>
             </div>
             <div className="space-y-2">
+                <Label htmlFor="email">Email Address</Label>
+                <Input id="email" type="email" placeholder="you@example.com" required disabled={isOtpSent} />
+                <p className="text-xs text-muted-foreground">Used for account recovery.</p>
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="phone">WhatsApp Number</Label>
               <Input id="phone" type="tel" placeholder="+91 12345 67890" required disabled={isOtpSent} />
               <p className="text-xs text-muted-foreground">We'll use this for login and important notifications.</p>

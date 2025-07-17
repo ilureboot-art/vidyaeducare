@@ -42,6 +42,7 @@ type AdminStatus = "Active" | "Pending" | "Rejected";
 type Admin = {
   id: string;
   name: string;
+  email: string;
   phone: string;
   role: AdminRole;
   status: AdminStatus;
@@ -49,13 +50,13 @@ type Admin = {
 };
 
 const initialAdmins: Admin[] = [
-  { id: "ADM001", name: "Super Admin", phone: "+91 99999 88888", role: "Head Admin", status: "Active", joinDate: "2024-07-01" },
-  { id: "ADM002", name: "Sub Admin One", phone: "+91 88888 77777", role: "Sub-admin", status: "Active", joinDate: "2024-07-15" },
+  { id: "ADM001", name: "Super Admin", email: "super@example.com", phone: "+91 99999 88888", role: "Head Admin", status: "Active", joinDate: "2024-07-01" },
+  { id: "ADM002", name: "Sub Admin One", email: "sub1@example.com", phone: "+91 88888 77777", role: "Sub-admin", status: "Active", joinDate: "2024-07-15" },
 ];
 
 const initialRequests: Admin[] = [
-    { id: "ADM003", name: "Charlie Request", phone: "+91 77777 66666", role: "Sub-admin", status: "Pending", joinDate: "2024-08-01" },
-    { id: "ADM004", name: "Diana Applicant", phone: "+91 66666 55555", role: "Sub-admin", status: "Pending", joinDate: "2024-08-02" },
+    { id: "ADM003", name: "Charlie Request", email: "charlie@example.com", phone: "+91 77777 66666", role: "Sub-admin", status: "Pending", joinDate: "2024-08-01" },
+    { id: "ADM004", name: "Diana Applicant", email: "diana@example.com", phone: "+91 66666 55555", role: "Sub-admin", status: "Pending", joinDate: "2024-08-02" },
 ]
 
 export default function AdminManagementPage() {
@@ -86,11 +87,12 @@ export default function AdminManagementPage() {
     e.preventDefault();
     const form = e.currentTarget;
     const name = (form.elements.namedItem('name') as HTMLInputElement).value;
+    const email = (form.elements.namedItem('email') as HTMLInputElement).value;
     const phone = (form.elements.namedItem('phone') as HTMLInputElement).value;
     const password = (form.elements.namedItem('password') as HTMLInputElement).value;
     const role = (form.elements.namedItem('role') as HTMLInputElement).value as AdminRole;
 
-    if (!name || !phone || !password || !role) {
+    if (!name || !email || !phone || !password || !role) {
         toast({ variant: 'destructive', title: 'Missing Information', description: 'Please fill out all fields.'});
         return;
     }
@@ -98,6 +100,7 @@ export default function AdminManagementPage() {
     const newAdmin: Admin = {
         id: `ADM${String(Date.now()).slice(-3)}`,
         name,
+        email,
         phone,
         role,
         status: "Active",
@@ -201,6 +204,10 @@ export default function AdminManagementPage() {
                             <Input id="name" name="name" required />
                         </div>
                          <div className="space-y-2">
+                            <Label htmlFor="email">Email Address</Label>
+                            <Input id="email" name="email" type="email" required />
+                        </div>
+                         <div className="space-y-2">
                             <Label htmlFor="phone">WhatsApp Number</Label>
                             <Input id="phone" name="phone" type="tel" required />
                         </div>
@@ -233,6 +240,7 @@ export default function AdminManagementPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Phone Number</TableHead>
@@ -243,6 +251,7 @@ export default function AdminManagementPage() {
               {admins.map((admin) => (
                 <TableRow key={admin.id}>
                   <TableCell className="font-medium">{admin.name}</TableCell>
+                   <TableCell>{admin.email}</TableCell>
                    <TableCell>
                     <Badge variant={admin.role === "Head Admin" ? "default" : "secondary"}>
                       {admin.role}

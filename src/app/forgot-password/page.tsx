@@ -13,23 +13,24 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Gamepad2, ArrowLeft } from "lucide-react";
+import { Gamepad2, ArrowLeft, Mail, MessageSquare } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function ForgotPasswordPage() {
   const { toast } = useToast();
   const router = useRouter();
   const [step, setStep] = useState<"send-otp" | "verify-otp" | "reset-password">("send-otp");
   const [otp, setOtp] = useState("");
+  const [recoveryMethod, setRecoveryMethod] = useState<"whatsapp" | "email">("whatsapp");
 
   const handleSendOtp = (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, send OTP via backend
     setStep("verify-otp");
     toast({
       title: "OTP Sent",
-      description: `An OTP has been sent to your WhatsApp number.`,
+      description: `An OTP has been sent to your ${recoveryMethod}.`,
     });
   };
 
@@ -79,75 +80,83 @@ export default function ForgotPasswordPage() {
       </div>
       <Card className="w-full">
         {step === "send-otp" && (
-          <form onSubmit={handleSendOtp}>
             <CardHeader>
               <CardTitle>Forgot Password</CardTitle>
               <CardDescription>
-                Enter your WhatsApp number and we'll send you an OTP to reset your password.
+                Choose a recovery method and we'll send you an OTP to reset your password.
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <Label htmlFor="phone">WhatsApp Number</Label>
-                <Input id="phone" type="tel" placeholder="+91 12345 67890" required />
-              </div>
-            </CardContent>
-            <CardContent>
-              <Button type="submit" className="w-full">Send Reset OTP</Button>
-            </CardContent>
-          </form>
         )}
+        <CardContent>
+            {step === "send-otp" && (
+                <form onSubmit={handleSendOtp}>
+                <Tabs defaultValue="whatsapp" onValueChange={(value) => setRecoveryMethod(value as any)}>
+                    <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="whatsapp"><MessageSquare className="mr-2"/> WhatsApp</TabsTrigger>
+                        <TabsTrigger value="email"><Mail className="mr-2"/> Email</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="whatsapp" className="pt-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="phone">WhatsApp Number</Label>
+                            <Input id="phone" type="tel" placeholder="+91 12345 67890" required />
+                        </div>
+                    </TabsContent>
+                    <TabsContent value="email" className="pt-4">
+                         <div className="space-y-2">
+                            <Label htmlFor="email">Email Address</Label>
+                            <Input id="email" type="email" placeholder="you@example.com" required />
+                        </div>
+                    </TabsContent>
+                </Tabs>
+                <Button type="submit" className="w-full mt-4">Send Reset OTP</Button>
+                </form>
+            )}
 
-        {step === "verify-otp" && (
-          <form onSubmit={handleVerifyOtp}>
-            <CardHeader>
-              <CardTitle>Verify OTP</CardTitle>
-              <CardDescription>
-                Enter the OTP we sent to your WhatsApp number.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <Label htmlFor="otp">Enter OTP</Label>
-                <Input
-                  id="otp"
-                  type="text"
-                  placeholder="Enter the 6-digit OTP"
-                  required
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value)}
-                />
-              </div>
-            </CardContent>
-            <CardContent>
-              <Button type="submit" className="w-full">Verify OTP</Button>
-            </CardContent>
-          </form>
-        )}
+            {step === "verify-otp" && (
+              <form onSubmit={handleVerifyOtp}>
+                  <CardHeader className="p-0 mb-4">
+                    <CardTitle>Verify OTP</CardTitle>
+                    <CardDescription>
+                      Enter the OTP we sent to your {recoveryMethod}.
+                    </CardDescription>
+                  </CardHeader>
+                  <div className="space-y-2">
+                    <Label htmlFor="otp">Enter OTP</Label>
+                    <Input
+                      id="otp"
+                      type="text"
+                      placeholder="Enter the 6-digit OTP"
+                      required
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value)}
+                    />
+                  </div>
+                   <Button type="submit" className="w-full mt-4">Verify OTP</Button>
+              </form>
+            )}
 
-        {step === "reset-password" && (
-          <form onSubmit={handleResetPassword}>
-            <CardHeader>
-              <CardTitle>Set New Password</CardTitle>
-              <CardDescription>
-                Choose a new, strong password for your account.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="password">New Password</Label>
-                <Input id="password" name="password" type="password" required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                <Input id="confirmPassword" name="confirmPassword" type="password" required />
-              </div>
-            </CardContent>
-            <CardContent>
-              <Button type="submit" className="w-full">Reset Password</Button>
-            </CardContent>
-          </form>
-        )}
+            {step === "reset-password" && (
+              <form onSubmit={handleResetPassword}>
+                  <CardHeader className="p-0 mb-4">
+                    <CardTitle>Set New Password</CardTitle>
+                    <CardDescription>
+                      Choose a new, strong password for your account.
+                    </CardDescription>
+                  </CardHeader>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="password">New Password</Label>
+                        <Input id="password" name="password" type="password" required />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                        <Input id="confirmPassword" name="confirmPassword" type="password" required />
+                    </div>
+                    <Button type="submit" className="w-full pt-2">Reset Password</Button>
+                  </div>
+              </form>
+            )}
+        </CardContent>
       </Card>
       <div className="text-center text-sm">
         <Link href="/login" passHref>

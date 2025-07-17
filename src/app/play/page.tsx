@@ -9,6 +9,13 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
+import { BarChart, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Line, Bar, ResponsiveContainer } from "recharts";
+import {
   Award,
   CircleHelp,
   Gamepad2,
@@ -22,7 +29,12 @@ import {
   Ticket,
   Trophy,
   ArrowLeft,
+  BarChart2,
+  Percent,
+  IndianRupee,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
+
 
 const MAX_ATTEMPTS = 5;
 const REWARDS = [100, 75, 50, 25, 15];
@@ -30,8 +42,51 @@ const GAMES_PER_TICKET = 2;
 
 type GameState = "idle" | "playing" | "demo" | "won" | "lost";
 
-// Mock user data for referral code
+// Mock user data
 const MOCK_USER_REFERRAL_CODE = "ALEX-D7F6E5";
+const playerStats = {
+    winRate: 45,
+    totalEarnings: 1250,
+    gamesPlayed: 85,
+    earningsHistory: [
+        { name: 'Game 1', earnings: 0 },
+        { name: 'Game 2', earnings: 50 },
+        { name: 'Game 3', earnings: 0 },
+        { name: 'Game 4', earnings: 25 },
+        { name: 'Game 5', earnings: 75 },
+        { name: 'Game 6', earnings: 0 },
+        { name: 'Game 7', earnings: 100 },
+    ],
+};
+
+
+const Confetti = () => (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {[...Array(100)].map((_, i) => (
+            <div
+                key={i}
+                className="absolute bg-yellow-400 rounded-full"
+                style={{
+                    left: `${Math.random() * 100}%`,
+                    top: `${-20 - Math.random() * 100}%`,
+                    width: `${Math.random() * 8 + 4}px`,
+                    height: `${Math.random() * 8 + 4}px`,
+                    animation: `confetti-fall ${Math.random() * 3 + 2}s linear ${Math.random() * 2}s infinite`,
+                }}
+            />
+        ))}
+        <style jsx>{`
+            @keyframes confetti-fall {
+                from {
+                    transform: translateY(0) rotate(0deg);
+                }
+                to {
+                    transform: translateY(120vh) rotate(720deg);
+                }
+            }
+        `}</style>
+    </div>
+);
 
 export default function PlayPage() {
   const router = useRouter();
@@ -47,6 +102,7 @@ export default function PlayPage() {
   const [reward, setReward] = useState(0);
   const [tickets, setTickets] = useState(2);
   const [gamesLeft, setGamesLeft] = useState(tickets * GAMES_PER_TICKET);
+  const [shake, setShake] = useState(false);
   
   const { toast } = useToast();
 
@@ -92,6 +148,10 @@ export default function PlayPage() {
     }
   }, [searchParams, startGame]);
 
+  const triggerShake = () => {
+    setShake(true);
+    setTimeout(() => setShake(false), 500);
+  }
 
   const handleGuessSubmit = async () => {
     const guessNum = parseInt(currentGuess);
@@ -123,6 +183,7 @@ export default function PlayPage() {
           });
       }
     } else {
+      triggerShake();
       const direction = guessNum < secretNumber ? "higher" : "lower";
       const hint = `The secret number is ${direction}.`;
       setFeedback(hint);
@@ -168,7 +229,6 @@ Join now: ${shareUrl}
           url: shareUrl,
         });
       } catch (error) {
-        // If share fails for any reason, fall back to copy
         console.error("Web Share API failed, falling back to clipboard:", error);
         fallbackCopy();
       }
@@ -193,7 +253,7 @@ Join now: ${shareUrl}
   const renderIdleState = () => (
     <div className="text-center space-y-6">
         <div className="flex flex-col items-center text-center">
-            <h1 className="text-4xl font-bold font-headline text-primary">GuessMaster</h1>
+            <h1 className="text-4xl font-bold text-primary">GuessMaster</h1>
             <p className="text-muted-foreground mt-2">Guess the secret number between 1 and 100 in 5 tries!</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -214,7 +274,7 @@ Join now: ${shareUrl}
             <Badge variant="secondary">Attempt {MAX_ATTEMPTS - attemptsLeft + 1} of {MAX_ATTEMPTS}</Badge>
         </div>
         <div className="p-4 bg-muted/50 rounded-lg text-center font-medium flex items-center justify-center gap-2 min-h-[64px]">
-            <Lightbulb className="w-5 h-5 text-accent shrink-0"/>
+            <Lightbulb className="w-5 h-5 text-yellow-500 shrink-0"/>
             <span>{feedback}</span>
         </div>
         <form onSubmit={(e) => { e.preventDefault(); handleGuessSubmit(); }} className="flex gap-2">
@@ -226,9 +286,9 @@ Join now: ${shareUrl}
               disabled={isChecking}
               min={1}
               max={100}
-              className="text-lg text-center"
+              className="text-lg text-center h-12"
             />
-            <Button type="submit" disabled={isChecking} className="w-28">
+            <Button type="submit" disabled={isChecking} className="w-28 h-12">
               {isChecking ? <Loader2 className="animate-spin" /> : "Guess"}
             </Button>
         </form>
@@ -255,9 +315,10 @@ Join now: ${shareUrl}
   );
 
   const renderEndState = () => (
-    <div className="text-center space-y-4 flex flex-col items-center">
+    <div className="text-center space-y-4 flex flex-col items-center relative">
+        {gameState === 'won' && <Confetti />}
         {gameState === 'won' ? <Trophy className="w-16 h-16 text-yellow-500" /> : <HeartCrack className="w-16 h-16 text-destructive" />}
-        <h2 className="text-2xl font-bold font-headline">{gameState === 'won' ? "You Won!" : "Game Over"}</h2>
+        <h2 className="text-2xl font-bold">{gameState === 'won' ? "You Won!" : "Game Over"}</h2>
         <p className="text-muted-foreground">{feedback}</p>
         {gameState === 'won' && reward > 0 && (
             <div className="flex items-center gap-2 p-3 bg-green-100 dark:bg-green-900/50 rounded-lg">
@@ -302,8 +363,13 @@ Join now: ${shareUrl}
   );
 
   return (
-    <div className="w-full max-w-md mx-auto">
-      <Card className="shadow-2xl shadow-primary/10">
+    <div className="w-full max-w-md mx-auto space-y-6">
+      <Card className={cn(
+        "shadow-2xl shadow-primary/10 transition-all",
+        shake && "animate-shake",
+        gameState === 'won' && "bg-gradient-to-br from-background via-green-50 to-background dark:from-background dark:via-green-950/50 dark:to-background",
+        gameState === 'lost' && "bg-gradient-to-br from-background via-red-50 to-background dark:from-background dark:via-red-950/50 dark:to-background"
+        )}>
         <CardHeader>
           {gameState !== 'idle' ? renderGameInfo() : <CardTitle className="text-center">Welcome!</CardTitle>}
         </CardHeader>
@@ -314,6 +380,68 @@ Join now: ${shareUrl}
           { (gameState === 'idle' || gameState === 'playing' || gameState === 'demo') && renderRewardTiers() }
         </CardFooter>
       </Card>
+
+      <Accordion type="single" collapsible className="w-full">
+        <AccordionItem value="item-1">
+          <AccordionTrigger>
+            <div className="flex items-center gap-2">
+                <BarChart2 className="w-5 h-5 text-primary"/>
+                <span className="font-semibold">Your Performance</span>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent>
+            <Card>
+                <CardHeader>
+                    <CardTitle className="text-lg">Lifetime Stats</CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-3 gap-4 text-center">
+                    <div className="p-2 bg-muted/50 rounded-lg">
+                        <Percent className="w-5 h-5 mx-auto text-primary mb-1"/>
+                        <p className="text-xl font-bold">{playerStats.winRate}%</p>
+                        <p className="text-xs text-muted-foreground">Win Rate</p>
+                    </div>
+                     <div className="p-2 bg-muted/50 rounded-lg">
+                        <IndianRupee className="w-5 h-5 mx-auto text-primary mb-1"/>
+                        <p className="text-xl font-bold">₹{playerStats.totalEarnings}</p>
+                        <p className="text-xs text-muted-foreground">Total Earnings</p>
+                    </div>
+                     <div className="p-2 bg-muted/50 rounded-lg">
+                        <Gamepad2 className="w-5 h-5 mx-auto text-primary mb-1"/>
+                        <p className="text-xl font-bold">{playerStats.gamesPlayed}</p>
+                        <p className="text-xs text-muted-foreground">Games Played</p>
+                    </div>
+                </CardContent>
+            </Card>
+             <Card className="mt-4">
+                <CardHeader>
+                    <CardTitle className="text-lg">Recent Earnings (Last 7 Games)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <ResponsiveContainer width="100%" height={200}>
+                        <LineChart data={playerStats.earningsHistory}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="name" fontSize={12} />
+                            <YAxis fontSize={12} />
+                            <Tooltip />
+                            <Line type="monotone" dataKey="earnings" name="Earnings (₹)" stroke="hsl(var(--primary))" strokeWidth={2} activeDot={{ r: 8 }} />
+                        </LineChart>
+                    </ResponsiveContainer>
+                </CardContent>
+            </Card>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
+       <style jsx global>{`
+            @keyframes shake {
+                10%, 90% { transform: translate3d(-1px, 0, 0); }
+                20%, 80% { transform: translate3d(2px, 0, 0); }
+                30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+                40%, 60% { transform: translate3d(4px, 0, 0); }
+            }
+            .animate-shake {
+                animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+            }
+        `}</style>
     </div>
   );
 }

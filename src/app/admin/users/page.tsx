@@ -30,20 +30,15 @@ type User = {
   wallet: number;
 };
 
-const initialUsers: User[] = [
-  { id: "USR001", name: "Alice", email: "alice@example.com", joinDate: "2024-07-29", status: "Active", wallet: 150.00 },
-  { id: "USR002", name: "Bob", email: "bob@example.com", joinDate: "2024-07-28", status: "Active", wallet: 75.50 },
-  { id: "USR003", name: "Charlie", email: "charlie@example.com", joinDate: "2024-07-27", status: "Banned", wallet: 0.00 },
-  { id: "USR004", name: "Diana", email: "diana@example.com", joinDate: "2024-07-26", status: "Active", wallet: 500.25 },
-  { id: "USR005", name: "Ethan", email: "ethan@example.com", joinDate: "2024-07-25", status: "Inactive", wallet: 10.00 },
-];
+// In a real app, this would be fetched from a database.
+const initialUsers: User[] = [];
 
 // Add the main user to this list for demonstration purposes
 const mainUser: User = {
     id: "PLYR-8D7F6E5C",
     name: "Alex Doe",
     email: "alex.doe@example.com",
-    joinDate: "2024-07-01",
+    joinDate: new Date().toISOString().split('T')[0],
     status: "Active",
     wallet: walletData.balance,
 }
@@ -139,7 +134,7 @@ export default function UserManagementPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredUsers.map((user) => (
+              {filteredUsers.length > 0 ? filteredUsers.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell>
                     <div className="flex items-center gap-3">
@@ -190,7 +185,11 @@ export default function UserManagementPage() {
                     </DropdownMenu>
                   </TableCell>
                 </TableRow>
-              ))}
+              )) : (
+                 <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground">No users found.</TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>

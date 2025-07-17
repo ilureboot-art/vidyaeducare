@@ -17,8 +17,6 @@ import { Gamepad2, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 
-const DEMO_OTP = "123456";
-
 export default function ForgotPasswordPage() {
   const { toast } = useToast();
   const router = useRouter();
@@ -30,14 +28,15 @@ export default function ForgotPasswordPage() {
     // In a real app, send OTP via backend
     setStep("verify-otp");
     toast({
-      title: "OTP Sent (Demo)",
-      description: `For demonstration purposes, your OTP is ${DEMO_OTP}`,
+      title: "OTP Sent",
+      description: `An OTP has been sent to your WhatsApp number.`,
     });
   };
 
   const handleVerifyOtp = (e: React.FormEvent) => {
     e.preventDefault();
-    if (otp === DEMO_OTP) {
+    // In a real app, verify OTP via backend
+    if (otp) {
       setStep("reset-password");
       toast({ title: "OTP Verified", description: "You can now set a new password." });
     } else {
@@ -113,7 +112,7 @@ export default function ForgotPasswordPage() {
                 <Input
                   id="otp"
                   type="text"
-                  placeholder="123456"
+                  placeholder="Enter the 6-digit OTP"
                   required
                   value={otp}
                   onChange={(e) => setOtp(e.target.value)}

@@ -16,9 +16,6 @@ export default function HomePage() {
             <Button asChild size="lg" className="bg-primary/90 hover:bg-primary">
                 <Link href="/login"><LogIn className="mr-2"/> Login / Sign Up</Link>
             </Button>
-            <Button asChild size="lg" variant="secondary">
-                <Link href="/play?demo=true"><Sprout className="mr-2"/> Play Demo</Link>
-            </Button>
         </div>
       </section>
 

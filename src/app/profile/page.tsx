@@ -8,17 +8,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Separator } from "@/components/ui/separator";
 import { User, Mail, Calendar, TrendingUp, Gamepad2, Percent, Edit, Fingerprint } from "lucide-react";
 
-// Mock data for the user profile
+// In a real app, this data would come from the logged-in user's session
 const initialUserProfile = {
   name: "Alex Doe",
   playerId: "PLYR-8D7F6E5C",
   email: "alex.doe@example.com",
   avatarUrl: "https://placehold.co/100x100.png",
-  joinDate: "2024-07-01",
+  joinDate: new Date().toISOString().split('T')[0],
   stats: {
-    totalEarnings: 1250,
-    gamesPlayed: 85,
-    winRate: 45,
+    totalEarnings: 0,
+    gamesPlayed: 0,
+    winRate: 0,
   },
 };
 

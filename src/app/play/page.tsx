@@ -24,7 +24,6 @@ import {
   Loader2,
   RefreshCw,
   Share2,
-  Sprout,
   Star,
   Ticket,
   Trophy,
@@ -35,35 +34,25 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { walletData, addTransaction } from "@/lib/user-data";
-import { initialPackages, initialReferboltSubscription, initialReferralBonus } from "@/lib/store-config";
+import { initialReferralBonus } from "@/lib/store-config";
 
 
 const MAX_ATTEMPTS = 5;
 const REWARDS = [100, 75, 50, 25, 15];
 const GAMES_PER_TICKET = 2;
 
-type GameState = "idle" | "playing" | "demo" | "won" | "lost";
+type GameState = "idle" | "playing" | "won" | "lost";
 
-// Mock user data
 const playerStats = {
-    winRate: 45,
-    totalEarnings: 1250,
-    gamesPlayed: 85,
-    earningsHistory: [
-        { name: 'Game 1', earnings: 0 },
-        { name: 'Game 2', earnings: 50 },
-        { name: 'Game 3', earnings: 0 },
-        { name: 'Game 4', earnings: 25 },
-        { name: 'Game 5', earnings: 75 },
-        { name: 'Game 6', earnings: 0 },
-        { name: 'Game 7', earnings: 100 },
-    ],
+    winRate: 0,
+    totalEarnings: 0,
+    gamesPlayed: 0,
+    earningsHistory: [],
 };
 
 const winRateData = [
   { name: 'Win Rate', value: playerStats.winRate, fill: 'hsl(var(--primary))' },
 ];
-
 
 const Confetti = () => (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -101,7 +90,6 @@ export default function PlayPage() {
   const [guessHistory, setGuessHistory] = useState<{ guess: number; hint: string }[]>([]);
   const [attemptsLeft, setAttemptsLeft] = useState(MAX_ATTEMPTS);
   const [gameState, setGameState] = useState<GameState>("idle");
-  const [isDemoMode, setIsDemoMode] = useState(false);
   const [feedback, setFeedback] = useState("Start a new game to play!");
   const [isChecking, setIsChecking] = useState(false);
   const [reward, setReward] = useState(0);
@@ -117,19 +105,18 @@ export default function PlayPage() {
     router.push('/play');
   };
 
-  const resetGame = useCallback((isDemo = false) => {
+  const resetGame = useCallback(() => {
     setSecretNumber(Math.floor(Math.random() * 100) + 1);
     setAttemptsLeft(MAX_ATTEMPTS);
     setCurrentGuess("");
     setGuessHistory([]);
     setReward(0);
     setFeedback("Guess a number between 1 and 100.");
-    setGameState(isDemo ? "demo" : "playing");
-    setIsDemoMode(isDemo);
+    setGameState("playing");
   }, []);
 
-  const startGame = useCallback((isDemo = false) => {
-    if (!isDemo && gamesLeft <= 0) {
+  const startGame = useCallback(() => {
+    if (gamesLeft <= 0) {
       toast({
         variant: "destructive",
         title: "No Games Left",
@@ -138,18 +125,15 @@ export default function PlayPage() {
       return;
     }
 
-    if (!isDemo) {
-      setGamesLeft((prev) => prev - 1);
-    }
-    resetGame(isDemo);
+    setGamesLeft((prev) => prev - 1);
+    resetGame();
   }, [gamesLeft, resetGame, toast]);
   
   useEffect(() => {
-    const isDemo = searchParams.get('demo') === 'true';
     const start = searchParams.get('start') === 'true';
 
-    if (isDemo || start) {
-      startGame(isDemo);
+    if (start) {
+      startGame();
     }
   }, [searchParams, startGame]);
 
@@ -176,12 +160,12 @@ export default function PlayPage() {
 
     if (guessNum === secretNumber) {
       const attemptsUsed = MAX_ATTEMPTS - newAttemptsLeft;
-      const earnedReward = isDemoMode ? 0 : REWARDS[attemptsUsed - 1] || 0;
+      const earnedReward = REWARDS[attemptsUsed - 1] || 0;
       setReward(earnedReward);
       setGameState("won");
       setFeedback(`Congratulations! You guessed the number in ${attemptsUsed} ${attemptsUsed > 1 ? 'attempts' : 'attempt'}.`);
       setGuessHistory([...guessHistory, { guess: guessNum, hint: 'Correct!' }]);
-      if (!isDemoMode && earnedReward > 0) {
+      if (earnedReward > 0) {
           walletData.balance += earnedReward;
           addTransaction({
             id: Date.now(),
@@ -270,9 +254,8 @@ Join now: ${shareUrl}
             <h1 className="text-4xl font-bold text-primary">GuessMaster</h1>
             <p className="text-muted-foreground mt-2">Guess the secret number between 1 and 100 in 5 tries!</p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Button size="lg" onClick={() => startGame(false)}><Star className="mr-2 h-5 w-5"/> Start Game</Button>
-            <Button size="lg" variant="secondary" onClick={() => startGame(true)}><Sprout className="mr-2 h-5 w-5"/> Play Demo</Button>
+        <div className="grid grid-cols-1 gap-4">
+            <Button size="lg" onClick={() => startGame()}><Star className="mr-2 h-5 w-5"/> Start New Game</Button>
         </div>
         <Button variant="ghost" onClick={handleShare} className="w-full">
             <Share2 className="mr-2 h-4 w-4"/>
@@ -284,7 +267,7 @@ Join now: ${shareUrl}
   const renderPlayingState = () => (
     <div className="space-y-4">
         <div className="flex justify-between items-center">
-            <h2 className="text-lg font-semibold">{isDemoMode ? 'Demo Game' : 'Real Game'}</h2>
+            <h2 className="text-lg font-semibold">Real Game</h2>
             <Badge variant="secondary">Attempt {MAX_ATTEMPTS - attemptsLeft + 1} of {MAX_ATTEMPTS}</Badge>
         </div>
         <div className="p-4 bg-muted/50 rounded-lg text-center font-medium flex items-center justify-center gap-2 min-h-[64px]">
@@ -341,7 +324,7 @@ Join now: ${shareUrl}
             </div>
         )}
         <div className="flex gap-4 pt-4">
-            <Button onClick={() => startGame(isDemoMode)}><RefreshCw className="mr-2 h-4 w-4"/> Play Again</Button>
+            <Button onClick={() => startGame()}><RefreshCw className="mr-2 h-4 w-4"/> Play Again</Button>
             <Button variant="outline" onClick={goBackToMenu}>Exit to Home</Button>
         </div>
     </div>
@@ -352,7 +335,6 @@ Join now: ${shareUrl}
       case 'idle':
         return renderIdleState();
       case 'playing':
-      case 'demo':
         return renderPlayingState();
       case 'won':
       case 'lost':
@@ -391,7 +373,7 @@ Join now: ${shareUrl}
           {renderCardContent()}
         </CardContent>
         <CardFooter>
-          { (gameState === 'idle' || gameState === 'playing' || gameState === 'demo') && renderRewardTiers() }
+          { (gameState === 'idle' || gameState === 'playing') && renderRewardTiers() }
         </CardFooter>
       </Card>
 

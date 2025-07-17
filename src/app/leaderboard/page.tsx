@@ -20,25 +20,11 @@ type Player = {
   gamesPlayed: number;
 };
 
-// Mock data for the leaderboard
-const initialLeaderboardData: Player[] = [
-  { rank: 1, name: "Alice", score: 5400, gamesPlayed: 60 },
-  { rank: 2, name: "Bob", score: 4800, gamesPlayed: 55 },
-  { rank: 3, name: "Charlie", score: 4250, gamesPlayed: 50 },
-  { rank: 4, name: "Diana", score: 3800, gamesPlayed: 48 },
-  { rank: 5, name: "Ethan", score: 3500, gamesPlayed: 45 },
-  { rank: 6, name: "Fiona", score: 3100, gamesPlayed: 42 },
-  { rank: 7, name: "George", score: 2800, gamesPlayed: 40 },
-  { rank: 8, name: "Hannah", score: 2500, gamesPlayed: 38 },
-  { rank: 9, name: "Ian", score: 2200, gamesPlayed: 35 },
-  { rank: 10, name: "Jane", score: 1900, gamesPlayed: 30 },
-];
+// In a real app, this data would be fetched from a server.
+const initialLeaderboardData: Player[] = [];
 
 export default function LeaderboardPage() {
   const [leaderboardData, setLeaderboardData] = useState<Player[]>(initialLeaderboardData);
-
-  // In a real app, this data would be fetched from a server.
-  // For now, we use state to make it conceptually ready for real data.
 
   return (
     <div className="w-full max-w-2xl mx-auto">
@@ -63,14 +49,18 @@ export default function LeaderboardPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {leaderboardData.map((player) => (
+              {leaderboardData.length > 0 ? leaderboardData.map((player) => (
                 <TableRow key={player.rank} className="font-medium">
                   <TableCell className="text-center">{player.rank}</TableCell>
                   <TableCell>{player.name}</TableCell>
                   <TableCell className="text-right">{player.gamesPlayed}</TableCell>
                   <TableCell className="text-right text-primary font-bold">₹{player.score.toLocaleString()}</TableCell>
                 </TableRow>
-              ))}
+              )) : (
+                <TableRow>
+                    <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">The leaderboard is empty. Be the first to play!</TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>

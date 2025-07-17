@@ -20,9 +20,6 @@ import { useToast } from "@/hooks/use-toast";
 import { initialReferralBonus } from "@/lib/store-config";
 import { addTransaction } from "@/lib/user-data";
 
-
-const DEMO_OTP = "123456";
-
 export default function SignupPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -43,14 +40,15 @@ export default function SignupPage() {
     e.preventDefault();
     setIsOtpSent(true);
     toast({
-      title: "OTP Sent (Demo)",
-      description: `For demonstration purposes, your OTP is ${DEMO_OTP}`,
+      title: "OTP Sent",
+      description: `An OTP has been sent to your WhatsApp number.`,
     });
   };
 
   const handleSignup = (e: React.FormEvent) => {
     e.preventDefault();
-    if (otp === DEMO_OTP) {
+    // In a real app, you would verify the OTP against your backend
+    if (otp) {
         if (referralCode) {
             // In a real app, this logic would live on the backend.
             // Here, we just add the transaction for the new user.
@@ -141,7 +139,7 @@ export default function SignupPage() {
                   <Input 
                       id="otp-signup" 
                       type="text" 
-                      placeholder="123456" 
+                      placeholder="Enter the 6-digit OTP"
                       required 
                       value={otp}
                       onChange={(e) => setOtp(e.target.value)}

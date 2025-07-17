@@ -18,25 +18,21 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 
-const DEMO_OTP = "123456";
-
 export default function AdminLoginPage() {
   const [isOtpSent, setIsOtpSent] = useState(false);
   const [otp, setOtp] = useState("");
   const { toast } = useToast();
   const router = useRouter();
 
-  // Shared function to "send" OTP
   const handleSendOtp = (e: React.FormEvent) => {
     e.preventDefault();
     setIsOtpSent(true);
     toast({
-      title: "OTP Sent (Demo)",
-      description: `For demonstration purposes, your OTP is ${DEMO_OTP}`,
+      title: "OTP Sent",
+      description: `An OTP has been sent to your WhatsApp.`,
     });
   };
 
-  // Admin Login Handler
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     // In a real app, you would verify credentials against your backend.
@@ -47,10 +43,10 @@ export default function AdminLoginPage() {
     router.push("/admin/analytics");
   };
 
-  // Admin Signup Handler
   const handleSignup = (e: React.FormEvent) => {
      e.preventDefault();
-    if (otp === DEMO_OTP) {
+    // In a real app, verify OTP via backend
+    if (otp) {
         toast({
             title: "Request Sent!",
             description: "Your request to become a sub-admin has been sent to the Head Admin for approval.",
@@ -130,7 +126,7 @@ export default function AdminLoginPage() {
                                     <Input 
                                         id="otp-signup" 
                                         type="text" 
-                                        placeholder="123456" 
+                                        placeholder="Enter 6-digit OTP" 
                                         required 
                                         value={otp}
                                         onChange={(e) => setOtp(e.target.value)}

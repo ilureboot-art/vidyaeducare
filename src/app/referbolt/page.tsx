@@ -14,21 +14,15 @@ import { Label } from "@/components/ui/label";
 import { walletData, addTransaction } from "@/lib/user-data";
 import { initialReferboltSubscription } from "@/lib/store-config";
 
-// Mock user data for ReferBolt
+// Data for ReferBolt would come from a backend for the logged-in user
 const initialReferboltData = {
   isSubscribed: true,
   autoRenew: false,
-  totalCommissions: 250,
-  totalReferrals: 5,
-  cycleProgress: 2,
+  totalCommissions: 0,
+  totalReferrals: 0,
+  cycleProgress: 0,
   cycleGoal: 3,
-  referralHistory: [
-    { id: 1, name: "Charlie", date: "2024-07-28", commission: 50 },
-    { id: 2, name: "Diana", date: "2024-07-29", commission: 50 },
-    { id: 3, name: "Frank", date: "2024-08-01", commission: 50 },
-    { id: 4, name: "Grace", date: "2024-08-02", commission: 50 },
-    { id: 5, name: "Heidi", date: "2024-08-03", commission: 50 },
-  ]
+  referralHistory: []
 };
 
 const benefits = [
@@ -44,48 +38,6 @@ export default function ReferBoltPage() {
   const [data, setData] = useState(initialReferboltData);
   const [autoRenew, setAutoRenew] = useState(data.autoRenew);
 
-  const handleCompleteCycle = () => {
-    // This is a simulation function. In a real app, this would be triggered by a backend event.
-    if (autoRenew) {
-      const cost = initialReferboltSubscription.price;
-      if (walletData.balance < cost) {
-        toast({
-          variant: "destructive",
-          title: "Auto-Renewal Failed",
-          description: "Insufficient wallet balance to start a new cycle.",
-        });
-        return;
-      }
-      
-      // 1. Deduct fee from wallet
-      walletData.balance -= cost;
-
-      // 2. Add transaction
-      addTransaction({
-        id: Date.now(),
-        type: 'withdrawal',
-        description: 'ReferBolt Auto-Renewal',
-        amount: -cost,
-        date: new Date().toISOString().split('T')[0],
-        status: 'Completed',
-      });
-      
-      // 3. Reset cycle
-      setData(prev => ({ ...prev, cycleProgress: 0, totalCommissions: prev.totalCommissions + 100 })); // Assuming a cycle completion bonus
-
-      toast({
-        title: "Cycle Complete & Renewed!",
-        description: `₹${cost} has been deducted for your new cycle. Your new balance is ₹${walletData.balance.toFixed(2)}.`,
-      });
-
-    } else {
-       setData(prev => ({ ...prev, cycleProgress: prev.cycleGoal }));
-       toast({
-        title: "Cycle Complete!",
-        description: "Go to the store to manually start a new cycle.",
-      });
-    }
-  }
 
   const handleShare = async () => {
     // In a real app, this code would be fetched for the logged-in user
@@ -187,7 +139,6 @@ Join now: ${shareUrl}
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">₹{data.totalCommissions.toLocaleString()}</div>
-                        <p className="text-xs text-muted-foreground">+₹50 this week</p>
                     </CardContent>
                 </Card>
                  <Card>
@@ -197,7 +148,6 @@ Join now: ${shareUrl}
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{data.totalReferrals}</div>
-                         <p className="text-xs text-muted-foreground">+1 this week</p>
                     </CardContent>
                 </Card>
             </div>
@@ -219,9 +169,6 @@ Join now: ${shareUrl}
                     </div>
                     <p className="text-center mt-2 text-muted-foreground">Complete the cycle to earn a bonus and start a new one!</p>
                 </CardContent>
-                 <CardFooter>
-                    <Button onClick={handleCompleteCycle} disabled={data.cycleProgress >= data.cycleGoal} className="w-full">Simulate Cycle Completion</Button>
-                 </CardFooter>
             </Card>
 
             <Card>
@@ -238,13 +185,17 @@ Join now: ${shareUrl}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {data.referralHistory.map((ref) => (
+                            {data.referralHistory.length > 0 ? data.referralHistory.map((ref) => (
                                 <TableRow key={ref.id}>
                                     <TableCell className="font-medium">{ref.name}</TableCell>
                                     <TableCell>{ref.date}</TableCell>
                                     <TableCell className="text-right font-bold text-green-600">₹{ref.commission}</TableCell>
                                 </TableRow>
-                            ))}
+                            )) : (
+                                <TableRow>
+                                    <TableCell colSpan={3} className="text-center text-muted-foreground">No referral history yet.</TableCell>
+                                </TableRow>
+                            )}
                         </TableBody>
                     </Table>
                 </CardContent>

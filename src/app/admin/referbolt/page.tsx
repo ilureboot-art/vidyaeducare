@@ -8,19 +8,12 @@ import { Badge } from "@/components/ui/badge";
 import { RefreshCw, Users, IndianRupee, Repeat } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
-// Mock data for ReferBolt management
-const initialReferrals = [
-  { id: "REF001", referrer: "Alice", new_user: "David", date: "2024-07-29", commission: 50, status: "Paid" },
-  { id: "REF002", referrer: "Bob", new_user: "Eve", date: "2024-07-29", commission: 50, status: "Paid" },
-  { id: "REF003", referrer: "Charlie", new_user: "Frank", date: "2024-07-28", commission: 0, status: "Pending Subscription" },
-  { id: "REF004", referrer: "Alice", new_user: "Grace", date: "2024-07-28", commission: 50, status: "Paid" },
-  { id: "REF005", referrer: "David", new_user: "Heidi", date: "2024-07-27", commission: 50, status: "Paid" },
-];
-
+// In a real app, this data would be fetched from a database
+const initialReferrals: any[] = [];
 const initialStats = {
-  totalCycles: 152,
-  totalCommissions: 7600,
-  activeReferrers: 89,
+  totalCycles: 0,
+  totalCommissions: 0,
+  activeReferrers: 0,
 };
 
 type Cycle = {
@@ -31,12 +24,7 @@ type Cycle = {
   subscriptionType: "Manual" | "Auto-Renewed";
 }
 
-const initialCycles: Cycle[] = [
-  { id: "CYCLE01", referrer: "Alice", referrals: 3, status: "Completed", subscriptionType: "Manual" },
-  { id: "CYCLE02", referrer: "Bob", referrals: 2, status: "In Progress", subscriptionType: "Manual" },
-  { id: "CYCLE03", referrer: "David", referrals: 1, status: "In Progress", subscriptionType: "Manual" },
-  { id: "CYCLE04", referrer: "Mallory", referrals: 3, status: "Completed", subscriptionType: "Auto-Renewed" },
-]
+const initialCycles: Cycle[] = [];
 
 export default function ReferBoltManagementPage() {
   const [referrals, setReferrals] = useState(initialReferrals);
@@ -44,7 +32,7 @@ export default function ReferBoltManagementPage() {
   const [cycles, setCycles] = useState<Cycle[]>(initialCycles);
 
   // In a real app, this data would be fetched and updated dynamically
-  // For simulation, we can just display the state.
+  // For now, we display the empty state.
 
   return (
     <div className="space-y-6">
@@ -60,7 +48,7 @@ export default function ReferBoltManagementPage() {
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalCycles}</div>
             <p className="text-xs text-muted-foreground">
-              +15 since last month
+              No cycles completed yet.
             </p>
           </CardContent>
         </Card>
@@ -74,7 +62,7 @@ export default function ReferBoltManagementPage() {
           <CardContent>
             <div className="text-2xl font-bold">₹{stats.totalCommissions.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">
-              +₹1,500 this month
+              No commissions paid yet.
             </p>
           </CardContent>
         </Card>
@@ -86,7 +74,7 @@ export default function ReferBoltManagementPage() {
           <CardContent>
             <div className="text-2xl font-bold">{stats.activeReferrers}</div>
             <p className="text-xs text-muted-foreground">
-              +12 new this month
+              No active referrers yet.
             </p>
           </CardContent>
         </Card>
@@ -109,7 +97,7 @@ export default function ReferBoltManagementPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {cycles.map((cycle) => (
+              {cycles.length > 0 ? cycles.map((cycle) => (
                 <TableRow key={cycle.id}>
                   <TableCell className="font-medium">{cycle.referrer}</TableCell>
                   <TableCell>
@@ -132,7 +120,11 @@ export default function ReferBoltManagementPage() {
                     )}
                   </TableCell>
                 </TableRow>
-              ))}
+              )) : (
+                <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground">No active cycles.</TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>
@@ -154,19 +146,9 @@ export default function ReferBoltManagementPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {referrals.map((referral) => (
-                <TableRow key={referral.id}>
-                  <TableCell className="font-medium">{referral.referrer}</TableCell>
-                  <TableCell>{referral.new_user}</TableCell>
-                  <TableCell>{referral.date}</TableCell>
-                  <TableCell>₹{referral.commission}</TableCell>
-                  <TableCell>
-                    <Badge variant={referral.status === "Paid" ? "default" : "destructive"}>
-                      {referral.status}
-                    </Badge>
-                  </TableCell>
+                <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground">No referral activity yet.</TableCell>
                 </TableRow>
-              ))}
             </TableBody>
           </Table>
         </CardContent>

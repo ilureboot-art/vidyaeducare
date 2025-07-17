@@ -34,6 +34,7 @@ import {
   IndianRupee,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { walletData, addTransaction } from "@/lib/user-data";
 
 
 const MAX_ATTEMPTS = 5;
@@ -180,7 +181,16 @@ export default function PlayPage() {
       setGameState("won");
       setFeedback(`Congratulations! You guessed the number in ${attemptsUsed} ${attemptsUsed > 1 ? 'attempts' : 'attempt'}.`);
       setGuessHistory([...guessHistory, { guess: guessNum, hint: 'Correct!' }]);
-      if (!isDemoMode) {
+      if (!isDemoMode && earnedReward > 0) {
+          walletData.balance += earnedReward;
+          addTransaction({
+            id: Date.now(),
+            type: 'deposit',
+            description: 'Game Won Reward',
+            amount: earnedReward,
+            date: new Date().toISOString().split('T')[0],
+            status: 'Completed',
+          });
           toast({
             title: "You Won!",
             description: `₹${earnedReward} has been added to your wallet.`,

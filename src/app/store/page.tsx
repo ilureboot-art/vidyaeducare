@@ -64,6 +64,15 @@ export default function StorePage() {
         status: 'Completed',
         user: "Alex Doe"
       });
+
+      // Simulate IBA commission
+      if (referralCode) {
+        const commission = discountedPrice * 0.1765; // 17.65%
+        toast({
+            title: "IBA Commission Logged",
+            description: `A commission of ₹${commission.toFixed(2)} for IBA code ${referralCode} has been logged for this sale. (Simulation)`,
+        });
+      }
       
       setBalance(walletData.balance);
 

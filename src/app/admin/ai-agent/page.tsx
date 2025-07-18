@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,7 +14,7 @@ import { generateEducationalContent, type VidyaEdurankInput, type VidyaEdurankOu
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-export default function VidyaEdurankPage() {
+export default function AiAgentPage() {
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(false);
     const [output, setOutput] = useState<VidyaEdurankOutput | null>(null);
@@ -155,10 +155,10 @@ export default function VidyaEdurankPage() {
             <Card className="shadow-lg">
                 <CardHeader className="text-center">
                     <CardTitle className="text-3xl font-bold text-primary flex items-center justify-center gap-2">
-                        <BrainCircuit /> Vidya Edurank AI Agent
+                        <BrainCircuit /> Vidya EduCare AI Agent
                     </CardTitle>
                     <CardDescription>
-                        Your AI assistant for generating educational materials from any text or file.
+                        Generate educational materials for the platform from any text or file.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -245,7 +245,7 @@ export default function VidyaEdurankPage() {
             {isLoading && (
                  <div className="text-center p-8 flex flex-col items-center justify-center gap-4">
                     <Loader2 className="w-10 h-10 animate-spin text-primary"/>
-                    <p className="text-muted-foreground">Vidya is thinking... please wait.</p>
+                    <p className="text-muted-foreground">The AI agent is thinking... please wait.</p>
                 </div>
             )}
 

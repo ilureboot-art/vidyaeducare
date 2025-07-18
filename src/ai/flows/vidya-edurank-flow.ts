@@ -1,7 +1,7 @@
 
 'use server';
 /**
- * @fileOverview The Vidya Edurank AI agent for generating educational content.
+ * @fileOverview The Vidya EduCare AI agent for generating educational content.
  *
  * - generateEducationalContent - The main function to generate content based on user input.
  * - VidyaEdurankInput - The input type for the agent.
@@ -42,7 +42,7 @@ const vidyaEdurankPrompt = ai.definePrompt({
     name: "vidyaEdurankPrompt",
     input: { schema: VidyaEdurankInputSchema },
     output: { schema: VidyaEdurankOutputSchema },
-    prompt: `You are Vidya Edurank, a highly intelligent, multilingual AI agent for students and teachers. Your job is to understand the provided study material and generate educational content based on the user's request.
+    prompt: `You are the Vidya EduCare AI Agent, a highly intelligent, multilingual AI assistant for administrators. Your job is to understand the provided study material and generate educational content for the platform based on the admin's request.
 
 Here are the user's specifications:
 - Input Language: {{{language}}}

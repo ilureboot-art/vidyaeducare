@@ -100,7 +100,7 @@ export default function MockTestPage() {
 
     const handlePrevQuestion = () => {
         if (currentQuestionIndex > 0) {
-            setCurrentQuestionIndex(prev => prev - 1);
+            setCurrentQuestionIndex(prev => prev + 1);
         }
     };
 
@@ -237,9 +237,6 @@ export default function MockTestPage() {
 
                     <div className="flex flex-wrap gap-4 justify-center pt-4">
                         <Button onClick={() => setTestState('review')}>Review Answers</Button>
-                        <Button asChild className="bg-purple-600 hover:bg-purple-700 text-white">
-                            <Link href="/student/generate"><BrainCircuit className="mr-2"/> Generate Study Materials</Link>
-                        </Button>
                         <Button onClick={() => setTestState("not_started")}>Take Another Test</Button>
                         <Button asChild variant="outline">
                             <Link href="/leaderboard">View Leaderboard</Link>

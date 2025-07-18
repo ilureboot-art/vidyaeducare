@@ -20,7 +20,8 @@ import {
     Home,
     UserCog,
     Bell,
-    FileQuestion
+    FileQuestion,
+    BrainCircuit
 } from "lucide-react";
 import {
     Sidebar,
@@ -41,6 +42,7 @@ const adminNavItems = [
   { href: "/admin/transactions", label: "Transactions", icon: CreditCard },
   { href: "/admin/chat", label: "Chat Management", icon: MessageSquare },
   { href: "/admin/question-bank", label: "Question Bank", icon: FileQuestion },
+  { href: "/admin/ai-agent", label: "Vidya EduCare AI Agent", icon: BrainCircuit },
   { href: "/admin/game-settings", label: "Game Settings", icon: Gamepad2 },
   { href: "/admin/store-settings", label: "Store Settings", icon: ShoppingCart },
   { href: "/admin/payment-settings", label: "Payment Settings", icon: Landmark },

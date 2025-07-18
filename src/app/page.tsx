@@ -33,7 +33,7 @@ const testimonials = [
     name: "Priya S.",
     role: "Parent of 10th Grader",
     avatar: "PS",
-    quote: "Vidya EduCare has been a game-changer for my son's exam preparation. The AI tools are incredible for creating quick summaries and practice questions."
+    quote: "Vidya EduCare has been a game-changer for my son's exam preparation. The mock tests are comprehensive and the platform is very user-friendly."
   },
   {
     name: "Rohan K.",
@@ -56,7 +56,7 @@ export default function HomePage() {
   const handleShare = async () => {
     const referralCode = "ALEX-D7F6E5C"; // Example code for the current user
     const url = `${window.location.origin}/signup?ref=${referralCode}`;
-    const message = `🎓 Check out Vidya EduCare! It's an amazing platform for mock tests, AI-powered learning, and skill-based games. 
+    const message = `🎓 Check out Vidya EduCare! It's an amazing platform for mock tests, skill-based games, and earning rewards. 
     
 Use my code ✨ ${referralCode} ✨ to get a ₹${initialReferralBonus} bonus when you join!
 

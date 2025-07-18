@@ -19,6 +19,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { walletData } from "@/lib/user-data";
+import { addNotification } from "@/lib/notifications";
 
 type UserStatus = "Active" | "Banned" | "Inactive";
 type User = {
@@ -31,19 +32,34 @@ type User = {
 };
 
 // In a real app, this would be fetched from a database.
-const initialUsers: User[] = [];
+const initialUsers: User[] = [
+    {
+        id: "PLYR-8D7F6E5C",
+        name: "Alex Doe",
+        email: "alex.doe@example.com",
+        joinDate: new Date(Date.now() - 86400000 * 5).toISOString().split('T')[0], // 5 days ago
+        status: "Active",
+        wallet: walletData.balance,
+    }
+];
 
-// Add the main user to this list for demonstration purposes
-const mainUser: User = {
-    id: "PLYR-8D7F6E5C",
-    name: "Alex Doe",
-    email: "alex.doe@example.com",
+
+// Listen for new user notifications to add them to the list
+addNotification({
+    type: "new_user",
+    message: "A new user, Bob Smith, has just signed up.",
+    userId: 'admin'
+});
+const newUserFromNotification: User = {
+    id: "PLYR-ABCD123",
+    name: "Bob Smith",
+    email: "bob@example.com",
     joinDate: new Date().toISOString().split('T')[0],
     status: "Active",
-    wallet: walletData.balance,
-}
+    wallet: 0,
+};
+initialUsers.push(newUserFromNotification);
 
-initialUsers.unshift(mainUser);
 
 const getStatusBadgeVariant = (status: string) => {
     return status === "Active" ? "default" : status === "Banned" ? "destructive" : "secondary";
@@ -58,7 +74,7 @@ export default function UserManagementPage() {
     // Keep the main user's wallet balance updated
     const interval = setInterval(() => {
         setUsers(prevUsers => {
-            const userIndex = prevUsers.findIndex(u => u.id === mainUser.id);
+            const userIndex = prevUsers.findIndex(u => u.id === initialUsers[0].id);
             if (userIndex !== -1 && prevUsers[userIndex].wallet !== walletData.balance) {
                 const newUsers = [...prevUsers];
                 newUsers[userIndex] = { ...newUsers[userIndex], wallet: walletData.balance };

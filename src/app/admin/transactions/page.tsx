@@ -32,7 +32,7 @@ const getStatusBadgeVariant = (status: string) => {
 }
 
 const getTypeIcon = (type: string, amount: number) => {
-    if (type.includes("Withdrawal") || type.includes("Purchase") || amount < 0) {
+    if (type.includes("withdrawal") || type.includes("Purchase") || amount < 0) {
         return <ArrowUpRight className="w-4 h-4 text-red-500" />;
     }
     return <ArrowDownLeft className="w-4 h-4 text-green-500" />;
@@ -45,6 +45,7 @@ export default function TransactionsPage() {
 
   useEffect(() => {
     const interval = setInterval(() => {
+      // A simple poll to check for changes in the shared data
       if (walletData.transactions.length !== transactions.length) {
         setTransactions([...walletData.transactions]);
       }
@@ -58,12 +59,19 @@ export default function TransactionsPage() {
 
     const tx = walletData.transactions[txIndex];
 
-    // If approving a deposit, add funds to the wallet
-    if (tx.type === 'deposit' && newStatus === 'Completed' && tx.status === 'Pending') {
+    // Only process if the transaction is currently pending
+    if (tx.status !== 'Pending') {
+        toast({ title: "Action not allowed", description: "This transaction has already been processed."});
+        return;
+    }
+
+    // Logic for approving a deposit
+    if (tx.type === 'deposit' && newStatus === 'Completed') {
       walletData.balance += tx.amount;
     }
-    // If rejecting a withdrawal, refund the user
-    if (tx.type === 'withdrawal' && newStatus === 'Rejected' && tx.status === 'Pending') {
+    
+    // Logic for rejecting a withdrawal (refunding the amount)
+    if (tx.type === 'withdrawal' && newStatus === 'Rejected') {
         walletData.balance += Math.abs(tx.amount);
     }
     
@@ -80,7 +88,8 @@ export default function TransactionsPage() {
     (tx) =>
       tx.user?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       String(tx.id).toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
 
   return (
     <div className="space-y-6">
@@ -134,7 +143,7 @@ export default function TransactionsPage() {
                     {(tx.type === "deposit" && tx.referenceId) && `Ref: ${tx.referenceId}`}
                     {(tx.type === "withdrawal" && tx.paymentMethod) && `To: ${tx.paymentMethod}`}
                   </TableCell>
-                  <TableCell>{tx.date}</TableCell>
+                  <TableCell>{new Date(tx.date).toLocaleDateString()}</TableCell>
                   <TableCell>
                     <Badge variant={getStatusBadgeVariant(tx.status)}>
                       {tx.status}

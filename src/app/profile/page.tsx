@@ -26,58 +26,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { studentData } from "@/lib/student-data";
+import type { StudentProfile } from "@/lib/student-data";
 
-
-type StudentProfile = {
-  id: string;
-  name: string;
-  dob: string;
-  avatarUrl: string;
-  academic: {
-      standard: string;
-      board: string;
-      stream: string;
-      language: string;
-      academicYear: string;
-      subjects: string[];
-  },
-  stats: {
-    totalEarnings: number;
-    testsTaken: number;
-    avgScore: number;
-  },
-  badges: ('Platinum' | 'Gold' | 'Silver' | 'Bronze')[];
-};
-
-const initialStudentProfiles: StudentProfile[] = [
-    {
-        id: "STU-001",
-        name: "Alex Doe",
-        dob: "2008-05-15",
-        avatarUrl: "https://placehold.co/100x100.png",
-        academic: {
-        standard: "10th",
-        board: "CBSE",
-        stream: "Science",
-        language: "English",
-        academicYear: "2024-2025",
-        subjects: ["Maths", "Science", "English"],
-        },
-        stats: {
-        totalEarnings: 0,
-        testsTaken: 0,
-        avgScore: 0,
-        },
-        badges: ["Gold", "Silver"],
-    }
-];
 
 // In a real app, these would be managed on the backend.
 const validActivationCodes = new Set(["PROD-12345", "PROD-ABCDE"]);
 
 
 export default function ProfilePage() {
-    const [students, setStudents] = useState<StudentProfile[]>(initialStudentProfiles);
+    const [students, setStudents] = useState<StudentProfile[]>(studentData);
     const { toast } = useToast();
     const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
     const [activationCode, setActivationCode] = useState('');
@@ -115,13 +73,17 @@ export default function ProfilePage() {
                 stream: (form.elements.namedItem('stream') as HTMLSelectElement).value,
                 language: (form.elements.namedItem('language') as HTMLSelectElement).value,
                 academicYear: "2024-2025",
-                subjects: ["Maths", "Science"], // Placeholder
+                subjects: ["Maths", "Science", "English", "History"], // Placeholder
             },
             stats: { totalEarnings: 0, testsTaken: 0, avgScore: 0 },
             badges: [],
         };
 
-        setStudents([...students, newStudent]);
+        const updatedStudents = [...students, newStudent];
+        setStudents(updatedStudents);
+        // This is a temporary solution to update the shared data. In a real app, this would be an API call.
+        studentData.splice(0, studentData.length, ...updatedStudents);
+
         toast({
             title: "Student Added!",
             description: `${name}'s profile has been created successfully.`
@@ -135,7 +97,10 @@ export default function ProfilePage() {
     };
 
     const handleDeleteStudent = (studentId: string) => {
-        setStudents(students.filter(s => s.id !== studentId));
+        const updatedStudents = students.filter(s => s.id !== studentId);
+        setStudents(updatedStudents);
+        studentData.splice(0, studentData.length, ...updatedStudents);
+
         toast({
             title: "Student Removed",
             description: `The student profile has been removed.`
@@ -375,3 +340,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    

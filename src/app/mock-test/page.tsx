@@ -14,6 +14,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { studentData } from "@/lib/student-data";
+import type { StudentProfile } from "@/lib/student-data";
 
 const MOCK_TEST_DURATION = 30 * 60; // 30 minutes in seconds
 
@@ -26,12 +28,19 @@ const mockQuestions = Array.from({ length: 50 }, (_, i) => ({
 
 type TestState = "not_started" | "in_progress" | "completed" | "review";
 
-const subjects = [
-    { name: "General Knowledge", icon: Book },
-    { name: "Science", icon: Atom },
-    { name: "Mathematics", icon: Sigma },
-    { name: "English", icon: Pilcrow },
-];
+const getIconForSubject = (subject: string) => {
+    switch (subject.toLowerCase()) {
+        case "maths":
+        case "mathematics":
+            return Sigma;
+        case "science":
+            return Atom;
+        case "english":
+            return Pilcrow;
+        default:
+            return Book;
+    }
+};
 
 export default function MockTestPage() {
     const { toast } = useToast();
@@ -41,6 +50,9 @@ export default function MockTestPage() {
     const [timeLeft, setTimeLeft] = useState(MOCK_TEST_DURATION);
     const [answers, setAnswers] = useState<{ [key: number]: string }>({});
     const [score, setScore] = useState(0);
+
+    // Use the subjects from the first student's profile
+    const studentSubjects = studentData[0]?.academic.subjects || [];
 
     useEffect(() => {
         if (testState !== "in_progress") return;
@@ -78,7 +90,7 @@ export default function MockTestPage() {
 
     const handlePrevQuestion = () => {
         if (currentQuestionIndex > 0) {
-            setCurrentQuestionIndex(prev => prev + 1);
+            setCurrentQuestionIndex(prev => prev - 1);
         }
     };
 
@@ -103,20 +115,25 @@ export default function MockTestPage() {
                  <Card className="w-full text-center">
                     <CardHeader>
                         <CardTitle className="text-3xl text-primary">Select a Subject</CardTitle>
-                        <CardDescription>Choose a subject to start your mock test.</CardDescription>
+                        <CardDescription>Choose from your registered subjects to start a mock test.</CardDescription>
                     </CardHeader>
                     <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {subjects.map(subject => {
-                            const Icon = subject.icon;
+                        {studentSubjects.length > 0 ? studentSubjects.map(subject => {
+                            const Icon = getIconForSubject(subject);
                             return (
-                                <Card key={subject.name} className="p-4 flex flex-col items-center justify-center text-center">
+                                <Card key={subject} className="p-4 flex flex-col items-center justify-center text-center">
                                     <Icon className="w-12 h-12 text-primary mb-2" />
-                                    <h3 className="text-lg font-semibold">{subject.name}</h3>
+                                    <h3 className="text-lg font-semibold">{subject}</h3>
                                     <p className="text-sm text-muted-foreground mt-1">50 Questions - 30 Mins</p>
-                                    <Button className="mt-4" onClick={() => handleStartTest(subject.name)}>Start Test</Button>
+                                    <Button className="mt-4" onClick={() => handleStartTest(subject)}>Start Test</Button>
                                 </Card>
                             )
-                        })}
+                        }) : (
+                            <div className="md:col-span-2 text-muted-foreground">
+                                <p>No subjects found in your profile.</p>
+                                <Button asChild variant="link"><Link href="/profile">Add Subjects to Your Profile</Link></Button>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             </div>
@@ -272,3 +289,5 @@ export default function MockTestPage() {
         </Card>
     )
 }
+
+    

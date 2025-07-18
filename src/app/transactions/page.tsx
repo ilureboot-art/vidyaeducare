@@ -20,6 +20,7 @@ import {
 import { ArrowUpRight, ArrowDownLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { walletData, type Transaction } from "@/lib/user-data";
+import { Button } from "@/components/ui/button";
 
 const getStatusBadgeVariant = (status: string) => {
     switch (status.toLowerCase()) {
@@ -51,6 +52,7 @@ function FormattedDate({ dateString }: { dateString: string }) {
 
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([...walletData.transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+  const [filter, setFilter] = useState<'all' | 'deposit' | 'withdrawal'>('all');
 
   useEffect(() => {
     // This effect ensures the page re-renders if the shared data changes
@@ -63,12 +65,22 @@ export default function TransactionsPage() {
     return () => clearInterval(interval);
   }, [transactions]);
 
+  const filteredTransactions = transactions.filter(tx => {
+    if (filter === 'all') return true;
+    return tx.type === filter;
+  });
+
   return (
     <div className="w-full max-w-2xl mx-auto space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>Transaction History</CardTitle>
           <CardDescription>A complete record of your financial activity.</CardDescription>
+           <div className="flex items-center gap-2 pt-4">
+              <Button variant={filter === 'all' ? 'default' : 'outline'} size="sm" onClick={() => setFilter('all')}>All</Button>
+              <Button variant={filter === 'deposit' ? 'default' : 'outline'} size="sm" onClick={() => setFilter('deposit')}>Deposits</Button>
+              <Button variant={filter === 'withdrawal' ? 'default' : 'outline'} size="sm" onClick={() => setFilter('withdrawal')}>Withdrawals</Button>
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -80,7 +92,7 @@ export default function TransactionsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {transactions.length > 0 ? transactions.map((tx) => (
+              {filteredTransactions.length > 0 ? filteredTransactions.map((tx) => (
                 <TableRow key={tx.id}>
                   <TableCell>
                     <div className="flex items-center gap-3">
@@ -104,7 +116,7 @@ export default function TransactionsPage() {
                 </TableRow>
               )) : (
                 <TableRow>
-                    <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">No transactions yet.</TableCell>
+                    <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">No transactions found for this filter.</TableCell>
                 </TableRow>
               )}
             </TableBody>

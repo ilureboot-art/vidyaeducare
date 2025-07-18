@@ -39,12 +39,11 @@ function FormattedDate({ dateString }: { dateString: string }) {
   const [formattedDate, setFormattedDate] = useState("");
 
   useEffect(() => {
-    // This effect runs only on the client, ensuring the date format is consistent.
     setFormattedDate(new Date(dateString).toLocaleDateString());
   }, [dateString]);
 
   if (!formattedDate) {
-    return null; // or a placeholder
+    return null; 
   }
 
   return <>{formattedDate}</>;
@@ -55,12 +54,12 @@ export default function TransactionsPage() {
   const [filter, setFilter] = useState<'all' | 'pending' | 'completed' | 'rejected'>('all');
 
   useEffect(() => {
-    // This effect ensures the page re-renders if the shared data changes
     const interval = setInterval(() => {
-        if (walletData.transactions.length !== transactions.length) {
-            setTransactions([...walletData.transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+        const sortedTransactions = [...walletData.transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        if (JSON.stringify(sortedTransactions) !== JSON.stringify(transactions)) {
+            setTransactions(sortedTransactions);
         }
-    }, 500); // Poll for changes
+    }, 500); 
     
     return () => clearInterval(interval);
   }, [transactions]);
@@ -105,7 +104,7 @@ export default function TransactionsPage() {
                       <div>
                         <p className="font-medium">{tx.description}</p>
                         <p className="text-xs text-muted-foreground"><FormattedDate dateString={tx.date} /></p>
-                        <p className="text-xs text-muted-foreground font-mono">ID: {tx.id}</p>
+                        {tx.id && <p className="text-xs text-muted-foreground font-mono">ID: {tx.id}</p>}
                       </div>
                     </div>
                   </TableCell>

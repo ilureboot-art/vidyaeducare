@@ -12,12 +12,16 @@ import { initialReferralBonus } from "@/lib/store-config";
 export default function HomePage() {
   const { toast } = useToast();
 
-  const handleShare = async (type: 'game' | 'referral' | 'referbolt') => {
+  const handleShare = async (type: 'vidya-educare' | 'game' | 'referral' | 'referbolt') => {
     let message = '';
     let url = window.location.origin;
     const referralCode = "ALEX-D7F6E5C"; // Example code
 
     switch (type) {
+      case 'vidya-educare':
+        url = `${window.location.origin}/signup?ref=${referralCode}`;
+        message = `🎓 Check out Vidya EduCare! It's an amazing platform for mock tests and AI-powered learning. Use my code ${referralCode} to get a bonus when you join!\nStart learning: ${url}`;
+        break;
       case 'game':
         url = `${window.location.origin}/signup?ref=${referralCode}`;
         message = `🎮 Join GuessMaster - India's Best Skill Gaming Platform! 🎮\n🚀 Use my referral code: ${referralCode}\n💰 Get ₹${initialReferralBonus} instant bonus on signup\n🎯 Play exciting skill-based number guessing games and win real cash!\nJoin now: ${url}`;
@@ -60,11 +64,14 @@ export default function HomePage() {
             <h1 className="text-5xl font-bold text-primary tracking-tighter">Welcome to Vidya EduCare!</h1>
             <p className="text-xl text-muted-foreground mt-4">Your platform for mastering academic mock tests and achieving excellence.</p>
             <div className="mt-8 flex gap-4 justify-center md:justify-start flex-wrap">
-                <Button asChild size="lg" className="bg-primary/90 hover:bg-primary">
+                <Button asChild size="lg">
                     <Link href="/login"><LogIn className="mr-2"/> Get Started</Link>
                 </Button>
                 <Button asChild size="lg" variant="secondary">
                     <Link href="/mock-test"><BookOpen className="mr-2"/> Take a Mock Test</Link>
+                </Button>
+                 <Button size="lg" variant="outline" onClick={() => handleShare('vidya-educare')}>
+                  <Share2 className="mr-2"/> Share App
                 </Button>
             </div>
         </div>
@@ -114,7 +121,7 @@ export default function HomePage() {
             <Card className="hover:shadow-lg transition-shadow">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-3">
-                        <div className="bg-accent/20 p-3 rounded-full"><IndianRupee className="w-6 h-6 text-accent-foreground" /></div>
+                        <div className="bg-primary/20 p-3 rounded-full"><IndianRupee className="w-6 h-6 text-primary" /></div>
                         Refer & Earn
                     </CardTitle>
                 </CardHeader>
@@ -130,7 +137,7 @@ export default function HomePage() {
             <Card className="hover:shadow-lg transition-shadow">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-3">
-                        <div className="bg-accent/20 p-3 rounded-full"><Zap className="w-6 h-6 text-accent-foreground" /></div>
+                        <div className="bg-primary/20 p-3 rounded-full"><Zap className="w-6 h-6 text-primary" /></div>
                        ReferBolt System
                     </CardTitle>
                 </CardHeader>

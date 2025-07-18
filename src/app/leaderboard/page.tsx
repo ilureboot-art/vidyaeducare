@@ -20,6 +20,7 @@ type Player = {
   avatar: string;
   score: number;
   time: string; // e.g., "15:32"
+  prize?: number;
 };
 
 const getRankColor = (rank: number) => {
@@ -31,11 +32,12 @@ const getRankColor = (rank: number) => {
 
 // In a real app, this data would be fetched from a server.
 const initialLeaderboardData: Player[] = [
-    { rank: 1, name: "Priya Sharma", avatar: "PS", score: 48, time: "18:45" },
-    { rank: 2, name: "Ankit Gupta", avatar: "AG", score: 45, time: "21:12" },
-    { rank: 3, name: "Sneha Reddy", avatar: "SR", score: 42, time: "23:01" },
-    { rank: 4, name: "Rahul Kumar", avatar: "RK", score: 40, time: "25:50" },
-    { rank: 5, name: "Amit Singh", avatar: "AS", score: 38, time: "28:33" },
+    { rank: 1, name: "Priya Sharma", avatar: "PS", score: 48, time: "18:45", prize: 1500 },
+    { rank: 2, name: "Ankit Gupta", avatar: "AG", score: 45, time: "21:12", prize: 1000 },
+    { rank: 3, name: "Sneha Reddy", avatar: "SR", score: 42, time: "23:01", prize: 500 },
+    { rank: 4, name: "Rahul Kumar", avatar: "RK", score: 41, time: "25:50", prize: 250 },
+    { rank: 5, name: "Amit Singh", avatar: "AS", score: 41, time: "28:33", prize: 250 },
+    { rank: 6, name: "Neha Patil", avatar: "NP", score: 40, time: "29:15" },
 ];
 
 export default function LeaderboardPage() {
@@ -50,7 +52,7 @@ export default function LeaderboardPage() {
             Live Mock Test Leaderboard
           </CardTitle>
           <CardDescription className="text-center">
-            See who's at the top of their game!
+            See who's at the top of their game! Top 5 scorers win cash rewards.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -60,7 +62,8 @@ export default function LeaderboardPage() {
                 <TableHead className="w-[80px] text-center">Rank</TableHead>
                 <TableHead>Student</TableHead>
                 <TableHead className="text-center">Time Taken</TableHead>
-                <TableHead className="text-right">Score</TableHead>
+                <TableHead className="text-center">Score</TableHead>
+                <TableHead className="text-right">Prize</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -85,11 +88,19 @@ export default function LeaderboardPage() {
                     </div>
                   </TableCell>
                   <TableCell className="text-center">{player.time}</TableCell>
-                  <TableCell className="text-right text-primary font-bold text-lg">{player.score} / 50</TableCell>
+                  <TableCell className="text-center text-primary font-bold text-lg">{player.score} / 50</TableCell>
+                  <TableCell className="text-right font-bold text-green-600">
+                    {player.prize ? (
+                        <div className="flex items-center justify-end gap-2" data-ai-hint="cash prize">
+                            <Trophy className="w-4 h-4 text-yellow-500" />
+                            ₹{player.prize}
+                        </div>
+                    ) : '-'}
+                  </TableCell>
                 </TableRow>
               )) : (
                 <TableRow>
-                    <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">The leaderboard is empty. Be the first to take a test!</TableCell>
+                    <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">The leaderboard is empty. Be the first to take a test!</TableCell>
                 </TableRow>
               )}
             </TableBody>

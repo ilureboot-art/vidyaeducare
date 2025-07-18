@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { User, Mail, Calendar, TrendingUp, Gamepad2, Percent, Edit, Fingerprint, GraduationCap, Building } from "lucide-react";
+import { User, Mail, Calendar, TrendingUp, Gamepad2, Percent, Edit, Fingerprint, GraduationCap, Building, Languages, BookCopy, FileClock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 // In a real app, this data would come from the logged-in user's session
@@ -19,14 +19,16 @@ const initialUserProfile = {
   academic: {
       standard: "10th",
       board: "CBSE",
-      stream: "Science"
+      stream: "Science",
+      language: "English",
+      academicYear: "2024-2025"
   },
   stats: {
     totalEarnings: 0,
     gamesPlayed: 0,
     winRate: 0,
   },
-  badges: ["Gold", "Silver"]
+  badges: ["Platinum", "Gold", "Silver", "Bronze"]
 };
 
 export default function ProfilePage() {
@@ -48,13 +50,13 @@ export default function ProfilePage() {
             </Avatar>
           <CardTitle className="text-3xl font-bold text-primary">{userProfile.name}</CardTitle>
           <CardDescription>Your personal account and game statistics.</CardDescription>
-           <div className="flex gap-2 pt-2">
+           <div className="flex gap-2 pt-2 flex-wrap justify-center">
             {userProfile.badges.map(badge => (
                 <Badge key={badge} variant="secondary" className="text-sm">
+                    {badge === "Platinum" && "💎"}
                     {badge === "Gold" && "🥇"}
                     {badge === "Silver" && "🥈"}
                     {badge === "Bronze" && "🥉"}
-                    {badge === "Platinum" && "💎"}
                      {badge}
                 </Badge>
             ))}
@@ -106,6 +108,27 @@ export default function ProfilePage() {
                         <div>
                             <p className="text-muted-foreground">Board</p>
                             <p className="font-medium">{userProfile.academic.board}</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                        <BookCopy className="w-5 h-5 text-muted-foreground"/>
+                        <div>
+                            <p className="text-muted-foreground">Stream</p>
+                            <p className="font-medium">{userProfile.academic.stream}</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                        <Languages className="w-5 h-5 text-muted-foreground"/>
+                        <div>
+                            <p className="text-muted-foreground">Language</p>
+                            <p className="font-medium">{userProfile.academic.language}</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg col-span-1 sm:col-span-2">
+                        <FileClock className="w-5 h-5 text-muted-foreground"/>
+                        <div>
+                            <p className="text-muted-foreground">Academic Year</p>
+                            <p className="font-medium">{userProfile.academic.academicYear}</p>
                         </div>
                     </div>
                 </div>

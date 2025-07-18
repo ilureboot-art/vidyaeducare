@@ -122,7 +122,7 @@ export default function TransactionsPage() {
               <TableRow>
                 <TableHead>User</TableHead>
                 <TableHead>Type</TableHead>
-                <TableHead>Details</TableHead>
+                <TableHead>Transaction ID</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
@@ -140,8 +140,8 @@ export default function TransactionsPage() {
                     </div>
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground font-mono">
-                    {(tx.type === "deposit" && tx.referenceId) && `Ref: ${tx.referenceId}`}
-                    {(tx.type === "withdrawal" && tx.paymentMethod) && `To: ${tx.paymentMethod}`}
+                    {tx.id}
+                    {tx.referenceId && <div className="text-ellipsis overflow-hidden">Ref: {tx.referenceId}</div>}
                   </TableCell>
                   <TableCell>{new Date(tx.date).toLocaleDateString()}</TableCell>
                   <TableCell>

@@ -52,7 +52,7 @@ function FormattedDate({ dateString }: { dateString: string }) {
 
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([...walletData.transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-  const [filter, setFilter] = useState<'all' | 'deposit' | 'withdrawal'>('all');
+  const [filter, setFilter] = useState<'all' | 'pending' | 'completed' | 'rejected'>('all');
 
   useEffect(() => {
     // This effect ensures the page re-renders if the shared data changes
@@ -67,7 +67,7 @@ export default function TransactionsPage() {
 
   const filteredTransactions = transactions.filter(tx => {
     if (filter === 'all') return true;
-    return tx.type === filter;
+    return tx.status.toLowerCase() === filter;
   });
 
   return (
@@ -78,8 +78,9 @@ export default function TransactionsPage() {
           <CardDescription>A complete record of your financial activity.</CardDescription>
            <div className="flex items-center gap-2 pt-4">
               <Button variant={filter === 'all' ? 'default' : 'outline'} size="sm" onClick={() => setFilter('all')}>All</Button>
-              <Button variant={filter === 'deposit' ? 'default' : 'outline'} size="sm" onClick={() => setFilter('deposit')}>Deposits</Button>
-              <Button variant={filter === 'withdrawal' ? 'default' : 'outline'} size="sm" onClick={() => setFilter('withdrawal')}>Withdrawals</Button>
+              <Button variant={filter === 'pending' ? 'default' : 'outline'} size="sm" onClick={() => setFilter('pending')}>Pending</Button>
+              <Button variant={filter === 'completed' ? 'default' : 'outline'} size="sm" onClick={() => setFilter('completed')}>Completed</Button>
+              <Button variant={filter === 'rejected' ? 'default' : 'outline'} size="sm" onClick={() => setFilter('rejected')}>Rejected</Button>
           </div>
         </CardHeader>
         <CardContent>
@@ -104,6 +105,7 @@ export default function TransactionsPage() {
                       <div>
                         <p className="font-medium">{tx.description}</p>
                         <p className="text-xs text-muted-foreground"><FormattedDate dateString={tx.date} /></p>
+                        <p className="text-xs text-muted-foreground font-mono">ID: {tx.id}</p>
                       </div>
                     </div>
                   </TableCell>

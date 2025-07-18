@@ -75,10 +75,14 @@ export default function StorePage() {
       }
       
       setBalance(walletData.balance);
+      
+      // Simulate providing a product activation code
+      const activationCode = `PROD-${String(Date.now()).slice(-5)}`;
 
       toast({
         title: "Purchase Successful!",
-        description: `You've subscribed for ${product.months} months. Your new balance is ₹${walletData.balance.toFixed(2)}.`,
+        description: `You've subscribed for ${product.months} months. Your Activation Code is: ${activationCode}. Use this code in 'My Students' to add a profile.`,
+        duration: 10000,
       });
 
       setIsPurchasing(null);

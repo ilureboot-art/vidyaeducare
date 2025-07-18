@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { User, Mail, Calendar, TrendingUp, Gamepad2, Percent, Edit, Fingerprint, GraduationCap, Building, Languages, BookCopy, FileClock, PlusCircle, Trash2, Cake, Medal, BarChart2 } from "lucide-react";
+import { User, Mail, Calendar, TrendingUp, Gamepad2, Percent, Edit, Fingerprint, GraduationCap, Building, Languages, BookCopy, FileClock, PlusCircle, Trash2, Cake, Medal, BarChart2, ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -72,11 +72,26 @@ const initialStudentProfiles: StudentProfile[] = [
     }
 ];
 
+// In a real app, these would be managed on the backend.
+const validActivationCodes = new Set(["PROD-12345", "PROD-ABCDE"]);
+
 
 export default function ProfilePage() {
     const [students, setStudents] = useState<StudentProfile[]>(initialStudentProfiles);
     const { toast } = useToast();
     const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
+    const [activationCode, setActivationCode] = useState('');
+    const [isCodeVerified, setIsCodeVerified] = useState(false);
+
+    const handleActivationSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      if (validActivationCodes.has(activationCode)) {
+        setIsCodeVerified(true);
+        toast({ title: "Code Verified!", description: "You can now add a new student profile." });
+      } else {
+        toast({ variant: 'destructive', title: "Invalid Code", description: "The activation code is incorrect." });
+      }
+    };
 
     const handleAddStudent = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -111,7 +126,12 @@ export default function ProfilePage() {
             title: "Student Added!",
             description: `${name}'s profile has been created successfully.`
         });
+        
+        // Reset state
+        validActivationCodes.delete(activationCode); // Mark code as used
         setIsAddStudentOpen(false);
+        setIsCodeVerified(false);
+        setActivationCode('');
     };
 
     const handleDeleteStudent = (studentId: string) => {
@@ -130,76 +150,110 @@ export default function ProfilePage() {
                 <h1 className="text-3xl font-bold text-primary">My Students</h1>
                 <p className="text-muted-foreground">Manage student profiles for mock test access.</p>
              </div>
-              <Dialog open={isAddStudentOpen} onOpenChange={setIsAddStudentOpen}>
+              <Dialog open={isAddStudentOpen} onOpenChange={(isOpen) => {
+                  setIsAddStudentOpen(isOpen);
+                  if (!isOpen) {
+                    setIsCodeVerified(false);
+                    setActivationCode('');
+                  }
+              }}>
                 <DialogTrigger asChild>
                     <Button><PlusCircle className="mr-2"/> Add New Student</Button>
                 </DialogTrigger>
                 <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Create New Student Profile</DialogTitle>
-                        <DialogDescription>
-                            Each product purchase allows you to create one student profile. Fill in the details below.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <form onSubmit={handleAddStudent} className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2 col-span-2">
-                                <Label htmlFor="name">Full Name</Label>
-                                <Input id="name" name="name" required />
+                    {!isCodeVerified ? (
+                        <>
+                            <DialogHeader>
+                                <DialogTitle>Enter Product Activation Code</DialogTitle>
+                                <DialogDescription>
+                                    To add a new student, you must first verify your product purchase. Please enter the activation code you received from the store.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <form onSubmit={handleActivationSubmit} className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="activation-code">Activation Code</Label>
+                                    <Input 
+                                      id="activation-code" 
+                                      value={activationCode} 
+                                      onChange={(e) => setActivationCode(e.target.value)} 
+                                      required 
+                                      placeholder="e.g., PROD-12345"
+                                    />
+                                </div>
+                                <DialogFooter>
+                                    <Button type="submit"><ShieldCheck className="mr-2"/>Verify Code</Button>
+                                </DialogFooter>
+                            </form>
+                        </>
+                    ) : (
+                        <>
+                        <DialogHeader>
+                            <DialogTitle>Create New Student Profile</DialogTitle>
+                            <DialogDescription>
+                                Each product purchase allows you to create one student profile. Fill in the details below.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={handleAddStudent} className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2 col-span-2">
+                                    <Label htmlFor="name">Full Name</Label>
+                                    <Input id="name" name="name" required />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="dob">Date of Birth</Label>
+                                    <Input id="dob" name="dob" type="date" required />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="standard">Standard</Label>
+                                    <Select name="standard" required>
+                                        <SelectTrigger id="standard"><SelectValue placeholder="Select..." /></SelectTrigger>
+                                        <SelectContent>
+                                            {[...Array(12)].map((_, i) => <SelectItem key={i+1} value={`${i+1}th`}>{i+1}th</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="board">Board</Label>
+                                    <Select name="board" required>
+                                        <SelectTrigger id="board"><SelectValue placeholder="Select..." /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="CBSE">CBSE</SelectItem>
+                                            <SelectItem value="SSC Maharashtra">SSC Maharashtra</SelectItem>
+                                            <SelectItem value="ICSE">ICSE</SelectItem>
+                                            <SelectItem value="Other">Other</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="stream">Stream</Label>
+                                    <Select name="stream" required>
+                                        <SelectTrigger id="stream"><SelectValue placeholder="Select..." /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="Science">Science</SelectItem>
+                                            <SelectItem value="Commerce">Commerce</SelectItem>
+                                            <SelectItem value="Arts">Arts</SelectItem>
+                                            <SelectItem value="General">General</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2 col-span-2">
+                                    <Label htmlFor="language">Language Medium</Label>
+                                    <Select name="language" required>
+                                        <SelectTrigger id="language"><SelectValue placeholder="Select..." /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="English">English</SelectItem>
+                                            <SelectItem value="Hindi">Hindi</SelectItem>
+                                            <SelectItem value="Marathi">Marathi</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="dob">Date of Birth</Label>
-                                <Input id="dob" name="dob" type="date" required />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="standard">Standard</Label>
-                                <Select name="standard" required>
-                                    <SelectTrigger id="standard"><SelectValue placeholder="Select..." /></SelectTrigger>
-                                    <SelectContent>
-                                        {[...Array(12)].map((_, i) => <SelectItem key={i+1} value={`${i+1}th`}>{i+1}th</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="board">Board</Label>
-                                 <Select name="board" required>
-                                    <SelectTrigger id="board"><SelectValue placeholder="Select..." /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="CBSE">CBSE</SelectItem>
-                                        <SelectItem value="SSC Maharashtra">SSC Maharashtra</SelectItem>
-                                        <SelectItem value="ICSE">ICSE</SelectItem>
-                                        <SelectItem value="Other">Other</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                             <div className="space-y-2">
-                                <Label htmlFor="stream">Stream</Label>
-                                 <Select name="stream" required>
-                                    <SelectTrigger id="stream"><SelectValue placeholder="Select..." /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="Science">Science</SelectItem>
-                                        <SelectItem value="Commerce">Commerce</SelectItem>
-                                        <SelectItem value="Arts">Arts</SelectItem>
-                                        <SelectItem value="General">General</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="space-y-2 col-span-2">
-                                <Label htmlFor="language">Language Medium</Label>
-                                 <Select name="language" required>
-                                    <SelectTrigger id="language"><SelectValue placeholder="Select..." /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="English">English</SelectItem>
-                                        <SelectItem value="Hindi">Hindi</SelectItem>
-                                        <SelectItem value="Marathi">Marathi</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
-                        <DialogFooter>
-                            <Button type="submit">Create Profile</Button>
-                        </DialogFooter>
-                    </form>
+                            <DialogFooter>
+                                <Button type="submit">Create Profile</Button>
+                            </DialogFooter>
+                        </form>
+                      </>
+                    )}
                 </DialogContent>
             </Dialog>
         </div>

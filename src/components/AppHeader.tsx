@@ -5,7 +5,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, BookOpen, Trophy, Store, Users, Wallet, Settings, ChevronRight, X, LogOut, User, History, BrainCircuit, Zap, Gamepad2 } from "lucide-react";
+import { Menu, BookOpen, Trophy, Store, Users, Wallet, Settings, ChevronRight, X, LogOut, User, History, BrainCircuit, Zap, Gamepad2, ShieldCheck } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { UserNotifications } from "@/components/UserNotifications";
 
@@ -18,7 +18,7 @@ const navItems = [
     { href: "/refer", label: "IBA Panel", icon: Users },
     { href: "/referbolt", label: "ReferBolt", icon: Zap },
     { href: "/wallet", label: "Wallet", icon: Wallet },
-    { href: "/profile", label: "Profile", icon: User },
+    { href: "/profile", label: "My Students", icon: User },
     { href: "/transactions", label: "Transactions", icon: History },
     { href: "/settings", label: "Settings", icon: Settings },
 ];
@@ -59,13 +59,13 @@ export function AppHeader() {
                                         <Link
                                             href={item.href}
                                             onClick={() => setIsOpen(false)}
-                                            className="flex items-center justify-between p-3 text-base font-medium rounded-lg hover:bg-muted"
+                                            className="flex items-center justify-between p-2 text-sm font-medium rounded-lg hover:bg-muted"
                                         >
-                                            <div className="flex items-center gap-4">
+                                            <div className="flex items-center gap-3">
                                                 <Icon className="w-5 h-5 text-primary" />
                                                 <span>{item.label}</span>
                                             </div>
-                                            <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                                            <ChevronRight className="w-4 h-4 text-muted-foreground" />
                                         </Link>
                                     </li>
                                     );
@@ -77,7 +77,7 @@ export function AppHeader() {
                              <Link
                                 href="/login"
                                 onClick={() => setIsOpen(false)}
-                                className="flex items-center justify-between p-3 text-base font-medium rounded-lg hover:bg-muted"
+                                className="flex items-center justify-between p-3 text-sm font-medium rounded-lg hover:bg-muted"
                             >
                                 <div className="flex items-center gap-4">
                                     <LogOut className="w-5 h-5 text-destructive" />

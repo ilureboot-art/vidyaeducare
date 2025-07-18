@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Share2, Copy, Users, IndianRupee, Goal } from "lucide-react";
+import { Share2, Copy, Users, IndianRupee, Goal, Percent, ShieldCheck } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -15,6 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
+import Link from "next/link";
 
 const initialReferralData = {
   referralCode: "ALEX-IBA-5C",
@@ -27,6 +28,14 @@ const initialReferralData = {
 
 const dailyTarget = 5;
 const monthlyTarget = 150;
+
+const bonusTiers = [
+    { target: 60, bonus: 1 },
+    { target: 70, bonus: 2 },
+    { target: 80, bonus: 3 },
+    { target: 90, bonus: 4 },
+    { target: 100, bonus: 5 },
+];
 
 export default function ReferPage() {
   const { toast } = useToast();
@@ -114,6 +123,10 @@ Join here: ${shareUrl}`;
                     </CardHeader>
                 </Card>
             </div>
+
+            <Button asChild variant="secondary" className="w-full">
+                <Link href="/refer/students"><ShieldCheck className="mr-2"/> View Student Access Panel</Link>
+            </Button>
             
             <div>
               <h3 className="text-lg font-semibold mb-2 flex items-center gap-2"><Goal/> Target Progress</h3>
@@ -134,6 +147,18 @@ Join here: ${shareUrl}`;
                  </div>
               </div>
             </div>
+
+             <div>
+                <h3 className="text-lg font-semibold mb-2 flex items-center gap-2"><Percent/> Monthly Bonus Commission</h3>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-center">
+                    {bonusTiers.map(tier => (
+                        <div key={tier.target} className="p-2 bg-muted/50 rounded-md">
+                            <p className="font-bold text-primary">{tier.target}% Target</p>
+                            <p className="text-sm text-muted-foreground">+ {tier.bonus}% Bonus</p>
+                        </div>
+                    ))}
+                </div>
+             </div>
 
             <div>
                 <h3 className="text-lg font-semibold mb-2">Recent Sales</h3>
@@ -160,8 +185,6 @@ Join here: ${shareUrl}`;
                     </TableBody>
                 </Table>
             </div>
-
-
         </CardContent>
       </Card>
     </div>

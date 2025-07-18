@@ -8,19 +8,25 @@ import { BookOpen, Trophy, Users, BarChart2, Star, ChevronRight, Calendar as Cal
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Calendar } from "@/components/ui/calendar";
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
 
 const studentStats = {
     name: "Alex Doe",
-    testsTaken: 0,
-    avgScore: 0,
+    testsTaken: 4,
+    avgScore: 75,
     badges: ["Gold", "Silver"],
+    performance: [
+        { subject: "Maths", score: 82 },
+        { subject: "Science", score: 68 },
+        { subject: "English", score: 78 },
+        { subject: "History", score: 71 },
+    ],
 };
 
 const quickLinks = [
     { href: "/mock-test", label: "Take a Mock Test", icon: BookOpen },
     { href: "/leaderboard", label: "View Leaderboard", icon: Trophy },
     { href: "/profile", label: "Manage Student Profiles", icon: Users },
-    { href: "/transactions", label: "View Performance", icon: BarChart2 },
 ];
 
 
@@ -46,33 +52,64 @@ export default function StudentDashboardPage() {
                 </div>
             </div>
             
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid md:grid-cols-3 gap-6">
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-sm font-medium text-muted-foreground">Tests Taken</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-3xl font-bold">{studentStats.testsTaken}</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-sm font-medium text-muted-foreground">Average Score</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                         <p className="text-3xl font-bold">{studentStats.avgScore}%</p>
+                    </CardContent>
+                </Card>
                  <Card>
                     <CardHeader>
-                        <CardTitle>Your Stats</CardTitle>
+                        <CardTitle className="text-sm font-medium text-muted-foreground">Badges Earned</CardTitle>
                     </CardHeader>
-                    <CardContent className="grid grid-cols-2 gap-4 text-center">
-                        <div className="p-3 bg-muted/50 rounded-lg">
-                            <p className="text-xs text-muted-foreground">Tests Taken</p>
-                            <p className="text-2xl font-bold">{studentStats.testsTaken}</p>
-                        </div>
-                        <div className="p-3 bg-muted/50 rounded-lg">
-                            <p className="text-xs text-muted-foreground">Average Score</p>
-                            <p className="text-2xl font-bold">{studentStats.avgScore}%</p>
-                        </div>
-                        <div className="p-3 bg-muted/50 rounded-lg col-span-2">
-                            <p className="text-xs text-muted-foreground">Badges</p>
-                            <div className="flex justify-center gap-2 mt-1">
-                                {studentStats.badges.length > 0 ? studentStats.badges.map(badge => (
-                                    <div key={badge} className="flex items-center gap-1 text-yellow-500">
-                                        <Star className="w-5 h-5"/>
-                                        <span className="font-semibold text-sm">{badge}</span>
-                                    </div>
-                                )) : <p className="text-sm">No badges yet</p>}
-                            </div>
+                     <CardContent>
+                        <div className="flex items-center gap-2">
+                            {studentStats.badges.length > 0 ? studentStats.badges.map(badge => (
+                                <div key={badge} className="flex items-center gap-1 text-yellow-500">
+                                    <Star className="w-6 h-6"/>
+                                    <span className="font-semibold text-lg">{badge}</span>
+                                </div>
+                            )) : <p className="text-sm">No badges yet</p>}
                         </div>
                     </CardContent>
                 </Card>
+            </div>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><BarChart2/> Performance Dashboard</CardTitle>
+                    <CardDescription>Your average scores across different subjects.</CardDescription>
+                </CardHeader>
+                <CardContent className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={studentStats.performance}>
+                            <XAxis dataKey="subject" stroke="#888888" fontSize={12} tickLine={false} axisLine={false}/>
+                            <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}%`}/>
+                            <Tooltip
+                              contentStyle={{
+                                background: "hsl(var(--background))",
+                                border: "1px solid hsl(var(--border))",
+                                borderRadius: "var(--radius)",
+                              }}
+                            />
+                            <Bar dataKey="score" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                    </ResponsiveContainer>
+                </CardContent>
+            </Card>
+
+             <div className="grid md:grid-cols-2 gap-6">
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2"><CalendarIcon /> Mock Test Schedule</CardTitle>
@@ -90,25 +127,24 @@ export default function StudentDashboardPage() {
                         />
                     </CardContent>
                 </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Quick Links</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                        {quickLinks.map(link => (
+                            <Link href={link.href} key={link.href} className="flex items-center justify-between p-3 bg-muted/50 hover:bg-muted rounded-lg transition-colors">
+                                <div className="flex items-center gap-3 font-medium">
+                                    <link.icon className="w-5 h-5 text-primary" />
+                                    <span>{link.label}</span>
+                                </div>
+                                <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                            </Link>
+                        ))}
+                    </CardContent>
+                </Card>
             </div>
 
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>Quick Links</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                    {quickLinks.map(link => (
-                        <Link href={link.href} key={link.href} className="flex items-center justify-between p-3 bg-muted/50 hover:bg-muted rounded-lg transition-colors">
-                            <div className="flex items-center gap-3 font-medium">
-                                <link.icon className="w-5 h-5 text-primary" />
-                                <span>{link.label}</span>
-                            </div>
-                            <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                        </Link>
-                    ))}
-                </CardContent>
-            </Card>
 
             <Card className="text-center">
                  <CardHeader>

@@ -35,6 +35,13 @@ export default function ProfilePage() {
     const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
     const [activationCode, setActivationCode] = useState("");
     const [isCodeVerified, setIsCodeVerified] = useState(false);
+    
+    // Static parent data for display
+    const parentProfile = {
+        name: "Alex Doe",
+        email: "alex.doe@example.com",
+        joinDate: "2024-07-01",
+    };
 
     const handleVerifyCode = () => {
         if (validActivationCodes.includes(activationCode)) {
@@ -85,7 +92,38 @@ export default function ProfilePage() {
     }
 
   return (
-    <div className="w-full max-w-4xl mx-auto space-y-6">
+    <div className="w-full max-w-4xl mx-auto space-y-8">
+        <Card>
+            <CardHeader>
+                <CardTitle className="text-2xl flex items-center gap-2"><User /> Parent Profile</CardTitle>
+                <CardDescription>Your account details.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                 <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                    <User className="w-5 h-5 text-muted-foreground"/>
+                    <div>
+                        <p className="text-xs text-muted-foreground">Name</p>
+                        <p className="font-medium">{parentProfile.name}</p>
+                    </div>
+                </div>
+                 <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                    <Mail className="w-5 h-5 text-muted-foreground"/>
+                    <div>
+                        <p className="text-xs text-muted-foreground">Email</p>
+                        <p className="font-medium">{parentProfile.email}</p>
+                    </div>
+                </div>
+                 <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                    <Calendar className="w-5 h-5 text-muted-foreground"/>
+                    <div>
+                        <p className="text-xs text-muted-foreground">Member Since</p>
+                        <p className="font-medium"><FormattedDate dateString={parentProfile.joinDate} /></p>
+                    </div>
+                </div>
+                <Button variant="outline" className="h-full">Edit Profile</Button>
+            </CardContent>
+        </Card>
+
         <div className="flex justify-between items-center">
              <h1 className="text-3xl font-bold">My Students</h1>
              <Dialog open={isAddStudentOpen} onOpenChange={(isOpen) => {

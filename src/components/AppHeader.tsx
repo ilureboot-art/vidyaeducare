@@ -8,6 +8,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTr
 import { Menu, BookOpen, Trophy, Store, Users, Wallet, Settings, ChevronRight, X, LogOut, User, History, BrainCircuit, Zap, Gamepad2, ShieldCheck, LayoutDashboard } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { UserNotifications } from "@/components/UserNotifications";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const navItems = [
     { href: "/student/dashboard", label: "Student Dashboard", icon: LayoutDashboard },
@@ -19,6 +20,7 @@ const navItems = [
     { href: "/referbolt", label: "ReferBolt", icon: Zap },
     { href: "/wallet", label: "Wallet", icon: Wallet },
     { href: "/profile", label: "My Students", icon: Users },
+    { href: "/profile", label: "My Profile", icon: User },
     { href: "/transactions", label: "Transactions", icon: History },
     { href: "/settings", label: "Settings", icon: Settings },
 ];
@@ -37,7 +39,7 @@ export function AppHeader() {
                     </Button>
                 </SheetTrigger>
                 <SheetContent side="left" className="w-72 p-0 flex flex-col">
-                    <SheetHeader className="p-4">
+                    <SheetHeader className="p-4 border-b">
                          <div className="flex justify-between items-center">
                             <SheetTitle asChild>
                                <h2 className="text-lg font-bold text-primary">Vidya EduCare Menu</h2>
@@ -53,14 +55,13 @@ export function AppHeader() {
                             </div>
                         </SheetDescription>
                     </SheetHeader>
-                    <div className="p-4 pt-0 flex-1 flex flex-col">
-                        <Separator />
-                        <nav className="mt-6 flex-1">
+                    <ScrollArea className="flex-1">
+                        <nav className="p-4">
                             <ul className="space-y-1">
-                                {navItems.map((item) => {
+                                {navItems.map((item, index) => {
                                     const Icon = item.icon;
                                     return (
-                                    <li key={item.href}>
+                                    <li key={`${item.href}-${index}`}>
                                         <Link
                                             href={item.href}
                                             onClick={() => setIsOpen(false)}
@@ -77,19 +78,18 @@ export function AppHeader() {
                                 })}
                             </ul>
                         </nav>
-                        <Separator />
-                        <div className="mt-4">
-                             <Link
-                                href="/login"
-                                onClick={() => setIsOpen(false)}
-                                className="flex items-center justify-between p-3 text-sm font-medium rounded-lg hover:bg-muted"
-                            >
-                                <div className="flex items-center gap-4">
-                                    <LogOut className="w-5 h-5 text-destructive" />
-                                    <span>Sign Out</span>
-                                </div>
-                            </Link>
-                        </div>
+                    </ScrollArea>
+                    <div className="p-4 mt-auto border-t">
+                         <Link
+                            href="/login"
+                            onClick={() => setIsOpen(false)}
+                            className="flex items-center justify-between p-3 text-sm font-medium rounded-lg hover:bg-muted"
+                        >
+                            <div className="flex items-center gap-4">
+                                <LogOut className="w-5 h-5 text-destructive" />
+                                <span>Sign Out</span>
+                            </div>
+                        </Link>
                     </div>
                 </SheetContent>
             </Sheet>

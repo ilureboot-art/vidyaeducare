@@ -51,7 +51,8 @@ function FormattedDate({ dateString }: { dateString: string }) {
 
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([...walletData.transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-  const [filter, setFilter] = useState<'all' | 'pending' | 'completed' | 'rejected'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'rejected'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'deposit' | 'withdrawal'>('all');
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -65,8 +66,9 @@ export default function TransactionsPage() {
   }, [transactions]);
 
   const filteredTransactions = transactions.filter(tx => {
-    if (filter === 'all') return true;
-    return tx.status.toLowerCase() === filter;
+    const statusMatch = statusFilter === 'all' || tx.status.toLowerCase() === statusFilter;
+    const typeMatch = typeFilter === 'all' || (typeFilter === 'deposit' && tx.amount >= 0) || (typeFilter === 'withdrawal' && tx.amount < 0);
+    return statusMatch && typeMatch;
   });
 
   return (
@@ -75,12 +77,21 @@ export default function TransactionsPage() {
         <CardHeader>
           <CardTitle>Transaction History</CardTitle>
           <CardDescription>A complete record of your financial activity.</CardDescription>
-           <div className="flex items-center gap-2 pt-4">
-              <Button variant={filter === 'all' ? 'default' : 'outline'} size="sm" onClick={() => setFilter('all')}>All</Button>
-              <Button variant={filter === 'pending' ? 'default' : 'outline'} size="sm" onClick={() => setFilter('pending')}>Pending</Button>
-              <Button variant={filter === 'completed' ? 'default' : 'outline'} size="sm" onClick={() => setFilter('completed')}>Completed</Button>
-              <Button variant={filter === 'rejected' ? 'default' : 'outline'} size="sm" onClick={() => setFilter('rejected')}>Rejected</Button>
-          </div>
+           <div className="flex flex-col gap-2 pt-4">
+               <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-muted-foreground">Type:</span>
+                  <Button variant={typeFilter === 'all' ? 'default' : 'outline'} size="sm" onClick={() => setTypeFilter('all')}>All</Button>
+                  <Button variant={typeFilter === 'deposit' ? 'default' : 'outline'} size="sm" onClick={() => setTypeFilter('deposit')}>Deposits</Button>
+                  <Button variant={typeFilter === 'withdrawal' ? 'default' : 'outline'} size="sm" onClick={() => setTypeFilter('withdrawal')}>Withdrawals</Button>
+              </div>
+              <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-muted-foreground">Status:</span>
+                  <Button variant={statusFilter === 'all' ? 'default' : 'outline'} size="sm" onClick={() => setStatusFilter('all')}>All</Button>
+                  <Button variant={statusFilter === 'pending' ? 'default' : 'outline'} size="sm" onClick={() => setStatusFilter('pending')}>Pending</Button>
+                  <Button variant={statusFilter === 'completed' ? 'default' : 'outline'} size="sm" onClick={() => setStatusFilter('completed')}>Completed</Button>
+                  <Button variant={statusFilter === 'rejected' ? 'default' : 'outline'} size="sm" onClick={() => setStatusFilter('rejected')}>Rejected</Button>
+              </div>
+           </div>
         </CardHeader>
         <CardContent>
           <Table>

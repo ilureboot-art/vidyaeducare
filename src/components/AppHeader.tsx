@@ -5,16 +5,18 @@ import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, BookOpen, Trophy, Store, Users, Wallet, Settings, ChevronRight, X, LogOut, User, History, BrainCircuit } from "lucide-react";
+import { Menu, BookOpen, Trophy, Store, Users, Wallet, Settings, ChevronRight, X, LogOut, User, History, BrainCircuit, Zap, Gamepad2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { UserNotifications } from "@/components/UserNotifications";
 
 const navItems = [
     { href: "/mock-test", label: "Mock Test", icon: BookOpen },
+    { href: "/play", label: "Play Game", icon: Gamepad2 },
     { href: "/vidya-edurank", label: "Vidya Edurank", icon: BrainCircuit },
     { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
     { href: "/store", label: "Store", icon: Store },
     { href: "/refer", label: "IBA Panel", icon: Users },
+    { href: "/referbolt", label: "ReferBolt", icon: Zap },
     { href: "/wallet", label: "Wallet", icon: Wallet },
     { href: "/profile", label: "Profile", icon: User },
     { href: "/transactions", label: "Transactions", icon: History },

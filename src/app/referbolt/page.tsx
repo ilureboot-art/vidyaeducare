@@ -185,7 +185,7 @@ Join now: ${shareUrl}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {data.referralHistory.length > 0 ? data.referralHistory.map((ref) => (
+                            {data.referralHistory.length > 0 ? data.referralHistory.map((ref: any) => (
                                 <TableRow key={ref.id}>
                                     <TableCell className="font-medium">{ref.name}</TableCell>
                                     <TableCell>{ref.date}</TableCell>

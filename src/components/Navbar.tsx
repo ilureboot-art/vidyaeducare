@@ -3,15 +3,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, Store, Users, Wallet, Home, BrainCircuit } from "lucide-react";
+import { BookOpen, Store, Users, Wallet, Home, BrainCircuit, Gamepad2, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/", label: "Home", icon: Home },
   { href: "/mock-test", label: "Test", icon: BookOpen },
+  { href: "/play", label: "Play", icon: Gamepad2 },
   { href: "/refer", label: "IBA Panel", icon: Users },
   { href: "/vidya-edurank", label: "Vidya", icon: BrainCircuit },
-  { href: "/store", label: "Store", icon: Store },
   { href: "/wallet", label: "Wallet", icon: Wallet },
 ];
 

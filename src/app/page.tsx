@@ -54,9 +54,19 @@ export default function HomePage() {
   const { toast } = useToast();
 
   const handleShare = async () => {
-    const referralCode = "ALEX-D7F6E5C"; // Example code
+    const referralCode = "ALEX-D7F6E5C"; // Example code for the current user
     const url = `${window.location.origin}/signup?ref=${referralCode}`;
-    const message = `🎓 Check out Vidya EduCare! It's an amazing platform for mock tests, AI-powered learning, and skill-based games. Use my code ${referralCode} to get a bonus when you join!\nStart your journey: ${url}`;
+    const message = `🎓 Check out Vidya EduCare! It's an amazing platform for mock tests, AI-powered learning, and skill-based games. 
+    
+Use my code ✨ ${referralCode} ✨ to get a ₹${initialReferralBonus} bonus when you join!
+
+Here's what you get:
+- 📚 Access to a huge library of mock tests.
+- 🎮 Fun skill games like GuessMaster to win cash.
+- 💸 Earn rewards by referring friends.
+
+Start your journey to success now: ${url}
+#VidyaEduCare #EdTech #MockTest #SkillGames #ReferAndEarn`;
     
     const fallbackCopy = () => {
         navigator.clipboard.writeText(message);
@@ -70,7 +80,9 @@ export default function HomePage() {
       try {
         await navigator.share({ title: 'Join Vidya EduCare!', text: message, url });
       } catch (error) {
-        fallbackCopy();
+        if ((error as DOMException).name !== 'AbortError') {
+          fallbackCopy();
+        }
       }
     } else {
       fallbackCopy();

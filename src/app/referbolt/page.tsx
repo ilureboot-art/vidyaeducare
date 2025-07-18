@@ -43,16 +43,19 @@ export default function ReferBoltPage() {
     // In a real app, this code would be fetched for the logged-in user
     const referralCode = "ALEX-D7F6E5";
     const shareUrl = `${window.location.origin}/signup?ref=${referralCode}`;
-    const benefitsText = benefits.map(b => `- ${b.text}`).join("\n");
+    const benefitsText = benefits.map(b => `✅ ${b.text}`).join("\n");
 
-    const message = `🤝 Join Referbolt - India's Best Skill Gaming Platform! 🤝
+    const message = `🤝 Unlock continuous earnings with the ReferBolt System on Vidya EduCare! 🤝
+
 🚀 Use my referral code: ${referralCode}
-ReferBolt Benefits
+
+✨ **ReferBolt Benefits:**
 ${benefitsText}
 
-💸 Earn real cash through referbolt
-Join now: ${shareUrl}
-#GuessMaster #SkillGaming #CashPrizes #ReferralBonus #Referbolt`;
+💸 This is the ultimate way to build a steady stream of income.
+Subscribe and start your earning cycle now: ${shareUrl}
+
+#VidyaEduCare #ReferBolt #PassiveIncome #ReferAndEarn #SkillGaming`;
 
     const fallbackCopy = () => {
         navigator.clipboard.writeText(message);
@@ -65,7 +68,7 @@ Join now: ${shareUrl}
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'Unlock Your Earnings with GuessMaster ReferBolt!',
+          title: 'Unlock Your Earnings with Vidya EduCare ReferBolt!',
           text: message,
           url: shareUrl,
         });

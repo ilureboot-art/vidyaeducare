@@ -60,10 +60,15 @@ export default function IBADashboardPage() {
 
   const handleShare = async () => {
     const shareUrl = `${window.location.origin}/signup?ref=${referralData.referralCode}`;
-    const message = `Join Vidya EduCare using my IBA code and get a special discount! 
-    
-Code: ${referralData.referralCode}
-Join here: ${shareUrl}`;
+    const message = `Join Vidya EduCare using my exclusive IBA code and get a special discount on your subscription!
+
+🎓 **Platform**: Vidya EduCare
+🔑 **My IBA Code**: ${referralData.referralCode}
+✨ **Your Benefit**: Get a 10% discount on subscriptions.
+🔗 **Join Here**: ${shareUrl}
+
+Take your exam preparation to the next level with mock tests and AI-powered study tools.
+#VidyaEduCare #IBA #Referral #Discount`;
 
     const fallbackCopy = () => {
       navigator.clipboard.writeText(message);
@@ -76,7 +81,7 @@ Join here: ${shareUrl}`;
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'Join Vidya EduCare!',
+          title: 'Join Vidya EduCare with my IBA Code!',
           text: message,
           url: shareUrl,
         });

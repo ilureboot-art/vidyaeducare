@@ -219,13 +219,17 @@ export default function PlayPage() {
     const shareUrl = `${window.location.origin}/signup?ref=${referralCode}`;
     const rewardsList = REWARDS.map((r, i) => `${i+1}${i === 0 ? 'st' : i === 1 ? 'nd' : i === 2 ? 'rd' : 'th'} Attempt: ₹${r}`).join('\n');
     const message = `🎮 Join GuessMaster - India's Best Skill Gaming Platform! 🎮
+
 🚀 Use my referral code: ${referralCode}
-💰 Get ₹${initialReferralBonus} instant bonus on signup
-🎯 Play exciting skill-based number guessing games.
-💰 Rewards prize for correct guess:
+💰 Get a ₹${initialReferralBonus} instant bonus on signup!
+
+🎯 Play exciting skill-based number guessing games and win real cash.
+💰 **Prize structure for correct guesses:**
 ${rewardsList}
-💸 Win real cash prizes through strategic thinking
+
+💸 Test your logic and win real cash prizes!
 Join now: ${shareUrl}
+
 #GuessMaster #SkillGaming #CashPrizes #ReferralBonus`;
 
     const fallbackCopy = () => {
@@ -244,8 +248,10 @@ Join now: ${shareUrl}
           url: shareUrl,
         });
       } catch (error) {
-        console.error("Web Share API failed, falling back to clipboard:", error);
-        fallbackCopy();
+        if ((error as DOMException).name !== 'AbortError') {
+          console.error("Web Share API failed, falling back to clipboard:", error);
+          fallbackCopy();
+        }
       }
     } else {
       fallbackCopy();

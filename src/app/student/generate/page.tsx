@@ -3,16 +3,17 @@
 
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { BrainCircuit, Loader2, Sparkles, Upload } from "lucide-react";
+import { BrainCircuit, Loader2, Sparkles, Upload, Share2 } from "lucide-react";
 import { generateEducationalContent, type VidyaEdurankInput, type VidyaEdurankOutput } from '@/ai/flows/vidya-edurank-flow';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { initialReferralBonus } from '@/lib/store-config';
 
 export default function VidyaEdurankPage() {
     const { toast } = useToast();
@@ -36,6 +37,44 @@ export default function VidyaEdurankPage() {
     const [studyMaterialFile, setStudyMaterialFile] = useState<string | null>(null);
     const [fileName, setFileName] = useState('');
     const [activeTab, setActiveTab] = useState('text');
+
+    const handleShare = async () => {
+        const referralCode = "ALEX-D7F6E5C"; // Example code
+        const url = `${window.location.origin}/signup?ref=${referralCode}`;
+        const message = `🧠 Supercharge your studies with Vidya Edurank AI on the Vidya EduCare platform!
+
+This AI agent can instantly generate:
+- ✅ Summary Notes
+- ✅ Multiple Choice Questions
+- ✅ Practice Question Papers
+- ✅ And more!
+
+Use my code ✨ ${referralCode} ✨ to get a ₹${initialReferralBonus} bonus when you join!
+
+Check it out: ${url}
+#VidyaEduCare #AIinEducation #StudySmart #EdTech #ReferAndEarn`;
+
+        const fallbackCopy = () => {
+            navigator.clipboard.writeText(message);
+            toast({
+                title: "Link Copied!",
+                description: "Promotional message for Vidya Edurank has been copied.",
+            });
+        };
+
+        if (navigator.share) {
+            try {
+                await navigator.share({ title: 'Discover the Vidya Edurank AI!', text: message, url });
+            } catch (error) {
+                 if ((error as DOMException).name !== 'AbortError') {
+                    fallbackCopy();
+                }
+            }
+        } else {
+            fallbackCopy();
+        }
+    };
+
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -240,6 +279,12 @@ export default function VidyaEdurankPage() {
                         </Button>
                     </form>
                 </CardContent>
+                <CardFooter>
+                    <Button variant="outline" className="w-full" onClick={handleShare}>
+                        <Share2 className="mr-2"/>
+                        Share Vidya Edurank
+                    </Button>
+                </CardFooter>
             </Card>
 
             {isLoading && (

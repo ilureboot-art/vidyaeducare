@@ -3,38 +3,65 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { BookOpen, Trophy, Users, LogIn, CheckCircle, GraduationCap, Gamepad2, IndianRupee, Star, Share2, Zap } from "lucide-react";
+import { BookOpen, Trophy, Users, LogIn, CheckCircle, GraduationCap, Gamepad2, IndianRupee, Star, Share2, Zap, BrainCircuit, Quote } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
 import { initialReferralBonus } from "@/lib/store-config";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+
+const features = [
+  {
+    icon: BookOpen,
+    title: "Mock Tests",
+    description: "Prepare for exams with our extensive library of mock tests for various subjects and standards."
+  },
+  {
+    icon: BrainCircuit,
+    title: "AI Study Tools",
+    description: "Generate notes, MCQs, and study plans from your materials with our powerful AI assistant."
+  },
+  {
+    icon: Gamepad2,
+    title: "Skill-Based Gaming",
+    description: "Play GuessMaster, test your number-guessing skills, and win real cash rewards."
+  },
+  {
+    icon: Users,
+    title: "Referral Programs",
+    description: "Earn bonuses and continuous commissions through our simple and advanced referral systems."
+  }
+];
+
+const testimonials = [
+  {
+    name: "Priya S.",
+    role: "Parent of 10th Grader",
+    avatar: "PS",
+    quote: "Vidya EduCare has been a game-changer for my son's exam preparation. The AI tools are incredible for creating quick summaries and practice questions."
+  },
+  {
+    name: "Rohan K.",
+    role: "User",
+    avatar: "RK",
+    quote: "I love playing GuessMaster in my free time! It's fun, challenging, and I've actually won some good pocket money. The referral system is a great bonus."
+  },
+   {
+    name: "Anjali M.",
+    role: "Parent of 12th Grader",
+    avatar: "AM",
+    quote: "The combination of serious mock tests and fun skill games is perfect. It keeps my daughter engaged in learning. Highly recommended!"
+  }
+];
+
 
 export default function HomePage() {
   const { toast } = useToast();
 
-  const handleShare = async (type: 'vidya-educare' | 'game' | 'referral' | 'referbolt') => {
-    let message = '';
-    let url = window.location.origin;
+  const handleShare = async () => {
     const referralCode = "ALEX-D7F6E5C"; // Example code
-
-    switch (type) {
-      case 'vidya-educare':
-        url = `${window.location.origin}/signup?ref=${referralCode}`;
-        message = `🎓 Check out Vidya EduCare! It's an amazing platform for mock tests and AI-powered learning. Use my code ${referralCode} to get a bonus when you join!\nStart learning: ${url}`;
-        break;
-      case 'game':
-        url = `${window.location.origin}/signup?ref=${referralCode}`;
-        message = `🎮 Join GuessMaster - India's Best Skill Gaming Platform! 🎮\n🚀 Use my referral code: ${referralCode}\n💰 Get ₹${initialReferralBonus} instant bonus on signup\n🎯 Play exciting skill-based number guessing games and win real cash!\nJoin now: ${url}`;
-        break;
-      case 'referral':
-         url = `${window.location.origin}/signup?ref=${referralCode}`;
-        message = `💰 Easy money! Join Vidya EduCare using my referral code and we both get a bonus: ${referralCode}\nSign up here: ${url}`;
-        break;
-      case 'referbolt':
-         url = `${window.location.origin}/referbolt`;
-        message = `⚡️ Supercharge your earnings with ReferBolt! Earn continuous commissions from your network. Use my code ${referralCode} to get started!\nLearn more: ${url}`;
-        break;
-    }
+    const url = `${window.location.origin}/signup?ref=${referralCode}`;
+    const message = `🎓 Check out Vidya EduCare! It's an amazing platform for mock tests, AI-powered learning, and skill-based games. Use my code ${referralCode} to get a bonus when you join!\nStart your journey: ${url}`;
     
     const fallbackCopy = () => {
         navigator.clipboard.writeText(message);
@@ -56,101 +83,117 @@ export default function HomePage() {
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto space-y-20">
+    <div className="w-full max-w-6xl mx-auto space-y-24">
       
-      {/* Vidya EduCare Section */}
-      <section className="grid md:grid-cols-2 gap-8 items-center text-center md:text-left">
+      {/* Hero Section */}
+      <section className="grid md:grid-cols-2 gap-12 items-center text-center md:text-left">
         <div>
-            <h1 className="text-5xl font-bold text-primary tracking-tighter">Welcome to Vidya EduCare!</h1>
-            <p className="text-xl text-muted-foreground mt-4">Your platform for mastering academic mock tests and achieving excellence.</p>
+            <h1 className="text-5xl lg:text-6xl font-bold text-primary tracking-tighter">Learn, Play, and Earn with Vidya EduCare.</h1>
+            <p className="text-xl text-muted-foreground mt-4">The ultimate platform combining academic excellence with skill-based gaming to make learning rewarding.</p>
             <div className="mt-8 flex gap-4 justify-center md:justify-start flex-wrap">
                 <Button asChild size="lg">
-                    <Link href="/login"><LogIn className="mr-2"/> Get Started</Link>
+                    <Link href="/signup"><LogIn className="mr-2"/> Join for Free</Link>
                 </Button>
                 <Button asChild size="lg" variant="secondary">
-                    <Link href="/mock-test"><BookOpen className="mr-2"/> Take a Mock Test</Link>
-                </Button>
-                 <Button size="lg" variant="outline" onClick={() => handleShare('vidya-educare')}>
-                  <Share2 className="mr-2"/> Share App
+                    <Link href="/how-to-play"><BookOpen className="mr-2"/> Learn More</Link>
                 </Button>
             </div>
         </div>
         <div>
-            <Image src="https://placehold.co/600x400.png" width={600} height={400} alt="Students learning" className="rounded-lg shadow-xl" data-ai-hint="students learning" />
+            <Image src="https://placehold.co/600x400.png" width={600} height={400} alt="Students learning and earning" className="rounded-lg shadow-xl" data-ai-hint="learning earning" />
         </div>
       </section>
       
-      {/* Separator */}
-       <div className="relative">
-        <div className="absolute inset-0 flex items-center" aria-hidden="true">
-            <div className="w-full border-t border-dashed border-gray-300" />
+      {/* How it Works Section */}
+      <section>
+        <div className="text-center space-y-2 mb-12">
+          <h2 className="text-3xl font-bold">A Rewarding Journey in 3 Steps</h2>
+          <p className="text-muted-foreground">Getting started is simple and straightforward.</p>
         </div>
-        <div className="relative flex justify-center">
-            <span className="bg-background px-4 text-muted-foreground">
-                <Star />
-            </span>
-        </div>
-      </div>
-
-
-      {/* GuessMaster Section */}
-      <section className="grid md:grid-cols-2 gap-8 items-center text-center md:text-left">
-         <div className="order-last md:order-first">
-            <Image src="https://placehold.co/600x400.png" width={600} height={400} alt="Fun number game" className="rounded-lg shadow-xl" data-ai-hint="number game" />
-        </div>
-        <div>
-            <h1 className="text-5xl font-bold text-accent tracking-tighter">Play GuessMaster!</h1>
-            <p className="text-xl text-muted-foreground mt-4">Test your skills, guess the number, and win real cash prizes!</p>
-            <div className="mt-8 flex gap-4 justify-center md:justify-start flex-wrap">
-                <Button asChild size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90">
-                    <Link href="/play"><Gamepad2 className="mr-2"/> Play Now</Link>
-                </Button>
-                <Button size="lg" variant="outline" onClick={() => handleShare('game')}>
-                  <Share2 className="mr-2"/> Share Game
-                </Button>
+        <div className="grid md:grid-cols-3 gap-8 text-center">
+            <div className="flex flex-col items-center">
+                <div className="flex items-center justify-center bg-primary/20 text-primary w-16 h-16 rounded-full text-2xl font-bold mb-4">1</div>
+                <h3 className="text-xl font-semibold">Sign Up</h3>
+                <p className="text-muted-foreground mt-2">Create your account in minutes. Use a referral code to get an instant bonus!</p>
+            </div>
+             <div className="flex flex-col items-center">
+                <div className="flex items-center justify-center bg-primary/20 text-primary w-16 h-16 rounded-full text-2xl font-bold mb-4">2</div>
+                <h3 className="text-xl font-semibold">Learn & Play</h3>
+                <p className="text-muted-foreground mt-2">Access mock tests and AI study tools, or play GuessMaster to test your skills.</p>
+            </div>
+             <div className="flex flex-col items-center">
+                <div className="flex items-center justify-center bg-primary/20 text-primary w-16 h-16 rounded-full text-2xl font-bold mb-4">3</div>
+                <h3 className="text-xl font-semibold">Earn Rewards</h3>
+                <p className="text-muted-foreground mt-2">Win cash prizes from games and earn bonuses by referring your friends.</p>
             </div>
         </div>
       </section>
 
-      <section className="space-y-8">
-        <div className="text-center">
-            <h2 className="text-3xl font-bold">Referral Programs</h2>
-            <p className="text-muted-foreground mt-2">Earn rewards by sharing the app with your friends and network.</p>
-        </div>
-        <div className="grid md:grid-cols-2 gap-8">
-            <Card className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-3">
-                        <div className="bg-primary/20 p-3 rounded-full"><IndianRupee className="w-6 h-6 text-primary" /></div>
-                        Refer & Earn
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p>Share your referral code with friends. When they sign up, you both receive a cash bonus in your wallet!</p>
-                </CardContent>
-                <CardFooter>
-                  <Button className="w-full" variant="secondary" onClick={() => handleShare('referral')}>
-                    <Share2 className="mr-2"/> Share & Earn Now
-                  </Button>
-                </CardFooter>
-            </Card>
-            <Card className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-3">
-                        <div className="bg-primary/20 p-3 rounded-full"><Zap className="w-6 h-6 text-primary" /></div>
-                       ReferBolt System
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p>Join our premium referral program to earn continuous commissions from your network in cycles. Unlimited earning potential!</p>
-                </CardContent>
-                 <CardFooter>
-                  <Button className="w-full" variant="secondary" onClick={() => handleShare('referbolt')}>
-                    <Share2 className="mr-2"/> Share ReferBolt Benefits
-                  </Button>
-                </CardFooter>
-            </Card>
-        </div>
+      {/* Features Section */}
+      <section>
+          <div className="text-center space-y-2 mb-12">
+            <h2 className="text-3xl font-bold">Everything You Need to Succeed</h2>
+            <p className="text-muted-foreground">One platform, limitless possibilities.</p>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {features.map((feature) => (
+                  <Card key={feature.title} className="text-center hover:shadow-lg transition-shadow">
+                      <CardHeader className="items-center">
+                          <div className="p-3 bg-primary/10 rounded-full">
+                            <feature.icon className="w-8 h-8 text-primary" />
+                          </div>
+                          <CardTitle>{feature.title}</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                          <p className="text-muted-foreground">{feature.description}</p>
+                      </CardContent>
+                  </Card>
+              ))}
+          </div>
+      </section>
+      
+      {/* Testimonials Section */}
+      <section>
+          <div className="text-center space-y-2 mb-12">
+            <h2 className="text-3xl font-bold">Trusted by Parents and Users</h2>
+            <p className="text-muted-foreground">Don't just take our word for it. Here's what people are saying.</p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-6">
+            {testimonials.map((testimonial) => (
+              <Card key={testimonial.name} className="flex flex-col">
+                  <CardContent className="pt-6 flex-grow">
+                      <Quote className="w-8 h-8 text-primary/50 mb-4"/>
+                      <p className="text-muted-foreground italic">"{testimonial.quote}"</p>
+                  </CardContent>
+                  <CardFooter className="mt-4">
+                      <div className="flex items-center gap-3">
+                          <Avatar>
+                              <AvatarImage src={`https://placehold.co/40x40.png?text=${testimonial.avatar}`} data-ai-hint="profile avatar" />
+                              <AvatarFallback>{testimonial.avatar}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-semibold">{testimonial.name}</p>
+                            <p className="text-sm text-muted-foreground">{testimonial.role}</p>
+                          </div>
+                      </div>
+                  </CardFooter>
+              </Card>
+            ))}
+          </div>
+      </section>
+
+      {/* Final CTA Section */}
+      <section className="bg-primary text-primary-foreground rounded-lg p-12 text-center">
+          <h2 className="text-4xl font-bold">Ready to Get Started?</h2>
+          <p className="mt-4 max-w-2xl mx-auto">Join thousands of users who are acing their exams and winning rewards. Sign up today and get an instant welcome bonus!</p>
+          <div className="mt-8 flex gap-4 justify-center">
+              <Button asChild size="lg" variant="secondary" className="text-primary hover:bg-white/90">
+                  <Link href="/signup">Create Your Account</Link>
+              </Button>
+               <Button size="lg" variant="ghost" onClick={handleShare}>
+                  <Share2 className="mr-2"/> Share with Friends
+                </Button>
+          </div>
       </section>
 
     </div>

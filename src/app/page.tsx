@@ -17,11 +17,6 @@ const features = [
     description: "Prepare for exams with our extensive library of mock tests for various subjects and standards."
   },
   {
-    icon: BrainCircuit,
-    title: "AI Study Tools",
-    description: "Generate notes, MCQs, and study plans from your materials with our powerful AI assistant."
-  },
-  {
     icon: Gamepad2,
     title: "Skill-Based Gaming",
     description: "Play GuessMaster, test your number-guessing skills, and win real cash rewards."
@@ -135,7 +130,7 @@ export default function HomePage() {
             <h2 className="text-3xl font-bold">Everything You Need to Succeed</h2>
             <p className="text-muted-foreground">One platform, limitless possibilities.</p>
           </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {features.map((feature) => (
                   <Card key={feature.title} className="text-center hover:shadow-lg transition-shadow">
                       <CardHeader className="items-center">

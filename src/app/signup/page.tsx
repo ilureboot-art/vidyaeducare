@@ -66,11 +66,12 @@ export default function SignupPage() {
                 amount: initialReferralBonus,
                 date: new Date().toISOString(),
                 status: 'Completed',
+                user: "New User" // In a real app, this would be the new user's name
             });
             addNotification({
               type: 'deposit_received',
               message: `You received a ₹${initialReferralBonus} Welcome Bonus!`,
-              userId: 'user-alex-doe'
+              userId: 'user-alex-doe' // This should be the new user's ID
             });
 
              // In a real app, you would look up the referrer and credit them.
@@ -82,11 +83,12 @@ export default function SignupPage() {
                 amount: initialReferralBonus,
                 date: new Date().toISOString(),
                 status: 'Completed',
+                user: "Alex Doe" // This is the referrer
             });
              addNotification({
               type: 'deposit_received',
               message: `You received a ₹${initialReferralBonus} bonus for referring a new user.`,
-              userId: 'user-alex-doe'
+              userId: 'user-alex-doe' // This is the referrer's ID
             });
         }
         toast({
@@ -107,9 +109,9 @@ export default function SignupPage() {
     <div className="w-full max-w-md mx-auto flex flex-col items-center justify-center min-h-screen space-y-4">
        <div className="text-center space-y-2">
         <h1 className="text-4xl font-bold text-primary flex items-center gap-2 justify-center">
-            <Gamepad2 className="w-10 h-10" /> GuessMaster
+            <Gamepad2 className="w-10 h-10" /> Vidya EduCare
         </h1>
-        <p className="text-muted-foreground">Create your account to start playing.</p>
+        <p className="text-muted-foreground">Create your account to start your journey.</p>
       </div>
       <Card className="w-full">
         <form onSubmit={isOtpSent ? handleSignup : handleSendOtp}>

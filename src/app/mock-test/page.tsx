@@ -8,7 +8,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Trophy, Clock, CheckCircle, XCircle, FileQuestion, ArrowLeft, BrainCircuit } from "lucide-react";
+import { Trophy, Clock, CheckCircle, XCircle, FileQuestion, ArrowLeft, BrainCircuit, Book, Atom, Sigma, Pilcrow } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -26,9 +26,17 @@ const mockQuestions = Array.from({ length: 50 }, (_, i) => ({
 
 type TestState = "not_started" | "in_progress" | "completed" | "review";
 
+const subjects = [
+    { name: "General Knowledge", icon: Book },
+    { name: "Science", icon: Atom },
+    { name: "Mathematics", icon: Sigma },
+    { name: "English", icon: Pilcrow },
+];
+
 export default function MockTestPage() {
     const { toast } = useToast();
     const [testState, setTestState] = useState<TestState>("not_started");
+    const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [timeLeft, setTimeLeft] = useState(MOCK_TEST_DURATION);
     const [answers, setAnswers] = useState<{ [key: number]: string }>({});
@@ -49,12 +57,13 @@ export default function MockTestPage() {
         return () => clearInterval(timer);
     }, [testState, timeLeft]);
 
-    const handleStartTest = () => {
+    const handleStartTest = (subject: string) => {
         setTimeLeft(MOCK_TEST_DURATION);
         setCurrentQuestionIndex(0);
         setAnswers({});
         setScore(0);
         setTestState("in_progress");
+        setSelectedSubject(subject);
     };
 
     const handleAnswerSelect = (questionId: number, answer: string) => {
@@ -69,7 +78,7 @@ export default function MockTestPage() {
 
     const handlePrevQuestion = () => {
         if (currentQuestionIndex > 0) {
-            setCurrentQuestionIndex(prev => prev - 1);
+            setCurrentQuestionIndex(prev => prev + 1);
         }
     };
 
@@ -90,26 +99,27 @@ export default function MockTestPage() {
 
     if (testState === "not_started") {
         return (
-            <Card className="w-full max-w-2xl text-center">
-                <CardHeader>
-                    <CardTitle className="text-3xl text-primary">MCQ Mock Test</CardTitle>
-                    <CardDescription>Prepare for your exams with our live mock tests.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <Alert>
-                        <Clock className="h-4 w-4" />
-                        <AlertTitle>Test Rules</AlertTitle>
-                        <AlertDescription>
-                            <ul className="list-disc list-inside">
-                                <li>50 Multiple Choice Questions</li>
-                                <li>30 Minutes Time Limit</li>
-                                <li>Auto-evaluation and result display</li>
-                            </ul>
-                        </AlertDescription>
-                    </Alert>
-                    <Button size="lg" onClick={handleStartTest}>Start Test Now</Button>
-                </CardContent>
-            </Card>
+            <div className="w-full max-w-4xl mx-auto space-y-6">
+                 <Card className="w-full text-center">
+                    <CardHeader>
+                        <CardTitle className="text-3xl text-primary">Select a Subject</CardTitle>
+                        <CardDescription>Choose a subject to start your mock test.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {subjects.map(subject => {
+                            const Icon = subject.icon;
+                            return (
+                                <Card key={subject.name} className="p-4 flex flex-col items-center justify-center text-center">
+                                    <Icon className="w-12 h-12 text-primary mb-2" />
+                                    <h3 className="text-lg font-semibold">{subject.name}</h3>
+                                    <p className="text-sm text-muted-foreground mt-1">50 Questions - 30 Mins</p>
+                                    <Button className="mt-4" onClick={() => handleStartTest(subject.name)}>Start Test</Button>
+                                </Card>
+                            )
+                        })}
+                    </CardContent>
+                </Card>
+            </div>
         );
     }
     
@@ -118,7 +128,7 @@ export default function MockTestPage() {
             <Card className="w-full max-w-3xl">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                        <FileQuestion className="text-primary"/> Test Review
+                        <FileQuestion className="text-primary"/> Test Review: {selectedSubject}
                     </CardTitle>
                     <CardDescription>Review your answers. Correct answers are marked in green.</CardDescription>
                 </CardHeader>
@@ -159,7 +169,7 @@ export default function MockTestPage() {
                         <Button variant="outline" onClick={() => setTestState("completed")}>
                             <ArrowLeft className="mr-2"/> Back to Results
                         </Button>
-                        <Button onClick={handleStartTest}>Take Another Test</Button>
+                        <Button onClick={() => setTestState("not_started")}>Take Another Test</Button>
                     </div>
                 </CardContent>
             </Card>
@@ -173,7 +183,7 @@ export default function MockTestPage() {
         return (
             <Card className="w-full max-w-2xl text-center">
                 <CardHeader>
-                    <CardTitle className="text-3xl text-primary">Test Results</CardTitle>
+                    <CardTitle className="text-3xl text-primary">Test Results: {selectedSubject}</CardTitle>
                     <Trophy className="w-16 h-16 mx-auto text-yellow-500 my-4" />
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -203,7 +213,7 @@ export default function MockTestPage() {
                         <Button asChild className="bg-purple-600 hover:bg-purple-700 text-white">
                             <Link href="/student/generate"><BrainCircuit className="mr-2"/> Generate Study Materials</Link>
                         </Button>
-                        <Button onClick={handleStartTest}>Take Another Test</Button>
+                        <Button onClick={() => setTestState("not_started")}>Take Another Test</Button>
                         <Button asChild variant="outline">
                             <Link href="/leaderboard">View Leaderboard</Link>
                         </Button>
@@ -222,7 +232,7 @@ export default function MockTestPage() {
         <Card className="w-full max-w-3xl">
             <CardHeader>
                 <div className="flex justify-between items-center">
-                    <CardTitle className="text-xl text-primary">Mock Test in Progress</CardTitle>
+                    <CardTitle className="text-xl text-primary">{selectedSubject} Test in Progress</CardTitle>
                     <Badge variant="secondary" className="flex items-center gap-2">
                         <Clock className="w-4 h-4" />
                         {String(minutesLeft).padStart(2, '0')}:{String(secondsLeft).padStart(2, '0')}

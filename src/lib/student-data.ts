@@ -20,10 +20,11 @@ export type StudentProfile = {
   badges: ('Platinum' | 'Gold' | 'Silver' | 'Bronze')[];
 };
 
-// This object acts as our in-memory, shared "database" for student profiles.
+// This object acts as our in-memory, shared "database" for a single student profile.
+// This represents the main user who is logged in.
 export const studentData: StudentProfile[] = [
     {
-        id: "STU-001",
+        id: "STU-D7F6E5C",
         name: "Alex Doe",
         dob: "2008-05-15",
         avatarUrl: "https://placehold.co/100x100.png",
@@ -33,7 +34,7 @@ export const studentData: StudentProfile[] = [
             stream: "Science",
             language: "English",
             academicYear: "2024-2025",
-            subjects: ["Maths", "Science", "English"],
+            subjects: ["Maths", "Science", "English", "History", "General Knowledge"],
         },
         stats: {
             totalEarnings: 0,
@@ -43,5 +44,3 @@ export const studentData: StudentProfile[] = [
         badges: ["Gold", "Silver"],
     }
 ];
-
-    

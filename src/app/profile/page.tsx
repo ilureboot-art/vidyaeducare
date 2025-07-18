@@ -5,33 +5,10 @@ import { useState, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { User, Mail, Calendar, TrendingUp, Gamepad2, Percent, Edit, Fingerprint, GraduationCap, Building, Languages, BookCopy, FileClock, PlusCircle, Trash2, Cake, Medal, BarChart2, ShieldCheck } from "lucide-react";
+import { User, Mail, Calendar, TrendingUp, Gamepad2, Percent, Edit, Fingerprint, GraduationCap, Building, Languages, BookCopy, FileClock, Cake, Medal, BarChart2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { useToast } from "@/hooks/use-toast";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { studentData } from "@/lib/student-data";
 import type { StudentProfile } from "@/lib/student-data";
-
-
-// In a real app, these would be managed on the backend.
-const validActivationCodes = new Set(["PROD-12345", "PROD-ABCDE"]);
 
 function FormattedDate({ dateString }: { dateString: string }) {
   const [formattedDate, setFormattedDate] = useState("");
@@ -47,197 +24,17 @@ function FormattedDate({ dateString }: { dateString: string }) {
   return <>{formattedDate}</>;
 }
 
+
 export default function ProfilePage() {
-    const [students, setStudents] = useState<StudentProfile[]>(studentData);
-    const { toast } = useToast();
-    const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
-    const [activationCode, setActivationCode] = useState('');
-    const [isCodeVerified, setIsCodeVerified] = useState(false);
+    const [student, setStudent] = useState<StudentProfile>(studentData[0]);
 
-    const handleActivationSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-      e.preventDefault();
-      if (validActivationCodes.has(activationCode)) {
-        setIsCodeVerified(true);
-        toast({ title: "Code Verified!", description: "You can now add a new student profile." });
-      } else {
-        toast({ variant: 'destructive', title: "Invalid Code", description: "The activation code is incorrect." });
-      }
-    };
-
-    const handleAddStudent = (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        const form = e.currentTarget;
-        const name = (form.elements.namedItem('name') as HTMLInputElement).value;
-        const dob = (form.elements.namedItem('dob') as HTMLInputElement).value;
-
-        if (!name || !dob) {
-            toast({ variant: 'destructive', title: 'Missing Information', description: 'Please fill out all required fields.' });
-            return;
-        }
-
-        const newStudent: StudentProfile = {
-            id: `STU-${String(Date.now()).slice(-4)}`,
-            name,
-            dob,
-            avatarUrl: `https://placehold.co/100x100.png?text=${name.charAt(0)}`,
-            academic: {
-                standard: (form.elements.namedItem('standard') as HTMLSelectElement).value,
-                board: (form.elements.namedItem('board') as HTMLSelectElement).value,
-                stream: (form.elements.namedItem('stream') as HTMLSelectElement).value,
-                language: (form.elements.namedItem('language') as HTMLSelectElement).value,
-                academicYear: "2024-2025",
-                subjects: ["Maths", "Science", "English", "History"], // Placeholder
-            },
-            stats: { totalEarnings: 0, testsTaken: 0, avgScore: 0 },
-            badges: [],
-        };
-
-        const updatedStudents = [...students, newStudent];
-        setStudents(updatedStudents);
-        // This is a temporary solution to update the shared data. In a real app, this would be an API call.
-        studentData.splice(0, studentData.length, ...updatedStudents);
-
-        toast({
-            title: "Student Added!",
-            description: `${name}'s profile has been created successfully.`
-        });
-        
-        // Reset state
-        validActivationCodes.delete(activationCode); // Mark code as used
-        setIsAddStudentOpen(false);
-        setIsCodeVerified(false);
-        setActivationCode('');
-    };
-
-    const handleDeleteStudent = (studentId: string) => {
-        const updatedStudents = students.filter(s => s.id !== studentId);
-        setStudents(updatedStudents);
-        studentData.splice(0, studentData.length, ...updatedStudents);
-
-        toast({
-            title: "Student Removed",
-            description: `The student profile has been removed.`
-        });
-    };
-
+    if (!student) {
+        return <div>Loading profile...</div>
+    }
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-6">
-        <div className="flex justify-between items-center">
-             <div className="space-y-1">
-                <h1 className="text-3xl font-bold text-primary">My Students</h1>
-                <p className="text-muted-foreground">Manage student profiles for mock test access.</p>
-             </div>
-              <Dialog open={isAddStudentOpen} onOpenChange={(isOpen) => {
-                  setIsAddStudentOpen(isOpen);
-                  if (!isOpen) {
-                    setIsCodeVerified(false);
-                    setActivationCode('');
-                  }
-              }}>
-                <DialogTrigger asChild>
-                    <Button><PlusCircle className="mr-2"/> Add New Student</Button>
-                </DialogTrigger>
-                <DialogContent>
-                    {!isCodeVerified ? (
-                        <>
-                            <DialogHeader>
-                                <DialogTitle>Enter Product Activation Code</DialogTitle>
-                                <DialogDescription>
-                                    To add a new student, you must first verify your product purchase. Please enter the activation code you received from the store.
-                                </DialogDescription>
-                            </DialogHeader>
-                            <form onSubmit={handleActivationSubmit} className="space-y-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="activation-code">Activation Code</Label>
-                                    <Input 
-                                      id="activation-code" 
-                                      value={activationCode} 
-                                      onChange={(e) => setActivationCode(e.target.value)} 
-                                      required 
-                                      placeholder="e.g., PROD-12345"
-                                    />
-                                </div>
-                                <DialogFooter>
-                                    <Button type="submit"><ShieldCheck className="mr-2"/>Verify Code</Button>
-                                </DialogFooter>
-                            </form>
-                        </>
-                    ) : (
-                        <>
-                        <DialogHeader>
-                            <DialogTitle>Create New Student Profile</DialogTitle>
-                            <DialogDescription>
-                                Each product purchase allows you to create one student profile. Fill in the details below.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <form onSubmit={handleAddStudent} className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2 col-span-2">
-                                    <Label htmlFor="name">Full Name</Label>
-                                    <Input id="name" name="name" required />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="dob">Date of Birth</Label>
-                                    <Input id="dob" name="dob" type="date" required />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="standard">Standard</Label>
-                                    <Select name="standard" required>
-                                        <SelectTrigger id="standard"><SelectValue placeholder="Select..." /></SelectTrigger>
-                                        <SelectContent>
-                                            {[...Array(12)].map((_, i) => <SelectItem key={i+1} value={`${i+1}th`}>{i+1}th</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="board">Board</Label>
-                                    <Select name="board" required>
-                                        <SelectTrigger id="board"><SelectValue placeholder="Select..." /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="CBSE">CBSE</SelectItem>
-                                            <SelectItem value="SSC Maharashtra">SSC Maharashtra</SelectItem>
-                                            <SelectItem value="ICSE">ICSE</SelectItem>
-                                            <SelectItem value="Other">Other</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="stream">Stream</Label>
-                                    <Select name="stream" required>
-                                        <SelectTrigger id="stream"><SelectValue placeholder="Select..." /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="Science">Science</SelectItem>
-                                            <SelectItem value="Commerce">Commerce</SelectItem>
-                                            <SelectItem value="Arts">Arts</SelectItem>
-                                            <SelectItem value="General">General</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-2 col-span-2">
-                                    <Label htmlFor="language">Language Medium</Label>
-                                    <Select name="language" required>
-                                        <SelectTrigger id="language"><SelectValue placeholder="Select..." /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="English">English</SelectItem>
-                                            <SelectItem value="Hindi">Hindi</SelectItem>
-                                            <SelectItem value="Marathi">Marathi</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </div>
-                            <DialogFooter>
-                                <Button type="submit">Create Profile</Button>
-                            </DialogFooter>
-                        </form>
-                      </>
-                    )}
-                </DialogContent>
-            </Dialog>
-        </div>
-      
-       {students.map(student => (
-        <Card key={student.id} className="shadow-lg">
+       <Card className="shadow-lg">
             <CardHeader>
             <div className="flex items-center gap-4">
                 <Avatar className="w-24 h-24 border-4 border-primary/20">
@@ -247,10 +44,7 @@ export default function ProfilePage() {
                 <div className="flex-1">
                     <CardTitle className="text-3xl font-bold text-primary flex items-center justify-between">
                         <span>{student.name}</span>
-                        <div className="flex gap-2">
-                            <Button variant="outline" size="sm"><Edit className="mr-2"/> Edit</Button>
-                             <Button variant="destructive" size="sm" onClick={() => handleDeleteStudent(student.id)}><Trash2 className="mr-2"/> Delete</Button>
-                        </div>
+                        <Button variant="outline" size="sm"><Edit className="mr-2"/> Edit Profile</Button>
                     </CardTitle>
                     <CardDescription>Student ID: {student.id}</CardDescription>
                 </div>
@@ -349,9 +143,6 @@ export default function ProfilePage() {
             
             </CardContent>
         </Card>
-      ))}
     </div>
   );
 }
-
-    

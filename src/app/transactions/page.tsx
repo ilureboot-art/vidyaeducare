@@ -79,13 +79,13 @@ export default function TransactionsPage() {
           <CardDescription>A complete record of your financial activity.</CardDescription>
            <div className="flex flex-col gap-2 pt-4">
                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-muted-foreground">Type:</span>
+                  <span className="text-sm font-medium text-muted-foreground min-w-[50px]">Type:</span>
                   <Button variant={typeFilter === 'all' ? 'default' : 'outline'} size="sm" onClick={() => setTypeFilter('all')}>All</Button>
                   <Button variant={typeFilter === 'deposit' ? 'default' : 'outline'} size="sm" onClick={() => setTypeFilter('deposit')}>Deposits</Button>
                   <Button variant={typeFilter === 'withdrawal' ? 'default' : 'outline'} size="sm" onClick={() => setTypeFilter('withdrawal')}>Withdrawals</Button>
               </div>
               <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-muted-foreground">Status:</span>
+                  <span className="text-sm font-medium text-muted-foreground min-w-[50px]">Status:</span>
                   <Button variant={statusFilter === 'all' ? 'default' : 'outline'} size="sm" onClick={() => setStatusFilter('all')}>All</Button>
                   <Button variant={statusFilter === 'pending' ? 'default' : 'outline'} size="sm" onClick={() => setStatusFilter('pending')}>Pending</Button>
                   <Button variant={statusFilter === 'completed' ? 'default' : 'outline'} size="sm" onClick={() => setStatusFilter('completed')}>Completed</Button>

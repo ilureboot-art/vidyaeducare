@@ -48,7 +48,7 @@ export default function StudentAccessPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><Users/> Client List</CardTitle>
           <CardDescription>
-            View the clients who have purchased products using your referral network.
+            View the clients who have purchased products using your referral code.
           </CardDescription>
         </CardHeader>
         <CardContent>

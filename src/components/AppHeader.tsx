@@ -15,10 +15,10 @@ const navItems = [
     { href: "/vidya-edurank", label: "Vidya Edurank", icon: BrainCircuit },
     { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
     { href: "/store", label: "Store", icon: Store },
-    { href: "/refer", label: "IBA Panel", icon: Users },
+    { href: "/refer", label: "IBA Panel", icon: ShieldCheck },
     { href: "/referbolt", label: "ReferBolt", icon: Zap },
     { href: "/wallet", label: "Wallet", icon: Wallet },
-    { href: "/profile", label: "Profile", icon: User },
+    { href: "/profile", label: "My Students", icon: Users },
     { href: "/transactions", label: "Transactions", icon: History },
     { href: "/settings", label: "Settings", icon: Settings },
 ];

@@ -8,10 +8,12 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Trophy, Clock, CheckCircle, XCircle } from "lucide-react";
+import { Trophy, Clock, CheckCircle, XCircle, FileQuestion, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
 
 const MOCK_TEST_DURATION = 30 * 60; // 30 minutes in seconds
 
@@ -22,7 +24,7 @@ const mockQuestions = Array.from({ length: 50 }, (_, i) => ({
     answer: "Option C",
 }));
 
-type TestState = "not_started" | "in_progress" | "completed";
+type TestState = "not_started" | "in_progress" | "completed" | "review";
 
 export default function MockTestPage() {
     const { toast } = useToast();
@@ -110,6 +112,59 @@ export default function MockTestPage() {
             </Card>
         );
     }
+    
+    if (testState === "review") {
+        return (
+            <Card className="w-full max-w-3xl">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <FileQuestion className="text-primary"/> Test Review
+                    </CardTitle>
+                    <CardDescription>Review your answers. Correct answers are marked in green.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <ScrollArea className="h-[60vh] pr-4">
+                        <div className="space-y-4">
+                            {mockQuestions.map((q, index) => {
+                                const userAnswer = answers[q.id];
+                                const isCorrect = userAnswer === q.answer;
+                                return (
+                                <div key={q.id} className="p-4 border rounded-lg">
+                                    <div className="flex items-center justify-between">
+                                        <p className="font-semibold">{index + 1}. {q.question}</p>
+                                        {isCorrect ? <CheckCircle className="text-green-500"/> : <XCircle className="text-red-500"/>}
+                                    </div>
+                                    <div className="mt-2 space-y-1 text-sm">
+                                        {q.options.map(option => {
+                                            const isUserAnswer = userAnswer === option;
+                                            const isCorrectAnswer = q.answer === option;
+                                            return (
+                                                <p key={option} className={cn(
+                                                    "p-2 rounded-md",
+                                                    isCorrectAnswer && "bg-green-100 dark:bg-green-900/50 font-semibold",
+                                                    isUserAnswer && !isCorrectAnswer && "bg-red-100 dark:bg-red-900/50 line-through"
+                                                )}>
+                                                    {option}
+                                                </p>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+                            )})}
+                        </div>
+                    </ScrollArea>
+                </CardContent>
+                <CardContent>
+                     <div className="flex justify-between items-center pt-4 border-t">
+                        <Button variant="outline" onClick={() => setTestState("completed")}>
+                            <ArrowLeft className="mr-2"/> Back to Results
+                        </Button>
+                        <Button onClick={handleStartTest}>Take Another Test</Button>
+                    </div>
+                </CardContent>
+            </Card>
+        )
+    }
 
     if (testState === "completed") {
         const percentage = (score / mockQuestions.length) * 100;
@@ -144,6 +199,7 @@ export default function MockTestPage() {
                     )}
 
                     <div className="flex gap-4 justify-center pt-4">
+                        <Button onClick={() => setTestState('review')}>Review Answers</Button>
                         <Button onClick={handleStartTest}>Take Another Test</Button>
                         <Button asChild variant="outline">
                             <Link href="/leaderboard">View Leaderboard</Link>

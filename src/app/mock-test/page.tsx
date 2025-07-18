@@ -15,16 +15,9 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { studentData } from "@/lib/student-data";
-import type { StudentProfile } from "@/lib/student-data";
+import { allQuestions, type Question } from "@/lib/question-bank";
 
 const MOCK_TEST_DURATION = 30 * 60; // 30 minutes in seconds
-
-const mockQuestions = Array.from({ length: 50 }, (_, i) => ({
-    id: i + 1,
-    question: `This is sample question number ${i + 1}. What is the correct option?`,
-    options: ["Option A", "Option B", "Option C", "Option D"],
-    answer: "Option C",
-}));
 
 type TestState = "not_started" | "in_progress" | "completed" | "review";
 
@@ -46,13 +39,14 @@ export default function MockTestPage() {
     const { toast } = useToast();
     const [testState, setTestState] = useState<TestState>("not_started");
     const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
+    const [activeQuestions, setActiveQuestions] = useState<Question[]>([]);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [timeLeft, setTimeLeft] = useState(MOCK_TEST_DURATION);
-    const [answers, setAnswers] = useState<{ [key: number]: string }>({});
+    const [answers, setAnswers] = useState<{ [key: string]: string }>({});
     const [score, setScore] = useState(0);
 
-    // Use the subjects from the first student's profile
-    const studentSubjects = studentData[0]?.academic.subjects || [];
+    const studentProfile = studentData[0];
+    const studentSubjects = studentProfile?.academic.subjects || [];
 
     useEffect(() => {
         if (testState !== "in_progress") return;
@@ -70,6 +64,22 @@ export default function MockTestPage() {
     }, [testState, timeLeft]);
 
     const handleStartTest = (subject: string) => {
+        const studentStandard = studentProfile.academic.standard;
+        const filteredQuestions = allQuestions.filter(q => 
+            q.subject.toLowerCase() === subject.toLowerCase() && 
+            q.standard === studentStandard
+        ).slice(0, 50); // Limit to 50 questions for the test
+
+        if (filteredQuestions.length === 0) {
+            toast({
+                variant: "destructive",
+                title: "No Questions Available",
+                description: `We couldn't find any questions for ${subject} at the ${studentStandard} level.`,
+            });
+            return;
+        }
+
+        setActiveQuestions(filteredQuestions);
         setTimeLeft(MOCK_TEST_DURATION);
         setCurrentQuestionIndex(0);
         setAnswers({});
@@ -78,12 +88,12 @@ export default function MockTestPage() {
         setSelectedSubject(subject);
     };
 
-    const handleAnswerSelect = (questionId: number, answer: string) => {
+    const handleAnswerSelect = (questionId: string, answer: string) => {
         setAnswers(prev => ({ ...prev, [questionId]: answer }));
     };
 
     const handleNextQuestion = () => {
-        if (currentQuestionIndex < mockQuestions.length - 1) {
+        if (currentQuestionIndex < activeQuestions.length - 1) {
             setCurrentQuestionIndex(prev => prev + 1);
         }
     };
@@ -96,8 +106,8 @@ export default function MockTestPage() {
 
     const handleSubmitTest = () => {
         let finalScore = 0;
-        mockQuestions.forEach(q => {
-            if (answers[q.id] === q.answer) {
+        activeQuestions.forEach(q => {
+            if (answers[q.id] === q.correctAnswer) {
                 finalScore++;
             }
         });
@@ -105,7 +115,7 @@ export default function MockTestPage() {
         setTestState("completed");
         toast({
             title: "Test Submitted!",
-            description: `You scored ${finalScore} out of ${mockQuestions.length}.`
+            description: `You scored ${finalScore} out of ${activeQuestions.length}.`
         });
     };
 
@@ -124,7 +134,7 @@ export default function MockTestPage() {
                                 <Card key={subject} className="p-4 flex flex-col items-center justify-center text-center">
                                     <Icon className="w-12 h-12 text-primary mb-2" />
                                     <h3 className="text-lg font-semibold">{subject}</h3>
-                                    <p className="text-sm text-muted-foreground mt-1">50 Questions - 30 Mins</p>
+                                    <p className="text-sm text-muted-foreground mt-1">Up to 50 Questions - 30 Mins</p>
                                     <Button className="mt-4" onClick={() => handleStartTest(subject)}>Start Test</Button>
                                 </Card>
                             )
@@ -152,19 +162,19 @@ export default function MockTestPage() {
                 <CardContent>
                     <ScrollArea className="h-[60vh] pr-4">
                         <div className="space-y-4">
-                            {mockQuestions.map((q, index) => {
+                            {activeQuestions.map((q, index) => {
                                 const userAnswer = answers[q.id];
-                                const isCorrect = userAnswer === q.answer;
+                                const isCorrect = userAnswer === q.correctAnswer;
                                 return (
                                 <div key={q.id} className="p-4 border rounded-lg">
                                     <div className="flex items-center justify-between">
-                                        <p className="font-semibold">{index + 1}. {q.question}</p>
+                                        <p className="font-semibold">{index + 1}. {q.text}</p>
                                         {isCorrect ? <CheckCircle className="text-green-500"/> : <XCircle className="text-red-500"/>}
                                     </div>
                                     <div className="mt-2 space-y-1 text-sm">
                                         {q.options.map(option => {
                                             const isUserAnswer = userAnswer === option;
-                                            const isCorrectAnswer = q.answer === option;
+                                            const isCorrectAnswer = q.correctAnswer === option;
                                             return (
                                                 <p key={option} className={cn(
                                                     "p-2 rounded-md",
@@ -194,7 +204,7 @@ export default function MockTestPage() {
     }
 
     if (testState === "completed") {
-        const percentage = (score / mockQuestions.length) * 100;
+        const percentage = (score / activeQuestions.length) * 100;
         const prizeEligible = percentage >= 80;
 
         return (
@@ -205,7 +215,7 @@ export default function MockTestPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <p className="text-xl">You have completed the test.</p>
-                    <p className="text-4xl font-bold">Your Score: {score} / {mockQuestions.length}</p>
+                    <p className="text-4xl font-bold">Your Score: {score} / {activeQuestions.length}</p>
                     
                     {prizeEligible ? (
                         <Alert variant="default" className="bg-green-100 dark:bg-green-900 border-green-500">
@@ -240,8 +250,17 @@ export default function MockTestPage() {
         );
     }
     
-    const currentQuestion = mockQuestions[currentQuestionIndex];
-    const progress = ((currentQuestionIndex + 1) / mockQuestions.length) * 100;
+    if (activeQuestions.length === 0) {
+        return (
+            <Card className="w-full max-w-3xl text-center p-8">
+                <CardTitle>Loading Test...</CardTitle>
+                <CardDescription>Preparing your questions.</CardDescription>
+            </Card>
+        )
+    }
+    
+    const currentQuestion = activeQuestions[currentQuestionIndex];
+    const progress = ((currentQuestionIndex + 1) / activeQuestions.length) * 100;
     const minutesLeft = Math.floor(timeLeft / 60);
     const secondsLeft = timeLeft % 60;
 
@@ -256,10 +275,10 @@ export default function MockTestPage() {
                     </Badge>
                 </div>
                 <Progress value={progress} className="mt-2" />
-                <p className="text-sm text-muted-foreground text-center mt-2">Question {currentQuestionIndex + 1} of {mockQuestions.length}</p>
+                <p className="text-sm text-muted-foreground text-center mt-2">Question {currentQuestionIndex + 1} of {activeQuestions.length}</p>
             </CardHeader>
             <CardContent className="space-y-6">
-                <p className="text-lg font-semibold">{currentQuestion.question}</p>
+                <p className="text-lg font-semibold">{currentQuestion.text}</p>
                 <RadioGroup 
                     value={answers[currentQuestion.id] || ""} 
                     onValueChange={(value) => handleAnswerSelect(currentQuestion.id, value)}
@@ -277,7 +296,7 @@ export default function MockTestPage() {
                     <Button variant="outline" onClick={handlePrevQuestion} disabled={currentQuestionIndex === 0}>
                         Previous
                     </Button>
-                     {currentQuestionIndex === mockQuestions.length - 1 ? (
+                     {currentQuestionIndex === activeQuestions.length - 1 ? (
                          <Button onClick={handleSubmitTest} className="bg-accent text-accent-foreground hover:bg-accent/90">Submit Test</Button>
                      ) : (
                         <Button onClick={handleNextQuestion}>
@@ -289,5 +308,3 @@ export default function MockTestPage() {
         </Card>
     )
 }
-
-    

@@ -34,24 +34,11 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea";
+import { allQuestions, type Question } from "@/lib/question-bank";
 
-type Question = {
-  id: string;
-  text: string;
-  subject: string;
-  standard: string;
-  options: string[];
-  correctAnswer: string;
-};
-
-const initialQuestions: Question[] = [
-    { id: "Q001", text: "What is the capital of France?", subject: "General Knowledge", standard: "10th", options: ["Berlin", "Madrid", "Paris", "Rome"], correctAnswer: "Paris" },
-    { id: "Q002", text: "What is 2 + 2?", subject: "Mathematics", standard: "10th", options: ["3", "4", "5", "6"], correctAnswer: "4" },
-    { id: "Q003", text: "Which gas is most abundant in the Earth's atmosphere?", subject: "Science", standard: "11th", options: ["Oxygen", "Hydrogen", "Nitrogen", "Carbon Dioxide"], correctAnswer: "Nitrogen" },
-];
 
 export default function QuestionBankPage() {
-  const [questions, setQuestions] = useState<Question[]>(initialQuestions);
+  const [questions, setQuestions] = useState<Question[]>(allQuestions);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
   const { toast } = useToast();
@@ -61,7 +48,7 @@ export default function QuestionBankPage() {
     const form = e.currentTarget;
     const formData = new FormData(form);
     
-    const newQuestion: Question = {
+    const newQuestionData = {
         id: editingQuestion ? editingQuestion.id : `Q${String(Date.now()).slice(-3)}`,
         text: formData.get("text") as string,
         subject: formData.get("subject") as string,
@@ -76,10 +63,15 @@ export default function QuestionBankPage() {
     };
 
     if (editingQuestion) {
-        setQuestions(questions.map(q => q.id === newQuestion.id ? newQuestion : q));
+        const updatedQuestions = questions.map(q => q.id === newQuestionData.id ? newQuestionData : q);
+        setQuestions(updatedQuestions);
+        // In a real app, this would be an API call to update the central store
+        Object.assign(allQuestions, updatedQuestions);
          toast({ title: "Question Updated!", description: "The question has been updated in the bank." });
     } else {
-        setQuestions([...questions, newQuestion]);
+        setQuestions([...questions, newQuestionData]);
+        // In a real app, this would be an API call to update the central store
+        allQuestions.push(newQuestionData);
         toast({ title: "Question Added!", description: "The new question has been added to the bank." });
     }
 
@@ -93,7 +85,13 @@ export default function QuestionBankPage() {
   }
   
   const handleDelete = (questionId: string) => {
-    setQuestions(questions.filter(q => q.id !== questionId));
+    const updatedQuestions = questions.filter(q => q.id !== questionId);
+    setQuestions(updatedQuestions);
+    // In a real app, this would be an API call to update the central store
+    const indexToDelete = allQuestions.findIndex(q => q.id === questionId);
+    if (indexToDelete > -1) {
+        allQuestions.splice(indexToDelete, 1);
+    }
     toast({ title: "Question Deleted", description: "The question has been removed from the bank."});
   }
 

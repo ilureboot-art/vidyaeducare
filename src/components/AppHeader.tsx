@@ -59,10 +59,10 @@ export function AppHeader() {
                                         <Link
                                             href={item.href}
                                             onClick={() => setIsOpen(false)}
-                                            className="flex items-center justify-between p-3 text-lg font-medium rounded-lg hover:bg-muted"
+                                            className="flex items-center justify-between p-3 text-base font-medium rounded-lg hover:bg-muted"
                                         >
                                             <div className="flex items-center gap-4">
-                                                <Icon className="w-6 h-6 text-primary" />
+                                                <Icon className="w-5 h-5 text-primary" />
                                                 <span>{item.label}</span>
                                             </div>
                                             <ChevronRight className="w-5 h-5 text-muted-foreground" />
@@ -77,10 +77,10 @@ export function AppHeader() {
                              <Link
                                 href="/login"
                                 onClick={() => setIsOpen(false)}
-                                className="flex items-center justify-between p-3 text-lg font-medium rounded-lg hover:bg-muted"
+                                className="flex items-center justify-between p-3 text-base font-medium rounded-lg hover:bg-muted"
                             >
                                 <div className="flex items-center gap-4">
-                                    <LogOut className="w-6 h-6 text-destructive" />
+                                    <LogOut className="w-5 h-5 text-destructive" />
                                     <span>Sign Out</span>
                                 </div>
                             </Link>

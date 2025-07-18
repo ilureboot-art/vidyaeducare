@@ -5,17 +5,17 @@ import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, BookOpen, Trophy, Store, Users, Wallet, Settings, ChevronRight, X, LogOut, User, History, BrainCircuit, Zap, Gamepad2, ShieldCheck } from "lucide-react";
+import { Menu, BookOpen, Trophy, Store, Users, Wallet, Settings, ChevronRight, X, LogOut, User, History, BrainCircuit, Zap, Gamepad2, ShieldCheck, LayoutDashboard } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { UserNotifications } from "@/components/UserNotifications";
 
 const navItems = [
-    { href: "/mock-test", label: "Mock Test", icon: BookOpen },
+    { href: "/student/dashboard", label: "Student Dashboard", icon: LayoutDashboard },
+    { href: "/iba/dashboard", label: "IBA Dashboard", icon: ShieldCheck },
     { href: "/play", label: "Play Game", icon: Gamepad2 },
     { href: "/vidya-edurank", label: "Vidya Edurank", icon: BrainCircuit },
     { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
     { href: "/store", label: "Store", icon: Store },
-    { href: "/refer", label: "IBA Panel", icon: ShieldCheck },
     { href: "/referbolt", label: "ReferBolt", icon: Zap },
     { href: "/wallet", label: "Wallet", icon: Wallet },
     { href: "/profile", label: "My Students", icon: Users },
@@ -36,11 +36,11 @@ export function AppHeader() {
                         <span className="sr-only">Open Menu</span>
                     </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="w-60 p-0 flex flex-col">
+                <SheetContent side="left" className="w-72 p-0 flex flex-col">
                     <SheetHeader className="p-4">
                          <div className="flex justify-between items-center">
                             <SheetTitle asChild>
-                               <h2 className="text-xl font-bold text-primary">Menu</h2>
+                               <h2 className="text-lg font-bold text-primary">Vidya EduCare Menu</h2>
                             </SheetTitle>
                             <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)}>
                                 <X/>

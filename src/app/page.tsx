@@ -114,7 +114,7 @@ export default function HomePage() {
              <div className="flex flex-col items-center">
                 <div className="flex items-center justify-center bg-primary/20 text-primary w-16 h-16 rounded-full text-2xl font-bold mb-4">2</div>
                 <h3 className="text-xl font-semibold">Learn & Play</h3>
-                <p className="text-muted-foreground mt-2">Access mock tests and AI study tools, or play GuessMaster to test your skills.</p>
+                <p className="text-muted-foreground mt-2">Access mock tests and play GuessMaster to test your skills.</p>
             </div>
              <div className="flex flex-col items-center">
                 <div className="flex items-center justify-center bg-primary/20 text-primary w-16 h-16 rounded-full text-2xl font-bold mb-4">3</div>
@@ -146,7 +146,29 @@ export default function HomePage() {
               ))}
           </div>
       </section>
-      
+
+      {/* Demo Game Section */}
+      <section>
+        <div className="text-center space-y-2 mb-12">
+          <h2 className="text-3xl font-bold">Experience the Fun</h2>
+          <p className="text-muted-foreground">Try the GuessMaster game right now. No sign-up required!</p>
+        </div>
+        <Card className="max-w-2xl mx-auto shadow-xl overflow-hidden bg-gradient-to-tr from-primary/10 to-background">
+          <div className="grid md:grid-cols-2 items-center">
+            <div className="p-8">
+              <CardTitle className="text-2xl font-bold text-primary flex items-center gap-2"><Gamepad2/> GuessMaster Demo</CardTitle>
+              <CardDescription className="mt-2">Can you guess the secret number between 1 and 100 in 5 tries? Test your logic and win bragging rights!</CardDescription>
+              <Button asChild className="mt-6" size="lg">
+                <Link href="/play?mode=demo">Play Demo Game</Link>
+              </Button>
+            </div>
+            <div className="hidden md:block">
+              <Image src="https://placehold.co/400x300.png" width={400} height={300} alt="GuessMaster Game" className="object-cover h-full w-full" data-ai-hint="gameplay numbers" />
+            </div>
+          </div>
+        </Card>
+      </section>
+
       {/* Testimonials Section */}
       <section>
           <div className="text-center space-y-2 mb-12">

@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { User, Mail, Calendar, TrendingUp, Gamepad2, Percent, Edit, Fingerprint, GraduationCap, Building, Languages, BookCopy, FileClock, Cake, Medal, BarChart2, Trash2, PlusCircle } from "lucide-react";
+import { User, Mail, Calendar, Phone, Gamepad2, Percent, Edit, Fingerprint, GraduationCap, Building, Languages, BookCopy, FileClock, Cake, Medal, BarChart2, Trash2, PlusCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { studentData, type StudentProfile, addStudent, deleteStudent, validActivationCodes, useActivationCode } from "@/lib/student-data";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 function FormattedDate({ dateString }: { dateString: string }) {
   const [formattedDate, setFormattedDate] = useState("");
@@ -40,6 +41,7 @@ export default function ProfilePage() {
     const parentProfile = {
         name: "Alex Doe",
         email: "alex.doe@example.com",
+        phone: "+91 12345 67890",
         joinDate: "2024-07-01",
     };
 
@@ -98,29 +100,40 @@ export default function ProfilePage() {
                 <CardTitle className="text-2xl flex items-center gap-2"><User /> Parent Profile</CardTitle>
                 <CardDescription>Your account details.</CardDescription>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                 <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                    <User className="w-5 h-5 text-muted-foreground"/>
-                    <div>
-                        <p className="text-xs text-muted-foreground">Name</p>
-                        <p className="font-medium">{parentProfile.name}</p>
+            <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                        <User className="w-5 h-5 text-muted-foreground"/>
+                        <div>
+                            <p className="text-xs text-muted-foreground">Name</p>
+                            <p className="font-medium">{parentProfile.name}</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                        <Mail className="w-5 h-5 text-muted-foreground"/>
+                        <div>
+                            <p className="text-xs text-muted-foreground">Email</p>
+                            <p className="font-medium">{parentProfile.email}</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                        <Phone className="w-5 h-5 text-muted-foreground"/>
+                        <div>
+                            <p className="text-xs text-muted-foreground">WhatsApp Number</p>
+                            <p className="font-medium">{parentProfile.phone}</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                        <Calendar className="w-5 h-5 text-muted-foreground"/>
+                        <div>
+                            <p className="text-xs text-muted-foreground">Member Since</p>
+                            <p className="font-medium"><FormattedDate dateString={parentProfile.joinDate} /></p>
+                        </div>
                     </div>
                 </div>
-                 <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                    <Mail className="w-5 h-5 text-muted-foreground"/>
-                    <div>
-                        <p className="text-xs text-muted-foreground">Email</p>
-                        <p className="font-medium">{parentProfile.email}</p>
-                    </div>
+                <div className="flex justify-end">
+                    <Button variant="outline">Edit Profile</Button>
                 </div>
-                 <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                    <Calendar className="w-5 h-5 text-muted-foreground"/>
-                    <div>
-                        <p className="text-xs text-muted-foreground">Member Since</p>
-                        <p className="font-medium"><FormattedDate dateString={parentProfile.joinDate} /></p>
-                    </div>
-                </div>
-                <Button variant="outline" className="h-full">Edit Profile</Button>
             </CardContent>
         </Card>
 
@@ -316,4 +329,5 @@ export default function ProfilePage() {
        )}
     </div>
   );
-}
+
+    

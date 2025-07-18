@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Share2, Copy, Users, IndianRupee, Goal, Percent, ShieldCheck, ChevronRight } from "lucide-react";
+import { Share2, Copy, Users, IndianRupee, Goal, Percent, ShieldCheck, ChevronRight, BarChart3, TrendingUp } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
 
 const initialReferralData = {
   referralCode: "ALEX-IBA-5C",
@@ -23,7 +24,15 @@ const initialReferralData = {
   totalCommission: 0,
   dailySales: 0,
   monthlySales: 0,
-  recentReferrals: []
+  recentReferrals: [],
+  salesHistory: [
+      { month: "Jan", sales: 12 },
+      { month: "Feb", sales: 19 },
+      { month: "Mar", sales: 15 },
+      { month: "Apr", sales: 25 },
+      { month: "May", sales: 21 },
+      { month: "Jun", sales: 32 },
+  ]
 };
 
 const dailyTarget = 5;
@@ -115,6 +124,35 @@ Join here: ${shareUrl}`;
                     </CardHeader>
                 </Card>
             </div>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><BarChart3/> Sales Analytics</CardTitle>
+                    <CardDescription>Visualize your sales performance and growth over time.</CardDescription>
+                </CardHeader>
+                <CardContent className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={referralData.salesHistory}>
+                            <XAxis dataKey="month" stroke="#888888" fontSize={12} tickLine={false} axisLine={false}/>
+                            <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`}/>
+                            <Tooltip
+                              contentStyle={{
+                                background: "hsl(var(--background))",
+                                border: "1px solid hsl(var(--border))",
+                                borderRadius: "var(--radius)",
+                              }}
+                            />
+                            <Bar dataKey="sales" name="Monthly Sales" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                    </ResponsiveContainer>
+                </CardContent>
+                <CardFooter>
+                    <div className="flex items-center text-sm text-muted-foreground">
+                        <TrendingUp className="mr-2 text-green-500" />
+                        <span>Your sales are trending upwards this year. Keep up the great work!</span>
+                    </div>
+                </CardFooter>
+            </Card>
 
             <Card>
                 <CardHeader>

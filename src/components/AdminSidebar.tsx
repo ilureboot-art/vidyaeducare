@@ -19,7 +19,8 @@ import {
     Landmark,
     Home,
     UserCog,
-    Bell
+    Bell,
+    FileQuestion
 } from "lucide-react";
 import {
     Sidebar,
@@ -39,6 +40,7 @@ const adminNavItems = [
   { href: "/admin/users", label: "User Management", icon: Users },
   { href: "/admin/transactions", label: "Transactions", icon: CreditCard },
   { href: "/admin/chat", label: "Chat Management", icon: MessageSquare },
+  { href: "/admin/question-bank", label: "Question Bank", icon: FileQuestion },
   { href: "/admin/game-settings", label: "Game Settings", icon: Gamepad2 },
   { href: "/admin/store-settings", label: "Store Settings", icon: ShoppingCart },
   { href: "/admin/payment-settings", label: "Payment Settings", icon: Landmark },

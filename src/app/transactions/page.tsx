@@ -50,13 +50,13 @@ function FormattedDate({ dateString }: { dateString: string }) {
 }
 
 export default function TransactionsPage() {
-  const [transactions, setTransactions] = useState<Transaction[]>([...walletData.transactions]);
+  const [transactions, setTransactions] = useState<Transaction[]>([...walletData.transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
 
   useEffect(() => {
     // This effect ensures the page re-renders if the shared data changes
     const interval = setInterval(() => {
         if (walletData.transactions.length !== transactions.length) {
-            setTransactions([...walletData.transactions]);
+            setTransactions([...walletData.transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
         }
     }, 500); // Poll for changes
     
@@ -104,7 +104,7 @@ export default function TransactionsPage() {
                 </TableRow>
               )) : (
                 <TableRow>
-                    <TableCell colSpan={3} className="text-center text-muted-foreground">No transactions yet.</TableCell>
+                    <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">No transactions yet.</TableCell>
                 </TableRow>
               )}
             </TableBody>

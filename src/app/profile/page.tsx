@@ -4,11 +4,15 @@
 import { useState, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { User, Mail, Calendar, TrendingUp, Gamepad2, Percent, Edit, Fingerprint, GraduationCap, Building, Languages, BookCopy, FileClock, Cake, Medal, BarChart2 } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { User, Mail, Calendar, TrendingUp, Gamepad2, Percent, Edit, Fingerprint, GraduationCap, Building, Languages, BookCopy, FileClock, Cake, Medal, BarChart2, Trash2, PlusCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { studentData } from "@/lib/student-data";
-import type { StudentProfile } from "@/lib/student-data";
+import { studentData, type StudentProfile, addStudent, deleteStudent, validActivationCodes, useActivationCode } from "@/lib/student-data";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 
 function FormattedDate({ dateString }: { dateString: string }) {
   const [formattedDate, setFormattedDate] = useState("");
@@ -18,7 +22,7 @@ function FormattedDate({ dateString }: { dateString: string }) {
   }, [dateString]);
 
   if (!formattedDate) {
-    return null; // Or a loading skeleton
+    return null; 
   }
 
   return <>{formattedDate}</>;
@@ -26,32 +30,152 @@ function FormattedDate({ dateString }: { dateString: string }) {
 
 
 export default function ProfilePage() {
-    const [student, setStudent] = useState<StudentProfile>(studentData[0]);
+    const [students, setStudents] = useState<StudentProfile[]>(studentData);
+    const { toast } = useToast();
+    const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
+    const [activationCode, setActivationCode] = useState("");
+    const [isCodeVerified, setIsCodeVerified] = useState(false);
 
-    if (!student) {
-        return <div>Loading profile...</div>
+    const handleVerifyCode = () => {
+        if (validActivationCodes.includes(activationCode)) {
+            setIsCodeVerified(true);
+            toast({ title: "Code Verified!", description: "You can now add the student's details." });
+        } else {
+            toast({ variant: 'destructive', title: "Invalid Code", description: "The activation code is incorrect or has already been used." });
+        }
+    };
+    
+    const handleAddStudent = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const formData = new FormData(e.currentTarget);
+        const newStudent: StudentProfile = {
+            id: `STU-${String(Date.now()).slice(-6)}`,
+            name: formData.get('name') as string,
+            dob: formData.get('dob') as string,
+            avatarUrl: "https://placehold.co/100x100.png",
+            academic: {
+                standard: formData.get('standard') as string,
+                board: formData.get('board') as string,
+                stream: formData.get('stream') as string,
+                language: 'English',
+                academicYear: '2024-2025',
+                subjects: ['Maths', 'Science', 'English', 'History', 'General Knowledge'],
+            },
+            stats: {
+                totalEarnings: 0,
+                testsTaken: 0,
+                avgScore: 0,
+            },
+            badges: [],
+        };
+        
+        addStudent(newStudent);
+        useActivationCode(activationCode);
+        setStudents([...studentData]);
+        toast({ title: "Student Added!", description: `${newStudent.name}'s profile has been created.`});
+        setIsAddStudentOpen(false);
+        setActivationCode("");
+        setIsCodeVerified(false);
+    }
+    
+    const handleDeleteStudent = (studentId: string) => {
+        deleteStudent(studentId);
+        setStudents([...studentData]);
+        toast({ title: "Student Removed", description: "The student profile has been deleted." });
     }
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-6">
-       <Card className="shadow-lg">
+        <div className="flex justify-between items-center">
+             <h1 className="text-3xl font-bold">My Students</h1>
+             <Dialog open={isAddStudentOpen} onOpenChange={(isOpen) => {
+                 setIsAddStudentOpen(isOpen);
+                 if (!isOpen) {
+                     setActivationCode("");
+                     setIsCodeVerified(false);
+                 }
+             }}>
+                <DialogTrigger asChild>
+                    <Button><PlusCircle className="mr-2"/> Add New Student</Button>
+                </DialogTrigger>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{isCodeVerified ? "Add Student Details" : "Enter Activation Code"}</DialogTitle>
+                        <DialogDescription>
+                            {isCodeVerified 
+                                ? "Fill in the details for the new student profile." 
+                                : "You need a product activation code from a subscription purchase to add a new student."}
+                        </DialogDescription>
+                    </DialogHeader>
+                    {!isCodeVerified ? (
+                        <div className="space-y-4 pt-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="activationCode">Product Activation Code</Label>
+                                <Input 
+                                    id="activationCode" 
+                                    value={activationCode} 
+                                    onChange={(e) => setActivationCode(e.target.value)}
+                                    placeholder="Enter code from store purchase"
+                                />
+                            </div>
+                            <Button className="w-full" onClick={handleVerifyCode}>Verify Code</Button>
+                        </div>
+                    ) : (
+                       <form className="space-y-4" onSubmit={handleAddStudent}>
+                           <div className="space-y-2">
+                               <Label htmlFor="name">Student's Full Name</Label>
+                               <Input id="name" name="name" required/>
+                           </div>
+                           <div className="space-y-2">
+                               <Label htmlFor="dob">Date of Birth</Label>
+                               <Input id="dob" name="dob" type="date" required/>
+                           </div>
+                           <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="standard">Standard</Label>
+                                    <Select name="standard" required><SelectTrigger><SelectValue placeholder="Select..."/></SelectTrigger><SelectContent>{[...Array(12)].map((_,i) => <SelectItem key={i+1} value={`${i+1}th`}>{i+1}th</SelectItem>)}</SelectContent></Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="board">Board</Label>
+                                    <Select name="board" required><SelectTrigger><SelectValue placeholder="Select..."/></SelectTrigger><SelectContent><SelectItem value="CBSE">CBSE</SelectItem><SelectItem value="ICSE">ICSE</SelectItem><SelectItem value="SSC">SSC</SelectItem></SelectContent></Select>
+                                </div>
+                           </div>
+                           <div className="space-y-2">
+                               <Label htmlFor="stream">Stream</Label>
+                               <Select name="stream" required><SelectTrigger><SelectValue placeholder="Select..."/></SelectTrigger><SelectContent><SelectItem value="Science">Science</SelectItem><SelectItem value="Commerce">Commerce</SelectItem><SelectItem value="Arts">Arts</SelectItem><SelectItem value="General">General</SelectItem></SelectContent></Select>
+                           </div>
+                           <DialogFooter>
+                               <Button type="submit">Create Profile</Button>
+                           </DialogFooter>
+                       </form>
+                    )}
+                </DialogContent>
+             </Dialog>
+        </div>
+
+       {students.map(student => (
+         <Card key={student.id} className="shadow-lg relative group">
             <CardHeader>
-            <div className="flex items-center gap-4">
-                <Avatar className="w-24 h-24 border-4 border-primary/20">
-                    <AvatarImage src={student.avatarUrl} alt={student.name} data-ai-hint="profile avatar" />
-                    <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                    <CardTitle className="text-3xl font-bold text-primary flex items-center justify-between">
-                        <span>{student.name}</span>
-                        <Button variant="outline" size="sm"><Edit className="mr-2"/> Edit Profile</Button>
-                    </CardTitle>
-                    <CardDescription>Student ID: {student.id}</CardDescription>
+                <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-4">
+                        <Avatar className="w-24 h-24 border-4 border-primary/20">
+                            <AvatarImage src={student.avatarUrl} alt={student.name} data-ai-hint="profile avatar" />
+                            <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                            <CardTitle className="text-3xl font-bold text-primary">
+                                <span>{student.name}</span>
+                            </CardTitle>
+                            <CardDescription>Student ID: {student.id}</CardDescription>
+                        </div>
+                    </div>
+                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                         <Button variant="outline" size="icon"><Edit className="w-4 h-4"/></Button>
+                         <Button variant="destructive" size="icon" onClick={() => handleDeleteStudent(student.id)}><Trash2 className="w-4 h-4"/></Button>
+                    </div>
                 </div>
-            </div>
             </CardHeader>
             <CardContent className="space-y-6">
-            
                 <Card>
                     <CardHeader>
                         <CardTitle className="text-xl flex items-center gap-2"><GraduationCap/> Academic Details</CardTitle>
@@ -140,9 +264,18 @@ export default function ProfilePage() {
                         </div>
                     </CardContent>
                 </Card>
-            
             </CardContent>
         </Card>
+       ))}
+
+       {students.length === 0 && (
+           <Card>
+               <CardContent className="text-center p-12">
+                   <p className="text-muted-foreground">No student profiles found.</p>
+                   <p className="text-muted-foreground">Purchase a subscription in the store to get an activation code, then add a student.</p>
+               </CardContent>
+           </Card>
+       )}
     </div>
   );
 }

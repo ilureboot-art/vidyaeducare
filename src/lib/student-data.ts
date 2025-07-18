@@ -20,8 +20,7 @@ export type StudentProfile = {
   badges: ('Platinum' | 'Gold' | 'Silver' | 'Bronze')[];
 };
 
-// This object acts as our in-memory, shared "database" for a single student profile.
-// This represents the main user who is logged in.
+// This object acts as our in-memory, shared "database" for student profiles.
 export const studentData: StudentProfile[] = [
     {
         id: "STU-D7F6E5C",
@@ -44,3 +43,26 @@ export const studentData: StudentProfile[] = [
         badges: ["Gold", "Silver"],
     }
 ];
+
+// --- Simulation of Product Activation Codes ---
+
+// In a real app, these would be securely generated and stored in a database after a purchase.
+export let validActivationCodes = ["PROD-A1B2C", "PROD-X9Y8Z", "PROD-M4N5P"];
+
+// Function to "use" a code, removing it from the valid list.
+export function useActivationCode(code: string) {
+    validActivationCodes = validActivationCodes.filter(c => c !== code);
+}
+
+// Function to add a new student profile.
+export function addStudent(student: StudentProfile) {
+    studentData.push(student);
+}
+
+// Function to delete a student profile.
+export function deleteStudent(studentId: string) {
+    const index = studentData.findIndex(s => s.id === studentId);
+    if (index > -1) {
+        studentData.splice(index, 1);
+    }
+}

@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ShieldCheck, Users } from "lucide-react";
 import Link from "next/link";
 
 type ClientStatus = "Active" | "Expired";
@@ -46,9 +46,9 @@ export default function StudentAccessPage() {
         </Link>
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><ShieldCheck/> Student Access Panel</CardTitle>
+          <CardTitle className="flex items-center gap-2"><Users/> Client List</CardTitle>
           <CardDescription>
-            View and manage the students who have purchased products using your referral network.
+            View the clients who have purchased products using your referral network.
           </CardDescription>
         </CardHeader>
         <CardContent>

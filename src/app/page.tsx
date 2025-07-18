@@ -3,11 +3,54 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { BookOpen, Trophy, Users, LogIn, CheckCircle, GraduationCap, Gamepad2, IndianRupee, Star } from "lucide-react";
+import { BookOpen, Trophy, Users, LogIn, CheckCircle, GraduationCap, Gamepad2, IndianRupee, Star, Share2, Zap } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import { useToast } from "@/hooks/use-toast";
+import { initialReferralBonus } from "@/lib/store-config";
 
 export default function HomePage() {
+  const { toast } = useToast();
+
+  const handleShare = async (type: 'game' | 'referral' | 'referbolt') => {
+    let message = '';
+    let url = window.location.origin;
+    const referralCode = "ALEX-D7F6E5C"; // Example code
+
+    switch (type) {
+      case 'game':
+        url = `${window.location.origin}/signup?ref=${referralCode}`;
+        message = `🎮 Join GuessMaster - India's Best Skill Gaming Platform! 🎮\n🚀 Use my referral code: ${referralCode}\n💰 Get ₹${initialReferralBonus} instant bonus on signup\n🎯 Play exciting skill-based number guessing games and win real cash!\nJoin now: ${url}`;
+        break;
+      case 'referral':
+         url = `${window.location.origin}/signup?ref=${referralCode}`;
+        message = `💰 Easy money! Join Vidya EduCare using my referral code and we both get a bonus: ${referralCode}\nSign up here: ${url}`;
+        break;
+      case 'referbolt':
+         url = `${window.location.origin}/referbolt`;
+        message = `⚡️ Supercharge your earnings with ReferBolt! Earn continuous commissions from your network. Use my code ${referralCode} to get started!\nLearn more: ${url}`;
+        break;
+    }
+    
+    const fallbackCopy = () => {
+        navigator.clipboard.writeText(message);
+        toast({
+            title: "Link Copied!",
+            description: "Promotional message copied to clipboard.",
+        });
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'Join Vidya EduCare!', text: message, url });
+      } catch (error) {
+        fallbackCopy();
+      }
+    } else {
+      fallbackCopy();
+    }
+  };
+
   return (
     <div className="w-full max-w-5xl mx-auto space-y-20">
       
@@ -55,8 +98,8 @@ export default function HomePage() {
                 <Button asChild size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90">
                     <Link href="/play"><Gamepad2 className="mr-2"/> Play Now</Link>
                 </Button>
-                <Button asChild size="lg" variant="secondary">
-                     <Link href="/play?mode=demo">Play Demo Game</Link>
+                <Button size="lg" variant="outline" onClick={() => handleShare('game')}>
+                  <Share2 className="mr-2"/> Share Game
                 </Button>
             </div>
         </div>
@@ -64,42 +107,41 @@ export default function HomePage() {
 
       <section className="space-y-8">
         <div className="text-center">
-            <h2 className="text-3xl font-bold">Why Choose Our Platform?</h2>
-            <p className="text-muted-foreground mt-2">A unique blend of education and skill-based gaming.</p>
+            <h2 className="text-3xl font-bold">Referral Programs</h2>
+            <p className="text-muted-foreground mt-2">Earn rewards by sharing the app with your friends and network.</p>
         </div>
-        <div className="grid md:grid-cols-3 gap-8">
+        <div className="grid md:grid-cols-2 gap-8">
             <Card className="hover:shadow-lg transition-shadow">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-3">
-                        <div className="bg-accent/20 p-3 rounded-full"><GraduationCap className="w-6 h-6 text-accent-foreground" /></div>
-                        Live Mock Tests
+                        <div className="bg-accent/20 p-3 rounded-full"><IndianRupee className="w-6 h-6 text-accent-foreground" /></div>
+                        Refer & Earn
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <p>Experience real exam scenarios with timed mock tests designed as per the latest syllabus for SSC, CBSE, and other boards.</p>
+                    <p>Share your referral code with friends. When they sign up, you both receive a cash bonus in your wallet!</p>
                 </CardContent>
+                <CardFooter>
+                  <Button className="w-full" variant="secondary" onClick={() => handleShare('referral')}>
+                    <Share2 className="mr-2"/> Share & Earn Now
+                  </Button>
+                </CardFooter>
             </Card>
             <Card className="hover:shadow-lg transition-shadow">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-3">
-                        <div className="bg-accent/20 p-3 rounded-full"><Trophy className="w-6 h-6 text-accent-foreground" /></div>
-                       Compete & Win
+                        <div className="bg-accent/20 p-3 rounded-full"><Zap className="w-6 h-6 text-accent-foreground" /></div>
+                       ReferBolt System
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <p>Climb the leaderboard in both mock tests and skill games. Earn badges and win cash rewards for top performance.</p>
+                    <p>Join our premium referral program to earn continuous commissions from your network in cycles. Unlimited earning potential!</p>
                 </CardContent>
-            </Card>
-             <Card className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-3">
-                        <div className="bg-accent/20 p-3 rounded-full"><Users className="w-6 h-6 text-accent-foreground" /></div>
-                        Referral Programs
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p>Join as an Independent Business Associate (IBA) or use our ReferBolt system to earn attractive commissions.</p>
-                </CardContent>
+                 <CardFooter>
+                  <Button className="w-full" variant="secondary" onClick={() => handleShare('referbolt')}>
+                    <Share2 className="mr-2"/> Share ReferBolt Benefits
+                  </Button>
+                </CardFooter>
             </Card>
         </div>
       </section>

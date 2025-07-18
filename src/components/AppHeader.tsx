@@ -5,18 +5,16 @@ import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, Gamepad2, HelpCircle, Trophy, Store, Gift, Zap, Wallet, Settings, ChevronRight, X, LogOut, User, BarChart, History, BrainCircuit } from "lucide-react";
+import { Menu, BookOpen, Trophy, Store, Users, Wallet, Settings, ChevronRight, X, LogOut, User, History, BrainCircuit } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { UserNotifications } from "@/components/UserNotifications";
 
 const navItems = [
-    { href: "/play", label: "Play", icon: Gamepad2 },
+    { href: "/mock-test", label: "Mock Test", icon: BookOpen },
     { href: "/vidya-edurank", label: "Vidya Edurank", icon: BrainCircuit },
-    { href: "/how-to-play", label: "How to Play", icon: HelpCircle },
     { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
     { href: "/store", label: "Store", icon: Store },
-    { href: "/refer", label: "Refer & Earn", icon: Gift },
-    { href: "/referbolt", label: "ReferBolt System", icon: Zap },
+    { href: "/refer", label: "IBA Panel", icon: Users },
     { href: "/wallet", label: "Wallet", icon: Wallet },
     { href: "/profile", label: "Profile", icon: User },
     { href: "/transactions", label: "Transactions", icon: History },
@@ -36,7 +34,7 @@ export function AppHeader() {
                         <span className="sr-only">Open Menu</span>
                     </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="w-64 p-0 flex flex-col">
+                <SheetContent side="left" className="w-60 p-0 flex flex-col">
                     <SheetHeader className="p-4">
                          <div className="flex justify-between items-center">
                             <SheetTitle asChild>
@@ -89,7 +87,7 @@ export function AppHeader() {
                 </SheetContent>
             </Sheet>
             <Link href="/" className="text-2xl font-bold text-primary tracking-tighter">
-                GuessMaster
+                Vidya EduCare
             </Link>
              <UserNotifications />
         </div>

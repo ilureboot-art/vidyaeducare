@@ -172,7 +172,6 @@ export default function PlayPage() {
       setGuessHistory([...guessHistory, { guess: guessNum, hint: 'Correct!' }]);
 
       if (gameMode === "real" && earnedReward > 0) {
-          walletData.balance += earnedReward;
           addTransaction({
             id: Date.now(),
             type: 'deposit',
@@ -180,7 +179,9 @@ export default function PlayPage() {
             amount: earnedReward,
             date: new Date().toISOString(),
             status: 'Completed',
+            user: "Alex Doe",
           });
+          walletData.balance += earnedReward;
           addNotification({
               type: "deposit_received",
               message: `You won ₹${earnedReward} in GuessMaster!`,
@@ -271,8 +272,9 @@ Join now: ${shareUrl}
             <h1 className="text-4xl font-bold text-primary">GuessMaster</h1>
             <p className="text-muted-foreground mt-2">Guess the secret number between 1 and 100 in 5 tries!</p>
         </div>
-        <div className="grid grid-cols-1 gap-4">
-            <Button size="lg" onClick={() => startGame("real")}><Star className="mr-2 h-5 w-5"/> Start New Game</Button>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Button size="lg" onClick={() => startGame("real")}><Star className="mr-2 h-5 w-5"/> Start Real Game</Button>
+            <Button size="lg" variant="secondary" onClick={() => startGame("demo")}><Sprout className="mr-2 h-5 w-5"/> Play Demo</Button>
         </div>
         <Button variant="ghost" onClick={handleShare} className="w-full">
             <Share2 className="mr-2 h-4 w-4"/>

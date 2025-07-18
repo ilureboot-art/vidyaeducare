@@ -11,54 +11,85 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Trophy } from "lucide-react";
+import { Trophy, Award } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 type Player = {
   rank: number;
   name: string;
+  avatar: string;
   score: number;
-  gamesPlayed: number;
+  time: string; // e.g., "15:32"
 };
 
+const getRankColor = (rank: number) => {
+    if (rank === 1) return "border-yellow-400";
+    if (rank === 2) return "border-gray-400";
+    if (rank === 3) return "border-amber-600";
+    return "border-transparent";
+}
+
 // In a real app, this data would be fetched from a server.
-const initialLeaderboardData: Player[] = [];
+const initialLeaderboardData: Player[] = [
+    { rank: 1, name: "Priya Sharma", avatar: "PS", score: 48, time: "18:45" },
+    { rank: 2, name: "Ankit Gupta", avatar: "AG", score: 45, time: "21:12" },
+    { rank: 3, name: "Sneha Reddy", avatar: "SR", score: 42, time: "23:01" },
+    { rank: 4, name: "Rahul Kumar", avatar: "RK", score: 40, time: "25:50" },
+    { rank: 5, name: "Amit Singh", avatar: "AS", score: 38, time: "28:33" },
+];
 
 export default function LeaderboardPage() {
   const [leaderboardData, setLeaderboardData] = useState<Player[]>(initialLeaderboardData);
 
   return (
-    <div className="w-full max-w-2xl mx-auto">
+    <div className="w-full max-w-3xl mx-auto">
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="text-3xl font-bold text-center text-primary flex items-center justify-center gap-2">
             <Trophy className="w-8 h-8 text-yellow-500" />
-            Top Players
+            Live Mock Test Leaderboard
           </CardTitle>
           <CardDescription className="text-center">
-            See who is leading the charts in GuessMaster!
+            See who's at the top of their game!
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[100px] text-center">Rank</TableHead>
-                <TableHead>Player</TableHead>
-                <TableHead className="text-right">Games Played</TableHead>
+                <TableHead className="w-[80px] text-center">Rank</TableHead>
+                <TableHead>Student</TableHead>
+                <TableHead className="text-center">Time Taken</TableHead>
                 <TableHead className="text-right">Score</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {leaderboardData.length > 0 ? leaderboardData.map((player) => (
                 <TableRow key={player.rank} className="font-medium">
-                  <TableCell className="text-center">{player.rank}</TableCell>
-                  <TableCell>{player.name}</TableCell>
-                  <TableCell className="text-right">{player.gamesPlayed}</TableCell>
-                  <TableCell className="text-right text-primary font-bold">₹{player.score.toLocaleString()}</TableCell>
+                  <TableCell className="text-center text-lg font-bold">
+                    {player.rank <= 3 ? (
+                        <Award className={`w-8 h-8 mx-auto ${
+                            player.rank === 1 ? 'text-yellow-400' : 
+                            player.rank === 2 ? 'text-gray-400' :
+                            'text-amber-600'
+                        }`} />
+                    ) : player.rank}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                        <Avatar className={`w-10 h-10 border-2 ${getRankColor(player.rank)}`}>
+                             <AvatarImage src={`https://placehold.co/40x40.png?text=${player.avatar}`} data-ai-hint="profile avatar" />
+                            <AvatarFallback>{player.avatar}</AvatarFallback>
+                        </Avatar>
+                        <span>{player.name}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-center">{player.time}</TableCell>
+                  <TableCell className="text-right text-primary font-bold text-lg">{player.score} / 50</TableCell>
                 </TableRow>
               )) : (
                 <TableRow>
-                    <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">The leaderboard is empty. Be the first to play!</TableCell>
+                    <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">The leaderboard is empty. Be the first to take a test!</TableCell>
                 </TableRow>
               )}
             </TableBody>

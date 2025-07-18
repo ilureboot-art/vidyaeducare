@@ -5,39 +5,45 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Share2, Copy, CheckCircle, Gift } from "lucide-react";
+import { Share2, Copy, Users, CheckCircle } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 
 const initialReferralData = {
-  referralCode: "ALEX-D7F6E5",
-  referralBonus: 5,
-  welcomeBonus: 5,
+  referralCode: "ALEX-IBA-5C",
+  totalReferrals: 0,
+  totalCommission: 0,
+  recentReferrals: []
 };
 
 export default function ReferPage() {
   const { toast } = useToast();
-  const [referralData] = useState(initialReferralData);
+  const [referralData, setReferralData] = useState(initialReferralData);
 
   const handleCopyToClipboard = () => {
     navigator.clipboard.writeText(referralData.referralCode);
     toast({
       title: "Copied!",
-      description: "Referral code copied to clipboard.",
+      description: "IBA Referral code copied to clipboard.",
     });
   };
 
   const handleShare = async () => {
     const shareUrl = `${window.location.origin}/signup?ref=${referralData.referralCode}`;
-    const benefits = [
-        `You get ₹${referralData.referralBonus} for every friend who joins.`,
-        `Your friend gets a ₹${referralData.welcomeBonus} welcome bonus.`,
-        `There's no limit to how many friends you can invite!`
-    ].join('\n- ');
-
-    const message = `Join me on GuessMaster and get rewarded!\n\nHere are the benefits:\n- ${benefits}\n\nUse my code when you sign up: ${referralData.referralCode}`;
-    const fullMessage = `${message}\n\nJoin here: ${shareUrl}`;
+    const message = `Join Vidya EduCare using my IBA code and get a special discount! 
+    
+Code: ${referralData.referralCode}
+Join here: ${shareUrl}`;
 
     const fallbackCopy = () => {
-      navigator.clipboard.writeText(fullMessage);
+      navigator.clipboard.writeText(message);
       toast({
           title: "Link Copied!",
           description: "Referral link and message copied to clipboard.",
@@ -47,7 +53,7 @@ export default function ReferPage() {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'Join me on GuessMaster!',
+          title: 'Join Vidya EduCare!',
           text: message,
           url: shareUrl,
         });
@@ -62,51 +68,73 @@ export default function ReferPage() {
     }
   };
 
-  const renderDashboardView = () => (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold text-center">Your Unique Referral Code</h3>
-        <div className="flex items-center gap-2 mt-2">
-          <p className="text-2xl font-mono p-3 bg-muted rounded-md w-full text-center tracking-widest">{referralData.referralCode}</p>
-        </div>
-      </div>
-       <div className="flex items-center gap-2">
-          <Button variant="outline" className="w-full" onClick={handleCopyToClipboard}><Copy className="w-4 h-4" /> Copy Code</Button>
-          <Button className="w-full" onClick={handleShare}><Share2 className="w-4 h-4" /> Share Link</Button>
-        </div>
-    </div>
-  );
-
-  const renderBenefits = () => (
-    <div className="space-y-3">
-        <h3 className="font-semibold text-lg text-center">Referral Benefits</h3>
-        <ul className="space-y-2 text-sm">
-            <li className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span>You get <span className="font-bold">₹{referralData.referralBonus}</span> for every friend who joins.</span></li>
-            <li className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span>Your friend gets a <span className="font-bold">₹{referralData.welcomeBonus} welcome bonus</span>.</span></li>
-            <li className="flex items-start gap-3"><CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0"/><span>There's no limit to how many friends you can invite!</span></li>
-        </ul>
-    </div>
-  )
-
   return (
-    <div className="w-full max-w-md mx-auto">
+    <div className="w-full max-w-2xl mx-auto">
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="text-3xl font-bold text-center text-primary flex items-center justify-center gap-2">
-            <Gift /> Refer & Earn
+            <Users /> IBA Dashboard
           </CardTitle>
           <CardDescription className="text-center">
-            Invite friends and you both get rewarded!
+            Your hub for tracking referrals, sales, and commissions.
           </CardDescription>
         </CardHeader>
-        <CardContent className="min-h-[150px] flex items-center justify-center">
-          {renderDashboardView()}
-        </CardContent>
-        <CardFooter className="flex-col !items-start gap-4">
-            <div className="w-full p-4 bg-muted/50 rounded-lg">
-                {renderBenefits()}
+        <CardContent className="space-y-6">
+          
+          <div className="text-center p-4 bg-muted rounded-lg">
+            <h3 className="text-lg font-semibold">Your Unique IBA Code</h3>
+            <div className="flex items-center justify-center gap-2 mt-2">
+              <p className="text-2xl font-mono p-3 bg-background rounded-md w-full max-w-xs text-center tracking-widest">{referralData.referralCode}</p>
             </div>
-        </CardFooter>
+          </div>
+           <div className="flex items-center gap-4">
+              <Button variant="outline" className="w-full" onClick={handleCopyToClipboard}><Copy className="mr-2" /> Copy Code</Button>
+              <Button className="w-full" onClick={handleShare}><Share2 className="mr-2" /> Share Link</Button>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4 text-center">
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-2xl">₹{referralData.totalCommission}</CardTitle>
+                        <CardDescription>Total Commission</CardDescription>
+                    </CardHeader>
+                </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-2xl">{referralData.totalReferrals}</CardTitle>
+                        <CardDescription>Total Sales</CardDescription>
+                    </CardHeader>
+                </Card>
+            </div>
+
+            <div>
+                <h3 className="text-lg font-semibold mb-2">Recent Sales</h3>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Student</TableHead>
+                            <TableHead>Date</TableHead>
+                            <TableHead className="text-right">Commission</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                         {referralData.recentReferrals.length > 0 ? referralData.recentReferrals.map((ref: any) => (
+                            <TableRow key={ref.id}>
+                                <TableCell>{ref.name}</TableCell>
+                                <TableCell>{ref.date}</TableCell>
+                                <TableCell className="text-right text-green-600 font-bold">+ ₹{ref.commission.toFixed(2)}</TableCell>
+                            </TableRow>
+                         )) : (
+                             <TableRow>
+                                <TableCell colSpan={3} className="text-center text-muted-foreground h-24">No recent sales yet.</TableCell>
+                             </TableRow>
+                         )}
+                    </TableBody>
+                </Table>
+            </div>
+
+
+        </CardContent>
       </Card>
     </div>
   );

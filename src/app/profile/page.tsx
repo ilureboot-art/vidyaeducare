@@ -6,7 +6,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { User, Mail, Calendar, TrendingUp, Gamepad2, Percent, Edit, Fingerprint } from "lucide-react";
+import { User, Mail, Calendar, TrendingUp, Gamepad2, Percent, Edit, Fingerprint, GraduationCap, Building } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 // In a real app, this data would come from the logged-in user's session
 const initialUserProfile = {
@@ -15,11 +16,17 @@ const initialUserProfile = {
   email: "alex.doe@example.com",
   avatarUrl: "https://placehold.co/100x100.png",
   joinDate: new Date().toISOString().split('T')[0],
+  academic: {
+      standard: "10th",
+      board: "CBSE",
+      stream: "Science"
+  },
   stats: {
     totalEarnings: 0,
     gamesPlayed: 0,
     winRate: 0,
   },
+  badges: ["Gold", "Silver"]
 };
 
 export default function ProfilePage() {
@@ -41,6 +48,17 @@ export default function ProfilePage() {
             </Avatar>
           <CardTitle className="text-3xl font-bold text-primary">{userProfile.name}</CardTitle>
           <CardDescription>Your personal account and game statistics.</CardDescription>
+           <div className="flex gap-2 pt-2">
+            {userProfile.badges.map(badge => (
+                <Badge key={badge} variant="secondary" className="text-sm">
+                    {badge === "Gold" && "🥇"}
+                    {badge === "Silver" && "🥈"}
+                    {badge === "Bronze" && "🥉"}
+                    {badge === "Platinum" && "💎"}
+                     {badge}
+                </Badge>
+            ))}
+          </div>
         </CardHeader>
         <CardContent className="space-y-6">
             
@@ -70,11 +88,33 @@ export default function ProfilePage() {
                     </div>
                 </div>
             </div>
+            
+            <Separator />
+
+            <div className="space-y-4">
+                <h3 className="font-semibold text-lg flex items-center gap-2"><GraduationCap className="w-5 h-5 text-accent"/> Academic Information</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                        <GraduationCap className="w-5 h-5 text-muted-foreground"/>
+                        <div>
+                            <p className="text-muted-foreground">Standard</p>
+                            <p className="font-medium">{userProfile.academic.standard}</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                        <Building className="w-5 h-5 text-muted-foreground"/>
+                        <div>
+                            <p className="text-muted-foreground">Board</p>
+                            <p className="font-medium">{userProfile.academic.board}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <Separator />
 
             <div className="space-y-4">
-                 <h3 className="font-semibold text-lg flex items-center gap-2"><Gamepad2 className="w-5 h-5 text-accent"/> Game Statistics</h3>
+                 <h3 className="font-semibold text-lg flex items-center gap-2"><Gamepad2 className="w-5 h-5 text-accent"/> Test Statistics</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
                     <div className="p-4 bg-muted/50 rounded-lg">
                         <TrendingUp className="w-6 h-6 mx-auto text-primary mb-2"/>
@@ -84,12 +124,12 @@ export default function ProfilePage() {
                      <div className="p-4 bg-muted/50 rounded-lg">
                         <Gamepad2 className="w-6 h-6 mx-auto text-primary mb-2"/>
                         <p className="text-2xl font-bold">{userProfile.stats.gamesPlayed}</p>
-                        <p className="text-sm text-muted-foreground">Games Played</p>
+                        <p className="text-sm text-muted-foreground">Tests Taken</p>
                     </div>
                      <div className="p-4 bg-muted/50 rounded-lg">
                         <Percent className="w-6 h-6 mx-auto text-primary mb-2"/>
                         <p className="text-2xl font-bold">{userProfile.stats.winRate}%</p>
-                        <p className="text-sm text-muted-foreground">Win Rate</p>
+                        <p className="text-sm text-muted-foreground">Avg. Score</p>
                     </div>
                 </div>
             </div>

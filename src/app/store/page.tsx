@@ -21,7 +21,9 @@ export default function StorePage() {
   const { toast } = useToast();
   const [isPurchasing, setIsPurchasing] = useState<number | string | null>(null);
   const [balance, setBalance] = useState(walletData.balance);
-  const [referralCode, setReferralCode] = useState("");
+  const [referralCode1, setReferralCode1] = useState("");
+  const [referralCode2, setReferralCode2] = useState("");
+
 
   // This effect keeps the local balance in sync with the central data store
   useEffect(() => {
@@ -39,7 +41,8 @@ export default function StorePage() {
     
     // Calculate discount
     const baseDiscount = 0.05; // 5% direct discount
-    const referralDiscount = referralCode ? 0.10 : 0; // 10% additional for referral
+    const hasReferral = referralCode1.trim() !== "";
+    const referralDiscount = hasReferral ? 0.10 : 0; // 10% additional for referral
     const totalDiscount = baseDiscount + referralDiscount;
     const discountedPrice = product.price * (1 - totalDiscount);
 
@@ -66,12 +69,24 @@ export default function StorePage() {
       });
 
       // Simulate IBA commission
-      if (referralCode) {
-        const commission = discountedPrice * 0.1765; // 17.65%
-        toast({
-            title: "IBA Commission Logged",
-            description: `A commission of ₹${commission.toFixed(2)} for IBA code ${referralCode} has been logged for this sale. (Simulation)`,
-        });
+      if (hasReferral) {
+        const totalCommission = discountedPrice * 0.1765;
+        if (referralCode2.trim() !== "") {
+            // Split commission
+            const commissionPerIba = totalCommission / 2;
+            toast({
+                title: "IBA Commission Logged (Split)",
+                description: `Commission of ₹${commissionPerIba.toFixed(2)} each for IBA codes ${referralCode1} and ${referralCode2} has been logged. (Simulation)`,
+                duration: 7000
+            });
+        } else {
+            // 100% commission
+            toast({
+                title: "IBA Commission Logged",
+                description: `A commission of ₹${totalCommission.toFixed(2)} for IBA code ${referralCode1} has been logged for this sale. (Simulation)`,
+                 duration: 7000
+            });
+        }
       }
       
       setBalance(walletData.balance);
@@ -162,19 +177,30 @@ export default function StorePage() {
               <TabsTrigger value="referbolt">ReferBolt</TabsTrigger>
             </TabsList>
             <TabsContent value="tests" className="space-y-6 pt-6">
-                 <div className="max-w-sm mx-auto">
-                    <Label htmlFor="referralCode">IBA Referral Code (Optional)</Label>
-                    <Input 
-                        id="referralCode" 
-                        placeholder="Enter IBA code for 10% extra discount"
-                        value={referralCode}
-                        onChange={(e) => setReferralCode(e.target.value)}
-                    />
+                 <div className="max-w-md mx-auto space-y-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="referralCode1">Referral Code 1 (For Discount & Commission)</Label>
+                        <Input 
+                            id="referralCode1" 
+                            placeholder="Enter first IBA code"
+                            value={referralCode1}
+                            onChange={(e) => setReferralCode1(e.target.value)}
+                        />
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="referralCode2">Referral Code 2 (For Commission Split - Optional)</Label>
+                        <Input 
+                            id="referralCode2" 
+                            placeholder="Enter second IBA code to split commission"
+                            value={referralCode2}
+                            onChange={(e) => setReferralCode2(e.target.value)}
+                        />
+                    </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
                 {subscriptionProducts.map((product, index) => {
                     const baseDiscount = 0.05;
-                    const referralDiscount = referralCode ? 0.10 : 0;
+                    const referralDiscount = referralCode1.trim() !== "" ? 0.10 : 0;
                     const totalDiscount = baseDiscount + referralDiscount;
                     const discountedPrice = product.price * (1 - totalDiscount);
                   

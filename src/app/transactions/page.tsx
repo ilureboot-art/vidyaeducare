@@ -20,7 +20,14 @@ import {
 import { ArrowUpRight, ArrowDownLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { walletData, type Transaction } from "@/lib/user-data";
-import { Button } from "@/components/ui/button";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 const getStatusBadgeVariant = (status: string) => {
     switch (status.toLowerCase()) {
@@ -77,19 +84,33 @@ export default function TransactionsPage() {
         <CardHeader>
           <CardTitle>Transaction History</CardTitle>
           <CardDescription>A complete record of your financial activity.</CardDescription>
-           <div className="flex flex-col gap-2 pt-4">
-               <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-muted-foreground min-w-[50px]">Type:</span>
-                  <Button variant={typeFilter === 'all' ? 'default' : 'outline'} size="sm" onClick={() => setTypeFilter('all')}>All</Button>
-                  <Button variant={typeFilter === 'deposit' ? 'default' : 'outline'} size="sm" onClick={() => setTypeFilter('deposit')}>Deposits</Button>
-                  <Button variant={typeFilter === 'withdrawal' ? 'default' : 'outline'} size="sm" onClick={() => setTypeFilter('withdrawal')}>Withdrawals</Button>
+           <div className="grid grid-cols-2 gap-4 pt-4">
+              <div className="space-y-2">
+                <Label htmlFor="type-filter">Filter by Type</Label>
+                <Select value={typeFilter} onValueChange={(value) => setTypeFilter(value as any)}>
+                    <SelectTrigger id="type-filter">
+                        <SelectValue placeholder="Select type..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All Types</SelectItem>
+                        <SelectItem value="deposit">Deposits</SelectItem>
+                        <SelectItem value="withdrawal">Withdrawals</SelectItem>
+                    </SelectContent>
+                </Select>
               </div>
-              <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-muted-foreground min-w-[50px]">Status:</span>
-                  <Button variant={statusFilter === 'all' ? 'default' : 'outline'} size="sm" onClick={() => setStatusFilter('all')}>All</Button>
-                  <Button variant={statusFilter === 'pending' ? 'default' : 'outline'} size="sm" onClick={() => setStatusFilter('pending')}>Pending</Button>
-                  <Button variant={statusFilter === 'completed' ? 'default' : 'outline'} size="sm" onClick={() => setStatusFilter('completed')}>Completed</Button>
-                  <Button variant={statusFilter === 'rejected' ? 'default' : 'outline'} size="sm" onClick={() => setStatusFilter('rejected')}>Rejected</Button>
+              <div className="space-y-2">
+                <Label htmlFor="status-filter">Filter by Status</Label>
+                <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as any)}>
+                    <SelectTrigger id="status-filter">
+                        <SelectValue placeholder="Select status..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All Statuses</SelectItem>
+                        <SelectItem value="completed">Completed</SelectItem>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="rejected">Rejected</SelectItem>
+                    </SelectContent>
+                </Select>
               </div>
            </div>
         </CardHeader>

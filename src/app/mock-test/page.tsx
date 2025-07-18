@@ -8,7 +8,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Trophy, Clock, CheckCircle, XCircle, FileQuestion, ArrowLeft } from "lucide-react";
+import { Trophy, Clock, CheckCircle, XCircle, FileQuestion, ArrowLeft, BrainCircuit } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -198,8 +198,11 @@ export default function MockTestPage() {
                         </Alert>
                     )}
 
-                    <div className="flex gap-4 justify-center pt-4">
+                    <div className="flex flex-wrap gap-4 justify-center pt-4">
                         <Button onClick={() => setTestState('review')}>Review Answers</Button>
+                        <Button asChild className="bg-purple-600 hover:bg-purple-700 text-white">
+                            <Link href="/student/generate"><BrainCircuit className="mr-2"/> Generate Study Materials</Link>
+                        </Button>
                         <Button onClick={handleStartTest}>Take Another Test</Button>
                         <Button asChild variant="outline">
                             <Link href="/leaderboard">View Leaderboard</Link>

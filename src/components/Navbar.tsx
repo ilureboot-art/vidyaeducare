@@ -11,7 +11,7 @@ const navItems = [
   { href: "/student/dashboard", label: "Student", icon: LayoutDashboard },
   { href: "/play", label: "Play", icon: Gamepad2 },
   { href: "/iba/dashboard", label: "IBA Panel", icon: ShieldCheck },
-  { href: "/vidya-edurank", label: "Vidya", icon: BrainCircuit },
+  { href: "/student/generate", label: "Vidya", icon: BrainCircuit },
   { href: "/wallet", label: "Wallet", icon: Wallet },
 ];
 

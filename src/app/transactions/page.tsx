@@ -38,6 +38,7 @@ function FormattedDate({ dateString }: { dateString: string }) {
   const [formattedDate, setFormattedDate] = useState("");
 
   useEffect(() => {
+    // This effect runs only on the client, ensuring the date format is consistent.
     setFormattedDate(new Date(dateString).toLocaleDateString());
   }, [dateString]);
 

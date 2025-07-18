@@ -42,6 +42,20 @@ const getStatusBadgeVariant = (status: string) => {
     }
 }
 
+function FormattedDate({ dateString }: { dateString: string }) {
+  const [formattedDate, setFormattedDate] = useState("");
+
+  useEffect(() => {
+    setFormattedDate(new Date(dateString).toLocaleDateString());
+  }, [dateString]);
+
+  if (!formattedDate) {
+    return null; // Or a loading skeleton
+  }
+
+  return <>{formattedDate}</>;
+}
+
 export default function WalletPage() {
   const { toast } = useToast();
   const [balance, setBalance] = useState(walletData.balance);
@@ -250,7 +264,7 @@ export default function WalletPage() {
                                 </div>
                                 <div>
                                     <p className="font-medium">{tx.description}</p>
-                                    <p className="text-xs text-muted-foreground">{new Date(tx.date).toLocaleDateString()}</p>
+                                    <p className="text-xs text-muted-foreground"><FormattedDate dateString={tx.date} /></p>
                                 </div>
                             </div>
                             <div className="text-right">

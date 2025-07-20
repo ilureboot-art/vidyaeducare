@@ -26,7 +26,7 @@ export const studentData: StudentProfile[] = [
         id: "STU-D7F6E5C",
         name: "Anjali Singh",
         dob: "2008-05-15",
-        avatarUrl: "https://placehold.co/100x100.png",
+        avatarUrl: "https://placehold.co/100x100.png?text=A",
         academic: {
             standard: "10th",
             board: "CBSE",
@@ -69,3 +69,5 @@ export function deleteStudent(studentId: string) {
         studentData.splice(index, 1);
     }
 }
+
+    

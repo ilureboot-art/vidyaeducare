@@ -48,7 +48,7 @@ export function AppHeader() {
                         <SheetDescription asChild>
                             <div className="flex items-center gap-3 pt-4">
                                 <User className="w-5 h-5" />
-                                <span className="font-medium">Parent User</span>
+                                <span className="font-medium">Alex Doe</span>
                             </div>
                         </SheetDescription>
                     </SheetHeader>
@@ -98,3 +98,5 @@ export function AppHeader() {
     </header>
   );
 }
+
+    

@@ -31,12 +31,17 @@ function FormattedDate({ dateString }: { dateString: string }) {
 
 
 export default function ProfilePage() {
-    const [students, setStudents] = useState<StudentProfile[]>(studentData);
+    const [students, setStudents] = useState<StudentProfile[]>([]);
     const { toast } = useToast();
     const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
     const [activationCode, setActivationCode] = useState("");
     const [isCodeVerified, setIsCodeVerified] = useState(false);
     
+    // This effect ensures the component uses the latest data from the module
+    useEffect(() => {
+        setStudents([...studentData]);
+    }, []);
+
     // Static parent data for display
     const parentProfile = {
         name: "Alex Doe",
@@ -61,7 +66,7 @@ export default function ProfilePage() {
             id: `STU-${String(Date.now()).slice(-6)}`,
             name: formData.get('name') as string,
             dob: formData.get('dob') as string,
-            avatarUrl: "https://placehold.co/100x100.png",
+            avatarUrl: `https://placehold.co/100x100.png?text=${(formData.get('name') as string).charAt(0)}`,
             academic: {
                 standard: formData.get('standard') as string,
                 board: formData.get('board') as string,
@@ -330,3 +335,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    

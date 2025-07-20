@@ -9,7 +9,7 @@ import { ShoppingCart, Sparkles, Loader2, BookOpen, Ticket, Zap } from "lucide-r
 import { walletData, addTransaction } from "@/lib/user-data";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { storeConfig, type TicketPackage } from "@/lib/store-config";
+import { storeConfig, type TicketPackage, type ReferboltSubscription, type MockTestSubscription } from "@/lib/store-config";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const subscriptionProducts = [
@@ -25,6 +25,7 @@ export default function StorePage() {
   const [referralCode2, setReferralCode2] = useState("");
   const [currentPackages, setCurrentPackages] = useState<TicketPackage[]>([]);
   const [currentReferboltSub, setCurrentReferboltSub] = useState(storeConfig.referboltSubscription);
+  const [currentMockTestSub, setCurrentMockTestSub] = useState(storeConfig.mockTestSubscription);
 
 
   // This effect keeps the local state in sync with the central data store
@@ -40,9 +41,12 @@ export default function StorePage() {
        if (JSON.stringify(storeConfig.referboltSubscription) !== JSON.stringify(currentReferboltSub)) {
         setCurrentReferboltSub({...storeConfig.referboltSubscription});
       }
+      if (JSON.stringify(storeConfig.mockTestSubscription) !== JSON.stringify(currentMockTestSub)) {
+        setCurrentMockTestSub({...storeConfig.mockTestSubscription});
+      }
     }, 500); // Check for updates periodically
     return () => clearInterval(interval);
-  }, [balance, currentPackages, currentReferboltSub]);
+  }, [balance, currentPackages, currentReferboltSub, currentMockTestSub]);
 
   const handleSubscriptionPurchase = (index: number) => {
     setIsPurchasing(index);
@@ -53,10 +57,14 @@ export default function StorePage() {
     const hasReferral = referralCode1.trim() !== "";
     const referralDiscount = hasReferral ? 0.10 : 0; // 10% additional for referral
     const totalDiscount = baseDiscount + referralDiscount;
-    const discountedPrice = product.price * (1 - totalDiscount);
+    const discountedBasePrice = product.price * (1 - totalDiscount);
+    
+    // Calculate GST
+    const gstAmount = discountedBasePrice * (currentMockTestSub.gstRate / 100);
+    const finalPrice = discountedBasePrice + gstAmount;
 
     setTimeout(() => {
-      if (walletData.balance < discountedPrice) {
+      if (walletData.balance < finalPrice) {
         toast({
           variant: "destructive",
           title: "Purchase Failed",
@@ -66,12 +74,12 @@ export default function StorePage() {
         return;
       }
       
-      walletData.balance -= discountedPrice;
+      walletData.balance -= finalPrice;
       addTransaction({
         id: Date.now(),
         type: 'withdrawal',
         description: `${product.name} Purchase`,
-        amount: -discountedPrice,
+        amount: -finalPrice,
         date: new Date().toISOString().split('T')[0],
         status: 'Completed',
         user: "Alex Doe"
@@ -79,7 +87,7 @@ export default function StorePage() {
 
       // Simulate IBA commission
       if (hasReferral) {
-        const totalCommission = discountedPrice * 0.1765;
+        const totalCommission = discountedBasePrice * 0.1765;
         if (referralCode2.trim() !== "") {
             // Split commission
             const commissionPerIba = totalCommission / 2;
@@ -100,7 +108,6 @@ export default function StorePage() {
       
       setBalance(walletData.balance);
       
-      // Simulate providing a product activation code
       const activationCode = `PROD-${String(Date.now()).slice(-5)}`;
 
       toast({
@@ -115,19 +122,22 @@ export default function StorePage() {
   
   const handleTicketPurchase = (pkg: TicketPackage) => {
       setIsPurchasing(pkg.price);
+      const gstAmount = pkg.price * (pkg.gstRate / 100);
+      const finalPrice = pkg.price + gstAmount;
+      
       setTimeout(() => {
-          if (walletData.balance < pkg.price) {
+          if (walletData.balance < finalPrice) {
               toast({ variant: 'destructive', title: "Purchase Failed", description: "Insufficient wallet balance." });
               setIsPurchasing(null);
               return;
           }
 
-          walletData.balance -= pkg.price;
+          walletData.balance -= finalPrice;
           addTransaction({
               id: Date.now(),
               type: 'withdrawal',
               description: `${pkg.tickets} Tickets Purchase`,
-              amount: -pkg.price,
+              amount: -finalPrice,
               date: new Date().toISOString(),
               status: 'Completed',
               user: 'Alex Doe',
@@ -141,27 +151,30 @@ export default function StorePage() {
   
   const handleReferboltPurchase = () => {
     setIsPurchasing('referbolt');
+    const cost = currentReferboltSub.price;
+    const gstAmount = cost * (currentReferboltSub.gstRate / 100);
+    const finalPrice = cost + gstAmount;
+
     setTimeout(() => {
-        const cost = storeConfig.referboltSubscription.price;
-        if (walletData.balance < cost) {
+        if (walletData.balance < finalPrice) {
             toast({ variant: 'destructive', title: "Purchase Failed", description: "Insufficient wallet balance." });
             setIsPurchasing(null);
             return;
         }
 
-        walletData.balance -= cost;
+        walletData.balance -= finalPrice;
         addTransaction({
             id: Date.now(),
             type: 'withdrawal',
             description: 'ReferBolt Subscription',
-            amount: -cost,
+            amount: -finalPrice,
             date: new Date().toISOString(),
             status: 'Completed',
             user: 'Alex Doe',
         });
         setBalance(walletData.balance);
         
-        const bonusTickets = storeConfig.referboltSubscription.ticketBonus;
+        const bonusTickets = currentReferboltSub.ticketBonus;
         toast({ 
             title: "Purchase Successful!", 
             description: `You are now subscribed to ReferBolt! A bonus of ${bonusTickets} tickets has been added to your account.`,
@@ -216,8 +229,10 @@ export default function StorePage() {
                     const baseDiscount = 0.05;
                     const referralDiscount = referralCode1.trim() !== "" ? 0.10 : 0;
                     const totalDiscount = baseDiscount + referralDiscount;
-                    const discountedPrice = product.price * (1 - totalDiscount);
-                  
+                    const discountedBasePrice = product.price * (1 - totalDiscount);
+                    const gstAmount = discountedBasePrice * (currentMockTestSub.gstRate / 100);
+                    const finalPrice = discountedBasePrice + gstAmount;
+
                   return (
                     <Card
                       key={index}
@@ -240,7 +255,10 @@ export default function StorePage() {
                       <CardContent className="flex-grow flex flex-col justify-center items-center space-y-4">
                          <div>
                             <p className="text-muted-foreground line-through">₹{product.price}</p>
-                            <p className="text-4xl font-bold">₹{discountedPrice.toFixed(0)}</p>
+                            <p className="text-4xl font-bold">₹{finalPrice.toFixed(0)}</p>
+                            <p className="text-xs text-muted-foreground">
+                                (Base: ₹{discountedBasePrice.toFixed(0)} + GST: ₹{gstAmount.toFixed(0)})
+                            </p>
                             <p className="text-sm font-semibold text-accent">You save {(totalDiscount * 100).toFixed(0)}%!</p>
                         </div>
                         <Button 
@@ -259,7 +277,10 @@ export default function StorePage() {
             <TabsContent value="tickets" className="space-y-6 pt-6">
                 <p className="text-center text-muted-foreground">Purchase tickets to play the GuessMaster skill game.</p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {currentPackages.map((pkg, index) => (
+                    {currentPackages.map((pkg, index) => {
+                        const gstAmount = pkg.price * (pkg.gstRate / 100);
+                        const finalPrice = pkg.price + gstAmount;
+                        return (
                         <Card key={index} className={`flex flex-col text-center transition-all ${pkg.bestValue ? 'border-primary border-2 shadow-primary/20 shadow-lg' : ''}`}>
                              {pkg.bestValue && (
                                 <div className="absolute top-0 right-0 -mt-3 -mr-3">
@@ -276,13 +297,14 @@ export default function StorePage() {
                                 <CardDescription>{pkg.games} Games</CardDescription>
                             </CardHeader>
                             <CardContent className="flex-grow flex flex-col justify-center items-center space-y-4">
-                                <p className="text-4xl font-bold">₹{pkg.price}</p>
+                                <p className="text-4xl font-bold">₹{finalPrice.toFixed(0)}</p>
+                                <p className="text-xs text-muted-foreground">(Incl. GST)</p>
                                 <Button size="lg" className="w-full" onClick={() => handleTicketPurchase(pkg)} disabled={isPurchasing !== null}>
                                      {isPurchasing === pkg.price ? <Loader2 className="animate-spin" /> : "Buy Now"}
                                 </Button>
                             </CardContent>
                         </Card>
-                    ))}
+                    )})}
                 </div>
             </TabsContent>
             <TabsContent value="referbolt" className="pt-6">
@@ -292,7 +314,8 @@ export default function StorePage() {
                          <CardDescription>{`Activate to earn commissions and get a bonus of ${currentReferboltSub.ticketBonus} tickets.`}</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        <p className="text-4xl font-bold">₹{currentReferboltSub.price}</p>
+                        <p className="text-4xl font-bold">₹{currentReferboltSub.price + (currentReferboltSub.price * (currentReferboltSub.gstRate / 100))}</p>
+                         <p className="text-xs text-muted-foreground">(Incl. GST)</p>
                         <Button size="lg" className="w-full" onClick={handleReferboltPurchase} disabled={isPurchasing !== null}>
                             {isPurchasing === 'referbolt' ? <Loader2 className="animate-spin"/> : "Subscribe Now"}
                         </Button>

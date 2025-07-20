@@ -27,11 +27,17 @@ import {
 
 const initialReferralData = {
   referralCode: "ALEX-IBA-5C",
-  totalReferrals: 0,
-  totalCommission: 0,
-  dailySales: 0,
-  monthlySales: 0,
-  recentReferrals: [],
+  totalReferrals: 5,
+  totalCommission: 441.25,
+  dailySales: 2,
+  monthlySales: 32,
+  recentReferrals: [
+    { id: 1, name: "Rohan Patel", date: "2024-08-02", commission: 88.25 },
+    { id: 2, name: "Priya Singh", date: "2024-08-02", commission: 88.25 },
+    { id: 3, name: "Amit Kumar", date: "2024-08-01", commission: 88.25 },
+    { id: 4, name: "Sneha Reddy", date: "2024-07-30", commission: 88.25 },
+    { id: 5, name: "Vikas Sharma", date: "2024-07-29", commission: 88.25 },
+  ],
   salesHistory: [
       { month: "Jan", sales: 12 },
       { month: "Feb", sales: 19 },
@@ -125,7 +131,7 @@ Take your exam preparation to the next level with mock tests and AI-powered stud
             <div className="grid grid-cols-2 gap-4 text-center">
                 <Card>
                     <CardHeader>
-                        <CardTitle className="text-2xl flex items-center justify-center gap-2"><IndianRupee/>{referralData.totalCommission}</CardTitle>
+                        <CardTitle className="text-2xl flex items-center justify-center gap-2"><IndianRupee/>{referralData.totalCommission.toFixed(2)}</CardTitle>
                         <CardDescription>Total Commission</CardDescription>
                     </CardHeader>
                 </Card>
@@ -254,7 +260,7 @@ Take your exam preparation to the next level with mock tests and AI-powered stud
                             {referralData.recentReferrals.length > 0 ? referralData.recentReferrals.map((ref: any) => (
                                 <TableRow key={ref.id}>
                                     <TableCell>{ref.name}</TableCell>
-                                    <TableCell>{ref.date}</TableCell>
+                                    <TableCell>{new Date(ref.date).toLocaleDateString()}</TableCell>
                                     <TableCell className="text-right text-green-600 font-bold">+ ₹{ref.commission.toFixed(2)}</TableCell>
                                 </TableRow>
                             )) : (
@@ -269,3 +275,5 @@ Take your exam preparation to the next level with mock tests and AI-powered stud
     </div>
   );
 }
+
+    

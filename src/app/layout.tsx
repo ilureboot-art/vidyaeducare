@@ -8,6 +8,7 @@ import { AppHeader } from '@/components/AppHeader';
 import { usePathname } from 'next/navigation';
 import { Navbar } from '@/components/Navbar';
 import { ChatWidget } from '@/components/ChatWidget';
+import { ThemeProvider } from "next-themes";
 
 export default function RootLayout({
   children,
@@ -21,7 +22,7 @@ export default function RootLayout({
   const bodyClassName = `font-body antialiased ${isAdminPage ? '' : 'flex flex-col min-h-screen'}`;
   
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -29,21 +30,28 @@ export default function RootLayout({
         <title>Vidya EduCare</title>
       </head>
       <body className={bodyClassName}>
-        {isAdminPage ? (
-          <>{children}</>
-        ) : isAuthPage ? (
-          <main className="flex-1 flex flex-col w-full">{children}</main>
-        ) : (
-          <>
-            <AppHeader />
-            <main className="flex-1 flex flex-col items-center w-full p-4 pb-24 pt-20">
-              {children}
-            </main>
-            <Navbar />
-            <ChatWidget />
-          </>
-        )}
-        <Toaster />
+        <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+        >
+            {isAdminPage ? (
+              <>{children}</>
+            ) : isAuthPage ? (
+              <main className="flex-1 flex flex-col w-full">{children}</main>
+            ) : (
+              <>
+                <AppHeader />
+                <main className="flex-1 flex flex-col items-center w-full p-4 pb-24 pt-20">
+                  {children}
+                </main>
+                <Navbar />
+                <ChatWidget />
+              </>
+            )}
+            <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );

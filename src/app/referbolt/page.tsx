@@ -12,7 +12,7 @@ import Link from "next/link";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { walletData, addTransaction } from "@/lib/user-data";
-import { initialReferboltSubscription } from "@/lib/store-config";
+import { storeConfig } from "@/lib/store-config";
 
 // Data for ReferBolt would come from a backend for the logged-in user
 const initialReferboltData = {
@@ -29,7 +29,7 @@ const benefits = [
     { text: "Earn a ₹50 commission for every referral who subscribes." },
     { text: "Complete a cycle with just 3 referrals." },
     { text: "Earn from both direct & indirect referrals as your network grows." },
-    { text: "Get a bonus of 4 game tickets (worth 8 games) upon subscribing." },
+    { text: `Get a bonus of ${storeConfig.referboltSubscription.ticketBonus} game tickets (worth ${storeConfig.referboltSubscription.ticketBonus * 2} games) upon subscribing.` },
     { text: "Unlimited earning potential through continuous cycles." },
 ];
 

@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Gamepad2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { initialReferralBonus } from "@/lib/store-config";
+import { storeConfig } from "@/lib/store-config";
 import { addTransaction } from "@/lib/user-data";
 import { addNotification } from "@/lib/notifications";
 
@@ -63,14 +63,14 @@ export default function SignupPage() {
                 id: Date.now(),
                 type: 'deposit',
                 description: 'Welcome Bonus (from referral)',
-                amount: initialReferralBonus,
+                amount: storeConfig.referralBonus,
                 date: new Date().toISOString(),
                 status: 'Completed',
                 user: "New User" // In a real app, this would be the new user's name
             });
             addNotification({
               type: 'deposit_received',
-              message: `You received a ₹${initialReferralBonus} Welcome Bonus!`,
+              message: `You received a ₹${storeConfig.referralBonus} Welcome Bonus!`,
               userId: 'user-alex-doe' // This should be the new user's ID
             });
 
@@ -80,14 +80,14 @@ export default function SignupPage() {
                 id: Date.now() + 1, // To avoid key collision
                 type: 'deposit',
                 description: `Referral Bonus for new user`,
-                amount: initialReferralBonus,
+                amount: storeConfig.referralBonus,
                 date: new Date().toISOString(),
                 status: 'Completed',
                 user: "Alex Doe" // This is the referrer
             });
              addNotification({
               type: 'deposit_received',
-              message: `You received a ₹${initialReferralBonus} bonus for referring a new user.`,
+              message: `You received a ₹${storeConfig.referralBonus} bonus for referring a new user.`,
               userId: 'user-alex-doe' // This is the referrer's ID
             });
         }

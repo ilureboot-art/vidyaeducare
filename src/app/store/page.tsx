@@ -9,7 +9,7 @@ import { ShoppingCart, Sparkles, Loader2, BookOpen, Ticket, Zap } from "lucide-r
 import { walletData, addTransaction } from "@/lib/user-data";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { initialPackages, initialReferboltSubscription, type TicketPackage } from "@/lib/store-config";
+import { storeConfig, type TicketPackage } from "@/lib/store-config";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const subscriptionProducts = [
@@ -23,17 +23,26 @@ export default function StorePage() {
   const [balance, setBalance] = useState(walletData.balance);
   const [referralCode1, setReferralCode1] = useState("");
   const [referralCode2, setReferralCode2] = useState("");
+  const [currentPackages, setCurrentPackages] = useState<TicketPackage[]>([]);
+  const [currentReferboltSub, setCurrentReferboltSub] = useState(storeConfig.referboltSubscription);
 
 
-  // This effect keeps the local balance in sync with the central data store
+  // This effect keeps the local state in sync with the central data store
   useEffect(() => {
     const interval = setInterval(() => {
       if (walletData.balance !== balance) {
         setBalance(walletData.balance);
       }
+      // Check if config has changed
+      if (JSON.stringify(storeConfig.packages) !== JSON.stringify(currentPackages)) {
+        setCurrentPackages([...storeConfig.packages]);
+      }
+       if (JSON.stringify(storeConfig.referboltSubscription) !== JSON.stringify(currentReferboltSub)) {
+        setCurrentReferboltSub({...storeConfig.referboltSubscription});
+      }
     }, 500); // Check for updates periodically
     return () => clearInterval(interval);
-  }, [balance]);
+  }, [balance, currentPackages, currentReferboltSub]);
 
   const handleSubscriptionPurchase = (index: number) => {
     setIsPurchasing(index);
@@ -133,7 +142,7 @@ export default function StorePage() {
   const handleReferboltPurchase = () => {
     setIsPurchasing('referbolt');
     setTimeout(() => {
-        const cost = initialReferboltSubscription.price;
+        const cost = storeConfig.referboltSubscription.price;
         if (walletData.balance < cost) {
             toast({ variant: 'destructive', title: "Purchase Failed", description: "Insufficient wallet balance." });
             setIsPurchasing(null);
@@ -152,11 +161,10 @@ export default function StorePage() {
         });
         setBalance(walletData.balance);
         
-        // In a real app, you would add the tickets to the user's ticket balance.
-        // For this simulation, we'll just show a toast message.
+        const bonusTickets = storeConfig.referboltSubscription.ticketBonus;
         toast({ 
             title: "Purchase Successful!", 
-            description: "You are now subscribed to ReferBolt! A bonus of 4 tickets has been added to your account.",
+            description: `You are now subscribed to ReferBolt! A bonus of ${bonusTickets} tickets has been added to your account.`,
             duration: 7000
         });
         setIsPurchasing(null);
@@ -251,7 +259,7 @@ export default function StorePage() {
             <TabsContent value="tickets" className="space-y-6 pt-6">
                 <p className="text-center text-muted-foreground">Purchase tickets to play the GuessMaster skill game.</p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {initialPackages.map((pkg, index) => (
+                    {currentPackages.map((pkg, index) => (
                         <Card key={index} className={`flex flex-col text-center transition-all ${pkg.bestValue ? 'border-primary border-2 shadow-primary/20 shadow-lg' : ''}`}>
                              {pkg.bestValue && (
                                 <div className="absolute top-0 right-0 -mt-3 -mr-3">
@@ -280,11 +288,11 @@ export default function StorePage() {
             <TabsContent value="referbolt" className="pt-6">
                 <Card className="flex flex-col text-center items-center max-w-md mx-auto">
                     <CardHeader>
-                        <CardTitle className="text-2xl flex items-center gap-2"><Zap className="text-primary"/> ReferBolt Subscription</CardTitle>
-                         <CardDescription>{initialReferboltSubscription.description}</CardDescription>
+                        <CardTitle className="text-2xl flex items-center gap-2"><Zap className="text-primary"/> {currentReferboltSub.name} Subscription</CardTitle>
+                         <CardDescription>{`Activate to earn commissions and get a bonus of ${currentReferboltSub.ticketBonus} tickets.`}</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        <p className="text-4xl font-bold">₹{initialReferboltSubscription.price}</p>
+                        <p className="text-4xl font-bold">₹{currentReferboltSub.price}</p>
                         <Button size="lg" className="w-full" onClick={handleReferboltPurchase} disabled={isPurchasing !== null}>
                             {isPurchasing === 'referbolt' ? <Loader2 className="animate-spin"/> : "Subscribe Now"}
                         </Button>

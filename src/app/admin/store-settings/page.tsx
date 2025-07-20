@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -9,23 +9,32 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PlusCircle, Trash2, Zap } from "lucide-react";
-import type { TicketPackage } from "@/lib/store-config";
-import { initialPackages, initialReferboltSubscription, initialReferralBonus } from "@/lib/store-config";
+import type { TicketPackage, ReferboltSubscription } from "@/lib/store-config";
+import {
+  storeConfig,
+  setPackages,
+  setReferralBonus,
+  setReferboltSubscription
+} from "@/lib/store-config";
 
 export default function AdminStoreSettingsPage() {
   const { toast } = useToast();
-  const [packages, setPackages] = useState<TicketPackage[]>(initialPackages);
-  const [referralBonus, setReferralBonus] = useState(initialReferralBonus);
-  const [referboltCost, setReferboltCost] = useState(initialReferboltSubscription.price);
-  const [referboltCommission, setReferboltCommission] = useState(50);
-  const [referboltTickets, setReferboltTickets] = useState(4);
+  const [packages, setLocalPackages] = useState<TicketPackage[]>([]);
+  const [referralBonus, setLocalReferralBonus] = useState(0);
+  const [referboltSub, setLocalReferboltSub] = useState<ReferboltSubscription>({ name: '', price: 0, description: '', ticketBonus: 0 });
+
+  useEffect(() => {
+    setLocalPackages(storeConfig.packages);
+    setLocalReferralBonus(storeConfig.referralBonus);
+    setLocalReferboltSub(storeConfig.referboltSubscription);
+  }, []);
 
   const handlePackageChange = (index: number, field: keyof TicketPackage, value: string | number | boolean) => {
     const newPackages = [...packages];
     const pkg = { ...newPackages[index] };
 
     if (typeof pkg[field] === 'number') {
-      value = Number(value);
+      value = Number(value) || 0;
     }
     
     (pkg as any)[field] = value;
@@ -39,24 +48,37 @@ export default function AdminStoreSettingsPage() {
     }
 
     newPackages[index] = pkg;
-    setPackages(newPackages);
+    setLocalPackages(newPackages);
+  };
+  
+  const handleReferboltChange = (field: keyof ReferboltSubscription, value: string | number) => {
+    const newSub = { ...referboltSub };
+     if (typeof newSub[field] === 'number') {
+      value = Number(value) || 0;
+    }
+    (newSub as any)[field] = value;
+    setLocalReferboltSub(newSub);
   };
 
   const addPackage = () => {
-    setPackages([...packages, { tickets: 0, price: 0, bestValue: false, games: 0 }]);
+    setLocalPackages([...packages, { tickets: 0, price: 0, bestValue: false, games: 0 }]);
   };
 
   const removePackage = (index: number) => {
-    setPackages(packages.filter((_, i) => i !== index));
+    setLocalPackages(packages.filter((_, i) => i !== index));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Saving store settings:", { packages, referralBonus, referboltCost, referboltCommission, referboltTickets });
+    
+    // Call the setter functions to update the shared configuration
+    setPackages(packages);
+    setReferralBonus(referralBonus);
+    setReferboltSubscription(referboltSub);
+
     toast({
-      title: "Settings Saved (Simulation)!",
-      description: "In a real app, these changes would be persisted. To see changes reflected in the user store, please modify src/lib/store-config.ts.",
-      duration: 8000
+      title: "Settings Saved!",
+      description: "Your changes have been applied across the application.",
     });
   };
 
@@ -112,7 +134,7 @@ export default function AdminStoreSettingsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="referralBonus">Referral & Welcome Bonus (₹)</Label>
-                <Input id="referralBonus" type="number" value={referralBonus} onChange={(e) => setReferralBonus(Number(e.target.value))} />
+                <Input id="referralBonus" type="number" value={referralBonus} onChange={(e) => setLocalReferralBonus(Number(e.target.value))} />
                 <p className="text-xs text-muted-foreground">This amount is given to both the referrer and the new user.</p>
               </div>
             </div>
@@ -128,15 +150,11 @@ export default function AdminStoreSettingsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="referboltCost">Subscription Cost (₹)</Label>
-                <Input id="referboltCost" type="number" value={referboltCost} onChange={(e) => setReferboltCost(Number(e.target.value))} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="referboltCommission">Referral Commission (₹)</Label>
-                <Input id="referboltCommission" type="number" value={referboltCommission} onChange={(e) => setReferboltCommission(Number(e.target.value))} />
+                <Input id="referboltCost" type="number" value={referboltSub.price} onChange={(e) => handleReferboltChange('price', e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="referboltTickets">Ticket Bonus (on subscribe)</Label>
-                <Input id="referboltTickets" type="number" value={referboltTickets} onChange={(e) => setReferboltTickets(Number(e.target.value))} />
+                <Input id="referboltTickets" type="number" value={referboltSub.ticketBonus} onChange={(e) => handleReferboltChange('ticketBonus', e.target.value)} />
               </div>
             </div>
           </CardContent>

@@ -35,7 +35,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { walletData, addTransaction } from "@/lib/user-data";
-import { initialReferralBonus } from "@/lib/store-config";
+import { storeConfig } from "@/lib/store-config";
 import { addNotification } from "@/lib/notifications";
 
 
@@ -221,7 +221,7 @@ export default function PlayPage() {
     const message = `🎮 Join GuessMaster - India's Best Skill Gaming Platform! 🎮
 
 🚀 Use my referral code: ${referralCode}
-💰 Get a ₹${initialReferralBonus} instant bonus on signup!
+💰 Get a ₹${storeConfig.referralBonus} instant bonus on signup!
 
 🎯 Play exciting skill-based number guessing games and win real cash.
 💰 **Prize structure for correct guesses:**

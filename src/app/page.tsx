@@ -7,7 +7,7 @@ import { BookOpen, Trophy, Users, LogIn, CheckCircle, GraduationCap, Gamepad2, I
 import Link from "next/link";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
-import { initialReferralBonus } from "@/lib/store-config";
+import { storeConfig } from "@/lib/store-config";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 const features = [
@@ -58,7 +58,7 @@ export default function HomePage() {
     const url = `${window.location.origin}/signup?ref=${referralCode}`;
     const message = `🎓 Check out Vidya EduCare! It's an amazing platform for mock tests, skill-based games, and earning rewards. 
     
-Use my code ✨ ${referralCode} ✨ to get a ₹${initialReferralBonus} bonus when you join!
+Use my code ✨ ${referralCode} ✨ to get a ₹${storeConfig.referralBonus} bonus when you join!
 
 Here's what you get:
 - 📚 Access to a huge library of mock tests.

@@ -257,7 +257,7 @@ export default function StorePage() {
                             <p className="text-muted-foreground line-through">₹{product.price}</p>
                             <p className="text-4xl font-bold">₹{finalPrice.toFixed(0)}</p>
                             <p className="text-xs text-muted-foreground">
-                                (Base: ₹{discountedBasePrice.toFixed(0)} + GST: ₹{gstAmount.toFixed(0)})
+                                (Base: ₹{discountedBasePrice.toFixed(0)} + GST @ {currentMockTestSub.gstRate}%: ₹{gstAmount.toFixed(0)})
                             </p>
                             <p className="text-sm font-semibold text-accent">You save {(totalDiscount * 100).toFixed(0)}%!</p>
                         </div>

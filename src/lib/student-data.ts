@@ -66,3 +66,5 @@ export function deleteStudent(studentId: string) {
         studentData.splice(index, 1);
     }
 }
+
+    

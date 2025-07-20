@@ -100,7 +100,7 @@ export default function MockTestPage() {
 
     const handlePrevQuestion = () => {
         if (currentQuestionIndex > 0) {
-            setCurrentQuestionIndex(prev => prev + 1);
+            setCurrentQuestionIndex(prev => prev - 1);
         }
     };
 
@@ -301,7 +301,21 @@ export default function MockTestPage() {
                         </Button>
                      )}
                 </div>
+                 <div className="flex justify-between items-center pt-4">
+                    <Button variant="outline" onClick={handlePrevQuestion} disabled={currentQuestionIndex === 0}>
+                        Previous
+                    </Button>
+                     {currentQuestionIndex === activeQuestions.length - 1 ? (
+                         <Button onClick={handleSubmitTest} className="bg-accent text-accent-foreground hover:bg-accent/90">Submit Test</Button>
+                     ) : (
+                        <Button onClick={handleNextQuestion}>
+                            Next
+                        </Button>
+                     )}
+                </div>
             </CardContent>
         </Card>
     )
 }
+
+    

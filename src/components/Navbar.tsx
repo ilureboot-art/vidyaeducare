@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/", label: "Home", icon: Home },
-  { href: "/student/dashboard", label: "Student", icon: LayoutDashboard },
+  { href: "/mock-test", label: "Mock Test", icon: BookOpen },
   { href: "/play", label: "Play", icon: Gamepad2 },
   { href: "/profile", label: "My Students", icon: Users },
   { href: "/wallet", label: "Wallet", icon: Wallet },
@@ -45,3 +45,5 @@ export function Navbar() {
     </div>
   );
 }
+
+    

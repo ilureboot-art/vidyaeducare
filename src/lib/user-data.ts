@@ -17,15 +17,29 @@ export const walletData: {
   adminPaymentMethods: {
     upiId: string;
     gpayNumber: string;
+    gpayUpiId: string;
     phonepeNumber: string;
+    phonepeUpiId: string;
+    accountHolderName: string;
+    accountNumber: string;
+    ifscCode: string;
+    bankName: string;
+    qrCodeUrl: string;
   };
   transactions: Transaction[];
 } = {
   balance: 50.00,
   adminPaymentMethods: {
-    upiId: "admin-upi@okhdfcbank",
-    gpayNumber: "+91 98765 43210",
-    phonepeNumber: "+91 98765 43210",
+    accountHolderName: "Sanjay Gurav (Founder/owner : Vidya Educare)",
+    accountNumber: "123101501925",
+    ifscCode: "icic0001200",
+    bankName: "ICICI Bank",
+    upiId: "sanjug123@icici",
+    gpayNumber: "9167992350",
+    gpayUpiId: "sanjaygurav0720@okicici",
+    phonepeNumber: "9167992350",
+    phonepeUpiId: "9167992350@ybl",
+    qrCodeUrl: "", // Admin can upload this
   },
   transactions: [],
 };

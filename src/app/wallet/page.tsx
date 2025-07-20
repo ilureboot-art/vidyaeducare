@@ -28,6 +28,7 @@ import Link from "next/link";
 import { walletData, addTransaction, type Transaction } from "@/lib/user-data";
 import { Badge } from "@/components/ui/badge";
 import { addNotification } from "@/lib/notifications";
+import { Separator } from "@/components/ui/separator";
 
 const getStatusBadgeVariant = (status: string) => {
     switch (status.toLowerCase()) {
@@ -173,6 +174,8 @@ export default function WalletPage() {
     form.reset();
   }
 
+  const { adminPaymentMethods } = walletData;
+
   return (
     <div className="w-full max-w-2xl mx-auto space-y-6">
       <Card className="shadow-lg">
@@ -190,7 +193,7 @@ export default function WalletPage() {
               <DialogTrigger asChild>
                 <Button size="lg" variant="outline"><PlusCircle className="mr-2"/> Add Funds</Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-w-md">
                 <DialogHeader>
                   <DialogTitle>Add Funds</DialogTitle>
                   <DialogDescription>
@@ -198,11 +201,24 @@ export default function WalletPage() {
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
-                    <div className="p-3 bg-muted rounded-md text-sm space-y-2">
+                    <div className="p-4 bg-muted rounded-md text-sm space-y-3">
                         <p className="font-semibold flex items-center gap-2"><Info className="w-4 h-4" />Admin Payment Details</p>
-                        <p>UPI ID: <span className="font-mono">{walletData.adminPaymentMethods.upiId}</span></p>
-                        <p>GPay: <span className="font-mono">{walletData.adminPaymentMethods.gpayNumber}</span></p>
-                        <p>PhonePe: <span className="font-mono">{walletData.adminPaymentMethods.phonepeNumber}</span></p>
+                        
+                        <div>
+                            <p className="font-bold">Bank Transfer</p>
+                            <p>Name: <span className="font-mono">{adminPaymentMethods.accountHolderName}</span></p>
+                            <p>Account: <span className="font-mono">{adminPaymentMethods.accountNumber}</span></p>
+                            <p>IFSC: <span className="font-mono">{adminPaymentMethods.ifscCode}</span></p>
+                            <p>Bank: <span className="font-mono">{adminPaymentMethods.bankName}</span></p>
+                        </div>
+                        <Separator />
+                        <div>
+                            <p className="font-bold">UPI</p>
+                            <p>GPay: <span className="font-mono">{adminPaymentMethods.gpayNumber}</span> / <span className="font-mono">{adminPaymentMethods.gpayUpiId}</span></p>
+                            <p>PhonePe: <span className="font-mono">{adminPaymentMethods.phonepeNumber}</span> / <span className="font-mono">{adminPaymentMethods.phonepeUpiId}</span></p>
+                            <p>Main UPI: <span className="font-mono">{adminPaymentMethods.upiId}</span></p>
+                        </div>
+                        
                          <p className="text-xs pt-2 text-muted-foreground">You can also scan a QR code if provided by the admin.</p>
                     </div>
                     <form onSubmit={handleAddFunds} className="space-y-4">

@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Share2, Copy, Users, IndianRupee, Goal, Percent, ShieldCheck, ChevronRight, BarChart3, TrendingUp } from "lucide-react";
+import { Share2, Copy, Users, IndianRupee, Goal, Percent, ShieldCheck, ChevronRight, BarChart3, TrendingUp, HelpCircle } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -17,6 +17,13 @@ import {
 import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
+import {
+  Tooltip as ShadTooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
 
 const initialReferralData = {
   referralCode: "ALEX-IBA-5C",
@@ -157,6 +164,26 @@ Take your exam preparation to the next level with mock tests and AI-powered stud
                         <span>Your sales are trending upwards this year. Keep up the great work!</span>
                     </div>
                 </CardFooter>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><Percent/> Commission Structure</CardTitle>
+                    <CardDescription>Your commission rates for referring new clients.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="p-4 bg-muted/50 rounded-lg">
+                        <h4 className="font-semibold">Mock Test Subscriptions</h4>
+                        <div className="flex items-baseline justify-between mt-2">
+                             <p className="text-2xl font-bold text-primary">17.65%</p>
+                             <p className="text-sm text-muted-foreground">of base price</p>
+                        </div>
+                    </div>
+                     <div className="flex items-center text-sm text-muted-foreground">
+                        <HelpCircle className="w-4 h-4 mr-2"/>
+                        <span>If a sale involves two IBA codes, the commission is split 50/50 between them.</span>
+                    </div>
+                </CardContent>
             </Card>
 
             <Card>

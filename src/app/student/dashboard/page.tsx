@@ -1,5 +1,19 @@
-// This page is deprecated and will be removed.
-// The new student management page is at /profile
+
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+
+// This page is deprecated and has been replaced by the /profile page,
+// which now functions as a multi-student management hub.
 export default function DeprecatedStudentDashboard() {
-    return null;
+  const router = useRouter();
+
+  useEffect(() => {
+    router.replace("/profile");
+  }, [router]);
+  
+  return null;
 }
+
+    

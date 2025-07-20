@@ -18,7 +18,6 @@ const navItems = [
     { href: "/store", label: "Store", icon: Store },
     { href: "/referbolt", label: "ReferBolt", icon: Zap },
     { href: "/wallet", label: "Wallet", icon: Wallet },
-    { href: "/profile", label: "My Profile", icon: User },
     { href: "/transactions", label: "Transactions", icon: History },
     { href: "/settings", label: "Settings", icon: Settings },
 ];
@@ -99,7 +98,5 @@ export function AppHeader() {
     </header>
   );
 }
-
-    
 
     

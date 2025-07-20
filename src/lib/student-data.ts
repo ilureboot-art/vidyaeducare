@@ -24,7 +24,7 @@ export type StudentProfile = {
 export const studentData: StudentProfile[] = [
     {
         id: "STU-D7F6E5C",
-        name: "Alex Doe",
+        name: "Anjali Singh",
         dob: "2008-05-15",
         avatarUrl: "https://placehold.co/100x100.png",
         academic: {
@@ -36,9 +36,9 @@ export const studentData: StudentProfile[] = [
             subjects: ["Maths", "Science", "English", "History", "General Knowledge"],
         },
         stats: {
-            totalEarnings: 0,
-            testsTaken: 0,
-            avgScore: 0,
+            totalEarnings: 150,
+            testsTaken: 5,
+            avgScore: 88,
         },
         badges: ["Gold", "Silver"],
     }
@@ -51,7 +51,10 @@ export let validActivationCodes = ["PROD-A1B2C", "PROD-X9Y8Z", "PROD-M4N5P"];
 
 // Function to "use" a code, removing it from the valid list.
 export function useActivationCode(code: string) {
-    validActivationCodes = validActivationCodes.filter(c => c !== code);
+    const index = validActivationCodes.indexOf(code);
+    if (index > -1) {
+        validActivationCodes.splice(index, 1);
+    }
 }
 
 // Function to add a new student profile.
@@ -66,7 +69,5 @@ export function deleteStudent(studentId: string) {
         studentData.splice(index, 1);
     }
 }
-
-    
 
     

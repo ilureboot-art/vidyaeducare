@@ -15,7 +15,7 @@ export const initialPackages: TicketPackage[] = [
 export const initialReferboltSubscription = {
     name: "ReferBolt",
     price: 100,
-    description: "Activate to earn commissions and get 4 bonus tickets (8 games).",
+    description: "Activate to earn commissions and get a bonus of 4 tickets (worth 8 games).",
 };
 
 export const initialReferralBonus = 5;

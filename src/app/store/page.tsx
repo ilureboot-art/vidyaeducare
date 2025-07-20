@@ -151,8 +151,14 @@ export default function StorePage() {
             user: 'Alex Doe',
         });
         setBalance(walletData.balance);
-
-        toast({ title: "Purchase Successful!", description: "You are now subscribed to ReferBolt!" });
+        
+        // In a real app, you would add the tickets to the user's ticket balance.
+        // For this simulation, we'll just show a toast message.
+        toast({ 
+            title: "Purchase Successful!", 
+            description: "You are now subscribed to ReferBolt! A bonus of 4 tickets has been added to your account.",
+            duration: 7000
+        });
         setIsPurchasing(null);
     }, 1500);
   };
@@ -291,5 +297,3 @@ export default function StorePage() {
     </div>
   );
 }
-
-    

@@ -7,9 +7,9 @@ export type TicketPackage = {
 };
 
 export const initialPackages: TicketPackage[] = [
-  { tickets: 5, price: 10, bestValue: false, games: 10 },
-  { tickets: 15, price: 25, bestValue: true, games: 30 },
-  { tickets: 30, price: 45, bestValue: false, games: 60 },
+  { tickets: 1, price: 25, bestValue: false, games: 2 },
+  { tickets: 5, price: 120, bestValue: false, games: 10 },
+  { tickets: 10, price: 225, bestValue: true, games: 20 },
 ];
 
 export const initialReferboltSubscription = {

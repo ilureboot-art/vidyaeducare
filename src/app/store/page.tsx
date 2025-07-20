@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { storeConfig, type TicketPackage, type ReferboltSubscription, type MockTestSubscription } from "@/lib/store-config";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { validActivationCodes } from "@/lib/student-data";
 
 const subscriptionProducts = [
     { name: "1 Year Subscription", price: 3000, months: 12, bestValue: true },
@@ -109,6 +110,7 @@ export default function StorePage() {
       setBalance(walletData.balance);
       
       const activationCode = `PROD-${String(Date.now()).slice(-5)}`;
+      validActivationCodes.push(activationCode);
 
       toast({
         title: "Purchase Successful!",

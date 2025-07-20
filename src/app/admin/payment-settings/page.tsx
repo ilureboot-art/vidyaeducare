@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -8,25 +9,48 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Landmark } from "lucide-react";
 import { walletData } from "@/lib/user-data";
-import { useState } from "react";
 
 export default function PaymentSettingsPage() {
     const { toast } = useToast();
     const [methods, setMethods] = useState(walletData.adminPaymentMethods);
+    const [qrFile, setQrFile] = useState<File | null>(null);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setMethods(prev => ({ ...prev, [name]: value }));
     };
 
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            setQrFile(e.target.files[0]);
+        }
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        // In a real app, this would be an API call. Here we update the shared object.
-        Object.assign(walletData.adminPaymentMethods, methods);
-        toast({
-            title: "Settings Saved!",
-            description: "Payment method details have been successfully updated.",
-        });
+        
+        const updateConfig = () => {
+             // In a real app, this would be an API call. Here we update the shared object.
+            Object.assign(walletData.adminPaymentMethods, methods);
+            toast({
+                title: "Settings Saved!",
+                description: "Payment method details have been successfully updated.",
+            });
+        }
+        
+        if (qrFile) {
+            // Simulate file upload and getting a URL
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const dataUrl = reader.result as string;
+                walletData.adminPaymentMethods.qrCodeUrl = dataUrl;
+                updateConfig();
+            };
+            reader.readAsDataURL(qrFile);
+        } else {
+             updateConfig();
+        }
+
     }
 
   return (
@@ -86,8 +110,9 @@ export default function PaymentSettingsPage() {
                         </div>
                          <div className="space-y-2 col-span-full">
                             <Label htmlFor="qrCode">Payment QR Code</Label>
-                            <Input id="qrCode" type="file" />
+                            <Input id="qrCode" type="file" onChange={handleFileChange} accept="image/png, image/jpeg, image/webp" />
                             <p className="text-xs text-muted-foreground">Upload an image of the payment QR code. It will be displayed to users.</p>
+                            {methods.qrCodeUrl && <img src={methods.qrCodeUrl} alt="Current QR Code" className="w-24 h-24 mt-2 rounded-md" />}
                         </div>
                     </div>
                 </div>

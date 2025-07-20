@@ -28,7 +28,9 @@ import Link from "next/link";
 import { walletData, addTransaction, type Transaction } from "@/lib/user-data";
 import { Badge } from "@/components/ui/badge";
 import { addNotification } from "@/lib/notifications";
-import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import Image from "next/image";
+import { CopyButton } from "@/components/CopyButton";
 
 const getStatusBadgeVariant = (status: string) => {
     switch (status.toLowerCase()) {
@@ -197,38 +199,64 @@ export default function WalletPage() {
                 <DialogHeader>
                   <DialogTitle>Add Funds</DialogTitle>
                   <DialogDescription>
-                    Send payment to the admin details below and enter the transaction reference ID.
+                    Send payment to one of the admin methods below and enter the transaction ID to confirm.
                   </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-4">
-                    <div className="p-4 bg-muted rounded-md text-sm space-y-3">
-                        <p className="font-semibold flex items-center gap-2"><Info className="w-4 h-4" />Admin Payment Details</p>
-                        
-                        <div>
-                            <p className="font-bold">Bank Transfer</p>
-                            <p>Name: <span className="font-mono">{adminPaymentMethods.accountHolderName}</span></p>
-                            <p>Account: <span className="font-mono">{adminPaymentMethods.accountNumber}</span></p>
-                            <p>IFSC: <span className="font-mono">{adminPaymentMethods.ifscCode}</span></p>
-                            <p>Bank: <span className="font-mono">{adminPaymentMethods.bankName}</span></p>
-                        </div>
-                        <Separator />
-                        <div>
-                            <p className="font-bold">UPI</p>
-                            <p>GPay: <span className="font-mono">{adminPaymentMethods.gpayNumber}</span> / <span className="font-mono">{adminPaymentMethods.gpayUpiId}</span></p>
-                            <p>PhonePe: <span className="font-mono">{adminPaymentMethods.phonepeNumber}</span> / <span className="font-mono">{adminPaymentMethods.phonepeUpiId}</span></p>
-                            <p>Main UPI: <span className="font-mono">{adminPaymentMethods.upiId}</span></p>
-                        </div>
-                        
-                         <p className="text-xs pt-2 text-muted-foreground">You can also scan a QR code if provided by the admin.</p>
-                    </div>
-                    <form onSubmit={handleAddFunds} className="space-y-4">
+                <div className="space-y-4 pt-2">
+                    <Tabs defaultValue="upi" className="w-full">
+                        <TabsList className="grid w-full grid-cols-2">
+                            <TabsTrigger value="upi">UPI / QR Code</TabsTrigger>
+                            <TabsTrigger value="bank">Bank Transfer</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="upi" className="pt-4 space-y-4">
+                            <p className="text-sm text-center text-muted-foreground">Scan the QR code or use one of the UPI IDs below.</p>
+                            {adminPaymentMethods.qrCodeUrl && (
+                                <div className="flex justify-center p-4 bg-muted rounded-lg">
+                                    <Image src={adminPaymentMethods.qrCodeUrl} alt="Payment QR Code" width={200} height={200} data-ai-hint="QR code" />
+                                </div>
+                            )}
+                            <div className="space-y-2 text-sm">
+                                <div className="flex justify-between items-center p-2 rounded-md hover:bg-muted">
+                                    <span className="font-semibold">GPay:</span>
+                                    <CopyButton valueToCopy={adminPaymentMethods.gpayNumber} />
+                                </div>
+                                <div className="flex justify-between items-center p-2 rounded-md hover:bg-muted">
+                                    <span className="font-semibold">PhonePe:</span>
+                                    <CopyButton valueToCopy={adminPaymentMethods.phonepeNumber} />
+                                </div>
+                                <div className="flex justify-between items-center p-2 rounded-md hover:bg-muted">
+                                    <span className="font-semibold">Main UPI ID:</span>
+                                    <CopyButton valueToCopy={adminPaymentMethods.upiId} />
+                                </div>
+                            </div>
+                        </TabsContent>
+                        <TabsContent value="bank" className="pt-4 space-y-2 text-sm">
+                             <div className="flex justify-between items-center p-2 rounded-md hover:bg-muted">
+                                <span>Account Name:</span>
+                                <CopyButton valueToCopy={adminPaymentMethods.accountHolderName} />
+                            </div>
+                             <div className="flex justify-between items-center p-2 rounded-md hover:bg-muted">
+                                <span>Account No:</span>
+                                <CopyButton valueToCopy={adminPaymentMethods.accountNumber} />
+                            </div>
+                            <div className="flex justify-between items-center p-2 rounded-md hover:bg-muted">
+                                <span>IFSC Code:</span>
+                                 <CopyButton valueToCopy={adminPaymentMethods.ifscCode} />
+                            </div>
+                             <div className="flex justify-between items-center p-2 rounded-md hover:bg-muted">
+                                <span>Bank Name:</span>
+                                <span className="font-medium text-right">{adminPaymentMethods.bankName}</span>
+                            </div>
+                        </TabsContent>
+                    </Tabs>
+                    <form onSubmit={handleAddFunds} className="space-y-4 border-t pt-4">
                         <div>
                             <Label htmlFor="amount-add">Amount (INR)</Label>
                             <Input id="amount-add" name="amount-add" type="number" placeholder="e.g., 500" required />
                         </div>
                         <div>
                             <Label htmlFor="txnId">Transaction Reference ID</Label>
-                            <Input id="txnId" name="txnId" placeholder="Enter the UPI transaction ID" required />
+                            <Input id="txnId" name="txnId" placeholder="Enter the UPI/Bank transaction ID" required />
                         </div>
                         <DialogFooter>
                             <Button type="submit">Submit Request</Button>

@@ -193,8 +193,7 @@ export default function MockTestPage() {
     }
 
     if (testState === "completed") {
-        const percentage = (score / activeQuestions.length) * 100;
-        const prizeEligible = percentage >= 80;
+        const prizeEligible = studentProfile.stats.avgScore > 80;
 
         return (
             <Card className="w-full max-w-2xl text-center">
@@ -212,7 +211,7 @@ export default function MockTestPage() {
                              <CheckCircle className="h-4 w-4 text-green-700" />
                             <AlertTitle className="text-green-800">Congratulations!</AlertTitle>
                             <AlertDescription className="text-green-700">
-                                You scored above 80% and are eligible for a cash prize! Rewards will be credited to your wallet shortly.
+                                This student's overall average is above 80%, making them eligible for a cash prize! Rewards will be credited to your wallet shortly.
                             </AlertDescription>
                         </Alert>
                     ) : (
@@ -220,7 +219,7 @@ export default function MockTestPage() {
                              <XCircle className="h-4 w-4" />
                             <AlertTitle>Keep Practicing!</AlertTitle>
                             <AlertDescription>
-                                You did not meet the 80% threshold for a prize this time. Keep trying!
+                                To be eligible for a prize, the student's overall average score must be above 80%. Keep trying!
                             </AlertDescription>
                         </Alert>
                     )}

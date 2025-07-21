@@ -1,24 +1,23 @@
-
 "use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, Store, Users, Wallet, Home, BrainCircuit, Gamepad2, Zap, ShieldCheck, LayoutDashboard, User } from "lucide-react";
+import { BookOpen, Store, Users, Wallet, Home, BrainCircuit, Gamepad2, Zap, ShieldCheck, LayoutDashboard, User, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/", label: "Home", icon: Home },
-  { href: "/mock-test", label: "Mock Test", icon: BookOpen },
-  { href: "/play", label: "Play", icon: Gamepad2 },
   { href: "/profile", label: "My Students", icon: Users },
+  { href: "/play", label: "Play", icon: Gamepad2 },
+  { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
   { href: "/wallet", label: "Wallet", icon: Wallet },
 ];
 
 export function Navbar() {
   const pathname = usePathname();
   
-  if (pathname.startsWith('/admin')) {
-    return null; // Don't render the main navbar in the admin section
+  if (pathname.startsWith('/admin') || pathname.startsWith('/mock-test')) {
+    return null; // Don't render the main navbar in the admin section or during a test
   }
 
   return (

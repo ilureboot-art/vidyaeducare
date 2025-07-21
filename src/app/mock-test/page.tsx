@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -14,42 +15,72 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { studentData } from "@/lib/student-data";
+import { studentData, type StudentProfile } from "@/lib/student-data";
 import { allQuestions, type Question } from "@/lib/question-bank";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
 
 const MOCK_TEST_DURATION = 30 * 60; // 30 minutes in seconds
 
-type TestState = "not_started" | "in_progress" | "completed" | "review";
-
-const getIconForSubject = (subject: string) => {
-    switch (subject.toLowerCase()) {
-        case "maths":
-        case "mathematics":
-            return Sigma;
-        case "science":
-            return Atom;
-        case "english":
-            return Pilcrow;
-        default:
-            return Book;
-    }
-};
+type TestState = "loading" | "in_progress" | "completed" | "review";
 
 export default function MockTestPage() {
     const { toast } = useToast();
-    const [testState, setTestState] = useState<TestState>("not_started");
-    const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
-    const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+    const router = useRouter();
+    const searchParams = useSearchParams();
+
+    const [testState, setTestState] = useState<TestState>("loading");
+    const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(null);
+    const [subject, setSubject] = useState<string | null>(null);
+
     const [activeQuestions, setActiveQuestions] = useState<Question[]>([]);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [timeLeft, setTimeLeft] = useState(MOCK_TEST_DURATION);
     const [answers, setAnswers] = useState<{ [key: string]: string }>({});
     const [score, setScore] = useState(0);
 
-    const studentProfile = studentData.find(s => s.id === selectedStudentId);
-    const studentSubjects = studentProfile?.academic.subjects || [];
+    useEffect(() => {
+        const studentId = searchParams.get('studentId');
+        const subjectParam = searchParams.get('subject');
+
+        if (!studentId || !subjectParam) {
+            toast({ variant: "destructive", title: "Error", description: "Missing student or subject information."});
+            router.push('/profile');
+            return;
+        }
+
+        const student = studentData.find(s => s.id === studentId);
+        if (!student) {
+             toast({ variant: "destructive", title: "Error", description: "Student profile not found."});
+            router.push('/profile');
+            return;
+        }
+
+        setStudentProfile(student);
+        setSubject(subjectParam);
+
+        const studentStandard = student.academic.standard;
+        const filteredQuestions = allQuestions.filter(q => 
+            q.subject.toLowerCase() === subjectParam.toLowerCase() && 
+            q.standard === studentStandard
+        ).slice(0, 50); // Limit to 50 questions
+
+        if (filteredQuestions.length === 0) {
+            toast({
+                variant: "destructive",
+                title: "No Questions Available",
+                description: `We couldn't find any questions for ${subjectParam} at the ${studentStandard} level.`,
+            });
+            router.push('/profile');
+            return;
+        }
+
+        setActiveQuestions(filteredQuestions);
+        setTimeLeft(MOCK_TEST_DURATION);
+        setCurrentQuestionIndex(0);
+        setAnswers({});
+        setScore(0);
+        setTestState("in_progress");
+
+    }, [searchParams, router, toast]);
 
     useEffect(() => {
         if (testState !== "in_progress") return;
@@ -67,34 +98,6 @@ export default function MockTestPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [testState, timeLeft]);
 
-    const handleStartTest = () => {
-        if (!selectedStudentId || !selectedSubject || !studentProfile) {
-            toast({ variant: "destructive", title: "Selection Missing", description: "Please select a student and a subject."});
-            return;
-        }
-
-        const studentStandard = studentProfile.academic.standard;
-        const filteredQuestions = allQuestions.filter(q => 
-            q.subject.toLowerCase() === selectedSubject.toLowerCase() && 
-            q.standard === studentStandard
-        ).slice(0, 50); // Limit to 50 questions for the test
-
-        if (filteredQuestions.length === 0) {
-            toast({
-                variant: "destructive",
-                title: "No Questions Available",
-                description: `We couldn't find any questions for ${selectedSubject} at the ${studentStandard} level.`,
-            });
-            return;
-        }
-
-        setActiveQuestions(filteredQuestions);
-        setTimeLeft(MOCK_TEST_DURATION);
-        setCurrentQuestionIndex(0);
-        setAnswers({});
-        setScore(0);
-        setTestState("in_progress");
-    };
 
     const handleAnswerSelect = (questionId: string, answer: string) => {
         setAnswers(prev => ({ ...prev, [questionId]: answer }));
@@ -127,55 +130,13 @@ export default function MockTestPage() {
         });
     };
     
-    const resetToSelection = () => {
-        setTestState("not_started");
-        setSelectedStudentId(null);
-        setSelectedSubject(null);
-    }
-
-    if (testState === "not_started") {
+    if (testState === "loading" || !studentProfile) {
         return (
-            <div className="w-full max-w-xl mx-auto space-y-6">
-                 <Card className="w-full text-center">
-                    <CardHeader>
-                        <CardTitle className="text-3xl text-primary">Start a Mock Test</CardTitle>
-                        <CardDescription>Choose a student and a subject to begin.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        {studentData.length > 0 ? (
-                           <>
-                             <div className="space-y-2 text-left">
-                                <Label htmlFor="student-select">Select Student</Label>
-                                <Select onValueChange={setSelectedStudentId} value={selectedStudentId || ''}>
-                                    <SelectTrigger id="student-select"><SelectValue placeholder="Choose a student profile..."/></SelectTrigger>
-                                    <SelectContent>
-                                        {studentData.map(s => <SelectItem key={s.id} value={s.id}>{s.name} ({s.academic.standard} {s.academic.board})</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            {selectedStudentId && (
-                                 <div className="space-y-2 text-left">
-                                    <Label htmlFor="subject-select">Select Subject</Label>
-                                    <Select onValueChange={setSelectedSubject} value={selectedSubject || ''}>
-                                        <SelectTrigger id="subject-select"><SelectValue placeholder="Choose a subject..."/></SelectTrigger>
-                                        <SelectContent>
-                                            {studentSubjects.map(sub => <SelectItem key={sub} value={sub}>{sub}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            )}
-                            <Button className="w-full" size="lg" onClick={handleStartTest} disabled={!selectedStudentId || !selectedSubject}>Start Test</Button>
-                           </>
-                        ) : (
-                            <div className="text-muted-foreground p-8 text-center">
-                                <p>No student profiles found.</p>
-                                <Button asChild variant="link"><Link href="/profile">Add a Student to Your Profile</Link></Button>
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
-            </div>
-        );
+             <Card className="w-full max-w-3xl text-center p-8">
+                <CardTitle>Loading Test...</CardTitle>
+                <CardDescription>Preparing your questions.</CardDescription>
+            </Card>
+        )
     }
     
     if (testState === "review") {
@@ -183,7 +144,7 @@ export default function MockTestPage() {
             <Card className="w-full max-w-3xl">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                        <FileQuestion className="text-primary"/> Test Review: {selectedSubject}
+                        <FileQuestion className="text-primary"/> Test Review: {subject}
                     </CardTitle>
                     <CardDescription>Review your answers for {studentProfile?.name}. Correct answers are marked in green.</CardDescription>
                 </CardHeader>
@@ -224,7 +185,7 @@ export default function MockTestPage() {
                         <Button variant="outline" onClick={() => setTestState("completed")}>
                             <ArrowLeft className="mr-2"/> Back to Results
                         </Button>
-                        <Button onClick={resetToSelection}>Take Another Test</Button>
+                        <Button asChild><Link href="/profile">Back to My Students</Link></Button>
                     </div>
                 </CardContent>
             </Card>
@@ -238,7 +199,7 @@ export default function MockTestPage() {
         return (
             <Card className="w-full max-w-2xl text-center">
                 <CardHeader>
-                    <CardTitle className="text-3xl text-primary">Test Results: {selectedSubject}</CardTitle>
+                    <CardTitle className="text-3xl text-primary">Test Results: {subject}</CardTitle>
                     <CardDescription>For {studentProfile?.name}</CardDescription>
                     <Trophy className="w-16 h-16 mx-auto text-yellow-500 my-4" />
                 </CardHeader>
@@ -266,7 +227,9 @@ export default function MockTestPage() {
 
                     <div className="flex flex-wrap gap-4 justify-center pt-4">
                         <Button onClick={() => setTestState('review')}>Review Answers</Button>
-                        <Button onClick={resetToSelection}>Take Another Test</Button>
+                         <Button asChild variant="outline">
+                            <Link href="/profile">Back to My Students</Link>
+                        </Button>
                         <Button asChild variant="outline">
                             <Link href="/leaderboard">View Leaderboard</Link>
                         </Button>
@@ -274,15 +237,6 @@ export default function MockTestPage() {
                 </CardContent>
             </Card>
         );
-    }
-    
-    if (activeQuestions.length === 0) {
-        return (
-            <Card className="w-full max-w-3xl text-center p-8">
-                <CardTitle>Loading Test...</CardTitle>
-                <CardDescription>Preparing your questions.</CardDescription>
-            </Card>
-        )
     }
     
     const currentQuestion = activeQuestions[currentQuestionIndex];
@@ -295,7 +249,7 @@ export default function MockTestPage() {
             <CardHeader>
                 <div className="flex justify-between items-center">
                     <div>
-                        <CardTitle className="text-xl text-primary">{selectedSubject} Test</CardTitle>
+                        <CardTitle className="text-xl text-primary">{subject} Test</CardTitle>
                         <CardDescription>For {studentProfile?.name}</CardDescription>
                     </div>
                     <Badge variant="secondary" className="flex items-center gap-2">

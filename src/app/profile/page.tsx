@@ -2,10 +2,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { User, Mail, Calendar, Phone, Gamepad2, Percent, Edit, Fingerprint, GraduationCap, Building, Languages, BookCopy, FileClock, Cake, Medal, BarChart2, Trash2, PlusCircle, TrendingUp } from "lucide-react";
+import { User, Mail, Calendar, Phone, Gamepad2, Percent, Edit, Fingerprint, GraduationCap, Building, Languages, BookCopy, FileClock, Cake, Medal, BarChart2, Trash2, PlusCircle, TrendingUp, BookOpen } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { studentData, type StudentProfile, addStudent, deleteStudent, validActivationCodes, useActivationCode } from "@/lib/student-data";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
@@ -13,7 +14,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 function FormattedDate({ dateString }: { dateString: string }) {
   const [formattedDate, setFormattedDate] = useState("");
@@ -33,10 +33,16 @@ function FormattedDate({ dateString }: { dateString: string }) {
 export default function ProfilePage() {
     const [students, setStudents] = useState<StudentProfile[]>([]);
     const { toast } = useToast();
+    const router = useRouter();
     const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
     const [activationCode, setActivationCode] = useState("");
     const [isCodeVerified, setIsCodeVerified] = useState(false);
     
+    // State for mock test dialog
+    const [isTestDialogOpen, setIsTestDialogOpen] = useState(false);
+    const [selectedStudentForTest, setSelectedStudentForTest] = useState<StudentProfile | null>(null);
+    const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
+
     // This effect ensures the component uses the latest data from the module
     useEffect(() => {
         setStudents([...studentData]);
@@ -96,6 +102,20 @@ export default function ProfilePage() {
         deleteStudent(studentId);
         setStudents([...studentData]);
         toast({ title: "Student Removed", description: "The student profile has been deleted." });
+    }
+    
+    const openTestDialog = (student: StudentProfile) => {
+        setSelectedStudentForTest(student);
+        setSelectedSubject(null); // Reset subject selection
+        setIsTestDialogOpen(true);
+    };
+    
+    const handleStartTest = () => {
+        if (!selectedStudentForTest || !selectedSubject) {
+             toast({ variant: "destructive", title: "Selection Missing", description: "Please select a subject to start the test."});
+            return;
+        }
+        router.push(`/mock-test?studentId=${selectedStudentForTest.id}&subject=${selectedSubject}`);
     }
 
   return (
@@ -319,6 +339,12 @@ export default function ProfilePage() {
                             </div>
                         </div>
                     </CardContent>
+                    <CardFooter>
+                        <Button className="w-full" onClick={() => openTestDialog(student)}>
+                            <BookOpen className="mr-2"/>
+                            Start Mock Test for {student.name.split(' ')[0]}
+                        </Button>
+                    </CardFooter>
                 </Card>
             </CardContent>
         </Card>
@@ -332,6 +358,33 @@ export default function ProfilePage() {
                </CardContent>
            </Card>
        )}
+       
+       {/* Mock Test Dialog */}
+       <Dialog open={isTestDialogOpen} onOpenChange={setIsTestDialogOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Start Mock Test for {selectedStudentForTest?.name}</DialogTitle>
+                    <DialogDescription>Select a subject to begin the test.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 pt-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="subject-select">Subject</Label>
+                        <Select onValueChange={setSelectedSubject} value={selectedSubject || ''}>
+                            <SelectTrigger id="subject-select"><SelectValue placeholder="Choose a subject..." /></SelectTrigger>
+                            <SelectContent>
+                                {selectedStudentForTest?.academic.subjects.map(sub => (
+                                    <SelectItem key={sub} value={sub}>{sub}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button onClick={handleStartTest} disabled={!selectedSubject}>Start Test</Button>
+                </DialogFooter>
+            </DialogContent>
+       </Dialog>
+
     </div>
   );
 }

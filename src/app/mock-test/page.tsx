@@ -17,6 +17,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { studentData, type StudentProfile } from "@/lib/student-data";
 import { allQuestions, type Question } from "@/lib/question-bank";
+import { Separator } from "@/components/ui/separator";
 
 const MOCK_TEST_DURATION = 30 * 60; // 30 minutes in seconds
 
@@ -34,7 +35,7 @@ export default function MockTestPage() {
     const [activeQuestions, setActiveQuestions] = useState<Question[]>([]);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [timeLeft, setTimeLeft] = useState(MOCK_TEST_DURATION);
-    const [answers, setAnswers] = useState<{ [key: string]: string }>({});
+    const [answers, setAnswers] = useState<{ [key: string]: { en: string; hi: string; } }>({});
     const [score, setScore] = useState(0);
     const [prizeEligible, setPrizeEligible] = useState(false);
 
@@ -100,8 +101,8 @@ export default function MockTestPage() {
     }, [testState, timeLeft]);
 
 
-    const handleAnswerSelect = (questionId: string, answer: string) => {
-        setAnswers(prev => ({ ...prev, [questionId]: answer }));
+    const handleAnswerSelect = (questionId: string, answerEn: string, answerHi: string) => {
+        setAnswers(prev => ({ ...prev, [questionId]: { en: answerEn, hi: answerHi } }));
     };
 
     const handleNextQuestion = () => {
@@ -112,18 +113,18 @@ export default function MockTestPage() {
 
     const handlePrevQuestion = () => {
         if (currentQuestionIndex > 0) {
-            setCurrentQuestionIndex(prev => prev - 1);
+            setCurrentQuestionIndex(prev => prev + 1);
         }
     };
 
     const handleSubmitTest = () => {
         let correctAnswers = 0;
         activeQuestions.forEach(q => {
-            if (answers[q.id] === q.correctAnswer) {
+            if (answers[q.id]?.en === q.correctAnswer.en) {
                 correctAnswers++;
             }
         });
-
+        
         const finalScore = (correctAnswers / activeQuestions.length) * 100;
         setScore(finalScore);
 
@@ -178,25 +179,28 @@ export default function MockTestPage() {
                         <div className="space-y-4">
                             {activeQuestions.map((q, index) => {
                                 const userAnswer = answers[q.id];
-                                const isCorrect = userAnswer === q.correctAnswer;
+                                const isCorrect = userAnswer?.en === q.correctAnswer.en;
                                 return (
                                 <div key={q.id} className="p-4 border rounded-lg">
                                     <div className="flex items-center justify-between">
-                                        <p className="font-semibold">{index + 1}. {q.text}</p>
+                                        <p className="font-semibold">{index + 1}. {q.text.en}</p>
                                         {isCorrect ? <CheckCircle className="text-green-500"/> : <XCircle className="text-red-500"/>}
                                     </div>
+                                    <p className="font-semibold text-muted-foreground">{q.text.hi}</p>
                                     <div className="mt-2 space-y-1 text-sm">
-                                        {q.options.map(option => {
-                                            const isUserAnswer = userAnswer === option;
-                                            const isCorrectAnswer = q.correctAnswer === option;
+                                        {q.options.en.map((optionEn, optionIndex) => {
+                                            const optionHi = q.options.hi[optionIndex];
+                                            const isUserAnswer = userAnswer?.en === optionEn;
+                                            const isCorrectAnswer = q.correctAnswer.en === optionEn;
                                             return (
-                                                <p key={option} className={cn(
+                                                <div key={optionEn} className={cn(
                                                     "p-2 rounded-md",
                                                     isCorrectAnswer && "bg-green-100 dark:bg-green-900/50 font-semibold",
                                                     isUserAnswer && !isCorrectAnswer && "bg-red-100 dark:bg-red-900/50 line-through"
                                                 )}>
-                                                    {option}
-                                                </p>
+                                                    <p>{optionEn}</p>
+                                                    <p className="text-muted-foreground">{optionHi}</p>
+                                                </div>
                                             )
                                         })}
                                     </div>
@@ -283,18 +287,31 @@ export default function MockTestPage() {
                 <p className="text-sm text-muted-foreground text-center mt-2">Question {currentQuestionIndex + 1} of {activeQuestions.length}</p>
             </CardHeader>
             <CardContent className="space-y-6">
-                <p className="text-lg font-semibold">{currentQuestion.text}</p>
+                <div>
+                    <p className="text-lg font-semibold">{currentQuestion.text.en}</p>
+                    <p className="text-lg font-semibold text-muted-foreground">{currentQuestion.text.hi}</p>
+                </div>
                 <RadioGroup 
-                    value={answers[currentQuestion.id] || ""} 
-                    onValueChange={(value) => handleAnswerSelect(currentQuestion.id, value)}
+                    value={answers[currentQuestion.id]?.en || ""} 
+                    onValueChange={(value) => {
+                        const optionIndex = currentQuestion.options.en.indexOf(value);
+                        handleAnswerSelect(currentQuestion.id, value, currentQuestion.options.hi[optionIndex]);
+                    }}
                     className="space-y-2"
                 >
-                    {currentQuestion.options.map((option, index) => (
-                        <Label key={index} className="flex items-center gap-4 p-3 border rounded-md has-[:checked]:bg-primary/10 has-[:checked]:border-primary cursor-pointer">
-                            <RadioGroupItem value={option} id={`q${currentQuestion.id}-o${index}`} />
-                            <span>{option}</span>
-                        </Label>
-                    ))}
+                    {currentQuestion.options.en.map((optionEn, index) => {
+                        const optionHi = currentQuestion.options.hi[index];
+                        return (
+                            <Label key={index} className="flex items-start gap-4 p-3 border rounded-md has-[:checked]:bg-primary/10 has-[:checked]:border-primary cursor-pointer">
+                                <RadioGroupItem value={optionEn} id={`q${currentQuestion.id}-o${index}`} className="mt-1" />
+                                <div>
+                                    <span>{optionEn}</span>
+                                    <br/>
+                                    <span className="text-muted-foreground">{optionHi}</span>
+                                </div>
+                            </Label>
+                        )
+                    })}
                 </RadioGroup>
 
                  <div className="flex justify-between items-center pt-4 border-t mt-4">

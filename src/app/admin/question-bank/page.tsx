@@ -35,12 +35,17 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea";
 import { allQuestions, type Question } from "@/lib/question-bank";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 
 export default function QuestionBankPage() {
   const [questions, setQuestions] = useState<Question[]>(allQuestions);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
+  const [option1En, setOption1En] = useState("");
+  const [option2En, setOption2En] = useState("");
+  const [option3En, setOption3En] = useState("");
+  const [option4En, setOption4En] = useState("");
   const { toast } = useToast();
   
   const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -48,25 +53,49 @@ export default function QuestionBankPage() {
     const form = e.currentTarget;
     const formData = new FormData(form);
     
-    const newQuestionData = {
+    const optionsEn = [
+        formData.get("option1.en") as string,
+        formData.get("option2.en") as string,
+        formData.get("option3.en") as string,
+        formData.get("option4.en") as string,
+    ];
+    const optionsHi = [
+        formData.get("option1.hi") as string,
+        formData.get("option2.hi") as string,
+        formData.get("option3.hi") as string,
+        formData.get("option4.hi") as string,
+    ];
+    
+    const correctAnsEn = formData.get("correctAnswer.en") as string;
+    const correctAnsIndex = optionsEn.indexOf(correctAnsEn);
+    const correctAnsHi = optionsHi[correctAnsIndex];
+
+    const newQuestionData: Question = {
         id: editingQuestion ? editingQuestion.id : `Q${String(Date.now()).slice(-3)}`,
-        text: formData.get("text") as string,
+        text: {
+            en: formData.get("text.en") as string,
+            hi: formData.get("text.hi") as string
+        },
         subject: formData.get("subject") as string,
         standard: formData.get("standard") as string,
-        options: [
-            formData.get("option1") as string,
-            formData.get("option2") as string,
-            formData.get("option3") as string,
-            formData.get("option4") as string,
-        ],
-        correctAnswer: formData.get("correctAnswer") as string,
+        options: {
+            en: optionsEn,
+            hi: optionsHi
+        },
+        correctAnswer: {
+            en: correctAnsEn,
+            hi: correctAnsHi,
+        },
     };
 
     if (editingQuestion) {
         const updatedQuestions = questions.map(q => q.id === newQuestionData.id ? newQuestionData : q);
         setQuestions(updatedQuestions);
         // In a real app, this would be an API call to update the central store
-        Object.assign(allQuestions, updatedQuestions);
+        const indexToUpdate = allQuestions.findIndex(q => q.id === newQuestionData.id);
+        if (indexToUpdate > -1) {
+            allQuestions[indexToUpdate] = newQuestionData;
+        }
          toast({ title: "Question Updated!", description: "The question has been updated in the bank." });
     } else {
         setQuestions([...questions, newQuestionData]);
@@ -80,6 +109,10 @@ export default function QuestionBankPage() {
   }
 
   const handleEdit = (question: Question) => {
+    setOption1En(question.options.en[0]);
+    setOption2En(question.options.en[1]);
+    setOption3En(question.options.en[2]);
+    setOption4En(question.options.en[3]);
     setEditingQuestion(question);
     setIsFormOpen(true);
   }
@@ -93,6 +126,17 @@ export default function QuestionBankPage() {
         allQuestions.splice(indexToDelete, 1);
     }
     toast({ title: "Question Deleted", description: "The question has been removed from the bank."});
+  }
+  
+  const handleOpenChange = (isOpen: boolean) => {
+    setIsFormOpen(isOpen);
+    if (!isOpen) {
+      setEditingQuestion(null);
+      setOption1En("");
+      setOption2En("");
+      setOption3En("");
+      setOption4En("");
+    }
   }
 
   return (
@@ -108,29 +152,53 @@ export default function QuestionBankPage() {
                     Add, edit, or remove questions for the mock tests.
                 </CardDescription>
               </div>
-              <Dialog open={isFormOpen} onOpenChange={(isOpen) => {
-                  setIsFormOpen(isOpen);
-                  if (!isOpen) setEditingQuestion(null);
-              }}>
+              <Dialog open={isFormOpen} onOpenChange={handleOpenChange}>
                 <DialogTrigger asChild>
                     <Button>
                         <PlusCircle className="mr-2 h-4 w-4" />
                         Add New Question
                     </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[625px]">
+                <DialogContent className="sm:max-w-[725px]">
                     <DialogHeader>
                         <DialogTitle>{editingQuestion ? 'Edit Question' : 'Add New Question'}</DialogTitle>
                         <DialogDescription>
-                            Fill in the details for the MCQ.
+                            Fill in the details for the MCQ in both languages.
                         </DialogDescription>
                     </DialogHeader>
                     <form onSubmit={handleFormSubmit} className="space-y-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="text">Question Text</Label>
-                            <Textarea id="text" name="text" required defaultValue={editingQuestion?.text}/>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <Tabs defaultValue="en" className="w-full">
+                            <TabsList className="grid w-full grid-cols-2">
+                                <TabsTrigger value="en">English</TabsTrigger>
+                                <TabsTrigger value="hi">Hindi</TabsTrigger>
+                            </TabsList>
+                            <TabsContent value="en" className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="text.en">Question Text (English)</Label>
+                                    <Textarea id="text.en" name="text.en" required defaultValue={editingQuestion?.text.en}/>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2"><Label htmlFor="option1.en">Option 1</Label><Input id="option1.en" name="option1.en" required defaultValue={editingQuestion?.options.en[0]} onChange={e => setOption1En(e.target.value)}/></div>
+                                    <div className="space-y-2"><Label htmlFor="option2.en">Option 2</Label><Input id="option2.en" name="option2.en" required defaultValue={editingQuestion?.options.en[1]} onChange={e => setOption2En(e.target.value)}/></div>
+                                    <div className="space-y-2"><Label htmlFor="option3.en">Option 3</Label><Input id="option3.en" name="option3.en" required defaultValue={editingQuestion?.options.en[2]} onChange={e => setOption3En(e.target.value)}/></div>
+                                    <div className="space-y-2"><Label htmlFor="option4.en">Option 4</Label><Input id="option4.en" name="option4.en" required defaultValue={editingQuestion?.options.en[3]} onChange={e => setOption4En(e.target.value)}/></div>
+                                </div>
+                            </TabsContent>
+                             <TabsContent value="hi" className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="text.hi">Question Text (Hindi)</Label>
+                                    <Textarea id="text.hi" name="text.hi" required defaultValue={editingQuestion?.text.hi}/>
+                                </div>
+                                 <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2"><Label htmlFor="option1.hi">Option 1</Label><Input id="option1.hi" name="option1.hi" required defaultValue={editingQuestion?.options.hi[0]} /></div>
+                                    <div className="space-y-2"><Label htmlFor="option2.hi">Option 2</Label><Input id="option2.hi" name="option2.hi" required defaultValue={editingQuestion?.options.hi[1]} /></div>
+                                    <div className="space-y-2"><Label htmlFor="option3.hi">Option 3</Label><Input id="option3.hi" name="option3.hi" required defaultValue={editingQuestion?.options.hi[2]} /></div>
+                                    <div className="space-y-2"><Label htmlFor="option4.hi">Option 4</Label><Input id="option4.hi" name="option4.hi" required defaultValue={editingQuestion?.options.hi[3]} /></div>
+                                </div>
+                            </TabsContent>
+                        </Tabs>
+
+                        <div className="grid grid-cols-2 gap-4 pt-4 border-t">
                              <div className="space-y-2">
                                 <Label htmlFor="standard">Academic Standard</Label>
                                  <Select name="standard" required defaultValue={editingQuestion?.standard}>
@@ -153,36 +221,18 @@ export default function QuestionBankPage() {
                                     </SelectContent>
                                 </Select>
                             </div>
-                        </div>
-                         <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="option1">Option 1</Label>
-                                <Input id="option1" name="option1" required defaultValue={editingQuestion?.options[0]}/>
-                            </div>
-                             <div className="space-y-2">
-                                <Label htmlFor="option2">Option 2</Label>
-                                <Input id="option2" name="option2" required defaultValue={editingQuestion?.options[1]}/>
-                            </div>
-                             <div className="space-y-2">
-                                <Label htmlFor="option3">Option 3</Label>
-                                <Input id="option3" name="option3" required defaultValue={editingQuestion?.options[2]}/>
-                            </div>
-                             <div className="space-y-2">
-                                <Label htmlFor="option4">Option 4</Label>
-                                <Input id="option4" name="option4" required defaultValue={editingQuestion?.options[3]}/>
-                            </div>
                          </div>
                          <div className="space-y-2">
-                            <Label htmlFor="correctAnswer">Correct Answer</Label>
-                            <Select name="correctAnswer" required defaultValue={editingQuestion?.correctAnswer}>
-                                <SelectTrigger id="correctAnswer">
+                            <Label htmlFor="correctAnswer.en">Correct Answer (Select the English option)</Label>
+                            <Select name="correctAnswer.en" required defaultValue={editingQuestion?.correctAnswer.en}>
+                                <SelectTrigger id="correctAnswer.en">
                                     <SelectValue placeholder="Select the correct option" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value={(document.querySelector('input[name="option1"]') as HTMLInputElement)?.value}>Option 1</SelectItem>
-                                    <SelectItem value={(document.querySelector('input[name="option2"]') as HTMLInputElement)?.value}>Option 2</SelectItem>
-                                    <SelectItem value={(document.querySelector('input[name="option3"]') as HTMLInputElement)?.value}>Option 3</SelectItem>
-                                    <SelectItem value={(document.querySelector('input[name="option4"]') as HTMLInputElement)?.value}>Option 4</SelectItem>
+                                    {option1En && <SelectItem value={option1En}>{option1En}</SelectItem>}
+                                    {option2En && <SelectItem value={option2En}>{option2En}</SelectItem>}
+                                    {option3En && <SelectItem value={option3En}>{option3En}</SelectItem>}
+                                    {option4En && <SelectItem value={option4En}>{option4En}</SelectItem>}
                                 </SelectContent>
                             </Select>
                          </div>
@@ -199,7 +249,7 @@ export default function QuestionBankPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[60%]">Question</TableHead>
+                <TableHead className="w-[60%]">Question (English)</TableHead>
                 <TableHead>Subject</TableHead>
                 <TableHead>Standard</TableHead>
                 <TableHead>Actions</TableHead>
@@ -208,7 +258,7 @@ export default function QuestionBankPage() {
             <TableBody>
               {questions.length > 0 ? questions.map((q) => (
                 <TableRow key={q.id}>
-                  <TableCell className="font-medium truncate max-w-sm">{q.text}</TableCell>
+                  <TableCell className="font-medium truncate max-w-sm">{q.text.en}</TableCell>
                   <TableCell>{q.subject}</TableCell>
                   <TableCell>{q.standard}</TableCell>
                   <TableCell>

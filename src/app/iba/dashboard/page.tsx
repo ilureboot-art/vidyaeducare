@@ -107,10 +107,13 @@ Don't miss out on the best way to prepare for your exams and earn rewards!
           url: shareUrl,
         });
       } catch (error) {
-         if ((error as DOMException).name !== 'AbortError') {
-          console.error("Share failed, falling back to clipboard:", error);
-          fallbackCopy();
+        // Silently fail if the user cancels the share action (AbortError).
+        if ((error as DOMException).name === 'AbortError') {
+          return;
         }
+        // For other errors, you might still want to log them or handle them differently.
+        console.error("Share failed:", error);
+        fallbackCopy();
       }
     } else {
       fallbackCopy();
@@ -283,5 +286,3 @@ Don't miss out on the best way to prepare for your exams and earn rewards!
     </div>
   );
 }
-
-    

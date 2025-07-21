@@ -36,6 +36,7 @@ export default function MockTestPage() {
     const [timeLeft, setTimeLeft] = useState(MOCK_TEST_DURATION);
     const [answers, setAnswers] = useState<{ [key: string]: string }>({});
     const [score, setScore] = useState(0);
+    const [prizeEligible, setPrizeEligible] = useState(false);
 
     useEffect(() => {
         const studentId = searchParams.get('studentId');
@@ -116,17 +117,29 @@ export default function MockTestPage() {
     };
 
     const handleSubmitTest = () => {
-        let finalScore = 0;
+        let correctAnswers = 0;
         activeQuestions.forEach(q => {
             if (answers[q.id] === q.correctAnswer) {
-                finalScore++;
+                correctAnswers++;
             }
         });
+
+        const finalScore = (correctAnswers / activeQuestions.length) * 100;
         setScore(finalScore);
+
+        // Check eligibility based on the new rule
+        if (studentProfile) {
+            // Check if all previous scores are > 80% AND the current score is > 80%
+            const allScores = studentProfile.stats.performance.map(p => p.score);
+            const allPreviousScoresAreHigh = allScores.every(s => s > 80);
+            const isEligible = finalScore > 80 && allPreviousScoresAreHigh;
+            setPrizeEligible(isEligible);
+        }
+
         setTestState("completed");
         toast({
             title: "Test Submitted!",
-            description: `You scored ${finalScore} out of ${activeQuestions.length}.`
+            description: `You scored ${correctAnswers} out of ${activeQuestions.length}.`
         });
     };
     
@@ -193,9 +206,6 @@ export default function MockTestPage() {
     }
 
     if (testState === "completed") {
-        const percentageScore = (score / activeQuestions.length) * 100;
-        const prizeEligible = percentageScore > 80;
-
         return (
             <Card className="w-full max-w-2xl text-center">
                 <CardHeader>
@@ -205,14 +215,14 @@ export default function MockTestPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <p className="text-xl">You have completed the test.</p>
-                    <p className="text-4xl font-bold">Your Score: {score} / {activeQuestions.length}</p>
+                    <p className="text-4xl font-bold">Your Score: {score.toFixed(0)}%</p>
                     
                     {prizeEligible ? (
                         <Alert variant="default" className="bg-green-100 dark:bg-green-900 border-green-500">
                              <CheckCircle className="h-4 w-4 text-green-700" />
-                            <AlertTitle className="text-green-800">Congratulations!</AlertTitle>
+                            <AlertTitle className="text-green-800">Congratulations! Prize Eligible!</AlertTitle>
                             <AlertDescription className="text-green-700">
-                                This score is above 80%, making the student eligible for a cash prize! Rewards will be credited to your wallet shortly.
+                                This student has maintained a score of over 80% in all subject tests, including this one. Rewards will be credited to your wallet shortly.
                             </AlertDescription>
                         </Alert>
                     ) : (
@@ -220,7 +230,7 @@ export default function MockTestPage() {
                              <XCircle className="h-4 w-4" />
                             <AlertTitle>Keep Practicing!</AlertTitle>
                             <AlertDescription>
-                                To be eligible for a prize on a test, the student must score above 80%. Keep trying!
+                                To be eligible for a prize, the student must score above 80% in this test and all other subject tests they have taken.
                             </AlertDescription>
                         </Alert>
                     )}

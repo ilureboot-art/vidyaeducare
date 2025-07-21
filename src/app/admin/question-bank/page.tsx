@@ -48,6 +48,11 @@ export default function QuestionBankPage() {
   const [option4En, setOption4En] = useState("");
   const { toast } = useToast();
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
+
+  // State for bulk upload dropdowns
+  const [bulkBoard, setBulkBoard] = useState<Question['board'] | ''>('');
+  const [bulkStandard, setBulkStandard] = useState('');
+  const [bulkSubject, setBulkSubject] = useState('');
   
   const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -144,31 +149,47 @@ export default function QuestionBankPage() {
   const handleBulkUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    if (!bulkBoard || !bulkStandard || !bulkSubject) {
+        toast({
+            variant: 'destructive',
+            title: "Information Missing",
+            description: "Please select the board, standard, and subject before uploading a file.",
+        });
+        return;
+    }
 
     const reader = new FileReader();
     reader.onload = (e) => {
         try {
             const content = e.target?.result;
             if (typeof content !== 'string') throw new Error("File content is not readable.");
-            const parsedQuestions: Omit<Question, 'id'>[] = JSON.parse(content);
+            
+            // Note: The parsed questions will not have board, standard, subject
+            const parsedQuestions: Omit<Question, 'id' | 'board' | 'standard' | 'subject'>[] = JSON.parse(content);
 
             if (!Array.isArray(parsedQuestions)) {
                  throw new Error("JSON must be an array of questions.");
             }
 
-            // Basic validation
+            // Basic validation and combining with dropdown selections
             const newQuestions: Question[] = parsedQuestions.map(q => {
-                 if (!q.text?.en || !q.options?.en || !q.correctAnswer?.en || !q.subject || !q.standard || !q.board) {
-                    throw new Error("One or more questions are missing required fields (including 'board').");
+                 if (!q.text?.en || !q.options?.en || !q.correctAnswer?.en) {
+                    throw new Error("One or more questions are missing required fields (text, options, correctAnswer).");
                  }
-                return { ...q, id: `Q${String(Date.now()).slice(-6)}-${Math.random()}` };
+                return { 
+                    ...q, 
+                    id: `Q${String(Date.now()).slice(-6)}-${Math.random()}`,
+                    board: bulkBoard,
+                    standard: bulkStandard,
+                    subject: bulkSubject,
+                };
             });
 
             allQuestions.push(...newQuestions);
             setQuestions([...allQuestions]);
             toast({
                 title: "Bulk Upload Successful!",
-                description: `${newQuestions.length} new questions have been added to the bank.`
+                description: `${newQuestions.length} new questions have been added for ${bulkSubject}, ${bulkStandard}, ${bulkBoard}.`
             });
             setIsBulkUploadOpen(false);
 
@@ -199,7 +220,14 @@ export default function QuestionBankPage() {
                 </CardDescription>
               </div>
               <div className="flex gap-2">
-                <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
+                <Dialog open={isBulkUploadOpen} onOpenChange={(isOpen) => {
+                    setIsBulkUploadOpen(isOpen);
+                    if (!isOpen) {
+                        setBulkBoard('');
+                        setBulkStandard('');
+                        setBulkSubject('');
+                    }
+                }}>
                     <DialogTrigger asChild>
                         <Button variant="outline"><Upload className="mr-2 h-4 w-4" /> Bulk Upload</Button>
                     </DialogTrigger>
@@ -207,18 +235,51 @@ export default function QuestionBankPage() {
                         <DialogHeader>
                             <DialogTitle>Bulk Upload Questions</DialogTitle>
                             <DialogDescription>
-                                Upload a JSON file containing an array of questions. Ensure the file follows the specified format. The 'id' will be generated automatically.
+                                Select the board, standard, and subject, then upload a JSON file containing an array of questions. The ID and other details will be added automatically.
                             </DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4">
-                            <Label>Required JSON Format:</Label>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="bulk-board">Board</Label>
+                                    <Select name="bulk-board" value={bulkBoard} onValueChange={(val) => setBulkBoard(val as Question['board'])} required>
+                                        <SelectTrigger id="bulk-board"><SelectValue placeholder="Select..." /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="CBSE">CBSE</SelectItem>
+                                            <SelectItem value="ICSE">ICSE</SelectItem>
+                                            <SelectItem value="SSC">SSC</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="bulk-standard">Standard</Label>
+                                    <Select name="bulk-standard" value={bulkStandard} onValueChange={setBulkStandard} required>
+                                        <SelectTrigger id="bulk-standard"><SelectValue placeholder="Select..." /></SelectTrigger>
+                                        <SelectContent>
+                                            {[...Array(12)].map((_, i) => <SelectItem key={i+1} value={`${i+1}th`}>{i+1}th</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="bulk-subject">Subject</Label>
+                                    <Select name="bulk-subject" value={bulkSubject} onValueChange={setBulkSubject} required>
+                                        <SelectTrigger id="bulk-subject"><SelectValue placeholder="Select..." /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="General Knowledge">General Knowledge</SelectItem>
+                                            <SelectItem value="Mathematics">Mathematics</SelectItem>
+                                            <SelectItem value="Science">Science</SelectItem>
+                                            <SelectItem value="English">English</SelectItem>
+                                            <SelectItem value="History">History</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+
+                            <Label>Required Simplified JSON Format:</Label>
                             <pre className="p-2 bg-muted text-xs rounded-md overflow-x-auto">
 {`[
   {
     "text": { "en": "Q Text", "mr": "प्रश्न मजकूर" },
-    "subject": "Science",
-    "standard": "10th",
-    "board": "SSC",
     "options": {
       "en": ["A", "B", "C", "D"],
       "mr": ["अ", "ब", "क", "ड"]
@@ -229,7 +290,7 @@ export default function QuestionBankPage() {
                             </pre>
                              <div className="space-y-2">
                                 <Label htmlFor="json-upload">JSON File</Label>
-                                <Input id="json-upload" type="file" accept=".json" onChange={handleBulkUpload} />
+                                <Input id="json-upload" type="file" accept=".json" onChange={handleBulkUpload} disabled={!bulkBoard || !bulkStandard || !bulkSubject}/>
                             </div>
                         </div>
                     </DialogContent>
@@ -389,3 +450,5 @@ export default function QuestionBankPage() {
     </div>
   );
 }
+
+    

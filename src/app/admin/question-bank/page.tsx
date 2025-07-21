@@ -79,6 +79,7 @@ export default function QuestionBankPage() {
         },
         subject: formData.get("subject") as string,
         standard: formData.get("standard") as string,
+        board: formData.get("board") as "CBSE" | "ICSE" | "SSC",
         options: {
             en: optionsEn,
             mr: optionsMr
@@ -157,8 +158,8 @@ export default function QuestionBankPage() {
 
             // Basic validation
             const newQuestions: Question[] = parsedQuestions.map(q => {
-                 if (!q.text?.en || !q.options?.en || !q.correctAnswer?.en || !q.subject || !q.standard) {
-                    throw new Error("One or more questions are missing required fields.");
+                 if (!q.text?.en || !q.options?.en || !q.correctAnswer?.en || !q.subject || !q.standard || !q.board) {
+                    throw new Error("One or more questions are missing required fields (including 'board').");
                  }
                 return { ...q, id: `Q${String(Date.now()).slice(-6)}-${Math.random()}` };
             });
@@ -217,6 +218,7 @@ export default function QuestionBankPage() {
     "text": { "en": "Q Text", "mr": "प्रश्न मजकूर" },
     "subject": "Science",
     "standard": "10th",
+    "board": "SSC",
     "options": {
       "en": ["A", "B", "C", "D"],
       "mr": ["अ", "ब", "क", "ड"]
@@ -301,6 +303,17 @@ export default function QuestionBankPage() {
                                         </SelectContent>
                                     </Select>
                                 </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="board">Education Board</Label>
+                                     <Select name="board" required defaultValue={editingQuestion?.board}>
+                                        <SelectTrigger id="board"><SelectValue placeholder="Select..." /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="CBSE">CBSE</SelectItem>
+                                            <SelectItem value="ICSE">ICSE</SelectItem>
+                                            <SelectItem value="SSC">SSC</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="correctAnswer.en">Correct Answer (Select the English option)</Label>
@@ -330,9 +343,10 @@ export default function QuestionBankPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[60%]">Question (English)</TableHead>
+                <TableHead className="w-[50%]">Question (English)</TableHead>
                 <TableHead>Subject</TableHead>
                 <TableHead>Standard</TableHead>
+                <TableHead>Board</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -342,6 +356,7 @@ export default function QuestionBankPage() {
                   <TableCell className="font-medium truncate max-w-sm">{q.text.en}</TableCell>
                   <TableCell>{q.subject}</TableCell>
                   <TableCell>{q.standard}</TableCell>
+                  <TableCell>{q.board}</TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -364,7 +379,7 @@ export default function QuestionBankPage() {
                 </TableRow>
               )) : (
                 <TableRow>
-                    <TableCell colSpan={4} className="text-center text-muted-foreground">No questions in the bank yet.</TableCell>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground">No questions in the bank yet.</TableCell>
                 </TableRow>
               )}
             </TableBody>

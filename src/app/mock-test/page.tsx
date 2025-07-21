@@ -60,16 +60,20 @@ export default function MockTestPage() {
         setSubject(subjectParam);
 
         const studentStandard = student.academic.standard;
+        const studentBoard = student.academic.board;
+
         const filteredQuestions = allQuestions.filter(q => 
             q.subject.toLowerCase() === subjectParam.toLowerCase() && 
-            q.standard === studentStandard
+            q.standard === studentStandard &&
+            q.board === studentBoard
         ).slice(0, 50); // Limit to 50 questions
 
         if (filteredQuestions.length === 0) {
             toast({
                 variant: "destructive",
                 title: "No Questions Available",
-                description: `We couldn't find any questions for ${subjectParam} at the ${studentStandard} level.`,
+                description: `We couldn't find any questions for ${subjectParam} for the ${studentBoard} board at the ${studentStandard} level.`,
+                duration: 7000
             });
             router.push('/profile');
             return;
@@ -275,7 +279,7 @@ export default function MockTestPage() {
             <CardHeader>
                 <div className="flex justify-between items-center">
                     <div>
-                        <CardTitle className="text-xl text-primary">{subject} Test</CardTitle>
+                        <CardTitle className="text-xl text-primary">{subject} Test ({studentProfile.academic.board})</CardTitle>
                         <CardDescription>For {studentProfile?.name}</CardDescription>
                     </div>
                     <Badge variant="secondary" className="flex items-center gap-2">

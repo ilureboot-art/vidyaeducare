@@ -16,6 +16,8 @@ export type StudentProfile = {
     totalEarnings: number;
     testsTaken: number;
     avgScore: number;
+    performance: { name: string; score: number }[];
+    recentActivity: { name: string; score: number }[];
   },
   badges: ('Platinum' | 'Gold' | 'Silver' | 'Bronze')[];
 };
@@ -39,6 +41,17 @@ export const studentData: StudentProfile[] = [
             totalEarnings: 150,
             testsTaken: 5,
             avgScore: 88,
+            performance: [
+                { name: 'Maths', score: 85 },
+                { name: 'Science', score: 92 },
+                { name: 'English', score: 80 },
+                { name: 'History', score: 95 },
+                { name: 'GK', score: 90 },
+            ],
+            recentActivity: [
+                { name: "Science Test", score: 92 },
+                { name: "History Test", score: 95 },
+            ]
         },
         badges: ["Gold", "Silver"],
     }

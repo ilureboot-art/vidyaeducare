@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { User, Mail, Calendar, Phone, Gamepad2, Percent, Edit, Fingerprint, GraduationCap, Building, Languages, BookCopy, FileClock, Cake, Medal, BarChart2, Trash2, PlusCircle, TrendingUp, BookOpen } from "lucide-react";
+import { User, Mail, Calendar, Phone, Edit, GraduationCap, Building, Languages, BookCopy, FileClock, Cake, Medal, BarChart2, Trash2, PlusCircle, TrendingUp, BookOpen, Activity } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { studentData, type StudentProfile, addStudent, deleteStudent, validActivationCodes, useActivationCode } from "@/lib/student-data";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
@@ -14,6 +14,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { ResponsiveContainer, BarChart, XAxis, YAxis, Tooltip, Bar, CartesianGrid } from "recharts";
+import { Separator } from "@/components/ui/separator";
 
 function FormattedDate({ dateString }: { dateString: string }) {
   const [formattedDate, setFormattedDate] = useState("");
@@ -85,6 +87,8 @@ export default function ProfilePage() {
                 totalEarnings: 0,
                 testsTaken: 0,
                 avgScore: 0,
+                performance: [],
+                recentActivity: [],
             },
             badges: [],
         };
@@ -119,7 +123,7 @@ export default function ProfilePage() {
     }
 
   return (
-    <div className="w-full max-w-4xl mx-auto space-y-8">
+    <div className="w-full max-w-5xl mx-auto space-y-8">
         <Card>
             <CardHeader>
                 <CardTitle className="text-2xl flex items-center gap-2"><User /> Parent Profile</CardTitle>
@@ -155,9 +159,6 @@ export default function ProfilePage() {
                             <p className="font-medium"><FormattedDate dateString={parentProfile.joinDate} /></p>
                         </div>
                     </div>
-                </div>
-                <div className="flex justify-end">
-                    <Button variant="outline">Edit Profile</Button>
                 </div>
             </CardContent>
         </Card>
@@ -234,15 +235,18 @@ export default function ProfilePage() {
             <CardHeader>
                 <div className="flex items-start justify-between">
                     <div className="flex items-center gap-4">
-                        <Avatar className="w-24 h-24 border-4 border-primary/20">
+                        <Avatar className="w-20 h-20 border-4 border-primary/20">
                             <AvatarImage src={student.avatarUrl} alt={student.name} data-ai-hint="profile avatar" />
                             <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
                         </Avatar>
                         <div>
-                            <CardTitle className="text-3xl font-bold text-primary">
+                            <CardTitle className="text-2xl font-bold text-primary">
                                 <span>{student.name}</span>
                             </CardTitle>
-                            <CardDescription>Student ID: {student.id}</CardDescription>
+                            <CardDescription>ID: {student.id} | <span className="font-semibold">{student.academic.standard} {student.academic.board}</span></CardDescription>
+                             <div className="flex flex-wrap gap-1 mt-2">
+                                {student.badges.length > 0 ? student.badges.map(badge => <Badge key={badge} variant="default" className="bg-yellow-500 hover:bg-yellow-600"><Medal className="mr-1.5"/>{badge}</Badge>) : <Badge variant="secondary">No badges yet</Badge>}
+                            </div>
                         </div>
                     </div>
                     <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -252,101 +256,96 @@ export default function ProfilePage() {
                 </div>
             </CardHeader>
             <CardContent className="space-y-6">
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-xl flex items-center gap-2"><GraduationCap/> Academic Details</CardTitle>
-                    </CardHeader>
-                    <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                        <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
-                            <Cake className="w-4 h-4 text-muted-foreground"/>
-                            <div className="flex flex-col">
-                                <span className="text-xs text-muted-foreground">D.O.B</span>
-                                <span><FormattedDate dateString={student.dob} /></span>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
-                            <GraduationCap className="w-4 h-4 text-muted-foreground"/>
-                            <div className="flex flex-col">
-                                <span className="text-xs text-muted-foreground">Standard</span>
-                                <span>{student.academic.standard}</span>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
-                            <Building className="w-4 h-4 text-muted-foreground"/>
-                            <div className="flex flex-col">
-                                <span className="text-xs text-muted-foreground">Board</span>
-                                <span>{student.academic.board}</span>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
-                            <FileClock className="w-4 h-4 text-muted-foreground"/>
-                            <div className="flex flex-col">
-                                <span className="text-xs text-muted-foreground">Year</span>
-                                <span>{student.academic.academicYear}</span>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
-                            <Languages className="w-4 h-4 text-muted-foreground"/>
-                            <div className="flex flex-col">
-                                <span className="text-xs text-muted-foreground">Language</span>
-                                <span>{student.academic.language}</span>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
-                            <TrendingUp className="w-4 h-4 text-muted-foreground"/>
-                            <div className="flex flex-col">
-                                <span className="text-xs text-muted-foreground">Stream</span>
-                                <span>{student.academic.stream}</span>
-                            </div>
-                        </div>
-                        <div className="flex items-start gap-2 p-2 bg-muted/50 rounded-lg col-span-2 md:col-span-3">
-                            <BookCopy className="w-4 h-4 text-muted-foreground mt-1"/>
-                            <div className="flex flex-col">
-                                <span className="text-xs text-muted-foreground">Subjects</span>
-                                <div className="flex flex-wrap gap-1 mt-1">
-                                    {student.academic.subjects.map(sub => <Badge key={sub} variant="secondary">{sub}</Badge>)}
+                <div className="grid md:grid-cols-3 gap-6">
+                    <div className="md:col-span-1 space-y-4">
+                         <Card>
+                            <CardHeader className="p-4">
+                                <CardTitle className="text-lg flex items-center gap-2"><GraduationCap/> Academics</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-4 pt-0 space-y-2 text-sm">
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">D.O.B</span>
+                                    <span className="font-medium"><FormattedDate dateString={student.dob} /></span>
                                 </div>
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Stream</span>
+                                    <span className="font-medium">{student.academic.stream}</span>
+                                </div>
+                                 <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Language</span>
+                                    <span className="font-medium">{student.academic.language}</span>
+                                </div>
+                            </CardContent>
+                         </Card>
+                         <Card>
+                            <CardHeader className="p-4">
+                                <CardTitle className="text-lg flex items-center gap-2"><Activity/> Recent Activity</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-4 pt-0 text-sm">
+                                {student.stats.recentActivity.length > 0 ? (
+                                    <ul className="space-y-2">
+                                        {student.stats.recentActivity.map((activity, index) => (
+                                            <li key={index} className="flex items-center justify-between">
+                                                <span>{activity.name}</span>
+                                                <Badge variant="outline">{activity.score}%</Badge>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                ) : (
+                                    <p className="text-muted-foreground">No recent test activity.</p>
+                                )}
+                            </CardContent>
+                         </Card>
+                    </div>
+                    <div className="md:col-span-2">
+                       <Card className="h-full">
+                         <CardHeader>
+                            <CardTitle className="text-lg flex items-center gap-2"><BarChart2/> Performance</CardTitle>
+                            <CardDescription>Score analysis from the last few mock tests.</CardDescription>
+                         </CardHeader>
+                         <CardContent className="grid grid-cols-3 gap-2 text-center pb-4">
+                             <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
+                                <p className="text-xs text-muted-foreground">Avg. Score</p>
+                                <p className="text-xl font-bold">{student.stats.avgScore}%</p>
                             </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-xl flex items-center gap-2"><BarChart2/> Performance Dashboard</CardTitle>
-                    </CardHeader>
-                    <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-4 text-center">
-                        <div className="p-3 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
-                            <Percent className="w-5 h-5 mx-auto text-blue-600 dark:text-blue-400 mb-1"/>
-                            <p className="text-xl font-bold">{student.stats.avgScore}%</p>
-                            <p className="text-xs text-muted-foreground">Avg. Score</p>
-                        </div>
-                        <div className="p-3 bg-green-100 dark:bg-green-900/50 rounded-lg">
-                            <TrendingUp className="w-5 h-5 mx-auto text-green-600 dark:text-green-400 mb-1"/>
-                            <p className="text-xl font-bold">₹{student.stats.totalEarnings}</p>
-                            <p className="text-xs text-muted-foreground">Earnings</p>
-                        </div>
-                        <div className="p-3 bg-pink-100 dark:bg-pink-900/50 rounded-lg">
-                            <Gamepad2 className="w-5 h-5 mx-auto text-pink-600 dark:text-pink-400 mb-1"/>
-                            <p className="text-xl font-bold">{student.stats.testsTaken}</p>
-                            <p className="text-xs text-muted-foreground">Tests Taken</p>
-                        </div>
-                        <div className="p-3 bg-yellow-100 dark:bg-yellow-900/50 rounded-lg col-span-2 md:col-span-3">
-                            <Medal className="w-5 h-5 mx-auto text-yellow-600 dark:text-yellow-400 mb-1"/>
-                            <p className="text-xs text-muted-foreground mb-2">Badges Earned</p>
-                            <div className="flex justify-center gap-2">
-                                {student.badges.length > 0 ? student.badges.map(badge => <Badge key={badge} variant="default">{badge}</Badge>) : <p className="text-sm">No badges yet.</p>}
+                            <div className="p-2 bg-green-100 dark:bg-green-900/50 rounded-lg">
+                                <p className="text-xs text-muted-foreground">Highest</p>
+                                <p className="text-xl font-bold">{student.stats.performance.length > 0 ? Math.max(...student.stats.performance.map(p => p.score)) : 0}%</p>
                             </div>
-                        </div>
-                    </CardContent>
-                    <CardFooter>
-                        <Button className="w-full" onClick={() => openTestDialog(student)}>
-                            <BookOpen className="mr-2"/>
-                            Start Mock Test for {student.name.split(' ')[0]}
-                        </Button>
-                    </CardFooter>
-                </Card>
+                            <div className="p-2 bg-pink-100 dark:bg-pink-900/50 rounded-lg">
+                                <p className="text-xs text-muted-foreground">Tests Taken</p>
+                                <p className="text-xl font-bold">{student.stats.testsTaken}</p>
+                            </div>
+                         </CardContent>
+                         <CardContent className="h-48 pr-0">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={student.stats.performance} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false}/>
+                                    <YAxis fontSize={12} domain={[0, 100]} />
+                                    <Tooltip
+                                        contentStyle={{
+                                            background: "hsl(var(--background))",
+                                            border: "1px solid hsl(var(--border))",
+                                            borderRadius: "var(--radius)",
+                                        }}
+                                        labelStyle={{ fontWeight: 'bold' }}
+                                        formatter={(value) => [`${value}%`, "Score"]}
+                                    />
+                                    <Bar dataKey="score" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                         </CardContent>
+                       </Card>
+                    </div>
+                </div>
             </CardContent>
+            <CardFooter>
+                 <Button className="w-full" onClick={() => openTestDialog(student)}>
+                    <BookOpen className="mr-2"/>
+                    Start Mock Test for {student.name.split(' ')[0]}
+                </Button>
+            </CardFooter>
         </Card>
        ))}
 

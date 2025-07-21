@@ -15,5 +15,4 @@ export default function DeprecatedStudentDashboard() {
   
   return null;
 }
-
     

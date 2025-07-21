@@ -16,6 +16,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { studentData } from "@/lib/student-data";
 import { allQuestions, type Question } from "@/lib/question-bank";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 
 const MOCK_TEST_DURATION = 30 * 60; // 30 minutes in seconds
 
@@ -39,13 +41,14 @@ export default function MockTestPage() {
     const { toast } = useToast();
     const [testState, setTestState] = useState<TestState>("not_started");
     const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
+    const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
     const [activeQuestions, setActiveQuestions] = useState<Question[]>([]);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [timeLeft, setTimeLeft] = useState(MOCK_TEST_DURATION);
     const [answers, setAnswers] = useState<{ [key: string]: string }>({});
     const [score, setScore] = useState(0);
 
-    const studentProfile = studentData[0];
+    const studentProfile = studentData.find(s => s.id === selectedStudentId);
     const studentSubjects = studentProfile?.academic.subjects || [];
 
     useEffect(() => {
@@ -63,10 +66,15 @@ export default function MockTestPage() {
         return () => clearInterval(timer);
     }, [testState, timeLeft]);
 
-    const handleStartTest = (subject: string) => {
+    const handleStartTest = () => {
+        if (!selectedStudentId || !selectedSubject || !studentProfile) {
+            toast({ variant: "destructive", title: "Selection Missing", description: "Please select a student and a subject."});
+            return;
+        }
+
         const studentStandard = studentProfile.academic.standard;
         const filteredQuestions = allQuestions.filter(q => 
-            q.subject.toLowerCase() === subject.toLowerCase() && 
+            q.subject.toLowerCase() === selectedSubject.toLowerCase() && 
             q.standard === studentStandard
         ).slice(0, 50); // Limit to 50 questions for the test
 
@@ -74,7 +82,7 @@ export default function MockTestPage() {
             toast({
                 variant: "destructive",
                 title: "No Questions Available",
-                description: `We couldn't find any questions for ${subject} at the ${studentStandard} level.`,
+                description: `We couldn't find any questions for ${selectedSubject} at the ${studentStandard} level.`,
             });
             return;
         }
@@ -85,7 +93,6 @@ export default function MockTestPage() {
         setAnswers({});
         setScore(0);
         setTestState("in_progress");
-        setSelectedSubject(subject);
     };
 
     const handleAnswerSelect = (questionId: string, answer: string) => {
@@ -118,30 +125,50 @@ export default function MockTestPage() {
             description: `You scored ${finalScore} out of ${activeQuestions.length}.`
         });
     };
+    
+    const resetToSelection = () => {
+        setTestState("not_started");
+        setSelectedStudentId(null);
+        setSelectedSubject(null);
+    }
 
     if (testState === "not_started") {
         return (
-            <div className="w-full max-w-4xl mx-auto space-y-6">
+            <div className="w-full max-w-xl mx-auto space-y-6">
                  <Card className="w-full text-center">
                     <CardHeader>
-                        <CardTitle className="text-3xl text-primary">Select a Subject</CardTitle>
-                        <CardDescription>Choose from your registered subjects to start a mock test.</CardDescription>
+                        <CardTitle className="text-3xl text-primary">Start a Mock Test</CardTitle>
+                        <CardDescription>Choose a student and a subject to begin.</CardDescription>
                     </CardHeader>
-                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {studentSubjects.length > 0 ? studentSubjects.map(subject => {
-                            const Icon = getIconForSubject(subject);
-                            return (
-                                <Card key={subject} className="p-4 flex flex-col items-center justify-center text-center">
-                                    <Icon className="w-12 h-12 text-primary mb-2" />
-                                    <h3 className="text-lg font-semibold">{subject}</h3>
-                                    <p className="text-sm text-muted-foreground mt-1">Up to 50 Questions - 30 Mins</p>
-                                    <Button className="mt-4" onClick={() => handleStartTest(subject)}>Start Test</Button>
-                                </Card>
-                            )
-                        }) : (
-                            <div className="md:col-span-2 text-muted-foreground">
-                                <p>No subjects found in your profile.</p>
-                                <Button asChild variant="link"><Link href="/profile">Add Subjects to Your Profile</Link></Button>
+                    <CardContent className="space-y-6">
+                        {studentData.length > 0 ? (
+                           <>
+                             <div className="space-y-2 text-left">
+                                <Label htmlFor="student-select">Select Student</Label>
+                                <Select onValueChange={setSelectedStudentId} value={selectedStudentId || ''}>
+                                    <SelectTrigger id="student-select"><SelectValue placeholder="Choose a student profile..."/></SelectTrigger>
+                                    <SelectContent>
+                                        {studentData.map(s => <SelectItem key={s.id} value={s.id}>{s.name} ({s.academic.standard} {s.academic.board})</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            {selectedStudentId && (
+                                 <div className="space-y-2 text-left">
+                                    <Label htmlFor="subject-select">Select Subject</Label>
+                                    <Select onValueChange={setSelectedSubject} value={selectedSubject || ''}>
+                                        <SelectTrigger id="subject-select"><SelectValue placeholder="Choose a subject..."/></SelectTrigger>
+                                        <SelectContent>
+                                            {studentSubjects.map(sub => <SelectItem key={sub} value={sub}>{sub}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
+                            <Button className="w-full" size="lg" onClick={handleStartTest} disabled={!selectedStudentId || !selectedSubject}>Start Test</Button>
+                           </>
+                        ) : (
+                            <div className="text-muted-foreground p-8 text-center">
+                                <p>No student profiles found.</p>
+                                <Button asChild variant="link"><Link href="/profile">Add a Student to Your Profile</Link></Button>
                             </div>
                         )}
                     </CardContent>
@@ -157,7 +184,7 @@ export default function MockTestPage() {
                     <CardTitle className="flex items-center gap-2">
                         <FileQuestion className="text-primary"/> Test Review: {selectedSubject}
                     </CardTitle>
-                    <CardDescription>Review your answers. Correct answers are marked in green.</CardDescription>
+                    <CardDescription>Review your answers for {studentProfile?.name}. Correct answers are marked in green.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <ScrollArea className="h-[60vh] pr-4">
@@ -196,7 +223,7 @@ export default function MockTestPage() {
                         <Button variant="outline" onClick={() => setTestState("completed")}>
                             <ArrowLeft className="mr-2"/> Back to Results
                         </Button>
-                        <Button onClick={() => setTestState("not_started")}>Take Another Test</Button>
+                        <Button onClick={resetToSelection}>Take Another Test</Button>
                     </div>
                 </CardContent>
             </Card>
@@ -211,6 +238,7 @@ export default function MockTestPage() {
             <Card className="w-full max-w-2xl text-center">
                 <CardHeader>
                     <CardTitle className="text-3xl text-primary">Test Results: {selectedSubject}</CardTitle>
+                    <CardDescription>For {studentProfile?.name}</CardDescription>
                     <Trophy className="w-16 h-16 mx-auto text-yellow-500 my-4" />
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -237,7 +265,7 @@ export default function MockTestPage() {
 
                     <div className="flex flex-wrap gap-4 justify-center pt-4">
                         <Button onClick={() => setTestState('review')}>Review Answers</Button>
-                        <Button onClick={() => setTestState("not_started")}>Take Another Test</Button>
+                        <Button onClick={resetToSelection}>Take Another Test</Button>
                         <Button asChild variant="outline">
                             <Link href="/leaderboard">View Leaderboard</Link>
                         </Button>
@@ -265,7 +293,10 @@ export default function MockTestPage() {
         <Card className="w-full max-w-3xl">
             <CardHeader>
                 <div className="flex justify-between items-center">
-                    <CardTitle className="text-xl text-primary">{selectedSubject} Test in Progress</CardTitle>
+                    <div>
+                        <CardTitle className="text-xl text-primary">{selectedSubject} Test</CardTitle>
+                        <CardDescription>For {studentProfile?.name}</CardDescription>
+                    </div>
                     <Badge variant="secondary" className="flex items-center gap-2">
                         <Clock className="w-4 h-4" />
                         {String(minutesLeft).padStart(2, '0')}:{String(secondsLeft).padStart(2, '0')}
@@ -289,19 +320,7 @@ export default function MockTestPage() {
                     ))}
                 </RadioGroup>
 
-                 <div className="flex justify-between items-center pt-4">
-                    <Button variant="outline" onClick={handlePrevQuestion} disabled={currentQuestionIndex === 0}>
-                        Previous
-                    </Button>
-                     {currentQuestionIndex === activeQuestions.length - 1 ? (
-                         <Button onClick={handleSubmitTest} className="bg-accent text-accent-foreground hover:bg-accent/90">Submit Test</Button>
-                     ) : (
-                        <Button onClick={handleNextQuestion}>
-                            Next
-                        </Button>
-                     )}
-                </div>
-                 <div className="flex justify-between items-center pt-4">
+                 <div className="flex justify-between items-center pt-4 border-t mt-4">
                     <Button variant="outline" onClick={handlePrevQuestion} disabled={currentQuestionIndex === 0}>
                         Previous
                     </Button>
@@ -317,5 +336,3 @@ export default function MockTestPage() {
         </Card>
     )
 }
-
-    

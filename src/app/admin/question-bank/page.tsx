@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileQuestion, MoreHorizontal, PlusCircle, Trash2, Edit } from "lucide-react";
+import { FileQuestion, MoreHorizontal, PlusCircle, Trash2, Edit, Upload } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -47,6 +47,7 @@ export default function QuestionBankPage() {
   const [option3En, setOption3En] = useState("");
   const [option4En, setOption4En] = useState("");
   const { toast } = useToast();
+  const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   
   const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -139,6 +140,50 @@ export default function QuestionBankPage() {
     }
   }
 
+  const handleBulkUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const content = e.target?.result;
+            if (typeof content !== 'string') throw new Error("File content is not readable.");
+            const parsedQuestions: Omit<Question, 'id'>[] = JSON.parse(content);
+
+            if (!Array.isArray(parsedQuestions)) {
+                 throw new Error("JSON must be an array of questions.");
+            }
+
+            // Basic validation
+            const newQuestions: Question[] = parsedQuestions.map(q => {
+                 if (!q.text?.en || !q.options?.en || !q.correctAnswer?.en || !q.subject || !q.standard) {
+                    throw new Error("One or more questions are missing required fields.");
+                 }
+                return { ...q, id: `Q${String(Date.now()).slice(-6)}-${Math.random()}` };
+            });
+
+            allQuestions.push(...newQuestions);
+            setQuestions([...allQuestions]);
+            toast({
+                title: "Bulk Upload Successful!",
+                description: `${newQuestions.length} new questions have been added to the bank.`
+            });
+            setIsBulkUploadOpen(false);
+
+        } catch (error) {
+            console.error("Bulk upload error:", error);
+            const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+             toast({
+                variant: 'destructive',
+                title: "Upload Failed",
+                description: `Failed to parse JSON file. Please check the format. ${errorMessage}`,
+             });
+        }
+    };
+    reader.readAsText(file);
+  }
+
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold flex items-center gap-2"><FileQuestion /> Question Bank Management</h1>
@@ -152,97 +197,133 @@ export default function QuestionBankPage() {
                     Add, edit, or remove questions for the mock tests.
                 </CardDescription>
               </div>
-              <Dialog open={isFormOpen} onOpenChange={handleOpenChange}>
-                <DialogTrigger asChild>
-                    <Button>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Add New Question
-                    </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[725px]">
-                    <DialogHeader>
-                        <DialogTitle>{editingQuestion ? 'Edit Question' : 'Add New Question'}</DialogTitle>
-                        <DialogDescription>
-                            Fill in the details for the MCQ in both languages.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <form onSubmit={handleFormSubmit} className="space-y-4">
-                        <Tabs defaultValue="en" className="w-full">
-                            <TabsList className="grid w-full grid-cols-2">
-                                <TabsTrigger value="en">English</TabsTrigger>
-                                <TabsTrigger value="hi">Hindi</TabsTrigger>
-                            </TabsList>
-                            <TabsContent value="en" className="space-y-4 pt-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="text.en">Question Text (English)</Label>
-                                    <Textarea id="text.en" name="text.en" required defaultValue={editingQuestion?.text.en}/>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2"><Label htmlFor="option1.en">Option 1</Label><Input id="option1.en" name="option1.en" required defaultValue={editingQuestion?.options.en[0]} onChange={e => setOption1En(e.target.value)}/></div>
-                                    <div className="space-y-2"><Label htmlFor="option2.en">Option 2</Label><Input id="option2.en" name="option2.en" required defaultValue={editingQuestion?.options.en[1]} onChange={e => setOption2En(e.target.value)}/></div>
-                                    <div className="space-y-2"><Label htmlFor="option3.en">Option 3</Label><Input id="option3.en" name="option3.en" required defaultValue={editingQuestion?.options.en[2]} onChange={e => setOption3En(e.target.value)}/></div>
-                                    <div className="space-y-2"><Label htmlFor="option4.en">Option 4</Label><Input id="option4.en" name="option4.en" required defaultValue={editingQuestion?.options.en[3]} onChange={e => setOption4En(e.target.value)}/></div>
-                                </div>
-                            </TabsContent>
-                             <TabsContent value="hi" className="space-y-4 pt-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="text.hi">Question Text (Hindi)</Label>
-                                    <Textarea id="text.hi" name="text.hi" required defaultValue={editingQuestion?.text.hi}/>
-                                </div>
-                                 <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2"><Label htmlFor="option1.hi">Option 1</Label><Input id="option1.hi" name="option1.hi" required defaultValue={editingQuestion?.options.hi[0]} /></div>
-                                    <div className="space-y-2"><Label htmlFor="option2.hi">Option 2</Label><Input id="option2.hi" name="option2.hi" required defaultValue={editingQuestion?.options.hi[1]} /></div>
-                                    <div className="space-y-2"><Label htmlFor="option3.hi">Option 3</Label><Input id="option3.hi" name="option3.hi" required defaultValue={editingQuestion?.options.hi[2]} /></div>
-                                    <div className="space-y-2"><Label htmlFor="option4.hi">Option 4</Label><Input id="option4.hi" name="option4.hi" required defaultValue={editingQuestion?.options.hi[3]} /></div>
-                                </div>
-                            </TabsContent>
-                        </Tabs>
-
-                        <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+              <div className="flex gap-2">
+                <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
+                    <DialogTrigger asChild>
+                        <Button variant="outline"><Upload className="mr-2 h-4 w-4" /> Bulk Upload</Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Bulk Upload Questions</DialogTitle>
+                            <DialogDescription>
+                                Upload a JSON file containing an array of questions. Ensure the file follows the specified format. The 'id' will be generated automatically.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                            <Label>Required JSON Format:</Label>
+                            <pre className="p-2 bg-muted text-xs rounded-md overflow-x-auto">
+{`[
+  {
+    "text": { "en": "Q Text", "hi": "Q Text" },
+    "subject": "Science",
+    "standard": "10th",
+    "options": {
+      "en": ["A", "B", "C", "D"],
+      "hi": ["अ", "ब", "स", "द"]
+    },
+    "correctAnswer": { "en": "A", "hi": "अ" }
+  }
+]`}
+                            </pre>
                              <div className="space-y-2">
-                                <Label htmlFor="standard">Academic Standard</Label>
-                                 <Select name="standard" required defaultValue={editingQuestion?.standard}>
-                                    <SelectTrigger id="standard"><SelectValue placeholder="Select..." /></SelectTrigger>
+                                <Label htmlFor="json-upload">JSON File</Label>
+                                <Input id="json-upload" type="file" accept=".json" onChange={handleBulkUpload} />
+                            </div>
+                        </div>
+                    </DialogContent>
+                </Dialog>
+                <Dialog open={isFormOpen} onOpenChange={handleOpenChange}>
+                    <DialogTrigger asChild>
+                        <Button>
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Add New Question
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[725px]">
+                        <DialogHeader>
+                            <DialogTitle>{editingQuestion ? 'Edit Question' : 'Add New Question'}</DialogTitle>
+                            <DialogDescription>
+                                Fill in the details for the MCQ in both languages.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={handleFormSubmit} className="space-y-4">
+                            <Tabs defaultValue="en" className="w-full">
+                                <TabsList className="grid w-full grid-cols-2">
+                                    <TabsTrigger value="en">English</TabsTrigger>
+                                    <TabsTrigger value="hi">Hindi</TabsTrigger>
+                                </TabsList>
+                                <TabsContent value="en" className="space-y-4 pt-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="text.en">Question Text (English)</Label>
+                                        <Textarea id="text.en" name="text.en" required defaultValue={editingQuestion?.text.en}/>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2"><Label htmlFor="option1.en">Option 1</Label><Input id="option1.en" name="option1.en" required defaultValue={editingQuestion?.options.en[0]} onChange={e => setOption1En(e.target.value)}/></div>
+                                        <div className="space-y-2"><Label htmlFor="option2.en">Option 2</Label><Input id="option2.en" name="option2.en" required defaultValue={editingQuestion?.options.en[1]} onChange={e => setOption2En(e.target.value)}/></div>
+                                        <div className="space-y-2"><Label htmlFor="option3.en">Option 3</Label><Input id="option3.en" name="option3.en" required defaultValue={editingQuestion?.options.en[2]} onChange={e => setOption3En(e.target.value)}/></div>
+                                        <div className="space-y-2"><Label htmlFor="option4.en">Option 4</Label><Input id="option4.en" name="option4.en" required defaultValue={editingQuestion?.options.en[3]} onChange={e => setOption4En(e.target.value)}/></div>
+                                    </div>
+                                </TabsContent>
+                                <TabsContent value="hi" className="space-y-4 pt-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="text.hi">Question Text (Hindi)</Label>
+                                        <Textarea id="text.hi" name="text.hi" required defaultValue={editingQuestion?.text.hi}/>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2"><Label htmlFor="option1.hi">Option 1</Label><Input id="option1.hi" name="option1.hi" required defaultValue={editingQuestion?.options.hi[0]} /></div>
+                                        <div className="space-y-2"><Label htmlFor="option2.hi">Option 2</Label><Input id="option2.hi" name="option2.hi" required defaultValue={editingQuestion?.options.hi[1]} /></div>
+                                        <div className="space-y-2"><Label htmlFor="option3.hi">Option 3</Label><Input id="option3.hi" name="option3.hi" required defaultValue={editingQuestion?.options.hi[2]} /></div>
+                                        <div className="space-y-2"><Label htmlFor="option4.hi">Option 4</Label><Input id="option4.hi" name="option4.hi" required defaultValue={editingQuestion?.options.hi[3]} /></div>
+                                    </div>
+                                </TabsContent>
+                            </Tabs>
+
+                            <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                                <div className="space-y-2">
+                                    <Label htmlFor="standard">Academic Standard</Label>
+                                    <Select name="standard" required defaultValue={editingQuestion?.standard}>
+                                        <SelectTrigger id="standard"><SelectValue placeholder="Select..." /></SelectTrigger>
+                                        <SelectContent>
+                                            {[...Array(12)].map((_, i) => <SelectItem key={i+1} value={`${i+1}th`}>{i+1}th</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="subject">Subject</Label>
+                                    <Select name="subject" required defaultValue={editingQuestion?.subject}>
+                                        <SelectTrigger id="subject"><SelectValue placeholder="Select..." /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="General Knowledge">General Knowledge</SelectItem>
+                                            <SelectItem value="Mathematics">Mathematics</SelectItem>
+                                            <SelectItem value="Science">Science</SelectItem>
+                                            <SelectItem value="English">English</SelectItem>
+                                            <SelectItem value="History">History</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="correctAnswer.en">Correct Answer (Select the English option)</Label>
+                                <Select name="correctAnswer.en" required defaultValue={editingQuestion?.correctAnswer.en}>
+                                    <SelectTrigger id="correctAnswer.en">
+                                        <SelectValue placeholder="Select the correct option" />
+                                    </SelectTrigger>
                                     <SelectContent>
-                                        {[...Array(12)].map((_, i) => <SelectItem key={i+1} value={`${i+1}th`}>{i+1}th</SelectItem>)}
+                                        {option1En && <SelectItem value={option1En}>{option1En}</SelectItem>}
+                                        {option2En && <SelectItem value={option2En}>{option2En}</SelectItem>}
+                                        {option3En && <SelectItem value={option3En}>{option3En}</SelectItem>}
+                                        {option4En && <SelectItem value={option4En}>{option4En}</SelectItem>}
                                     </SelectContent>
                                 </Select>
                             </div>
-                             <div className="space-y-2">
-                                <Label htmlFor="subject">Subject</Label>
-                                 <Select name="subject" required defaultValue={editingQuestion?.subject}>
-                                    <SelectTrigger id="subject"><SelectValue placeholder="Select..." /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="General Knowledge">General Knowledge</SelectItem>
-                                        <SelectItem value="Mathematics">Mathematics</SelectItem>
-                                        <SelectItem value="Science">Science</SelectItem>
-                                        <SelectItem value="English">English</SelectItem>
-                                        <SelectItem value="History">History</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                         </div>
-                         <div className="space-y-2">
-                            <Label htmlFor="correctAnswer.en">Correct Answer (Select the English option)</Label>
-                            <Select name="correctAnswer.en" required defaultValue={editingQuestion?.correctAnswer.en}>
-                                <SelectTrigger id="correctAnswer.en">
-                                    <SelectValue placeholder="Select the correct option" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {option1En && <SelectItem value={option1En}>{option1En}</SelectItem>}
-                                    {option2En && <SelectItem value={option2En}>{option2En}</SelectItem>}
-                                    {option3En && <SelectItem value={option3En}>{option3En}</SelectItem>}
-                                    {option4En && <SelectItem value={option4En}>{option4En}</SelectItem>}
-                                </SelectContent>
-                            </Select>
-                         </div>
 
-                        <DialogFooter>
-                            <Button type="submit">{editingQuestion ? 'Save Changes' : 'Add Question'}</Button>
-                        </DialogFooter>
-                    </form>
-                </DialogContent>
-              </Dialog>
+                            <DialogFooter>
+                                <Button type="submit">{editingQuestion ? 'Save Changes' : 'Add Question'}</Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
+              </div>
             </div>
         </CardHeader>
         <CardContent>
@@ -293,5 +374,3 @@ export default function QuestionBankPage() {
     </div>
   );
 }
-
-    

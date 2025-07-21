@@ -173,8 +173,8 @@ export default function QuestionBankPage() {
 
             // Basic validation and combining with dropdown selections
             const newQuestions: Question[] = parsedQuestions.map(q => {
-                 if (!q.text?.en || !q.options?.en || !q.correctAnswer?.en) {
-                    throw new Error("One or more questions are missing required fields (text, options, correctAnswer).");
+                 if (!q.text?.en || !q.options?.en || !q.correctAnswer?.en || !q.text?.mr || !q.options?.mr || !q.correctAnswer?.mr) {
+                    throw new Error("One or more questions are missing required fields (text, options, correctAnswer in both languages).");
                  }
                 return { 
                     ...q, 
@@ -235,7 +235,7 @@ export default function QuestionBankPage() {
                         <DialogHeader>
                             <DialogTitle>Bulk Upload Questions</DialogTitle>
                             <DialogDescription>
-                                Select the board, standard, and subject, then upload a JSON file containing an array of questions. The ID and other details will be added automatically.
+                                First, select the board, standard, and subject. Then, upload a JSON file with your questions. These selections will be applied to all questions in the file.
                             </DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4">
@@ -275,7 +275,7 @@ export default function QuestionBankPage() {
                                 </div>
                             </div>
 
-                            <Label>Required Simplified JSON Format:</Label>
+                            <Label className="font-semibold">Required Simplified JSON Format:</Label>
                             <pre className="p-2 bg-muted text-xs rounded-md overflow-x-auto">
 {`[
   {
@@ -450,5 +450,3 @@ export default function QuestionBankPage() {
     </div>
   );
 }
-
-    

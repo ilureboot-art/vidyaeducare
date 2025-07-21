@@ -79,9 +79,11 @@ I'm an Independent Business Associate with them, and I highly recommend their pl
 
 ✨ **Why Vidya EduCare?**
 - 📚 Extensive library of realistic mock tests for various standards.
-- 🤖 AI-powered tools to help you study smarter.
 - 🏆 Compete on live leaderboards and win cash prizes for top scores.
 - 🎮 Fun skill games to sharpen your mind.
+
+* Become IBA & start your business journey with Vidya EduCare *
+No registration fee and investment to become IBA and start business with Vidya EduCare
 
 Use my exclusive IBA code to get a special 10% discount on your subscription!
 
@@ -107,13 +109,10 @@ Don't miss out on the best way to prepare for your exams and earn rewards!
           url: shareUrl,
         });
       } catch (error) {
-        // Silently fail if the user cancels the share action (AbortError).
-        if ((error as DOMException).name === 'AbortError') {
-          return;
+        // Silently fail if the user cancels the share action.
+        if ((error as DOMException).name !== 'AbortError') {
+           fallbackCopy();
         }
-        // For other errors, you might still want to log them or handle them differently.
-        console.error("Share failed:", error);
-        fallbackCopy();
       }
     } else {
       fallbackCopy();

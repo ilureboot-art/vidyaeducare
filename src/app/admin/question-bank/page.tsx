@@ -172,7 +172,7 @@ export default function QuestionBankPage() {
                                 <TabsTrigger value="en">English</TabsTrigger>
                                 <TabsTrigger value="hi">Hindi</TabsTrigger>
                             </TabsList>
-                            <TabsContent value="en" className="space-y-4">
+                            <TabsContent value="en" className="space-y-4 pt-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="text.en">Question Text (English)</Label>
                                     <Textarea id="text.en" name="text.en" required defaultValue={editingQuestion?.text.en}/>
@@ -184,7 +184,7 @@ export default function QuestionBankPage() {
                                     <div className="space-y-2"><Label htmlFor="option4.en">Option 4</Label><Input id="option4.en" name="option4.en" required defaultValue={editingQuestion?.options.en[3]} onChange={e => setOption4En(e.target.value)}/></div>
                                 </div>
                             </TabsContent>
-                             <TabsContent value="hi" className="space-y-4">
+                             <TabsContent value="hi" className="space-y-4 pt-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="text.hi">Question Text (Hindi)</Label>
                                     <Textarea id="text.hi" name="text.hi" required defaultValue={editingQuestion?.text.hi}/>

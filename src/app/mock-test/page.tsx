@@ -129,10 +129,13 @@ export default function MockTestPage() {
 
         // Check eligibility based on the new rule
         if (studentProfile) {
+            // Create a temporary performance history including the current test result
+            const newPerformanceEntry = { name: subject || "Test", score: finalScore };
+            const combinedPerformance = [...studentProfile.stats.performance, newPerformanceEntry];
+
             // Check if all previous scores are > 80% AND the current score is > 80%
-            const allPreviousScoresAreHigh = studentProfile.stats.performance.every(p => p.score > 80);
-            const isEligible = finalScore > 80 && allPreviousScoresAreHigh;
-            setPrizeEligible(isEligible);
+            const allScoresAreHigh = combinedPerformance.every(p => p.score > 80);
+            setPrizeEligible(allScoresAreHigh);
         }
 
         setTestState("completed");
@@ -300,5 +303,3 @@ export default function MockTestPage() {
         </Card>
     )
 }
-
-    

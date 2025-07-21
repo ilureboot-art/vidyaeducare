@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { User, Mail, Calendar, Phone, Edit, GraduationCap, Building, Languages, BookCopy, FileClock, Cake, Medal, BarChart2, Trash2, PlusCircle, TrendingUp, BookOpen, Activity, Info } from "lucide-react";
+import { User, Mail, Calendar, Phone, Edit, GraduationCap, Building, Languages, BookCopy, FileClock, Cake, Medal, BarChart2, Trash2, PlusCircle, TrendingUp, BookOpen, Activity, Info, CalendarCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { studentData, type StudentProfile, addStudent, deleteStudent, validActivationCodes, useActivationCode } from "@/lib/student-data";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
@@ -22,6 +22,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { getTestsForStudent, type ScheduledTest } from "@/lib/test-schedule";
+import { format } from "date-fns";
 
 function FormattedDate({ dateString }: { dateString: string }) {
   const [formattedDate, setFormattedDate] = useState("");
@@ -50,6 +52,7 @@ export default function ProfilePage() {
     const [isTestDialogOpen, setIsTestDialogOpen] = useState(false);
     const [selectedStudentForTest, setSelectedStudentForTest] = useState<StudentProfile | null>(null);
     const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
+    const [upcomingTests, setUpcomingTests] = useState<ScheduledTest[]>([]);
 
     // This effect ensures the component uses the latest data from the module
     useEffect(() => {
@@ -117,6 +120,7 @@ export default function ProfilePage() {
     const openTestDialog = (student: StudentProfile) => {
         setSelectedStudentForTest(student);
         setSelectedSubject(null); // Reset subject selection
+        setUpcomingTests(getTestsForStudent(student.academic.board, student.academic.standard));
         setIsTestDialogOpen(true);
     };
     
@@ -239,6 +243,7 @@ export default function ProfilePage() {
 
        {students.map(student => {
          const isEligible = student.stats.performance.length > 0 && student.stats.performance.every(p => p.score > 80);
+         const studentUpcomingTests = getTestsForStudent(student.academic.board, student.academic.standard);
          return (
          <Card key={student.id} className="shadow-lg relative group overflow-hidden">
             <CardHeader className="flex flex-row items-start justify-between gap-4 bg-muted/30 p-4">
@@ -272,8 +277,8 @@ export default function ProfilePage() {
                      <Button variant="destructive" size="icon" onClick={() => handleDeleteStudent(student.id)}><Trash2 className="w-4 h-4"/></Button>
                 </div>
             </CardHeader>
-            <CardContent className="p-4 grid md:grid-cols-3 gap-6">
-                <div className="md:col-span-1 space-y-4">
+            <CardContent className="p-4 grid md:grid-cols-2 gap-6">
+                 <div className="space-y-4">
                      <h3 className="font-semibold flex items-center gap-2 text-muted-foreground"><GraduationCap size={16}/> Academic Details</h3>
                      <div className="space-y-2 text-sm pl-2 border-l-2">
                         <p><strong>D.O.B:</strong> <FormattedDate dateString={student.dob} /></p>
@@ -283,8 +288,8 @@ export default function ProfilePage() {
                         <p><strong>Language:</strong> {student.academic.language}</p>
                      </div>
                 </div>
-                <div className="md:col-span-2">
-                    <h3 className="font-semibold flex items-center gap-2 text-muted-foreground"><BarChart2 size={16}/> Performance Analytics</h3>
+                <div>
+                     <h3 className="font-semibold flex items-center gap-2 text-muted-foreground"><BarChart2 size={16}/> Performance Analytics</h3>
                     <div className="grid grid-cols-3 gap-2 text-center my-4">
                          <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
                             <p className="text-xs text-muted-foreground">Avg. Score</p>
@@ -325,6 +330,26 @@ export default function ProfilePage() {
                         )}
                      </div>
                 </div>
+                 <div className="md:col-span-2 space-y-4">
+                     <h3 className="font-semibold flex items-center gap-2 text-muted-foreground"><CalendarCheck size={16}/> Upcoming Tests</h3>
+                      {studentUpcomingTests.length > 0 ? (
+                        <div className="space-y-2">
+                          {studentUpcomingTests.map(test => (
+                            <div key={test.id} className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                              <div>
+                                <p className="font-medium">{test.title}</p>
+                                <p className="text-sm text-muted-foreground">{test.subject}</p>
+                              </div>
+                              <Badge variant="outline">{format(new Date(test.date), "PPP")}</Badge>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center text-sm text-muted-foreground bg-muted/20 rounded-lg p-4">
+                          No upcoming tests scheduled for this student.
+                        </div>
+                      )}
+                 </div>
             </CardContent>
             <CardFooter className="p-4 bg-muted/30">
                  <Button className="w-full" onClick={() => openTestDialog(student)}>

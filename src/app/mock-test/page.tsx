@@ -127,15 +127,25 @@ export default function MockTestPage() {
         const finalScore = (correctAnswers / activeQuestions.length) * 100;
         setScore(finalScore);
 
-        // Check eligibility based on the new rule
         if (studentProfile) {
-            // Create a temporary performance history including the current test result
-            const newPerformanceEntry = { name: subject || "Test", score: finalScore };
-            const combinedPerformance = [...studentProfile.stats.performance, newPerformanceEntry];
+            const student = studentData.find(s => s.id === studentProfile.id);
+            if (student) {
+                const newPerformanceEntry = { name: subject || "Test", score: finalScore };
+                const existingEntryIndex = student.stats.performance.findIndex(p => p.name === newPerformanceEntry.name);
 
-            // Check if all previous scores are > 80% AND the current score is > 80%
-            const allScoresAreHigh = combinedPerformance.every(p => p.score > 80);
-            setPrizeEligible(allScoresAreHigh);
+                if (existingEntryIndex > -1) {
+                    student.stats.performance[existingEntryIndex] = newPerformanceEntry;
+                } else {
+                    student.stats.performance.push(newPerformanceEntry);
+                }
+
+                student.stats.testsTaken = student.stats.performance.length;
+                const totalScore = student.stats.performance.reduce((acc, p) => acc + p.score, 0);
+                student.stats.avgScore = totalScore / student.stats.testsTaken;
+                
+                const allScoresAreHigh = student.stats.performance.every(p => p.score > 80);
+                setPrizeEligible(allScoresAreHigh);
+            }
         }
 
         setTestState("completed");

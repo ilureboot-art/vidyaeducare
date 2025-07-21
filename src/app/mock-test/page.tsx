@@ -130,8 +130,7 @@ export default function MockTestPage() {
         // Check eligibility based on the new rule
         if (studentProfile) {
             // Check if all previous scores are > 80% AND the current score is > 80%
-            const allScores = studentProfile.stats.performance.map(p => p.score);
-            const allPreviousScoresAreHigh = allScores.every(s => s > 80);
+            const allPreviousScoresAreHigh = studentProfile.stats.performance.every(p => p.score > 80);
             const isEligible = finalScore > 80 && allPreviousScoresAreHigh;
             setPrizeEligible(isEligible);
         }
@@ -230,7 +229,7 @@ export default function MockTestPage() {
                              <XCircle className="h-4 w-4" />
                             <AlertTitle>Keep Practicing!</AlertTitle>
                             <AlertDescription>
-                                To be eligible for a prize, the student must score above 80% in this test and all other subject tests they have taken.
+                                To be eligible for a prize, the student must score above 80% in this test and all other subject tests they have taken. If the score for any subject test drops below 80%, eligibility is lost.
                             </AlertDescription>
                         </Alert>
                     )}
@@ -301,3 +300,5 @@ export default function MockTestPage() {
         </Card>
     )
 }
+
+    

@@ -35,7 +35,7 @@ export default function MockTestPage() {
     const [activeQuestions, setActiveQuestions] = useState<Question[]>([]);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [timeLeft, setTimeLeft] = useState(MOCK_TEST_DURATION);
-    const [answers, setAnswers] = useState<{ [key: string]: { en: string; hi: string; } }>({});
+    const [answers, setAnswers] = useState<{ [key: string]: { en: string; mr: string; } }>({});
     const [score, setScore] = useState(0);
     const [prizeEligible, setPrizeEligible] = useState(false);
 
@@ -101,8 +101,8 @@ export default function MockTestPage() {
     }, [testState, timeLeft]);
 
 
-    const handleAnswerSelect = (questionId: string, answerEn: string, answerHi: string) => {
-        setAnswers(prev => ({ ...prev, [questionId]: { en: answerEn, hi: answerHi } }));
+    const handleAnswerSelect = (questionId: string, answerEn: string, answerMr: string) => {
+        setAnswers(prev => ({ ...prev, [questionId]: { en: answerEn, mr: answerMr } }));
     };
 
     const handleNextQuestion = () => {
@@ -183,23 +183,23 @@ export default function MockTestPage() {
                                 return (
                                 <div key={q.id} className="p-4 border rounded-lg">
                                     <div className="flex items-center justify-between">
-                                        <p className="font-semibold">{index + 1}. {q.text.en}</p>
+                                        <p className="font-semibold">{index + 1}. {q.text.mr}</p>
                                         {isCorrect ? <CheckCircle className="text-green-500"/> : <XCircle className="text-red-500"/>}
                                     </div>
-                                    <p className="font-semibold text-muted-foreground">{q.text.hi}</p>
+                                    <p className="font-semibold text-muted-foreground">{q.text.en}</p>
                                     <div className="mt-2 space-y-1 text-sm">
-                                        {q.options.en.map((optionEn, optionIndex) => {
-                                            const optionHi = q.options.hi[optionIndex];
-                                            const isUserAnswer = userAnswer?.en === optionEn;
-                                            const isCorrectAnswer = q.correctAnswer.en === optionEn;
+                                        {q.options.mr.map((optionMr, optionIndex) => {
+                                            const optionEn = q.options.en[optionIndex];
+                                            const isUserAnswer = userAnswer?.mr === optionMr;
+                                            const isCorrectAnswer = q.correctAnswer.mr === optionMr;
                                             return (
-                                                <div key={optionEn} className={cn(
+                                                <div key={optionMr} className={cn(
                                                     "p-2 rounded-md",
                                                     isCorrectAnswer && "bg-green-100 dark:bg-green-900/50 font-semibold",
                                                     isUserAnswer && !isCorrectAnswer && "bg-red-100 dark:bg-red-900/50 line-through"
                                                 )}>
-                                                    <p>{optionEn}</p>
-                                                    <p className="text-muted-foreground">{optionHi}</p>
+                                                    <p>{optionMr}</p>
+                                                    <p className="text-muted-foreground">{optionEn}</p>
                                                 </div>
                                             )
                                         })}
@@ -288,26 +288,26 @@ export default function MockTestPage() {
             </CardHeader>
             <CardContent className="space-y-6">
                 <div>
-                    <p className="text-lg font-semibold">{currentQuestion.text.en}</p>
-                    <p className="text-lg font-semibold text-muted-foreground">{currentQuestion.text.hi}</p>
+                    <p className="text-lg font-semibold">{currentQuestion.text.mr}</p>
+                    <p className="text-lg font-semibold text-muted-foreground">{currentQuestion.text.en}</p>
                 </div>
                 <RadioGroup 
-                    value={answers[currentQuestion.id]?.en || ""} 
+                    value={answers[currentQuestion.id]?.mr || ""} 
                     onValueChange={(value) => {
-                        const optionIndex = currentQuestion.options.en.indexOf(value);
-                        handleAnswerSelect(currentQuestion.id, value, currentQuestion.options.hi[optionIndex]);
+                        const optionIndex = currentQuestion.options.mr.indexOf(value);
+                        handleAnswerSelect(currentQuestion.id, currentQuestion.options.en[optionIndex], value);
                     }}
                     className="space-y-2"
                 >
-                    {currentQuestion.options.en.map((optionEn, index) => {
-                        const optionHi = currentQuestion.options.hi[index];
+                    {currentQuestion.options.mr.map((optionMr, index) => {
+                        const optionEn = currentQuestion.options.en[index];
                         return (
                             <Label key={index} className="flex items-start gap-4 p-3 border rounded-md has-[:checked]:bg-primary/10 has-[:checked]:border-primary cursor-pointer">
-                                <RadioGroupItem value={optionEn} id={`q${currentQuestion.id}-o${index}`} className="mt-1" />
+                                <RadioGroupItem value={optionMr} id={`q${currentQuestion.id}-o${index}`} className="mt-1" />
                                 <div>
-                                    <span>{optionEn}</span>
+                                    <span>{optionMr}</span>
                                     <br/>
-                                    <span className="text-muted-foreground">{optionHi}</span>
+                                    <span className="text-muted-foreground">{optionEn}</span>
                                 </div>
                             </Label>
                         )
@@ -330,5 +330,3 @@ export default function MockTestPage() {
         </Card>
     )
 }
-
-    

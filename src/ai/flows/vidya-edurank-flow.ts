@@ -12,7 +12,7 @@ import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
 const VidyaEdurankInputSchema = z.object({
-  language: z.string().describe('The input language (e.g., English, Hindi, Marathi).'),
+  language: z.string().describe('The input language (e.g., English, Marathi, Hindi).'),
   grade: z.string().describe('The target grade for the content (e.g., 6th, 10th).'),
   subject: z.string().describe('The subject of the study material (e.g., Science, Mathematics).'),
   topic: z.string().describe('The topic or chapter name.'),
@@ -65,7 +65,7 @@ Based on the material, please generate the following outputs as requested:
 - Summary Notes: Create concept-wise summary notes using bullet points or short paragraphs. The language should be clear, concise, and appropriate for a {{{grade}}} grade student.
 {{/if}}
 {{#if outputs.mcqs}}
-- MCQs: Generate a list of multiple-choice questions. Each question should have 4 options, and you must indicate the correct answer clearly (e.g., with a "✅" or by bolding it).
+- MCQs: Generate a list of multiple-choice questions. Each question should have 4 options, and you must indicate the correct answer clearly (e.g., with a "✅" or by bolding it). Ensure questions and options are provided in both English and Marathi.
 {{/if}}
 {{#if outputs.questionPaper}}
 - Question Paper: Create a structured question paper based on the {{{curriculum}}} board guidelines if possible. Include a variety of question types (e.g., short answer, long answer) and assign marks to each question. The total marks should be reasonable (e.g., 20-25 marks).

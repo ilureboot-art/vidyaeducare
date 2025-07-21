@@ -60,32 +60,32 @@ export default function QuestionBankPage() {
         formData.get("option3.en") as string,
         formData.get("option4.en") as string,
     ];
-    const optionsHi = [
-        formData.get("option1.hi") as string,
-        formData.get("option2.hi") as string,
-        formData.get("option3.hi") as string,
-        formData.get("option4.hi") as string,
+    const optionsMr = [
+        formData.get("option1.mr") as string,
+        formData.get("option2.mr") as string,
+        formData.get("option3.mr") as string,
+        formData.get("option4.mr") as string,
     ];
     
     const correctAnsEn = formData.get("correctAnswer.en") as string;
     const correctAnsIndex = optionsEn.indexOf(correctAnsEn);
-    const correctAnsHi = optionsHi[correctAnsIndex];
+    const correctAnsMr = optionsMr[correctAnsIndex];
 
     const newQuestionData: Question = {
         id: editingQuestion ? editingQuestion.id : `Q${String(Date.now()).slice(-3)}`,
         text: {
             en: formData.get("text.en") as string,
-            hi: formData.get("text.hi") as string
+            mr: formData.get("text.mr") as string
         },
         subject: formData.get("subject") as string,
         standard: formData.get("standard") as string,
         options: {
             en: optionsEn,
-            hi: optionsHi
+            mr: optionsMr
         },
         correctAnswer: {
             en: correctAnsEn,
-            hi: correctAnsHi,
+            mr: correctAnsMr,
         },
     };
 
@@ -214,14 +214,14 @@ export default function QuestionBankPage() {
                             <pre className="p-2 bg-muted text-xs rounded-md overflow-x-auto">
 {`[
   {
-    "text": { "en": "Q Text", "hi": "Q Text" },
+    "text": { "en": "Q Text", "mr": "प्रश्न मजकूर" },
     "subject": "Science",
     "standard": "10th",
     "options": {
       "en": ["A", "B", "C", "D"],
-      "hi": ["अ", "ब", "स", "द"]
+      "mr": ["अ", "ब", "क", "ड"]
     },
-    "correctAnswer": { "en": "A", "hi": "अ" }
+    "correctAnswer": { "en": "A", "mr": "अ" }
   }
 ]`}
                             </pre>
@@ -247,11 +247,23 @@ export default function QuestionBankPage() {
                             </DialogDescription>
                         </DialogHeader>
                         <form onSubmit={handleFormSubmit} className="space-y-4">
-                            <Tabs defaultValue="en" className="w-full">
+                            <Tabs defaultValue="mr" className="w-full">
                                 <TabsList className="grid w-full grid-cols-2">
+                                    <TabsTrigger value="mr">Marathi</TabsTrigger>
                                     <TabsTrigger value="en">English</TabsTrigger>
-                                    <TabsTrigger value="hi">Hindi</TabsTrigger>
                                 </TabsList>
+                                <TabsContent value="mr" className="space-y-4 pt-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="text.mr">Question Text (Marathi)</Label>
+                                        <Textarea id="text.mr" name="text.mr" required defaultValue={editingQuestion?.text.mr}/>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2"><Label htmlFor="option1.mr">Option 1</Label><Input id="option1.mr" name="option1.mr" required defaultValue={editingQuestion?.options.mr[0]} /></div>
+                                        <div className="space-y-2"><Label htmlFor="option2.mr">Option 2</Label><Input id="option2.mr" name="option2.mr" required defaultValue={editingQuestion?.options.mr[1]} /></div>
+                                        <div className="space-y-2"><Label htmlFor="option3.mr">Option 3</Label><Input id="option3.mr" name="option3.mr" required defaultValue={editingQuestion?.options.mr[2]} /></div>
+                                        <div className="space-y-2"><Label htmlFor="option4.mr">Option 4</Label><Input id="option4.mr" name="option4.mr" required defaultValue={editingQuestion?.options.mr[3]} /></div>
+                                    </div>
+                                </TabsContent>
                                 <TabsContent value="en" className="space-y-4 pt-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="text.en">Question Text (English)</Label>
@@ -262,18 +274,6 @@ export default function QuestionBankPage() {
                                         <div className="space-y-2"><Label htmlFor="option2.en">Option 2</Label><Input id="option2.en" name="option2.en" required defaultValue={editingQuestion?.options.en[1]} onChange={e => setOption2En(e.target.value)}/></div>
                                         <div className="space-y-2"><Label htmlFor="option3.en">Option 3</Label><Input id="option3.en" name="option3.en" required defaultValue={editingQuestion?.options.en[2]} onChange={e => setOption3En(e.target.value)}/></div>
                                         <div className="space-y-2"><Label htmlFor="option4.en">Option 4</Label><Input id="option4.en" name="option4.en" required defaultValue={editingQuestion?.options.en[3]} onChange={e => setOption4En(e.target.value)}/></div>
-                                    </div>
-                                </TabsContent>
-                                <TabsContent value="hi" className="space-y-4 pt-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="text.hi">Question Text (Hindi)</Label>
-                                        <Textarea id="text.hi" name="text.hi" required defaultValue={editingQuestion?.text.hi}/>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-2"><Label htmlFor="option1.hi">Option 1</Label><Input id="option1.hi" name="option1.hi" required defaultValue={editingQuestion?.options.hi[0]} /></div>
-                                        <div className="space-y-2"><Label htmlFor="option2.hi">Option 2</Label><Input id="option2.hi" name="option2.hi" required defaultValue={editingQuestion?.options.hi[1]} /></div>
-                                        <div className="space-y-2"><Label htmlFor="option3.hi">Option 3</Label><Input id="option3.hi" name="option3.hi" required defaultValue={editingQuestion?.options.hi[2]} /></div>
-                                        <div className="space-y-2"><Label htmlFor="option4.hi">Option 4</Label><Input id="option4.hi" name="option4.hi" required defaultValue={editingQuestion?.options.hi[3]} /></div>
                                     </div>
                                 </TabsContent>
                             </Tabs>

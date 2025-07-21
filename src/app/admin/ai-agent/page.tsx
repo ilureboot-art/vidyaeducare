@@ -19,11 +19,11 @@ export default function AiAgentPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [output, setOutput] = useState<VidyaEdurankOutput | null>(null);
     const [formState, setFormState] = useState<Omit<VidyaEdurankInput, 'studyMaterial'>>({
-        language: 'English',
+        language: 'Marathi',
         grade: '10th',
         subject: 'Science',
         topic: '',
-        curriculum: 'CBSE',
+        curriculum: 'SSC',
         outputs: {
             notes: true,
             mcqs: true,
@@ -176,9 +176,9 @@ export default function AiAgentPage() {
                                 <Label htmlFor="topic">Topic / Chapter</Label>
                                 <Input id="topic" name="topic" value={formState.topic} onChange={handleInputChange} placeholder="Name of the topic or chapter" required />
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="curriculum">Curriculum</Label>
-                                <Input id="curriculum" name="curriculum" value={formState.curriculum} onChange={handleInputChange} placeholder="e.g., CBSE, ICSE" />
+                             <div className="space-y-2">
+                                <Label htmlFor="language">Language</Label>
+                                <Input id="language" name="language" value={formState.language} onChange={handleInputChange} placeholder="e.g., Marathi, English" />
                             </div>
                         </div>
                         

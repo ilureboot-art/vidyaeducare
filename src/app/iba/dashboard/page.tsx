@@ -73,20 +73,28 @@ export default function IBADashboardPage() {
 
   const handleShare = async () => {
     const shareUrl = `${window.location.origin}/signup?ref=${referralData.referralCode}`;
-    const message = `Join Vidya EduCare using my exclusive IBA code and get a special discount on your subscription!
+    const message = `🚀 Ace your exams with Vidya EduCare! 🚀
 
-🎓 **Platform**: Vidya EduCare
+I'm an Independent Business Associate with them, and I highly recommend their platform for serious students.
+
+✨ **Why Vidya EduCare?**
+- 📚 Extensive library of realistic mock tests for various standards.
+- 🤖 AI-powered tools to help you study smarter.
+- 🏆 Compete on live leaderboards and win cash prizes for top scores.
+- 🎮 Fun skill games to sharpen your mind.
+
+Use my exclusive IBA code to get a special 10% discount on your subscription!
+
 🔑 **My IBA Code**: ${referralData.referralCode}
-✨ **Your Benefit**: Get a 10% discount on subscriptions.
-🔗 **Join Here**: ${shareUrl}
+🔗 **Sign Up Here**: ${shareUrl}
 
-Take your exam preparation to the next level with mock tests and AI-powered study tools.
-#VidyaEduCare #IBA #Referral #Discount`;
+Don't miss out on the best way to prepare for your exams and earn rewards!
+#VidyaEduCare #MockTest #ExamPrep #StudySmart #IBA #Referral #Discount`;
 
     const fallbackCopy = () => {
       navigator.clipboard.writeText(message);
       toast({
-          title: "Link Copied!",
+          title: "Promotional Message Copied!",
           description: "Referral link and message copied to clipboard.",
       });
     };
@@ -94,7 +102,7 @@ Take your exam preparation to the next level with mock tests and AI-powered stud
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'Join Vidya EduCare with my IBA Code!',
+          title: 'Boost Your Exam Prep with Vidya EduCare!',
           text: message,
           url: shareUrl,
         });
@@ -125,7 +133,7 @@ Take your exam preparation to the next level with mock tests and AI-powered stud
           </div>
            <div className="flex items-center gap-4">
               <Button variant="outline" className="w-full" onClick={handleCopyToClipboard}><Copy className="mr-2" /> Copy Code</Button>
-              <Button className="w-full" onClick={handleShare}><Share2 className="mr-2" /> Share Link</Button>
+              <Button className="w-full" onClick={handleShare}><Share2 className="mr-2" /> Share & Promote</Button>
             </div>
             
             <div className="grid grid-cols-2 gap-4 text-center">
@@ -275,5 +283,3 @@ Take your exam preparation to the next level with mock tests and AI-powered stud
     </div>
   );
 }
-
-    

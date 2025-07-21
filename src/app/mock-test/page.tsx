@@ -64,6 +64,7 @@ export default function MockTestPage() {
         }, 1000);
 
         return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [testState, timeLeft]);
 
     const handleStartTest = () => {

@@ -31,6 +31,7 @@ export default function StorePage() {
 
   // This effect keeps the local state in sync with the central data store
   useEffect(() => {
+    setCurrentPackages([...storeConfig.packages]);
     const interval = setInterval(() => {
       if (walletData.balance !== balance) {
         setBalance(walletData.balance);

@@ -22,7 +22,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { getTestsForStudent, type ScheduledTest } from "@/lib/test-schedule";
+import { getUpcomingTestsForStudent, type ScheduledTest } from "@/lib/test-schedule";
 import { format } from "date-fns";
 
 function FormattedDate({ dateString }: { dateString: string }) {
@@ -48,18 +48,14 @@ export default function ProfilePage() {
     const [activationCode, setActivationCode] = useState("");
     const [isCodeVerified, setIsCodeVerified] = useState(false);
     
-    // State for mock test dialog
     const [isTestDialogOpen, setIsTestDialogOpen] = useState(false);
     const [selectedStudentForTest, setSelectedStudentForTest] = useState<StudentProfile | null>(null);
-    const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
     const [upcomingTests, setUpcomingTests] = useState<ScheduledTest[]>([]);
 
-    // This effect ensures the component uses the latest data from the module
     useEffect(() => {
         setStudents([...studentData]);
     }, []);
 
-    // Static parent data for display
     const parentProfile = {
         name: "Alex Doe",
         email: "alex.doe@example.com",
@@ -119,17 +115,13 @@ export default function ProfilePage() {
     
     const openTestDialog = (student: StudentProfile) => {
         setSelectedStudentForTest(student);
-        setSelectedSubject(null); // Reset subject selection
-        setUpcomingTests(getTestsForStudent(student.academic.board, student.academic.standard));
+        setUpcomingTests(getUpcomingTestsForStudent(student.academic.board, student.academic.standard));
         setIsTestDialogOpen(true);
     };
     
-    const handleStartTest = () => {
-        if (!selectedStudentForTest || !selectedSubject) {
-             toast({ variant: "destructive", title: "Selection Missing", description: "Please select a subject to start the test."});
-            return;
-        }
-        router.push(`/mock-test?studentId=${selectedStudentForTest.id}&subject=${selectedSubject}`);
+    const handleStartTest = (testId: string) => {
+        if (!selectedStudentForTest) return;
+        router.push(`/mock-test?studentId=${selectedStudentForTest.id}&testId=${testId}`);
     }
 
   return (
@@ -243,7 +235,7 @@ export default function ProfilePage() {
 
        {students.map(student => {
          const isEligible = student.stats.performance.length > 0 && student.stats.performance.every(p => p.score > 80);
-         const studentUpcomingTests = getTestsForStudent(student.academic.board, student.academic.standard);
+         const studentUpcomingTests = getUpcomingTestsForStudent(student.academic.board, student.academic.standard);
          return (
          <Card key={student.id} className="shadow-lg relative group overflow-hidden">
             <CardHeader className="flex flex-row items-start justify-between gap-4 bg-muted/30 p-4">
@@ -293,7 +285,7 @@ export default function ProfilePage() {
                     <div className="grid grid-cols-3 gap-2 text-center my-4">
                          <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
                             <p className="text-xs text-muted-foreground">Avg. Score</p>
-                            <p className="text-xl font-bold">{student.stats.avgScore}%</p>
+                            <p className="text-xl font-bold">{student.stats.avgScore.toFixed(0)}%</p>
                         </div>
                         <div className="p-2 bg-green-100 dark:bg-green-900/50 rounded-lg">
                             <p className="text-xs text-muted-foreground">Highest</p>
@@ -330,31 +322,11 @@ export default function ProfilePage() {
                         )}
                      </div>
                 </div>
-                 <div className="md:col-span-2 space-y-4">
-                     <h3 className="font-semibold flex items-center gap-2 text-muted-foreground"><CalendarCheck size={16}/> Upcoming Tests</h3>
-                      {studentUpcomingTests.length > 0 ? (
-                        <div className="space-y-2">
-                          {studentUpcomingTests.map(test => (
-                            <div key={test.id} className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
-                              <div>
-                                <p className="font-medium">{test.title}</p>
-                                <p className="text-sm text-muted-foreground">{test.subject}</p>
-                              </div>
-                              <Badge variant="outline">{format(new Date(test.date), "PPP")}</Badge>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-center text-sm text-muted-foreground bg-muted/20 rounded-lg p-4">
-                          No upcoming tests scheduled for this student.
-                        </div>
-                      )}
-                 </div>
             </CardContent>
             <CardFooter className="p-4 bg-muted/30">
                  <Button className="w-full" onClick={() => openTestDialog(student)}>
                     <BookOpen className="mr-2"/>
-                    Start Mock Test for {student.name.split(' ')[0]}
+                    View & Start Upcoming Tests
                 </Button>
             </CardFooter>
         </Card>
@@ -369,29 +341,27 @@ export default function ProfilePage() {
            </Card>
        )}
        
-       {/* Mock Test Dialog */}
        <Dialog open={isTestDialogOpen} onOpenChange={setIsTestDialogOpen}>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Start Mock Test for {selectedStudentForTest?.name}</DialogTitle>
-                    <DialogDescription>Select a subject to begin the test.</DialogDescription>
+                    <DialogTitle>Upcoming Tests for {selectedStudentForTest?.name}</DialogTitle>
+                    <DialogDescription>Select a test from the list to begin.</DialogDescription>
                 </DialogHeader>
-                <div className="space-y-4 pt-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="subject-select">Subject</Label>
-                        <Select onValueChange={setSelectedSubject} value={selectedSubject || ''}>
-                            <SelectTrigger id="subject-select"><SelectValue placeholder="Choose a subject..." /></SelectTrigger>
-                            <SelectContent>
-                                {selectedStudentForTest?.academic.subjects.map(sub => (
-                                    <SelectItem key={sub} value={sub}>{sub}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
+                <div className="space-y-2 pt-4">
+                    {upcomingTests.length > 0 ? (
+                        upcomingTests.map(test => (
+                            <div key={test.id} className="flex items-center justify-between p-3 rounded-lg border">
+                                <div>
+                                    <p className="font-semibold">{test.testSetName}</p>
+                                    <p className="text-sm text-muted-foreground">{format(new Date(test.date), "PPP")}</p>
+                                </div>
+                                <Button onClick={() => handleStartTest(test.id)}>Start Test</Button>
+                            </div>
+                        ))
+                    ) : (
+                        <p className="text-center text-muted-foreground py-4">No upcoming tests scheduled for this student.</p>
+                    )}
                 </div>
-                <DialogFooter>
-                    <Button onClick={handleStartTest} disabled={!selectedSubject}>Start Test</Button>
-                </DialogFooter>
             </DialogContent>
        </Dialog>
 

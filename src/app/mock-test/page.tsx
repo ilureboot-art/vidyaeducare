@@ -9,15 +9,15 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Trophy, Clock, CheckCircle, XCircle, FileQuestion, ArrowLeft, BrainCircuit, Book, Atom, Sigma, Pilcrow } from "lucide-react";
+import { Trophy, Clock, CheckCircle, XCircle, FileQuestion, ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { studentData, type StudentProfile } from "@/lib/student-data";
-import { allQuestions, type Question } from "@/lib/question-bank";
-import { Separator } from "@/components/ui/separator";
+import { allTestSets, type Question } from "@/lib/question-bank";
+import { getScheduledTestById, type ScheduledTest } from "@/lib/test-schedule";
 
 const MOCK_TEST_DURATION = 30 * 60; // 30 minutes in seconds
 
@@ -30,7 +30,7 @@ export default function MockTestPage() {
 
     const [testState, setTestState] = useState<TestState>("loading");
     const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(null);
-    const [subject, setSubject] = useState<string | null>(null);
+    const [scheduledTest, setScheduledTest] = useState<ScheduledTest | null>(null);
 
     const [activeQuestions, setActiveQuestions] = useState<Question[]>([]);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -41,10 +41,10 @@ export default function MockTestPage() {
 
     useEffect(() => {
         const studentId = searchParams.get('studentId');
-        const subjectParam = searchParams.get('subject');
+        const testId = searchParams.get('testId');
 
-        if (!studentId || !subjectParam) {
-            toast({ variant: "destructive", title: "Error", description: "Missing student or subject information."});
+        if (!studentId || !testId) {
+            toast({ variant: "destructive", title: "Error", description: "Missing student or test information."});
             router.push('/profile');
             return;
         }
@@ -55,31 +55,31 @@ export default function MockTestPage() {
             router.push('/profile');
             return;
         }
+        
+        const schedTest = getScheduledTestById(testId);
+        if (!schedTest) {
+             toast({ variant: "destructive", title: "Error", description: "Scheduled test not found."});
+            router.push('/profile');
+            return;
+        }
 
-        setStudentProfile(student);
-        setSubject(subjectParam);
-
-        const studentStandard = student.academic.standard;
-        const studentBoard = student.academic.board;
-
-        const filteredQuestions = allQuestions.filter(q => 
-            q.subject.toLowerCase() === subjectParam.toLowerCase() && 
-            q.standard === studentStandard &&
-            q.board === studentBoard
-        ).slice(0, 50); // Limit to 50 questions
-
-        if (filteredQuestions.length === 0) {
+        const testSet = allTestSets.find(ts => ts.id === schedTest.testSetId);
+        if (!testSet || testSet.questions.length === 0) {
             toast({
                 variant: "destructive",
                 title: "No Questions Available",
-                description: `We couldn't find any questions for ${subjectParam} for the ${studentBoard} board at the ${studentStandard} level.`,
+                description: `We couldn't find any questions for the test "${schedTest.testSetName}".`,
                 duration: 7000
             });
             router.push('/profile');
             return;
         }
 
-        setActiveQuestions(filteredQuestions);
+        setStudentProfile(student);
+        setScheduledTest(schedTest);
+        setActiveQuestions(testSet.questions);
+
+        // Reset state for new test
         setTimeLeft(MOCK_TEST_DURATION);
         setCurrentQuestionIndex(0);
         setAnswers({});
@@ -122,6 +122,8 @@ export default function MockTestPage() {
     };
 
     const handleSubmitTest = () => {
+        if (!scheduledTest) return;
+
         let correctAnswers = 0;
         activeQuestions.forEach(q => {
             if (answers[q.id]?.en === q.correctAnswer.en) {
@@ -135,7 +137,7 @@ export default function MockTestPage() {
         if (studentProfile) {
             const student = studentData.find(s => s.id === studentProfile.id);
             if (student) {
-                const newPerformanceEntry = { name: subject || "Test", score: finalScore };
+                const newPerformanceEntry = { name: scheduledTest.subject, score: finalScore };
                 const existingEntryIndex = student.stats.performance.findIndex(p => p.name === newPerformanceEntry.name);
 
                 if (existingEntryIndex > -1) {
@@ -160,11 +162,12 @@ export default function MockTestPage() {
         });
     };
     
-    if (testState === "loading" || !studentProfile) {
+    if (testState === "loading" || !studentProfile || !scheduledTest) {
         return (
-             <Card className="w-full max-w-3xl text-center p-8">
+             <Card className="w-full max-w-3xl text-center p-8 flex flex-col items-center justify-center gap-4">
+                <Loader2 className="w-10 h-10 animate-spin text-primary"/>
                 <CardTitle>Loading Test...</CardTitle>
-                <CardDescription>Preparing your questions.</CardDescription>
+                <CardDescription>Preparing your questions. Please wait.</CardDescription>
             </Card>
         )
     }
@@ -174,9 +177,9 @@ export default function MockTestPage() {
             <Card className="w-full max-w-3xl">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                        <FileQuestion className="text-primary"/> Test Review: {subject}
+                        <FileQuestion className="text-primary"/> Test Review: {scheduledTest.testSetName}
                     </CardTitle>
-                    <CardDescription>Review your answers for {studentProfile?.name}. Correct answers are marked in green.</CardDescription>
+                    <CardDescription>Reviewing answers for {studentProfile?.name}. Correct answers are marked in green.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <ScrollArea className="h-[60vh] pr-4">
@@ -229,7 +232,7 @@ export default function MockTestPage() {
         return (
             <Card className="w-full max-w-2xl text-center">
                 <CardHeader>
-                    <CardTitle className="text-3xl text-primary">Test Results: {subject}</CardTitle>
+                    <CardTitle className="text-3xl text-primary">Test Results: {scheduledTest.testSetName}</CardTitle>
                     <CardDescription>For {studentProfile?.name}</CardDescription>
                     <Trophy className="w-16 h-16 mx-auto text-yellow-500 my-4" />
                 </CardHeader>
@@ -279,7 +282,7 @@ export default function MockTestPage() {
             <CardHeader>
                 <div className="flex justify-between items-center">
                     <div>
-                        <CardTitle className="text-xl text-primary">{subject} Test ({studentProfile.academic.board})</CardTitle>
+                        <CardTitle className="text-xl text-primary">{scheduledTest.testSetName}</CardTitle>
                         <CardDescription>For {studentProfile?.name}</CardDescription>
                     </div>
                     <Badge variant="secondary" className="flex items-center gap-2">

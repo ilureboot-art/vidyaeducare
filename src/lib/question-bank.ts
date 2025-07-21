@@ -2,86 +2,84 @@
 export type Question = {
   id: string;
   text: { en: string; mr: string };
-  subject: string;
-  standard: string;
-  board: "CBSE" | "ICSE" | "SSC";
   options: { en: string[]; mr: string[] };
   correctAnswer: { en: string; mr: string };
 };
 
+export type TestSet = {
+  id: string;
+  name: string; // e.g., "SSC Science Test #1"
+  board: "CBSE" | "ICSE" | "SSC";
+  standard: string;
+  subject: string;
+  questions: Question[]; // Exactly 50 questions
+};
+
+
 // This acts as our shared, in-memory question bank "database".
-// In a real application, this would be a database table.
-export const allQuestions: Question[] = [
+// It now stores TestSets instead of individual questions.
+export let allTestSets: TestSet[] = [
     { 
-        id: "Q001", 
-        text: { en: "What is the capital of France?", mr: "फ्रान्सची राजधानी कोणती?" },
-        subject: "General Knowledge", 
-        standard: "10th", 
-        board: "CBSE",
-        options: { en: ["Berlin", "Madrid", "Paris", "Rome"], mr: ["बर्लिन", "माद्रिद", "पॅरिस", "रोम"] },
-        correctAnswer: { en: "Paris", mr: "पॅरिस" } 
-    },
-    { 
-        id: "Q002", 
-        text: { en: "What is 2 + 2?", mr: "२ + २ किती होतात?" },
-        subject: "Mathematics", 
-        standard: "10th", 
+        id: "SET-SSC-SCI-10-01",
+        name: "SSC Science Practice Set 1",
         board: "SSC",
-        options: { en: ["3", "4", "5", "6"], mr: ["३", "४", "५", "६"] },
-        correctAnswer: { en: "4", mr: "४" } 
+        standard: "10th",
+        subject: "Science",
+        questions: Array.from({ length: 50 }, (_, i) => ({
+            id: `Q-SSC-SCI-10-01-${i+1}`,
+            text: { en: `Sample Science Question ${i+1} for SSC 10th?`, mr: `एसएससी १०वी साठी नमुना विज्ञान प्रश्न ${i+1}?` },
+            options: { en: ["Option A", "Option B", "Option C", "Option D"], mr: ["पर्याय अ", "पर्याय ब", "पर्याय क", "पर्याय ड"] },
+            correctAnswer: { en: "Option A", mr: "पर्याय अ" }
+        }))
     },
     { 
-        id: "Q003", 
-        text: { en: "Which gas is most abundant in the Earth's atmosphere?", mr: "पृथ्वीच्या वातावरणात कोणता वायू सर्वाधिक प्रमाणात आढळतो?" },
-        subject: "Science", 
-        standard: "11th", 
+        id: "SET-CBSE-MATH-10-01",
+        name: "CBSE Maths Practice Set 1",
         board: "CBSE",
-        options: { en: ["Oxygen", "Hydrogen", "Nitrogen", "Carbon Dioxide"], mr: ["ऑक्सिजन", "हायड्रोजन", "नायट्रोजन", "कार्बन डायऑक्साइड"] },
-        correctAnswer: { en: "Nitrogen", mr: "नायट्रोजन" } 
-    },
-    { 
-        id: "SC10-01", 
-        text: { en: "What is the powerhouse of the cell?", mr: "पेशीचे ऊर्जाकेंद्र कोणते आहे?" },
-        subject: "Science", 
-        standard: "10th", 
-        board: "SSC",
-        options: { en: ["Nucleus", "Ribosome", "Mitochondrion", "Chloroplast"], mr: ["केंद्रक", "रायबोसोम", "माइटोकॉन्ड्रियन", "हरितलवक"] },
-        correctAnswer: { en: "Mitochondrion", mr: "माइटोकॉन्ड्रियन" }
-    },
-    { 
-        id: "SC10-02", 
-        text: { en: "What is the chemical symbol for water?", mr: "पाण्याचे रासायनिक सूत्र काय आहे?" },
-        subject: "Science", 
-        standard: "10th", 
-        board: "SSC",
-        options: { en: ["O2", "H2O", "CO2", "NaCl"], mr: ["O2", "H2O", "CO2", "NaCl"] },
-        correctAnswer: { en: "H2O", mr: "H2O" } 
-    },
-    { 
-        id: "MT10-01", 
-        text: { en: "What is the value of Pi (to 2 decimal places)?", mr: "पाय (π) चे मूल्य (२ दशांश स्थानांपर्यंत) काय आहे?" },
-        subject: "Mathematics", 
-        standard: "10th", 
-        board: "CBSE",
-        options: { en: ["3.14", "3.15", "3.16", "3.13"], mr: ["३.१४", "३.१५", "३.१६", "३.१३"] },
-        correctAnswer: { en: "3.14", mr: "३.१४" } 
-    },
-    { 
-        id: "EN10-01", 
-        text: { en: "Who wrote 'Romeo and Juliet'?", mr: "'रोमियो आणि ज्युलिएट' कोणी लिहिले?" },
-        subject: "English", 
-        standard: "10th", 
-        board: "ICSE",
-        options: { en: ["Charles Dickens", "William Shakespeare", "Jane Austen", "Mark Twain"], mr: ["चार्ल्स डिकन्स", "विल्यम शेक्सपियर", "जेन ऑस्टेन", "मार्क ट्वेन"] },
-        correctAnswer: { en: "William Shakespeare", mr: "विल्यम शेक्सपियर" } 
-    },
-    { 
-        id: "HS11-01", 
-        text: { en: "In which year did World War II end?", mr: "दुसरे महायुद्ध कोणत्या वर्षी संपले?" },
-        subject: "History", 
-        standard: "11th", 
-        board: "CBSE",
-        options: { en: ["1943", "1944", "1945", "1946"], mr: ["१९४३", "१९४४", "१९४५", "१९४६"] },
-        correctAnswer: { en: "1945", mr: "१९४५" }
+        standard: "10th",
+        subject: "Mathematics",
+        questions: Array.from({ length: 50 }, (_, i) => ({
+            id: `Q-CBSE-MATH-10-01-${i+1}`,
+            text: { en: `Sample Maths Question ${i+1} for CBSE 10th?`, mr: `सीबीएसई १०वी साठी नमुना गणित प्रश्न ${i+1}?` },
+            options: { en: ["Option A", "Option B", "Option C", "Option D"], mr: ["पर्याय अ", "पर्याय ब", "पर्याय क", "पर्याय ड"] },
+            correctAnswer: { en: "Option A", mr: "पर्याय अ" }
+        }))
     },
 ];
+
+export function addTestSet(testSet: TestSet) {
+    // Check if a set with the same name already exists for the same board/standard/subject
+    const existingIndex = allTestSets.findIndex(ts => 
+        ts.name === testSet.name &&
+        ts.board === testSet.board &&
+        ts.standard === testSet.standard &&
+        ts.subject === testSet.subject
+    );
+
+    if (existingIndex > -1) {
+        // Update existing test set
+        allTestSets[existingIndex] = testSet;
+    } else {
+        // Add new test set
+        allTestSets.push(testSet);
+    }
+}
+
+export function deleteTestSet(testSetId: string) {
+    const indexToDelete = allTestSets.findIndex(ts => ts.id === testSetId);
+    if (indexToDelete > -1) {
+        allTestSets.splice(indexToDelete, 1);
+    }
+}
+
+// Function to get all questions from all sets for a specific criteria.
+// This is still useful if we ever need to show a mixed pool of questions.
+export function getQuestionsForCriteria(board: string, standard: string, subject: string): Question[] {
+    const questions: Question[] = [];
+    allTestSets.forEach(set => {
+        if (set.board === board && set.standard === standard && set.subject === subject) {
+            questions.push(...set.questions);
+        }
+    });
+    return questions;
+}

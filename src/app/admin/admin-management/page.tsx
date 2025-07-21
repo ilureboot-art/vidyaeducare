@@ -90,7 +90,8 @@ export default function AdminManagementPage() {
     const email = (form.elements.namedItem('email') as HTMLInputElement).value;
     const phone = (form.elements.namedItem('phone') as HTMLInputElement).value;
     const password = (form.elements.namedItem('password') as HTMLInputElement).value;
-    const role = (form.elements.namedItem('role') as HTMLInputElement).value as AdminRole;
+    const role = (form.querySelector('[name=role]') as HTMLInputElement)?.value as AdminRole | undefined;
+
 
     if (!name || !email || !phone || !password || !role) {
         toast({ variant: 'destructive', title: 'Missing Information', description: 'Please fill out all fields.'});

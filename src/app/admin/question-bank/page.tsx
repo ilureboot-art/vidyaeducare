@@ -36,6 +36,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { allQuestions, type Question } from "@/lib/question-bank";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { academicConfig } from "@/lib/academic-config";
 
 
 export default function QuestionBankPage() {
@@ -164,14 +165,12 @@ export default function QuestionBankPage() {
             const content = e.target?.result;
             if (typeof content !== 'string') throw new Error("File content is not readable.");
             
-            // Note: The parsed questions will not have board, standard, subject
             const parsedQuestions: Omit<Question, 'id' | 'board' | 'standard' | 'subject'>[] = JSON.parse(content);
 
             if (!Array.isArray(parsedQuestions)) {
                  throw new Error("JSON must be an array of questions.");
             }
 
-            // Basic validation and combining with dropdown selections
             const newQuestions: Question[] = parsedQuestions.map(q => {
                  if (!q.text?.en || !q.options?.en || !q.correctAnswer?.en || !q.text?.mr || !q.options?.mr || !q.correctAnswer?.mr) {
                     throw new Error("One or more questions are missing required fields (text, options, correctAnswer in both languages).");
@@ -179,7 +178,7 @@ export default function QuestionBankPage() {
                 return { 
                     ...q, 
                     id: `Q${String(Date.now()).slice(-6)}-${Math.random()}`,
-                    board: bulkBoard,
+                    board: bulkBoard as Question['board'],
                     standard: bulkStandard,
                     subject: bulkSubject,
                 };
@@ -231,23 +230,21 @@ export default function QuestionBankPage() {
                     <DialogTrigger asChild>
                         <Button variant="outline"><Upload className="mr-2 h-4 w-4" /> Bulk Upload</Button>
                     </DialogTrigger>
-                    <DialogContent>
+                    <DialogContent className="sm:max-w-xl">
                         <DialogHeader>
                             <DialogTitle>Bulk Upload Questions</DialogTitle>
                             <DialogDescription>
                                 First, select the board, standard, and subject. Then, upload a JSON file with your questions. These selections will be applied to all questions in the file.
                             </DialogDescription>
                         </DialogHeader>
-                        <div className="space-y-4">
+                        <div className="space-y-4 py-4">
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="bulk-board">Board</Label>
                                     <Select name="bulk-board" value={bulkBoard} onValueChange={(val) => setBulkBoard(val as Question['board'])} required>
                                         <SelectTrigger id="bulk-board"><SelectValue placeholder="Select..." /></SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="CBSE">CBSE</SelectItem>
-                                            <SelectItem value="ICSE">ICSE</SelectItem>
-                                            <SelectItem value="SSC">SSC</SelectItem>
+                                            {academicConfig.boards.map(board => <SelectItem key={board} value={board}>{board}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -256,7 +253,7 @@ export default function QuestionBankPage() {
                                     <Select name="bulk-standard" value={bulkStandard} onValueChange={setBulkStandard} required>
                                         <SelectTrigger id="bulk-standard"><SelectValue placeholder="Select..." /></SelectTrigger>
                                         <SelectContent>
-                                            {[...Array(12)].map((_, i) => <SelectItem key={i+1} value={`${i+1}th`}>{i+1}th</SelectItem>)}
+                                            {academicConfig.standards.map(std => <SelectItem key={std} value={std}>{std}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -265,18 +262,15 @@ export default function QuestionBankPage() {
                                     <Select name="bulk-subject" value={bulkSubject} onValueChange={setBulkSubject} required>
                                         <SelectTrigger id="bulk-subject"><SelectValue placeholder="Select..." /></SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="General Knowledge">General Knowledge</SelectItem>
-                                            <SelectItem value="Mathematics">Mathematics</SelectItem>
-                                            <SelectItem value="Science">Science</SelectItem>
-                                            <SelectItem value="English">English</SelectItem>
-                                            <SelectItem value="History">History</SelectItem>
+                                            {academicConfig.subjects.map(sub => <SelectItem key={sub} value={sub}>{sub}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
                                 </div>
                             </div>
 
-                            <Label className="font-semibold">Required Simplified JSON Format:</Label>
-                            <pre className="p-2 bg-muted text-xs rounded-md overflow-x-auto">
+                            <div className="space-y-2 pt-4">
+                                <Label className="font-semibold">Required Simplified JSON Format:</Label>
+                                <pre className="p-2 bg-muted text-xs rounded-md overflow-x-auto">
 {`[
   {
     "text": { "en": "Q Text", "mr": "प्रश्न मजकूर" },
@@ -287,7 +281,8 @@ export default function QuestionBankPage() {
     "correctAnswer": { "en": "A", "mr": "अ" }
   }
 ]`}
-                            </pre>
+                                </pre>
+                            </div>
                              <div className="space-y-2">
                                 <Label htmlFor="json-upload">JSON File</Label>
                                 <Input id="json-upload" type="file" accept=".json" onChange={handleBulkUpload} disabled={!bulkBoard || !bulkStandard || !bulkSubject}/>
@@ -302,7 +297,7 @@ export default function QuestionBankPage() {
                             Add New Question
                         </Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-[725px]">
+                    <DialogContent className="sm:max-w-3xl">
                         <DialogHeader>
                             <DialogTitle>{editingQuestion ? 'Edit Question' : 'Add New Question'}</DialogTitle>
                             <DialogDescription>
@@ -347,7 +342,7 @@ export default function QuestionBankPage() {
                                     <Select name="standard" required defaultValue={editingQuestion?.standard}>
                                         <SelectTrigger id="standard"><SelectValue placeholder="Select..." /></SelectTrigger>
                                         <SelectContent>
-                                            {[...Array(12)].map((_, i) => <SelectItem key={i+1} value={`${i+1}th`}>{i+1}th</SelectItem>)}
+                                            {academicConfig.standards.map(std => <SelectItem key={std} value={std}>{std}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -356,11 +351,7 @@ export default function QuestionBankPage() {
                                     <Select name="subject" required defaultValue={editingQuestion?.subject}>
                                         <SelectTrigger id="subject"><SelectValue placeholder="Select..." /></SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="General Knowledge">General Knowledge</SelectItem>
-                                            <SelectItem value="Mathematics">Mathematics</SelectItem>
-                                            <SelectItem value="Science">Science</SelectItem>
-                                            <SelectItem value="English">English</SelectItem>
-                                            <SelectItem value="History">History</SelectItem>
+                                            {academicConfig.subjects.map(sub => <SelectItem key={sub} value={sub}>{sub}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -369,9 +360,7 @@ export default function QuestionBankPage() {
                                      <Select name="board" required defaultValue={editingQuestion?.board}>
                                         <SelectTrigger id="board"><SelectValue placeholder="Select..." /></SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="CBSE">CBSE</SelectItem>
-                                            <SelectItem value="ICSE">ICSE</SelectItem>
-                                            <SelectItem value="SSC">SSC</SelectItem>
+                                            {academicConfig.boards.map(board => <SelectItem key={board} value={board}>{board}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
                                 </div>

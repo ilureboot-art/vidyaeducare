@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
-import { PlusCircle, Trash2, Zap, BookOpen } from "lucide-react";
+import { PlusCircle, Trash2, Zap, BookOpen, GraduationCap } from "lucide-react";
 import type { TicketPackage, ReferboltSubscription, MockTestSubscription } from "@/lib/store-config";
 import {
   storeConfig,
@@ -17,6 +17,7 @@ import {
   setReferboltSubscription,
   setMockTestSubscription
 } from "@/lib/store-config";
+import { academicConfig, setBoards, setStandards, setSubjects } from "@/lib/academic-config";
 
 export default function AdminStoreSettingsPage() {
   const { toast } = useToast();
@@ -24,12 +25,21 @@ export default function AdminStoreSettingsPage() {
   const [referralBonus, setLocalReferralBonus] = useState(0);
   const [referboltSub, setLocalReferboltSub] = useState<ReferboltSubscription>({ name: '', price: 0, description: '', ticketBonus: 0, gstRate: 0, hsnSacCode: '' });
   const [mockTestSub, setLocalMockTestSub] = useState<MockTestSubscription>({ gstRate: 0, hsnSacCode: '' });
+  
+  // State for academic config
+  const [boards, setLocalBoards] = useState<string[]>([]);
+  const [standards, setLocalStandards] = useState<string[]>([]);
+  const [subjects, setLocalSubjects] = useState<string[]>([]);
 
   useEffect(() => {
     setLocalPackages(storeConfig.packages);
     setLocalReferralBonus(storeConfig.referralBonus);
     setLocalReferboltSub(storeConfig.referboltSubscription);
     setLocalMockTestSub(storeConfig.mockTestSubscription);
+    // Load academic configs
+    setLocalBoards([...academicConfig.boards]);
+    setLocalStandards([...academicConfig.standards]);
+    setLocalSubjects([...academicConfig.subjects]);
   }, []);
 
   const handlePackageChange = (index: number, field: keyof TicketPackage, value: string | number | boolean) => {
@@ -79,6 +89,22 @@ export default function AdminStoreSettingsPage() {
   const removePackage = (index: number) => {
     setLocalPackages(packages.filter((_, i) => i !== index));
   };
+  
+  const handleDynamicListChange = (setter: React.Dispatch<React.SetStateAction<string[]>>, index: number, value: string) => {
+      setter(prev => {
+          const newList = [...prev];
+          newList[index] = value;
+          return newList;
+      });
+  };
+
+  const addToList = (setter: React.Dispatch<React.SetStateAction<string[]>>) => {
+      setter(prev => [...prev, '']);
+  };
+  
+  const removeFromList = (setter: React.Dispatch<React.SetStateAction<string[]>>, index: number) => {
+      setter(prev => prev.filter((_, i) => i !== index));
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,6 +113,9 @@ export default function AdminStoreSettingsPage() {
     setReferralBonus(referralBonus);
     setReferboltSubscription(referboltSub);
     setMockTestSubscription(mockTestSub);
+    setBoards(boards);
+    setStandards(standards);
+    setSubjects(subjects);
 
     toast({
       title: "Settings Saved!",
@@ -94,9 +123,31 @@ export default function AdminStoreSettingsPage() {
     });
   };
 
+  const renderDynamicList = (
+      title: string, 
+      list: string[], 
+      setter: React.Dispatch<React.SetStateAction<string[]>>
+  ) => (
+      <div className="space-y-4">
+          <Label className="text-lg font-semibold">{title}</Label>
+          {list.map((item, index) => (
+              <div key={index} className="flex items-center gap-2">
+                  <Input value={item} onChange={(e) => handleDynamicListChange(setter, index, e.target.value)} />
+                  <Button type="button" variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" onClick={() => removeFromList(setter, index)}>
+                      <Trash2 className="h-4 w-4" />
+                  </Button>
+              </div>
+          ))}
+          <Button type="button" variant="outline" className="w-full" onClick={() => addToList(setter)}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Add {title.slice(0, -1)}
+          </Button>
+      </div>
+  );
+
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Store & GST Settings</h1>
+      <h1 className="text-3xl font-bold">Store & Academic Settings</h1>
       <form onSubmit={handleSubmit}>
         <Card>
           <CardHeader>
@@ -205,6 +256,18 @@ export default function AdminStoreSettingsPage() {
               </div>
             </div>
           </CardContent>
+        </Card>
+
+        <Card className="mt-6">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2"><GraduationCap/> Academic Configurations</CardTitle>
+                <CardDescription>Manage the options available for education boards, standards, and subjects across the app.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {renderDynamicList("Boards", boards, setLocalBoards)}
+                {renderDynamicList("Standards", standards, setLocalStandards)}
+                {renderDynamicList("Subjects", subjects, setLocalSubjects)}
+            </CardContent>
         </Card>
 
 

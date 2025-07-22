@@ -57,20 +57,21 @@ export default function SignupPage() {
         });
 
         if (referralCode) {
+            const bonusAmount = storeConfig.referralBonus;
             // In a real app, this logic would live on the backend.
             // Here, we just add the transaction for the new user.
              addTransaction({
                 id: Date.now(),
                 type: 'deposit',
                 description: 'Welcome Bonus (from referral)',
-                amount: storeConfig.referralBonus,
+                amount: bonusAmount,
                 date: new Date().toISOString(),
                 status: 'Completed',
                 user: "New User" // In a real app, this would be the new user's name
             });
             addNotification({
               type: 'deposit_received',
-              message: `You received a ₹${storeConfig.referralBonus} Welcome Bonus!`,
+              message: `You received a ₹${bonusAmount} Welcome Bonus!`,
               userId: 'user-alex-doe' // This should be the new user's ID
             });
 
@@ -80,14 +81,14 @@ export default function SignupPage() {
                 id: Date.now() + 1, // To avoid key collision
                 type: 'deposit',
                 description: `Referral Bonus for new user`,
-                amount: storeConfig.referralBonus,
+                amount: bonusAmount,
                 date: new Date().toISOString(),
                 status: 'Completed',
                 user: "Alex Doe" // This is the referrer
             });
              addNotification({
               type: 'deposit_received',
-              message: `You received a ₹${storeConfig.referralBonus} bonus for referring a new user.`,
+              message: `You received a ₹${bonusAmount} bonus for referring a new user.`,
               userId: 'user-alex-doe' // This is the referrer's ID
             });
         }

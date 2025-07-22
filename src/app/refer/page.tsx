@@ -1,20 +1,95 @@
 
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Share2, IndianRupee, Gift } from "lucide-react";
+import { storeConfig } from "@/lib/store-config";
 
-// This page now acts as a redirect to the new IBA Dashboard.
-export default function ReferRedirectPage() {
-  const router = useRouter();
+export default function ReferAndEarnPage() {
+    const { toast } = useToast();
 
-  useEffect(() => {
-    router.replace("/iba/dashboard");
-  }, [router]);
+    const handleShare = async () => {
+        const referralCode = "ALEX-D7F6E5C"; // Example code for the logged-in user
+        const url = `${window.location.origin}/signup?ref=${referralCode}`;
+        const bonusAmount = storeConfig.referralBonus;
+        
+        const message = `🎉 Join me on Vidya EduCare! Sign up with my code and we both get a ₹${bonusAmount} welcome bonus!
 
-  return (
-    <div className="w-full h-full flex items-center justify-center">
-        <p>Redirecting to your IBA Dashboard...</p>
-    </div>
-  );
+It's a great platform for mock tests and fun skill games where you can win cash prizes.
+
+My Referral Code: ${referralCode}
+
+Click here to join: ${url}`;
+    
+        const fallbackCopy = () => {
+            navigator.clipboard.writeText(message);
+            toast({
+                title: "Link Copied!",
+                description: "Promotional message copied to clipboard.",
+            });
+        };
+
+        if (navigator.share) {
+            try {
+                await navigator.share({ title: 'Join Vidya EduCare!', text: message, url });
+            } catch (error) {
+                if ((error as DOMException).name !== 'AbortError') {
+                  fallbackCopy();
+                }
+            }
+        } else {
+            fallbackCopy();
+        }
+    };
+
+    return (
+        <div className="w-full max-w-2xl mx-auto">
+            <Card className="shadow-lg">
+                <CardHeader className="text-center">
+                    <CardTitle className="text-3xl font-bold text-primary flex items-center justify-center gap-2">
+                        <Share2 /> Refer & Earn
+                    </CardTitle>
+                    <CardDescription>
+                        Invite your friends and earn rewards together!
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6 text-center">
+                    <div className="p-6 bg-muted rounded-lg">
+                        <h3 className="text-xl font-bold">Share your referral code</h3>
+                        <p className="text-muted-foreground mt-2">
+                            When a friend signs up using your code, you both get a special bonus credited to your wallets.
+                        </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center justify-center gap-2 text-primary"><IndianRupee /> You Get</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <p className="text-3xl font-bold">₹{storeConfig.referralBonus}</p>
+                                <p className="text-xs text-muted-foreground">For each successful referral.</p>
+                            </CardContent>
+                        </Card>
+                        <Card>
+                             <CardHeader>
+                                <CardTitle className="flex items-center justify-center gap-2 text-primary"><Gift/> They Get</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <p className="text-3xl font-bold">₹{storeConfig.referralBonus}</p>
+                                <p className="text-xs text-muted-foreground">As an instant welcome bonus.</p>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    <Button size="lg" className="w-full" onClick={handleShare}>
+                        <Share2 className="mr-2" />
+                        Share With Friends
+                    </Button>
+                </CardContent>
+            </Card>
+        </div>
+    );
 }

@@ -12,7 +12,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 const navItems = [
     { href: "/profile", label: "My Students", icon: Users },
-    { href: "/iba/dashboard", label: "Refer & Earn", icon: Share2 },
+    { href: "/refer", label: "Refer & Earn", icon: Share2 },
+    { href: "/iba/dashboard", label: "IBA Dashboard", icon: ShieldCheck },
     { href: "/play", label: "Play Game", icon: Gamepad2 },
     { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
     { href: "/store", label: "Store", icon: Store },

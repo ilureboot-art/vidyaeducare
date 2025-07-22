@@ -5,14 +5,14 @@ import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, BookOpen, Trophy, Store, Users, Wallet, Settings, ChevronRight, X, LogOut, User, History, BrainCircuit, Zap, Gamepad2, ShieldCheck, LayoutDashboard } from "lucide-react";
+import { Menu, BookOpen, Trophy, Store, Users, Wallet, Settings, ChevronRight, X, LogOut, User, History, BrainCircuit, Zap, Gamepad2, ShieldCheck, LayoutDashboard, Share2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { UserNotifications } from "@/components/UserNotifications";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 const navItems = [
     { href: "/profile", label: "My Students", icon: Users },
-    { href: "/iba/dashboard", label: "IBA Dashboard", icon: ShieldCheck },
+    { href: "/iba/dashboard", label: "Refer & Earn", icon: Share2 },
     { href: "/play", label: "Play Game", icon: Gamepad2 },
     { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
     { href: "/store", label: "Store", icon: Store },

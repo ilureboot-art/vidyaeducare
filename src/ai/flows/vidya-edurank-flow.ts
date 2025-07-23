@@ -24,7 +24,8 @@ const VidyaEdurankInputSchema = z.object({
     animationScript: z.boolean(),
     studyPlan: z.boolean(),
   }),
-  studyMaterial: z.string().describe('The raw text or a data URI of the study material provided by the user. If it is a file, it must be a data URI with a MIME type and Base64 encoding.'),
+  studyMaterialText: z.string().optional().describe('The raw text of the study material provided by the user.'),
+  studyMaterialFile: z.string().optional().describe("A data URI of the study material file provided by the user. Expected format: 'data:<mimetype>;base64,<encoded_data>'."),
 });
 export type VidyaEdurankInput = z.infer<typeof VidyaEdurankInputSchema>;
 
@@ -53,7 +54,12 @@ Here are the user's specifications:
 
 Here is the study material you need to process. It could be plain text or an image/document provided as a data URI.
 ---
-{{media url=studyMaterial}}
+{{#if studyMaterialText}}
+{{{studyMaterialText}}}
+{{/if}}
+{{#if studyMaterialFile}}
+{{media url=studyMaterialFile}}
+{{/if}}
 ---
 
 Based on the material, please generate the following outputs as requested:

@@ -18,7 +18,7 @@ export default function AiAgentPage() {
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(false);
     const [output, setOutput] = useState<VidyaEdurankOutput | null>(null);
-    const [formState, setFormState] = useState<Omit<VidyaEdurankInput, 'studyMaterial'>>({
+    const [formState, setFormState] = useState<Omit<VidyaEdurankInput, 'studyMaterialText' | 'studyMaterialFile'>>({
         language: 'Marathi',
         grade: '10th',
         subject: 'Science',
@@ -69,9 +69,10 @@ export default function AiAgentPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         
-        const studyMaterial = activeTab === 'file' ? studyMaterialFile : studyMaterialText;
+        const isTextMode = activeTab === 'text';
+        const isFileMode = activeTab === 'file';
 
-        if (!studyMaterial || !formState.topic.trim()) {
+        if (!formState.topic.trim() || (isTextMode && !studyMaterialText.trim()) || (isFileMode && !studyMaterialFile)) {
             toast({
                 variant: 'destructive',
                 title: "Missing Information",
@@ -85,7 +86,8 @@ export default function AiAgentPage() {
 
         const input: VidyaEdurankInput = {
             ...formState,
-            studyMaterial: studyMaterial,
+            studyMaterialText: isTextMode ? studyMaterialText : undefined,
+            studyMaterialFile: isFileMode ? studyMaterialFile! : undefined,
         };
 
         try {

@@ -65,16 +65,32 @@ export default function AiAgentPage() {
 
         setFileName(file.name);
         
-        const reader = new FileReader();
-        reader.onload = (loadEvent) => {
-            const dataUri = loadEvent.target?.result as string;
-            setStudyMaterial(dataUri);
-            toast({ title: "File Ready", description: `${file.name} has been selected and is ready to be processed.`});
-        };
-        reader.onerror = () => {
-             toast({ variant: "destructive", title: "Error", description: "Could not read the selected file."});
+        if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') { // .docx file
+            const reader = new FileReader();
+            reader.onload = async (loadEvent) => {
+                const arrayBuffer = loadEvent.target?.result as ArrayBuffer;
+                try {
+                    const result = await mammoth.extractRawText({ arrayBuffer });
+                    setTextMaterial(result.value);
+                    setActiveTab('text'); // Switch to text tab to show content
+                    toast({ title: "DOCX content extracted!", description: `Content from ${file.name} is ready.` });
+                } catch (error) {
+                    toast({ variant: "destructive", title: "Error", description: "Could not extract text from DOCX file." });
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        } else { // Handle images and PDFs as data URIs
+            const reader = new FileReader();
+            reader.onload = (loadEvent) => {
+                const dataUri = loadEvent.target?.result as string;
+                setStudyMaterial(dataUri);
+                toast({ title: "File Ready", description: `${file.name} has been selected and is ready to be processed.` });
+            };
+            reader.onerror = () => {
+                 toast({ variant: "destructive", title: "Error", description: "Could not read the selected file." });
+            }
+            reader.readAsDataURL(file);
         }
-        reader.readAsDataURL(file);
     }
 
 
@@ -315,7 +331,7 @@ export default function AiAgentPage() {
                         
                         <div className="space-y-2">
                             <Label>Study Material</Label>
-                             <Tabs defaultValue="text" value={activeTab} onValueChange={setActiveTab} className="w-full">
+                             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                                 <TabsList className="grid w-full grid-cols-2">
                                     <TabsTrigger value="text">Paste Text</TabsTrigger>
                                     <TabsTrigger value="file">Upload File</TabsTrigger>
@@ -398,5 +414,3 @@ export default function AiAgentPage() {
         </div>
     );
 }
-
-    

@@ -18,7 +18,7 @@ export default function AiAgentPage() {
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(false);
     const [output, setOutput] = useState<VidyaEdurankOutput | null>(null);
-    const [formState, setFormState] = useState<Omit<VidyaEdurankInput, 'studyMaterialText' | 'studyMaterialFile'>>({
+    const [formState, setFormState] = useState<Omit<VidyaEdurankInput, 'studyMaterial'>>({
         language: 'Marathi',
         grade: '10th',
         subject: 'Science',
@@ -32,8 +32,7 @@ export default function AiAgentPage() {
             studyPlan: false,
         },
     });
-    const [studyMaterialText, setStudyMaterialText] = useState('');
-    const [studyMaterialFile, setStudyMaterialFile] = useState<string | null>(null);
+    const [studyMaterial, setStudyMaterial] = useState('');
     const [fileName, setFileName] = useState('');
     const [activeTab, setActiveTab] = useState('text');
 
@@ -58,7 +57,7 @@ export default function AiAgentPage() {
             const reader = new FileReader();
             reader.onload = (loadEvent) => {
                 const dataUri = loadEvent.target?.result as string;
-                setStudyMaterialFile(dataUri);
+                setStudyMaterial(dataUri);
                 setFileName(file.name);
                 toast({ title: "File Ready", description: `${file.name} has been selected.`});
             };
@@ -69,10 +68,7 @@ export default function AiAgentPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         
-        const isTextMode = activeTab === 'text';
-        const isFileMode = activeTab === 'file';
-
-        if (!formState.topic.trim() || (isTextMode && !studyMaterialText.trim()) || (isFileMode && !studyMaterialFile)) {
+        if (!formState.topic.trim() || !studyMaterial.trim()) {
             toast({
                 variant: 'destructive',
                 title: "Missing Information",
@@ -86,8 +82,7 @@ export default function AiAgentPage() {
 
         const input: VidyaEdurankInput = {
             ...formState,
-            studyMaterialText: isTextMode ? studyMaterialText : undefined,
-            studyMaterialFile: isFileMode ? studyMaterialFile! : undefined,
+            studyMaterial: studyMaterial,
         };
 
         try {
@@ -186,15 +181,19 @@ export default function AiAgentPage() {
                         
                         <div className="space-y-2">
                             <Label>Study Material</Label>
-                             <Tabs defaultValue="text" onValueChange={setActiveTab} className="w-full">
+                             <Tabs defaultValue="text" onValueChange={(tab) => {
+                                 setActiveTab(tab);
+                                 setStudyMaterial('');
+                                 setFileName('');
+                             }} className="w-full">
                                 <TabsList className="grid w-full grid-cols-2">
                                     <TabsTrigger value="text">Paste Text</TabsTrigger>
                                     <TabsTrigger value="file">Upload File</TabsTrigger>
                                 </TabsList>
                                 <TabsContent value="text" className="pt-2">
                                     <Textarea
-                                        value={studyMaterialText}
-                                        onChange={(e) => setStudyMaterialText(e.target.value)}
+                                        value={studyMaterial}
+                                        onChange={(e) => setStudyMaterial(e.target.value)}
                                         placeholder="Paste textbook paragraph, chapter summary, or key points here..."
                                         className="min-h-[150px]"
                                     />

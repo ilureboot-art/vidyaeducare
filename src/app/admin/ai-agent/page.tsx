@@ -69,9 +69,14 @@ export default function AiAgentPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         
-        const material = activeTab === 'file' ? studyMaterial : textMaterial;
+        let materialToSubmit = '';
+        if (activeTab === 'file') {
+            materialToSubmit = studyMaterial;
+        } else {
+            materialToSubmit = textMaterial;
+        }
 
-        if (!formState.topic.trim() || !material.trim()) {
+        if (!formState.topic.trim() || !materialToSubmit) {
             toast({
                 variant: 'destructive',
                 title: "Missing Information",
@@ -85,7 +90,7 @@ export default function AiAgentPage() {
 
         const input: VidyaEdurankInput = {
             ...formState,
-            studyMaterial: material,
+            studyMaterial: materialToSubmit,
         };
 
         try {
@@ -184,7 +189,7 @@ export default function AiAgentPage() {
                         
                         <div className="space-y-2">
                             <Label>Study Material</Label>
-                             <Tabs defaultValue="text" onValueChange={setActiveTab} className="w-full">
+                             <Tabs defaultValue="text" value={activeTab} onValueChange={setActiveTab} className="w-full">
                                 <TabsList className="grid w-full grid-cols-2">
                                     <TabsTrigger value="text">Paste Text</TabsTrigger>
                                     <TabsTrigger value="file">Upload File</TabsTrigger>
@@ -253,5 +258,3 @@ export default function AiAgentPage() {
         </div>
     );
 }
-
-    

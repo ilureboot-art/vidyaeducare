@@ -34,7 +34,6 @@ export default function AiAgentPage() {
     });
     const [studyMaterial, setStudyMaterial] = useState('');
     const [fileName, setFileName] = useState('');
-    const [activeTab, setActiveTab] = useState('text');
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -181,8 +180,7 @@ export default function AiAgentPage() {
                         
                         <div className="space-y-2">
                             <Label>Study Material</Label>
-                             <Tabs defaultValue="text" onValueChange={(tab) => {
-                                 setActiveTab(tab);
+                             <Tabs defaultValue="text" onValueChange={() => {
                                  setStudyMaterial('');
                                  setFileName('');
                              }} className="w-full">

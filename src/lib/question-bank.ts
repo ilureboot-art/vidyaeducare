@@ -71,15 +71,3 @@ export function deleteTestSet(testSetId: string) {
         allTestSets.splice(indexToDelete, 1);
     }
 }
-
-// Function to get all questions from all sets for a specific criteria.
-// This is still useful if we ever need to show a mixed pool of questions.
-export function getQuestionsForCriteria(board: string, standard: string, subject: string): Question[] {
-    const questions: Question[] = [];
-    allTestSets.forEach(set => {
-        if (set.board === board && set.standard === standard && set.subject === subject) {
-            questions.push(...set.questions);
-        }
-    });
-    return questions;
-}

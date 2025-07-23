@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileQuestion, MoreHorizontal, PlusCircle, Trash2, Edit, Upload, BookCopy } from "lucide-react";
+import { MoreHorizontal, Trash2, Edit, Upload, BookCopy } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -26,18 +26,9 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { allTestSets, addTestSet, deleteTestSet, type TestSet } from "@/lib/question-bank";
-import { academicConfig } from "@/lib/academic-config";
 
-
-export default function QuestionBankPage() {
+export default function TestSetManagementPage() {
   const [testSets, setTestSets] = useState<TestSet[]>(allTestSets);
   const { toast } = useToast();
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
@@ -58,7 +49,7 @@ export default function QuestionBankPage() {
             const content = e.target?.result;
             if (typeof content !== 'string') throw new Error("File content is not readable.");
             
-            const uploadedSet: Omit<TestSet, 'id'> = JSON.parse(content);
+            const uploadedSet: Omit<TestSet, 'id' | 'questions'> & { questions: Omit<TestSet['questions'][0], 'id'>[] } = JSON.parse(content);
 
             if (!uploadedSet.name || !uploadedSet.board || !uploadedSet.standard || !uploadedSet.subject || !Array.isArray(uploadedSet.questions)) {
                 throw new Error("JSON is missing required fields: name, board, standard, subject, or questions array.");

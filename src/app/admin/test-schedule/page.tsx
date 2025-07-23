@@ -11,8 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { format } from "date-fns";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { academicConfig } from '@/lib/academic-config';
-import { allTestSets, type TestSet } from '@/lib/question-bank';
+import { allTestSets } from '@/lib/question-bank';
 import { scheduledTests, addScheduledTest, type ScheduledTest } from '@/lib/test-schedule';
 import {
   Table,

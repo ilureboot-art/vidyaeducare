@@ -84,6 +84,7 @@ export default function AiAgentPage() {
             reader.onload = (loadEvent) => {
                 const dataUri = loadEvent.target?.result as string;
                 setStudyMaterial(dataUri);
+                setActiveTab('file'); // Switch to file tab
                 toast({ title: "File Ready", description: `${file.name} has been selected and is ready to be processed.` });
             };
             reader.onerror = () => {
@@ -357,7 +358,7 @@ export default function AiAgentPage() {
                                             accept=".pdf,.png,.jpg,.jpeg,.docx"
                                         />
                                     </div>
-                                    {fileName && activeTab === 'file' && <p className="text-sm text-center mt-2 text-muted-foreground">Selected file: <span className="font-semibold">{fileName}</span></p>}
+                                    {fileName && <p className="text-sm text-center mt-2 text-muted-foreground">Selected file: <span className="font-semibold">{fileName}</span></p>}
                                 </TabsContent>
                             </Tabs>
                         </div>
@@ -413,4 +414,5 @@ export default function AiAgentPage() {
             {renderOutput()}
         </div>
     );
-}
+
+    

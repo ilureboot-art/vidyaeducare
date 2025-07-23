@@ -34,6 +34,7 @@ export default function AiAgentPage() {
     });
     const [studyMaterial, setStudyMaterial] = useState('');
     const [fileName, setFileName] = useState('');
+    const [activeTab, setActiveTab] = useState('text');
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -67,7 +68,9 @@ export default function AiAgentPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         
-        if (!formState.topic.trim() || !studyMaterial.trim()) {
+        const material = activeTab === 'file' ? studyMaterial : (e.currentTarget as HTMLFormElement).querySelector<HTMLTextAreaElement>('textarea')?.value || '';
+
+        if (!formState.topic.trim() || !material.trim()) {
             toast({
                 variant: 'destructive',
                 title: "Missing Information",
@@ -81,7 +84,7 @@ export default function AiAgentPage() {
 
         const input: VidyaEdurankInput = {
             ...formState,
-            studyMaterial: studyMaterial,
+            studyMaterial: material,
         };
 
         try {
@@ -180,18 +183,13 @@ export default function AiAgentPage() {
                         
                         <div className="space-y-2">
                             <Label>Study Material</Label>
-                             <Tabs defaultValue="text" onValueChange={() => {
-                                 setStudyMaterial('');
-                                 setFileName('');
-                             }} className="w-full">
+                             <Tabs defaultValue="text" onValueChange={setActiveTab} className="w-full">
                                 <TabsList className="grid w-full grid-cols-2">
                                     <TabsTrigger value="text">Paste Text</TabsTrigger>
                                     <TabsTrigger value="file">Upload File</TabsTrigger>
                                 </TabsList>
                                 <TabsContent value="text" className="pt-2">
                                     <Textarea
-                                        value={studyMaterial}
-                                        onChange={(e) => setStudyMaterial(e.target.value)}
                                         placeholder="Paste textbook paragraph, chapter summary, or key points here..."
                                         className="min-h-[150px]"
                                     />
@@ -209,7 +207,7 @@ export default function AiAgentPage() {
                                             accept=".pdf,.png,.jpg,.jpeg"
                                         />
                                     </div>
-                                    {fileName && <p className="text-sm text-center mt-2 text-muted-foreground">Selected file: <span className="font-semibold">{fileName}</span></p>}
+                                    {fileName && activeTab === 'file' && <p className="text-sm text-center mt-2 text-muted-foreground">Selected file: <span className="font-semibold">{fileName}</span></p>}
                                 </TabsContent>
                             </Tabs>
                         </div>
@@ -252,3 +250,5 @@ export default function AiAgentPage() {
         </div>
     );
 }
+
+    

@@ -28,12 +28,15 @@ export default function AiAgentPage() {
         subject: 'Science',
         topic: '',
         curriculum: 'SSC',
+        mcqCount: 10,
         outputs: {
             notes: true,
             mcqs: true,
             questionPaper: false,
             animationScript: false,
             studyPlan: false,
+            eli5: false,
+            glossary: false,
         },
     });
     const [studyMaterial, setStudyMaterial] = useState('');
@@ -132,6 +135,12 @@ export default function AiAgentPage() {
         if (output.summaryNotes) {
             contentString += "📝 Summary Notes\n----------------------------------------\n" + output.summaryNotes + "\n\n";
         }
+        if (output.eli5) {
+            contentString += "🧒 Explain Like I'm 5\n----------------------------------------\n" + output.eli5 + "\n\n";
+        }
+        if (output.glossary) {
+            contentString += "📖 Glossary / Keywords\n----------------------------------------\n" + output.glossary + "\n\n";
+        }
         if (output.mcqs) {
             contentString += "📚 MCQs\n----------------------------------------\n" + output.mcqs + "\n\n";
         }
@@ -226,6 +235,18 @@ export default function AiAgentPage() {
                         <div>
                             <h3 className="text-xl font-semibold">📝 Summary Notes</h3>
                             <div className="whitespace-pre-wrap">{output.summaryNotes}</div>
+                        </div>
+                    )}
+                    {output.eli5 && (
+                        <div>
+                            <h3 className="text-xl font-semibold">🧒 Explain Like I'm 5</h3>
+                            <div className="whitespace-pre-wrap">{output.eli5}</div>
+                        </div>
+                    )}
+                    {output.glossary && (
+                        <div>
+                            <h3 className="text-xl font-semibold">📖 Glossary / Keywords</h3>
+                            <div className="whitespace-pre-wrap">{output.glossary}</div>
                         </div>
                     )}
                     {output.mcqs && (
@@ -341,9 +362,9 @@ export default function AiAgentPage() {
 
                         <Separator />
 
-                        <div className="space-y-2">
+                        <div className="space-y-4">
                              <Label>Expected Outputs</Label>
-                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                                 {(Object.keys(formState.outputs) as (keyof VidyaEdurankInput['outputs'])[]).map((key) => (
                                     <div key={key} className="flex items-center space-x-2">
                                         <Checkbox
@@ -351,10 +372,24 @@ export default function AiAgentPage() {
                                             checked={formState.outputs[key]}
                                             onCheckedChange={() => handleCheckboxChange(key)}
                                         />
-                                        <Label htmlFor={key} className="capitalize">{key.replace('mcqs', 'MCQs').replace('questionPaper', 'Question Paper').replace('animationScript', 'Animation Script').replace('studyPlan', 'Study Plan').replace('notes', 'Notes')}</Label>
+                                        <Label htmlFor={key} className="capitalize">{key.replace(/([A-Z])/g, ' $1').replace('mcqs', 'MCQs').replace('eli5', 'ELI5').trim()}</Label>
                                     </div>
                                 ))}
                             </div>
+                            {formState.outputs.mcqs && (
+                                <div className="space-y-2 pt-4 max-w-xs">
+                                    <Label htmlFor="mcqCount">Number of MCQs</Label>
+                                    <Input 
+                                        id="mcqCount"
+                                        name="mcqCount"
+                                        type="number"
+                                        value={formState.mcqCount}
+                                        onChange={handleInputChange}
+                                        min="1"
+                                        max="50"
+                                    />
+                                </div>
+                            )}
                         </div>
                         
                         <Button type="submit" className="w-full" disabled={isLoading}>

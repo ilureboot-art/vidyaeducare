@@ -33,6 +33,7 @@ export default function AiAgentPage() {
         },
     });
     const [studyMaterial, setStudyMaterial] = useState('');
+    const [textMaterial, setTextMaterial] = useState('');
     const [fileName, setFileName] = useState('');
     const [activeTab, setActiveTab] = useState('text');
 
@@ -68,7 +69,7 @@ export default function AiAgentPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         
-        const material = activeTab === 'file' ? studyMaterial : (e.currentTarget as HTMLFormElement).querySelector<HTMLTextAreaElement>('textarea')?.value || '';
+        const material = activeTab === 'file' ? studyMaterial : textMaterial;
 
         if (!formState.topic.trim() || !material.trim()) {
             toast({
@@ -192,6 +193,8 @@ export default function AiAgentPage() {
                                     <Textarea
                                         placeholder="Paste textbook paragraph, chapter summary, or key points here..."
                                         className="min-h-[150px]"
+                                        value={textMaterial}
+                                        onChange={(e) => setTextMaterial(e.target.value)}
                                     />
                                 </TabsContent>
                                 <TabsContent value="file" className="pt-2">

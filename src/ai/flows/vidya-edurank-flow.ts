@@ -9,7 +9,7 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
+import { z } from 'zod';
 
 const VidyaEdurankInputSchema = z.object({
   language: z.string().describe('The input language (e.g., English, Marathi, Hindi).'),
@@ -53,11 +53,7 @@ Here are the user's specifications:
 
 Here is the study material you need to process. It could be plain text or an image/document provided as a data URI.
 ---
-{{#if (contains studyMaterial "data:")}}
-  {{media url=studyMaterial}}
-{{else}}
-  {{{studyMaterial}}}
-{{/if}}
+{{media url=studyMaterial}}
 ---
 
 Based on the material, please generate the following outputs as requested:

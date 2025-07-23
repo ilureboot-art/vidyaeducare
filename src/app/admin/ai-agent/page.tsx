@@ -69,14 +69,9 @@ export default function AiAgentPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         
-        let materialToSubmit = '';
-        if (activeTab === 'file') {
-            materialToSubmit = studyMaterial;
-        } else {
-            materialToSubmit = textMaterial;
-        }
+        const materialToSubmit = activeTab === 'file' ? studyMaterial : textMaterial;
 
-        if (!formState.topic.trim() || !materialToSubmit) {
+        if (!formState.topic.trim() || !materialToSubmit.trim()) {
             toast({
                 variant: 'destructive',
                 title: "Missing Information",

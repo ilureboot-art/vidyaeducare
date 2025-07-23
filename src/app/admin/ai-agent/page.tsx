@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { BrainCircuit, Loader2, Sparkles, Upload } from "lucide-react";
+import { BrainCircuit, Loader2, Sparkles, Upload, Download } from "lucide-react";
 import { generateEducationalContent, type VidyaEdurankInput, type VidyaEdurankOutput } from '@/ai/flows/vidya-edurank-flow';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -103,6 +103,50 @@ export default function AiAgentPage() {
         }
     };
 
+    const handleDownload = () => {
+        if (!output) return;
+
+        let contentString = `Generated Content for: ${output.chapterName || formState.topic}\n\n`;
+        contentString += "========================================\n\n";
+
+        if (output.summaryNotes) {
+            contentString += "📝 Summary Notes\n";
+            contentString += "----------------------------------------\n";
+            contentString += output.summaryNotes + "\n\n";
+        }
+        if (output.mcqs) {
+            contentString += "📚 MCQs\n";
+            contentString += "----------------------------------------\n";
+            contentString += output.mcqs + "\n\n";
+        }
+        if (output.questionPaper) {
+            contentString += "📄 Question Paper\n";
+            contentString += "----------------------------------------\n";
+            contentString += output.questionPaper + "\n\n";
+        }
+        if (output.animationScript) {
+            contentString += "🎬 Animation Script\n";
+            contentString += "----------------------------------------\n";
+            contentString += output.animationScript + "\n\n";
+        }
+        if (output.studyPlan) {
+            contentString += "📆 Study Plan\n";
+            contentString += "----------------------------------------\n";
+            contentString += output.studyPlan + "\n\n";
+        }
+
+        const blob = new Blob([contentString], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        const fileName = `${(output.chapterName || formState.topic).replace(/\s+/g, '_') || 'ai-content'}.txt`;
+        link.setAttribute('download', fileName);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    };
+
     const renderOutput = () => {
         if (!output) return null;
 
@@ -146,6 +190,12 @@ export default function AiAgentPage() {
                         </div>
                     )}
                 </CardContent>
+                <CardFooter>
+                    <Button onClick={handleDownload} variant="secondary">
+                        <Download className="mr-2" />
+                        Download Content
+                    </Button>
+                </CardFooter>
             </Card>
         );
     };

@@ -65,29 +65,16 @@ export default function AiAgentPage() {
 
         setFileName(file.name);
         
-        if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-            const reader = new FileReader();
-            reader.onload = async (loadEvent) => {
-                const arrayBuffer = loadEvent.target?.result as ArrayBuffer;
-                try {
-                    const result = await mammoth.extractRawText({ arrayBuffer });
-                    setStudyMaterial(result.value);
-                    toast({ title: "DOCX File Processed", description: `${file.name} content has been extracted.`});
-                } catch (error) {
-                    console.error("Error extracting DOCX:", error);
-                    toast({ variant: "destructive", title: "Error", description: "Could not read the DOCX file."});
-                }
-            };
-            reader.readAsArrayBuffer(file);
-        } else {
-            const reader = new FileReader();
-            reader.onload = (loadEvent) => {
-                const dataUri = loadEvent.target?.result as string;
-                setStudyMaterial(dataUri);
-                toast({ title: "File Ready", description: `${file.name} has been selected.`});
-            };
-            reader.readAsDataURL(file);
+        const reader = new FileReader();
+        reader.onload = (loadEvent) => {
+            const dataUri = loadEvent.target?.result as string;
+            setStudyMaterial(dataUri);
+            toast({ title: "File Ready", description: `${file.name} has been selected and is ready to be processed.`});
+        };
+        reader.onerror = () => {
+             toast({ variant: "destructive", title: "Error", description: "Could not read the selected file."});
         }
+        reader.readAsDataURL(file);
     }
 
 
@@ -411,3 +398,5 @@ export default function AiAgentPage() {
         </div>
     );
 }
+
+    

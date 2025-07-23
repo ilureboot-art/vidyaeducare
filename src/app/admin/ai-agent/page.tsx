@@ -13,6 +13,10 @@ import { BrainCircuit, Loader2, Sparkles, Upload, Download } from "lucide-react"
 import { generateEducationalContent, type VidyaEdurankInput, type VidyaEdurankOutput } from '@/ai/flows/vidya-edurank-flow';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import mammoth from 'mammoth';
+import jsPDF from 'jspdf';
+import { Document, Packer, Paragraph, TextRun } from 'docx';
 
 export default function AiAgentPage() {
     const { toast } = useToast();
@@ -52,19 +56,37 @@ export default function AiAgentPage() {
         }));
     };
     
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (file) {
+        if (!file) return;
+
+        setFileName(file.name);
+        
+        if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+            const reader = new FileReader();
+            reader.onload = async (loadEvent) => {
+                const arrayBuffer = loadEvent.target?.result as ArrayBuffer;
+                try {
+                    const result = await mammoth.extractRawText({ arrayBuffer });
+                    setStudyMaterial(result.value);
+                    toast({ title: "DOCX File Processed", description: `${file.name} content has been extracted.`});
+                } catch (error) {
+                    console.error("Error extracting DOCX:", error);
+                    toast({ variant: "destructive", title: "Error", description: "Could not read the DOCX file."});
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        } else {
             const reader = new FileReader();
             reader.onload = (loadEvent) => {
                 const dataUri = loadEvent.target?.result as string;
                 setStudyMaterial(dataUri);
-                setFileName(file.name);
                 toast({ title: "File Ready", description: `${file.name} has been selected.`});
             };
             reader.readAsDataURL(file);
         }
     }
+
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -103,49 +125,90 @@ export default function AiAgentPage() {
         }
     };
 
-    const handleDownload = () => {
-        if (!output) return;
-
+    const generateContentString = () => {
+        if (!output) return "";
         let contentString = `Generated Content for: ${output.chapterName || formState.topic}\n\n`;
         contentString += "========================================\n\n";
-
         if (output.summaryNotes) {
-            contentString += "📝 Summary Notes\n";
-            contentString += "----------------------------------------\n";
-            contentString += output.summaryNotes + "\n\n";
+            contentString += "📝 Summary Notes\n----------------------------------------\n" + output.summaryNotes + "\n\n";
         }
         if (output.mcqs) {
-            contentString += "📚 MCQs\n";
-            contentString += "----------------------------------------\n";
-            contentString += output.mcqs + "\n\n";
+            contentString += "📚 MCQs\n----------------------------------------\n" + output.mcqs + "\n\n";
         }
         if (output.questionPaper) {
-            contentString += "📄 Question Paper\n";
-            contentString += "----------------------------------------\n";
-            contentString += output.questionPaper + "\n\n";
+            contentString += "📄 Question Paper\n----------------------------------------\n" + output.questionPaper + "\n\n";
         }
         if (output.animationScript) {
-            contentString += "🎬 Animation Script\n";
-            contentString += "----------------------------------------\n";
-            contentString += output.animationScript + "\n\n";
+            contentString += "🎬 Animation Script\n----------------------------------------\n" + output.animationScript + "\n\n";
         }
         if (output.studyPlan) {
-            contentString += "📆 Study Plan\n";
-            contentString += "----------------------------------------\n";
-            contentString += output.studyPlan + "\n\n";
+            contentString += "📆 Study Plan\n----------------------------------------\n" + output.studyPlan + "\n\n";
         }
+        return contentString;
+    }
 
+    const downloadTxt = () => {
+        const contentString = generateContentString();
         const blob = new Blob([contentString], { type: 'text/plain;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        const fileName = `${(output.chapterName || formState.topic).replace(/\s+/g, '_') || 'ai-content'}.txt`;
+        const fileName = `${(output?.chapterName || formState.topic).replace(/\s+/g, '_') || 'ai-content'}.txt`;
         link.setAttribute('download', fileName);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
     };
+
+    const downloadPdf = () => {
+        if (!output) return;
+        const doc = new jsPDF();
+        const contentString = generateContentString();
+        doc.text(contentString, 10, 10);
+        const fileName = `${(output.chapterName || formState.topic).replace(/\s+/g, '_') || 'ai-content'}.pdf`;
+        doc.save(fileName);
+    };
+
+    const downloadDocx = async () => {
+        if (!output) return;
+        const contentString = generateContentString();
+        const paragraphs = contentString.split('\n').map(line => new Paragraph({
+            children: [new TextRun(line)],
+        }));
+        const doc = new Document({
+            sections: [{
+                properties: {},
+                children: paragraphs,
+            }],
+        });
+        const blob = await Packer.toBlob(doc);
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        const fileName = `${(output.chapterName || formState.topic).replace(/\s+/g, '_') || 'ai-content'}.docx`;
+        link.setAttribute('download', fileName);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }
+    
+    const downloadJson = () => {
+        if (!output) return;
+        const jsonString = JSON.stringify(output, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        const fileName = `${(output.chapterName || formState.topic).replace(/\s+/g, '_') || 'ai-content'}.json`;
+        link.setAttribute('download', fileName);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }
+
 
     const renderOutput = () => {
         if (!output) return null;
@@ -191,10 +254,20 @@ export default function AiAgentPage() {
                     )}
                 </CardContent>
                 <CardFooter>
-                    <Button onClick={handleDownload} variant="secondary">
-                        <Download className="mr-2" />
-                        Download Content
-                    </Button>
+                     <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="secondary">
+                                <Download className="mr-2" />
+                                Download Content
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={downloadTxt}>Text (.txt)</DropdownMenuItem>
+                            <DropdownMenuItem onClick={downloadPdf}>PDF (.pdf)</DropdownMenuItem>
+                            <DropdownMenuItem onClick={downloadDocx}>Word (.docx)</DropdownMenuItem>
+                            <DropdownMenuItem onClick={downloadJson}>JSON (.json)</DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </CardFooter>
             </Card>
         );
@@ -251,13 +324,13 @@ export default function AiAgentPage() {
                                     <div className="relative border-dashed border-2 border-muted-foreground/50 rounded-lg p-6 text-center hover:border-primary transition-colors">
                                         <Upload className="mx-auto h-12 w-12 text-muted-foreground" />
                                         <p className="mt-2 text-sm text-muted-foreground">Click to browse or drag & drop</p>
-                                        <p className="text-xs text-muted-foreground">PDF, PNG, or JPG</p>
+                                        <p className="text-xs text-muted-foreground">DOCX, PDF, PNG, or JPG</p>
                                         <Input 
                                             id="fileUpload" 
                                             type="file"
                                             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                             onChange={handleFileChange}
-                                            accept=".pdf,.png,.jpg,.jpeg"
+                                            accept=".pdf,.png,.jpg,.jpeg,.docx"
                                         />
                                     </div>
                                     {fileName && activeTab === 'file' && <p className="text-sm text-center mt-2 text-muted-foreground">Selected file: <span className="font-semibold">{fileName}</span></p>}

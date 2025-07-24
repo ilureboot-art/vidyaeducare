@@ -147,6 +147,31 @@ export default function PlayPage() {
     setTimeout(() => setShake(false), 500);
   }
 
+  const handleSubmitTest = useCallback(() => {
+      setGameState("lost");
+      setFeedback(`Game Over! The correct number was ${secretNumber}.`);
+      toast({
+          variant: "destructive",
+          title: "Time's Up!",
+          description: `The correct number was ${secretNumber}.`,
+      });
+  }, [secretNumber, toast]);
+
+   useEffect(() => {
+        if (gameState !== "playing") return;
+
+        if (timeLeft <= 0) {
+            handleSubmitTest();
+            return;
+        }
+
+        const timer = setInterval(() => {
+            setTimeLeft((prevTime) => prevTime - 1);
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [gameState, timeLeft, handleSubmitTest]);
+
   const handleGuessSubmit = async () => {
     const guessNum = parseInt(currentGuess);
 

@@ -49,7 +49,10 @@ function FormattedDate({ dateString }: { dateString: string }) {
   const [formattedDate, setFormattedDate] = useState("");
 
   useEffect(() => {
-    setFormattedDate(new Date(dateString).toLocaleDateString());
+    // This effect runs only on the client, ensuring no hydration mismatch.
+    if (dateString) {
+      setFormattedDate(new Date(dateString).toLocaleDateString());
+    }
   }, [dateString]);
 
   if (!formattedDate) {
@@ -62,11 +65,13 @@ function FormattedDate({ dateString }: { dateString: string }) {
 export default function WalletPage() {
   const { toast } = useToast();
   const [balance, setBalance] = useState(walletData.balance);
-  const [transactions, setTransactions] = useState<Transaction[]>([...walletData.transactions]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [addFundsOpen, setAddFundsOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
 
   useEffect(() => {
+    setTransactions([...walletData.transactions]);
+
     const interval = setInterval(() => {
       if (walletData.balance !== balance) {
         setBalance(walletData.balance);

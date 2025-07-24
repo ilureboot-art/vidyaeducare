@@ -29,11 +29,14 @@ function FormattedDate({ dateString }: { dateString: string }) {
   const [formattedDate, setFormattedDate] = useState("");
 
   useEffect(() => {
-    setFormattedDate(new Date(dateString).toLocaleDateString());
+    // This effect runs only on the client, ensuring no hydration mismatch.
+    if (dateString) {
+      setFormattedDate(new Date(dateString).toLocaleDateString());
+    }
   }, [dateString]);
 
   if (!formattedDate) {
-    return null; 
+    return null; // Or a loading skeleton
   }
 
   return <>{formattedDate}</>;

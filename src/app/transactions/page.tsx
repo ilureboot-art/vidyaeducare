@@ -46,26 +46,32 @@ function FormattedDate({ dateString }: { dateString: string }) {
   const [formattedDate, setFormattedDate] = useState("");
 
   useEffect(() => {
-    setFormattedDate(new Date(dateString).toLocaleDateString());
+    // This effect runs only on the client, ensuring no hydration mismatch.
+    if (dateString) {
+      setFormattedDate(new Date(dateString).toLocaleDateString());
+    }
   }, [dateString]);
 
   if (!formattedDate) {
-    return null; 
+    return null; // Or a loading skeleton
   }
 
   return <>{formattedDate}</>;
 }
 
 export default function TransactionsPage() {
-  const [transactions, setTransactions] = useState<Transaction[]>([...walletData.transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'rejected'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'deposit' | 'withdrawal'>('all');
 
   useEffect(() => {
+    const sortedTransactions = [...walletData.transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    setTransactions(sortedTransactions);
+        
     const interval = setInterval(() => {
-        const sortedTransactions = [...walletData.transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        if (JSON.stringify(sortedTransactions) !== JSON.stringify(transactions)) {
-            setTransactions(sortedTransactions);
+        const updatedSortedTransactions = [...walletData.transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        if (JSON.stringify(updatedSortedTransactions) !== JSON.stringify(transactions)) {
+            setTransactions(updatedSortedTransactions);
         }
     }, 500); 
     

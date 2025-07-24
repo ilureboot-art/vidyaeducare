@@ -9,22 +9,22 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PlusCircle, Trash2, Zap, BookOpen, GraduationCap } from "lucide-react";
-import type { TicketPackage, ReferboltSubscription, MockTestSubscription } from "@/lib/store-config";
+import type { TicketPackage, ReferboltSubscription, MockTestPackage } from "@/lib/store-config";
 import {
   storeConfig,
   setPackages,
   setReferralBonus,
   setReferboltSubscription,
-  setMockTestSubscription
+  setMockTestPackages
 } from "@/lib/store-config";
 import { academicConfig, setBoards, setStandards, setSubjects } from "@/lib/academic-config";
 
 export default function AdminStoreSettingsPage() {
   const { toast } = useToast();
   const [packages, setLocalPackages] = useState<TicketPackage[]>([]);
+  const [mockTestPackages, setLocalMockTestPackages] = useState<MockTestPackage[]>([]);
   const [referralBonus, setLocalReferralBonus] = useState(0);
   const [referboltSub, setLocalReferboltSub] = useState<ReferboltSubscription>({ name: '', price: 0, description: '', ticketBonus: 0, gstRate: 0, hsnSacCode: '' });
-  const [mockTestSub, setLocalMockTestSub] = useState<MockTestSubscription>({ gstRate: 0, hsnSacCode: '' });
   
   // State for academic config
   const [boards, setLocalBoards] = useState<string[]>([]);
@@ -33,9 +33,9 @@ export default function AdminStoreSettingsPage() {
 
   useEffect(() => {
     setLocalPackages(storeConfig.packages);
+    setLocalMockTestPackages(storeConfig.mockTestPackages);
     setLocalReferralBonus(storeConfig.referralBonus);
     setLocalReferboltSub(storeConfig.referboltSubscription);
-    setLocalMockTestSub(storeConfig.mockTestSubscription);
     // Load academic configs
     setLocalBoards([...academicConfig.boards]);
     setLocalStandards([...academicConfig.standards]);
@@ -64,6 +64,28 @@ export default function AdminStoreSettingsPage() {
     setLocalPackages(newPackages);
   };
   
+  const handleMockTestPackageChange = (index: number, field: keyof MockTestPackage, value: string | number | boolean) => {
+    const newPackages = [...mockTestPackages];
+    const pkg = { ...newPackages[index] };
+
+    if (field === 'price' || field === 'months' || field === 'gstRate') {
+        value = Number(value) || 0;
+    }
+    
+    (pkg as any)[field] = value;
+
+    if (field === 'bestValue' && value === true) {
+        newPackages.forEach((p, i) => {
+            if (i !== index) {
+                p.bestValue = false;
+            }
+        });
+    }
+
+    newPackages[index] = pkg;
+    setLocalMockTestPackages(newPackages);
+  };
+  
   const handleReferboltChange = (field: keyof ReferboltSubscription, value: string | number) => {
     const newSub = { ...referboltSub };
      if (field === 'price' || field === 'ticketBonus' || field === 'gstRate') {
@@ -72,24 +94,23 @@ export default function AdminStoreSettingsPage() {
     (newSub as any)[field] = value;
     setLocalReferboltSub(newSub);
   };
-  
-  const handleMockTestSubChange = (field: keyof MockTestSubscription, value: string | number) => {
-    const newSub = { ...mockTestSub };
-     if (field === 'gstRate') {
-      value = Number(value) || 0;
-    }
-    (newSub as any)[field] = value;
-    setLocalMockTestSub(newSub);
-  }
 
   const addPackage = () => {
-    setLocalPackages([...packages, { tickets: 0, price: 0, bestValue: false, games: 0, gstRate: 18, hsnSacCode: '998439' }]);
+    setLocalPackages([...packages, { tickets: 0, price: 0, bestValue: false, games: 0, gstRate: 28, hsnSacCode: '998439' }]);
   };
 
   const removePackage = (index: number) => {
     setLocalPackages(packages.filter((_, i) => i !== index));
   };
   
+  const addMockTestPackage = () => {
+    setLocalMockTestPackages([...mockTestPackages, { name: 'New Subscription', price: 0, months: 1, bestValue: false, gstRate: 18, hsnSacCode: '999294' }]);
+  };
+  
+  const removeMockTestPackage = (index: number) => {
+      setLocalMockTestPackages(mockTestPackages.filter((_,i) => i !== index));
+  };
+
   const handleDynamicListChange = (setter: React.Dispatch<React.SetStateAction<string[]>>, index: number, value: string) => {
       setter(prev => {
           const newList = [...prev];
@@ -110,9 +131,9 @@ export default function AdminStoreSettingsPage() {
     e.preventDefault();
     
     setPackages(packages);
+    setMockTestPackages(mockTestPackages);
     setReferralBonus(referralBonus);
     setReferboltSubscription(referboltSub);
-    setMockTestSubscription(mockTestSub);
     setBoards(boards);
     setStandards(standards);
     setSubjects(subjects);
@@ -199,19 +220,47 @@ export default function AdminStoreSettingsPage() {
         <Card className="mt-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><BookOpen /> Mock Test Subscriptions</CardTitle>
-            <CardDescription>Configure GST for mock test products.</CardDescription>
+            <CardDescription>Configure mock test subscription packages.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="mocktest-gst">GST Rate (%)</Label>
-                <Input id="mocktest-gst" type="number" value={mockTestSub.gstRate} onChange={(e) => handleMockTestSubChange('gstRate', e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="mocktest-hsn">HSN/SAC Code</Label>
-                <Input id="mocktest-hsn" type="text" value={mockTestSub.hsnSacCode} onChange={(e) => handleMockTestSubChange('hsnSacCode', e.target.value)} />
-              </div>
-            </div>
+          <CardContent className="space-y-6">
+            {mockTestPackages.map((pkg, index) => (
+                <div key={index} className="p-4 border rounded-lg space-y-4 relative">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                         <div className="space-y-2">
+                            <Label htmlFor={`mt-name-${index}`}>Package Name</Label>
+                            <Input id={`mt-name-${index}`} type="text" value={pkg.name} onChange={(e) => handleMockTestPackageChange(index, 'name', e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor={`mt-price-${index}`}>Base Price (₹)</Label>
+                            <Input id={`mt-price-${index}`} type="number" value={pkg.price} onChange={(e) => handleMockTestPackageChange(index, 'price', e.target.value)} />
+                        </div>
+                         <div className="space-y-2">
+                            <Label htmlFor={`mt-months-${index}`}>Duration (Months)</Label>
+                            <Input id={`mt-months-${index}`} type="number" value={pkg.months} onChange={(e) => handleMockTestPackageChange(index, 'months', e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor={`mt-gst-${index}`}>GST Rate (%)</Label>
+                            <Input id={`mt-gst-${index}`} type="number" value={pkg.gstRate} onChange={(e) => handleMockTestPackageChange(index, 'gstRate', e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor={`mt-hsn-${index}`}>HSN/SAC Code</Label>
+                            <Input id={`mt-hsn-${index}`} type="text" value={pkg.hsnSacCode} onChange={(e) => handleMockTestPackageChange(index, 'hsnSacCode', e.target.value)} />
+                        </div>
+                    </div>
+                     <div className="flex items-center space-x-2 pt-2">
+                        <Checkbox id={`mt-best-value-${index}`} checked={pkg.bestValue} onCheckedChange={(checked) => handleMockTestPackageChange(index, 'bestValue', !!checked)} />
+                        <Label htmlFor={`mt-best-value-${index}`}>Mark as 'Best Value'</Label>
+                    </div>
+                    <Button variant="ghost" size="icon" className="absolute top-2 right-2 text-muted-foreground hover:text-destructive" onClick={() => removeMockTestPackage(index)}>
+                        <Trash2 className="h-4 w-4" />
+                        <span className="sr-only">Remove Package</span>
+                    </Button>
+                </div>
+            ))}
+             <Button type="button" variant="outline" className="w-full" onClick={addMockTestPackage}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add New Subscription
+            </Button>
           </CardContent>
         </Card>
 

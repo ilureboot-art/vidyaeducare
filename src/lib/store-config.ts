@@ -17,7 +17,11 @@ export type ReferboltSubscription = {
   hsnSacCode: string;
 };
 
-export type MockTestSubscription = {
+export type MockTestPackage = {
+    name: string;
+    price: number; // Base price
+    months: number;
+    bestValue: boolean;
     gstRate: number; // GST percentage
     hsnSacCode: string;
 };
@@ -31,6 +35,11 @@ export let storeConfig = {
         { tickets: 10, price: 225, bestValue: true, games: 20, gstRate: 28, hsnSacCode: '998439' },
     ] as TicketPackage[],
     
+    mockTestPackages: [
+        { name: "1 Year Subscription", price: 3000, months: 12, bestValue: true, gstRate: 18, hsnSacCode: '999294' },
+        { name: "6 Months Subscription", price: 1500, months: 6, bestValue: false, gstRate: 18, hsnSacCode: '999294' },
+    ] as MockTestPackage[],
+
     referboltSubscription: {
         name: "ReferBolt",
         price: 100,
@@ -39,11 +48,6 @@ export let storeConfig = {
         gstRate: 18,
         hsnSacCode: '998314',
     } as ReferboltSubscription,
-    
-    mockTestSubscription: {
-        gstRate: 18,
-        hsnSacCode: '999294'
-    } as MockTestSubscription,
 
     referralBonus: 5,
 };
@@ -54,12 +58,12 @@ export function setPackages(newPackages: TicketPackage[]) {
     storeConfig.packages = newPackages;
 }
 
-export function setReferboltSubscription(newSub: ReferboltSubscription) {
-    storeConfig.referboltSubscription = newSub;
+export function setMockTestPackages(newPackages: MockTestPackage[]) {
+    storeConfig.mockTestPackages = newPackages;
 }
 
-export function setMockTestSubscription(newSub: MockTestSubscription) {
-    storeConfig.mockTestSubscription = newSub;
+export function setReferboltSubscription(newSub: ReferboltSubscription) {
+    storeConfig.referboltSubscription = newSub;
 }
 
 export function setReferralBonus(newBonus: number) {

@@ -9,14 +9,10 @@ import { ShoppingCart, Sparkles, Loader2, BookOpen, Ticket, Zap } from "lucide-r
 import { walletData, addTransaction } from "@/lib/user-data";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { storeConfig, type TicketPackage, type ReferboltSubscription, type MockTestSubscription } from "@/lib/store-config";
+import { storeConfig, type TicketPackage, type ReferboltSubscription, type MockTestPackage } from "@/lib/store-config";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { validActivationCodes } from "@/lib/student-data";
 
-const subscriptionProducts = [
-    { name: "1 Year Subscription", price: 3000, months: 12, bestValue: true },
-    { name: "6 Months Subscription", price: 1500, months: 6, bestValue: false },
-];
 
 export default function StorePage() {
   const { toast } = useToast();
@@ -26,15 +22,15 @@ export default function StorePage() {
   const [referralCode2, setReferralCode2] = useState("");
 
   const [currentPackages, setCurrentPackages] = useState<TicketPackage[]>([]);
+  const [currentMockTestPackages, setCurrentMockTestPackages] = useState<MockTestPackage[]>([]);
   const [currentReferboltSub, setCurrentReferboltSub] = useState<ReferboltSubscription | null>(null);
-  const [currentMockTestSub, setCurrentMockTestSub] = useState<MockTestSubscription | null>(null);
 
   // This effect keeps the local state in sync with the central data store
   useEffect(() => {
     setBalance(walletData.balance);
     setCurrentPackages([...storeConfig.packages]);
+    setCurrentMockTestPackages([...storeConfig.mockTestPackages]);
     setCurrentReferboltSub({...storeConfig.referboltSubscription});
-    setCurrentMockTestSub({...storeConfig.mockTestSubscription});
 
     const interval = setInterval(() => {
       if (walletData.balance !== balance) {
@@ -44,7 +40,7 @@ export default function StorePage() {
     return () => clearInterval(interval);
   }, [balance]);
 
-  if (!currentMockTestSub || !currentReferboltSub) {
+  if (!currentReferboltSub) {
       return (
           <div className="w-full max-w-4xl mx-auto flex justify-center items-center h-64">
               <Loader2 className="animate-spin text-primary" size={32}/>
@@ -54,7 +50,7 @@ export default function StorePage() {
 
   const handleSubscriptionPurchase = (index: number) => {
     setIsPurchasing(index);
-    const product = subscriptionProducts[index];
+    const product = currentMockTestPackages[index];
     
     // Calculate discount
     const baseDiscount = 0.05; // 5% direct discount
@@ -64,7 +60,7 @@ export default function StorePage() {
     const discountedBasePrice = product.price * (1 - totalDiscount);
     
     // Calculate GST
-    const gstAmount = discountedBasePrice * (currentMockTestSub.gstRate / 100);
+    const gstAmount = discountedBasePrice * (product.gstRate / 100);
     const finalPrice = discountedBasePrice + gstAmount;
 
     setTimeout(() => {
@@ -117,7 +113,7 @@ export default function StorePage() {
 
       toast({
         title: "Purchase Successful!",
-        description: `You've subscribed for ${product.months} months. Your Activation Code is: ${activationCode}. Use this code in 'My Students' to add a profile.`,
+        description: `You've purchased the ${product.name}. Your Activation Code is: ${activationCode}. Use this code in 'My Students' to add a profile.`,
         duration: 10000,
       });
 
@@ -230,12 +226,12 @@ export default function StorePage() {
                     </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
-                {subscriptionProducts.map((product, index) => {
+                {currentMockTestPackages.map((product, index) => {
                     const baseDiscount = 0.05;
                     const referralDiscount = referralCode1.trim() !== "" ? 0.10 : 0;
                     const totalDiscount = baseDiscount + referralDiscount;
                     const discountedBasePrice = product.price * (1 - totalDiscount);
-                    const gstAmount = discountedBasePrice * (currentMockTestSub.gstRate / 100);
+                    const gstAmount = discountedBasePrice * (product.gstRate / 100);
                     const finalPrice = discountedBasePrice + gstAmount;
 
                   return (
@@ -262,7 +258,7 @@ export default function StorePage() {
                             <p className="text-muted-foreground line-through">₹{product.price}</p>
                             <p className="text-4xl font-bold">₹{finalPrice.toFixed(0)}</p>
                             <p className="text-xs text-muted-foreground">
-                                (Base: ₹{discountedBasePrice.toFixed(0)} + GST @ {currentMockTestSub.gstRate}%: ₹{gstAmount.toFixed(0)})
+                                (Base: ₹{discountedBasePrice.toFixed(0)} + GST @ {product.gstRate}%: ₹{gstAmount.toFixed(0)})
                             </p>
                             <p className="text-sm font-semibold text-accent">You save {(totalDiscount * 100).toFixed(0)}%!</p>
                         </div>

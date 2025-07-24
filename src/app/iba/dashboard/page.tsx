@@ -109,10 +109,9 @@ Don't miss out on the best way to prepare for your exams and earn rewards!
           url: shareUrl,
         });
       } catch (error) {
-        // Silently fail if the user cancels the share action.
-        if ((error as DOMException).name !== 'AbortError') {
-           fallbackCopy();
-        }
+        // Fallback to clipboard copy if share fails for any reason
+        console.error("Web Share API failed, falling back to clipboard:", error);
+        fallbackCopy();
       }
     } else {
       fallbackCopy();

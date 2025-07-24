@@ -104,8 +104,9 @@ export default function PlayPage() {
   
   const [playerStats, setPlayerStats] = useState(initialPlayerStats);
   
-  const [timeLeft, setTimeLeft] = useState(GAME_DURATION);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const endTimeRef = useRef<number | null>(null);
+  const [timeLeft, setTimeLeft] = useState(GAME_DURATION);
 
 
   const { toast } = useToast();
@@ -116,17 +117,6 @@ export default function PlayPage() {
     router.push('/play');
   };
 
-  const resetGame = useCallback(() => {
-    setSecretNumber(Math.floor(Math.random() * 100) + 1);
-    setAttemptsLeft(MAX_ATTEMPTS);
-    setCurrentGuess("");
-    setGuessHistory([]);
-    setReward(0);
-    setFeedback("Guess a number between 1 and 100.");
-    setGameState("playing");
-    setTimeLeft(GAME_DURATION);
-  }, []);
-  
   const stopTimer = useCallback(() => {
     if (timerRef.current) {
         clearInterval(timerRef.current);
@@ -185,7 +175,17 @@ export default function PlayPage() {
 
   }, [gameMode, playerStats, stopTimer, toast]);
 
-
+  const resetGame = useCallback(() => {
+    setSecretNumber(Math.floor(Math.random() * 100) + 1);
+    setAttemptsLeft(MAX_ATTEMPTS);
+    setCurrentGuess("");
+    setGuessHistory([]);
+    setReward(0);
+    setFeedback("Guess a number between 1 and 100.");
+    setGameState("playing");
+    endTimeRef.current = Date.now() + GAME_DURATION * 1000;
+  }, []);
+  
   const startGame = useCallback((mode: GameMode) => {
     setGameMode(mode);
     if (mode === "real") {
@@ -209,21 +209,24 @@ export default function PlayPage() {
     }
   }, [searchParams, startGame, gameState]);
   
-    useEffect(() => {
-        if (gameState === 'playing' && !timerRef.current) {
-            timerRef.current = setInterval(() => {
-                setTimeLeft(prevTime => {
-                    if (prevTime <= 1) {
-                       endGame("lost", `Time's Up! The correct number was ${secretNumber}.`);
-                       return 0;
-                    }
-                    return prevTime - 1;
-                });
-            }, 1000);
+  useEffect(() => {
+    if (gameState === "playing" && endTimeRef.current) {
+      timerRef.current = setInterval(() => {
+        const now = Date.now();
+        const newTimeLeft = Math.round((endTimeRef.current! - now) / 1000);
+        if (newTimeLeft <= 0) {
+          setTimeLeft(0);
+          endGame("lost", `Time's Up! The correct number was ${secretNumber}.`);
+        } else {
+          setTimeLeft(newTimeLeft);
         }
+      }, 1000);
+    } else {
+      stopTimer();
+    }
+    return () => stopTimer();
+  }, [gameState, endGame, secretNumber, stopTimer]);
 
-        return () => stopTimer();
-    }, [gameState, stopTimer, endGame, secretNumber]);
 
   const triggerShake = () => {
     setShake(true);
@@ -303,10 +306,9 @@ Join now: ${shareUrl}
           url: shareUrl,
         });
       } catch (error) {
-        if ((error as DOMException).name !== 'AbortError') {
-          console.error("Web Share API failed, falling back to clipboard:", error);
-          fallbackCopy();
-        }
+        // Fallback to clipboard copy if share fails for any reason
+        console.error("Web Share API failed, falling back to clipboard:", error);
+        fallbackCopy();
       }
     } else {
       fallbackCopy();
@@ -570,5 +572,3 @@ Join now: ${shareUrl}
     </div>
   );
 }
-
-    

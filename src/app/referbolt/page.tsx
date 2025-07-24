@@ -73,10 +73,9 @@ Subscribe and start your earning cycle now: ${shareUrl}
           url: shareUrl,
         });
       } catch (error) {
-        if ((error as DOMException).name !== 'AbortError') {
-          console.error("Share failed, falling back to clipboard:", error);
-          fallbackCopy();
-        }
+        // Fallback to clipboard copy if share fails for any reason
+        console.error("Share failed, falling back to clipboard:", error);
+        fallbackCopy();
       }
     } else {
       fallbackCopy();

@@ -35,9 +35,9 @@ Click here to join: ${url}`;
             try {
                 await navigator.share({ title: 'Join Vidya EduCare!', text: message, url });
             } catch (error) {
-                if ((error as DOMException).name !== 'AbortError') {
-                  fallbackCopy();
-                }
+                // Fallback to clipboard copy if share fails for any reason
+                console.error("Web Share API failed, falling back to clipboard:", error);
+                fallbackCopy();
             }
         } else {
             fallbackCopy();

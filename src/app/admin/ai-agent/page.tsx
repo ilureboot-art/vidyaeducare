@@ -377,7 +377,7 @@ export default function AiAgentPage() {
                                         value={formState.mcqCount}
                                         onChange={(e) => setFormState(prevState => ({...prevState, mcqCount: parseInt(e.target.value, 10) || 10 }))}
                                         min="1"
-                                        max="50"
+                                        max="100"
                                     />
                                 </div>
                             )}

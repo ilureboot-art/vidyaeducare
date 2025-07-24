@@ -12,7 +12,6 @@ import { useToast } from "@/hooks/use-toast";
 import { BrainCircuit, Loader2, Sparkles, Upload, Download } from "lucide-react";
 import { generateEducationalContent, type VidyaEdurankInput, type VidyaEdurankOutput } from '@/ai/flows/vidya-edurank-flow';
 import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import mammoth from 'mammoth';
 import jsPDF from 'jspdf';
@@ -39,12 +38,11 @@ export default function AiAgentPage() {
             glossary: false,
         },
     });
+    // UNIFIED STATE for study material
     const [studyMaterial, setStudyMaterial] = useState('');
-    const [textMaterial, setTextMaterial] = useState('');
     const [fileName, setFileName] = useState('');
-    const [activeTab, setActiveTab] = useState('text');
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
         setFormState(prevState => ({ ...prevState, [name]: value }));
     };
@@ -64,43 +62,30 @@ export default function AiAgentPage() {
         if (!file) return;
 
         setFileName(file.name);
+        setIsLoading(true); // Show loader while processing file
         
-        if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') { // .docx file
-            const reader = new FileReader();
-            reader.onload = async (loadEvent) => {
-                const arrayBuffer = loadEvent.target?.result as ArrayBuffer;
-                try {
-                    const result = await mammoth.extractRawText({ arrayBuffer });
-                    setTextMaterial(result.value);
-                    setActiveTab('text'); // Switch to text tab to show content
-                    toast({ title: "DOCX content extracted!", description: `Content from ${file.name} is ready.` });
-                } catch (error) {
-                    toast({ variant: "destructive", title: "Error", description: "Could not extract text from DOCX file." });
-                }
-            };
-            reader.readAsArrayBuffer(file);
-        } else { // Handle images and PDFs as data URIs
-            const reader = new FileReader();
-            reader.onload = (loadEvent) => {
-                const dataUri = loadEvent.target?.result as string;
-                setStudyMaterial(dataUri);
-                setActiveTab('file'); // Switch to file tab
-                toast({ title: "File Ready", description: `${file.name} has been selected and is ready to be processed.` });
-            };
-            reader.onerror = () => {
-                 toast({ variant: "destructive", title: "Error", description: "Could not read the selected file." });
-            }
-            reader.readAsDataURL(file);
-        }
+        const reader = new FileReader();
+
+        reader.onload = async (loadEvent) => {
+            const dataUri = loadEvent.target?.result as string;
+            setStudyMaterial(dataUri); // Always set the data URI
+            toast({ title: "File Ready", description: `${file.name} is ready to be processed.` });
+            setIsLoading(false);
+        };
+        
+        reader.onerror = () => {
+             toast({ variant: "destructive", title: "Error", description: "Could not read the selected file." });
+             setIsLoading(false);
+        };
+        
+        reader.readAsDataURL(file);
     }
 
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         
-        const materialToSubmit = activeTab === 'file' ? studyMaterial : textMaterial;
-
-        if (!formState.topic.trim() || !materialToSubmit.trim()) {
+        if (!formState.topic.trim() || !studyMaterial.trim()) {
             toast({
                 variant: 'destructive',
                 title: "Missing Information",
@@ -114,7 +99,7 @@ export default function AiAgentPage() {
 
         const input: VidyaEdurankInput = {
             ...formState,
-            studyMaterial: materialToSubmit,
+            studyMaterial: studyMaterial,
         };
 
         try {
@@ -178,7 +163,10 @@ export default function AiAgentPage() {
         if (!output) return;
         const doc = new jsPDF();
         const contentString = generateContentString();
-        doc.text(contentString, 10, 10);
+        // The default font in jsPDF doesn't support all characters.
+        // For broad compatibility, splitting text and handling manually is safer.
+        const splitText = doc.splitTextToSize(contentString, 180);
+        doc.text(splitText, 10, 10);
         const fileName = `${(output.chapterName || formState.topic).replace(/\s+/g, '_') || 'ai-content'}.pdf`;
         doc.save(fileName);
     };
@@ -332,35 +320,30 @@ export default function AiAgentPage() {
                         
                         <div className="space-y-2">
                             <Label>Study Material</Label>
-                             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                                <TabsList className="grid w-full grid-cols-2">
-                                    <TabsTrigger value="text">Paste Text</TabsTrigger>
-                                    <TabsTrigger value="file">Upload File</TabsTrigger>
-                                </TabsList>
-                                <TabsContent value="text" className="pt-2">
-                                    <Textarea
-                                        placeholder="Paste textbook paragraph, chapter summary, or key points here..."
-                                        className="min-h-[150px]"
-                                        value={textMaterial}
-                                        onChange={(e) => setTextMaterial(e.target.value)}
+                             <div className="grid grid-cols-1 gap-4">
+                                <Textarea
+                                    placeholder="Paste textbook paragraph, chapter summary, or key points here... OR upload a file below."
+                                    className="min-h-[150px]"
+                                    value={studyMaterial}
+                                    onChange={(e) => {
+                                        setStudyMaterial(e.target.value);
+                                        setFileName(''); // Clear filename if user types
+                                    }}
+                                />
+                                <div className="relative border-dashed border-2 border-muted-foreground/50 rounded-lg p-6 text-center hover:border-primary transition-colors">
+                                    <Upload className="mx-auto h-12 w-12 text-muted-foreground" />
+                                    <p className="mt-2 text-sm text-muted-foreground">Click to browse or drag & drop a file</p>
+                                    <p className="text-xs text-muted-foreground">DOCX, PDF, PNG, or JPG</p>
+                                    <Input 
+                                        id="fileUpload" 
+                                        type="file"
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                        onChange={handleFileChange}
+                                        accept=".pdf,.png,.jpg,.jpeg,.docx"
                                     />
-                                </TabsContent>
-                                <TabsContent value="file" className="pt-2">
-                                    <div className="relative border-dashed border-2 border-muted-foreground/50 rounded-lg p-6 text-center hover:border-primary transition-colors">
-                                        <Upload className="mx-auto h-12 w-12 text-muted-foreground" />
-                                        <p className="mt-2 text-sm text-muted-foreground">Click to browse or drag & drop</p>
-                                        <p className="text-xs text-muted-foreground">DOCX, PDF, PNG, or JPG</p>
-                                        <Input 
-                                            id="fileUpload" 
-                                            type="file"
-                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                            onChange={handleFileChange}
-                                            accept=".pdf,.png,.jpg,.jpeg,.docx"
-                                        />
-                                    </div>
-                                    {fileName && <p className="text-sm text-center mt-2 text-muted-foreground">Selected file: <span className="font-semibold">{fileName}</span></p>}
-                                </TabsContent>
-                            </Tabs>
+                                </div>
+                                {fileName && <p className="text-sm text-center mt-2 text-muted-foreground">Selected file: <span className="font-semibold">{fileName}</span></p>}
+                             </div>
                         </div>
 
 
@@ -388,7 +371,7 @@ export default function AiAgentPage() {
                                         name="mcqCount"
                                         type="number"
                                         value={formState.mcqCount}
-                                        onChange={handleInputChange}
+                                        onChange={(e) => setFormState(prevState => ({...prevState, mcqCount: parseInt(e.target.value, 10) || 10 }))}
                                         min="1"
                                         max="50"
                                     />
@@ -404,7 +387,7 @@ export default function AiAgentPage() {
                 </CardContent>
             </Card>
 
-            {isLoading && (
+            {isLoading && !output && (
                  <div className="text-center p-8 flex flex-col items-center justify-center gap-4">
                     <Loader2 className="w-10 h-10 animate-spin text-primary"/>
                     <p className="text-muted-foreground">The AI agent is thinking... please wait.</p>
@@ -414,5 +397,4 @@ export default function AiAgentPage() {
             {renderOutput()}
         </div>
     );
-
-    
+}

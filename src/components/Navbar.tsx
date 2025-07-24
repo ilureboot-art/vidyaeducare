@@ -12,6 +12,7 @@ const navItems = [
   { href: "/play", label: "Play", icon: Gamepad2 },
   { href: "/store", label: "Store", icon: Store },
   { href: "/referbolt", label: "ReferBolt", icon: Zap },
+  { href: "/wallet", label: "Wallet", icon: Wallet },
 ];
 
 export function Navbar() {
@@ -23,7 +24,7 @@ export function Navbar() {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-2 z-50">
-         <nav className="grid grid-cols-5 gap-1">
+         <nav className="grid grid-cols-6 gap-1">
             {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = item.href === '/' ? pathname === item.href : pathname.startsWith(item.href);

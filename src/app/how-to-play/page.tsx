@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { List, CheckCircle, Award, Ticket, Share2, Zap } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { storeConfig } from "@/lib/store-config";
 
 export default function HowToPlayPage() {
   return (
@@ -27,7 +28,7 @@ export default function HowToPlayPage() {
               GuessMaster is a simple number guessing game. The goal is to guess a secret number between <Badge>1</Badge> and <Badge>100</Badge>. You have a limited number of attempts to guess the correct number.
             </p>
              <ul className="list-disc list-inside space-y-2 pl-4">
-              <li>You start with <Badge variant="secondary">5</Badge> attempts per game.</li>
+              <li>You start with <Badge variant="secondary">{storeConfig.gameSettings.maxAttempts}</Badge> attempts per game.</li>
               <li>Enter your guess in the input box and click "Guess".</li>
               <li>After each guess, you'll get a hint: <Badge variant="outline">higher</Badge> or <Badge variant="outline">lower</Badge>.</li>
               <li>Use the hints to narrow down the possible numbers.</li>
@@ -54,14 +55,12 @@ export default function HowToPlayPage() {
               Winning & Rewards
             </h2>
             <span>
-              You win the game by guessing the secret number within your 5 attempts. The faster you guess, the higher your reward!
+              You win the game by guessing the secret number within your {storeConfig.gameSettings.maxAttempts} attempts. The faster you guess, the higher your reward!
             </span>
             <ul className="list-disc list-inside space-y-2 pl-4">
-              <li><span className="font-bold">1st Attempt:</span> ₹100</li>
-              <li><span className="font-bold">2nd Attempt:</span> ₹75</li>
-              <li><span className="font-bold">3rd Attempt:</span> ₹50</li>
-              <li><span className="font-bold">4th Attempt:</span> ₹25</li>
-              <li><span className="font-bold">5th Attempt:</span> ₹15</li>
+              {storeConfig.gameSettings.rewards.map((reward, index) => (
+                <li key={index}><span className="font-bold">{index + 1}{index === 0 ? 'st' : index === 1 ? 'nd' : index === 2 ? 'rd' : 'th'} Attempt:</span> ₹{reward}</li>
+              ))}
             </ul>
           </div>
           

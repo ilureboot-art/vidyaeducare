@@ -40,8 +40,6 @@ import { storeConfig } from "@/lib/store-config";
 import { addNotification } from "@/lib/notifications";
 
 
-const MAX_ATTEMPTS = 5;
-const REWARDS = [100, 75, 50, 25, 15];
 const GAMES_PER_TICKET = 2;
 const GAME_DURATION = 60; // 60 seconds
 
@@ -92,7 +90,7 @@ export default function PlayPage() {
   const [secretNumber, setSecretNumber] = useState(0);
   const [currentGuess, setCurrentGuess] = useState("");
   const [guessHistory, setGuessHistory] = useState<{ guess: number; hint: string }[]>([]);
-  const [attemptsLeft, setAttemptsLeft] = useState(MAX_ATTEMPTS);
+  const [attemptsLeft, setAttemptsLeft] = useState(storeConfig.gameSettings.maxAttempts);
   const [gameState, setGameState] = useState<GameState>("idle");
   const [gameMode, setGameMode] = useState<GameMode>("real");
   const [feedback, setFeedback] = useState("Start a new game to play!");
@@ -177,7 +175,7 @@ export default function PlayPage() {
 
   const resetGame = useCallback(() => {
     setSecretNumber(Math.floor(Math.random() * 100) + 1);
-    setAttemptsLeft(MAX_ATTEMPTS);
+    setAttemptsLeft(storeConfig.gameSettings.maxAttempts);
     setCurrentGuess("");
     setGuessHistory([]);
     setReward(0);
@@ -209,23 +207,27 @@ export default function PlayPage() {
     }
   }, [searchParams, startGame, gameState]);
   
-  useEffect(() => {
-    if (gameState === "playing" && endTimeRef.current) {
-      timerRef.current = setInterval(() => {
+  const handleTimerTick = useCallback(() => {
+    if (endTimeRef.current) {
         const now = Date.now();
         const newTimeLeft = Math.round((endTimeRef.current! - now) / 1000);
         if (newTimeLeft <= 0) {
-          setTimeLeft(0);
-          endGame("lost", `Time's Up! The correct number was ${secretNumber}.`);
+            setTimeLeft(0);
+            endGame("lost", `Time's Up! The correct number was ${secretNumber}.`);
         } else {
-          setTimeLeft(newTimeLeft);
+            setTimeLeft(newTimeLeft);
         }
-      }, 1000);
-    } else {
-      stopTimer();
     }
-    return () => stopTimer();
-  }, [gameState, endGame, secretNumber, stopTimer]);
+  }, [endGame, secretNumber]);
+  
+  useEffect(() => {
+      if (gameState === "playing") {
+          timerRef.current = setInterval(handleTimerTick, 1000);
+      } else {
+          stopTimer();
+      }
+      return () => stopTimer();
+  }, [gameState, stopTimer, handleTimerTick]);
 
 
   const triggerShake = () => {
@@ -250,8 +252,8 @@ export default function PlayPage() {
     setAttemptsLeft(newAttemptsLeft);
 
     if (guessNum === secretNumber) {
-      const attemptsUsed = MAX_ATTEMPTS - newAttemptsLeft;
-      const earnedReward = REWARDS[attemptsUsed - 1] || 0;
+      const attemptsUsed = storeConfig.gameSettings.maxAttempts - newAttemptsLeft;
+      const earnedReward = storeConfig.gameSettings.rewards[attemptsUsed - 1] || 0;
       setReward(earnedReward);
       setGuessHistory([...guessHistory, { guess: guessNum, hint: 'Correct!' }]);
       endGame("won", `Congratulations! You guessed the number in ${attemptsUsed} ${attemptsUsed > 1 ? 'attempts' : 'attempt'}.`, earnedReward);
@@ -275,7 +277,7 @@ export default function PlayPage() {
   const handleShare = async () => {
     const referralCode = "ALEX-D7F6E5C";
     const shareUrl = `${window.location.origin}/signup?ref=${referralCode}`;
-    const rewardsList = REWARDS.map((r, i) => `${i+1}${i === 0 ? 'st' : i === 1 ? 'nd' : i === 2 ? 'rd' : 'th'} Attempt: ₹${r}`).join('\n');
+    const rewardsList = storeConfig.gameSettings.rewards.map((r, i) => `${i+1}${i === 0 ? 'st' : i === 1 ? 'nd' : i === 2 ? 'rd' : 'th'} Attempt: ₹${r}`).join('\n');
     const message = `🎮 Join GuessMaster - India's Best Skill Gaming Platform! 🎮
 
 🚀 Use my referral code: ${referralCode}
@@ -331,7 +333,7 @@ Join now: ${shareUrl}
     <div className="text-center space-y-6">
         <div className="flex flex-col items-center text-center">
             <h1 className="text-4xl font-bold text-primary">GuessMaster</h1>
-            <p className="text-muted-foreground mt-2">Guess the secret number between 1 and 100 in 5 tries!</p>
+            <p className="text-muted-foreground mt-2">Guess the secret number between 1 and 100 in {storeConfig.gameSettings.maxAttempts} tries!</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Button size="lg" onClick={() => startGame("real")}><Star className="mr-2 h-5 w-5"/> Start Real Game</Button>
@@ -355,7 +357,7 @@ Join now: ${shareUrl}
                 <Clock className="w-4 h-4" />
                 {String(minutesLeft).padStart(2, '0')}:{String(secondsLeft).padStart(2, '0')}
             </Badge>
-            <Badge variant="secondary">Attempt {MAX_ATTEMPTS - attemptsLeft + 1} of {MAX_ATTEMPTS}</Badge>
+            <Badge variant="secondary">Attempt {storeConfig.gameSettings.maxAttempts - attemptsLeft + 1} of {storeConfig.gameSettings.maxAttempts}</Badge>
         </div>
         <div className="p-4 bg-muted/50 rounded-lg text-center font-medium flex items-center justify-center gap-2 min-h-[64px]">
             <Lightbulb className="w-5 h-5 text-yellow-500 shrink-0"/>
@@ -435,7 +437,7 @@ Join now: ${shareUrl}
     <div className="w-full space-y-2">
         <h3 className="text-xs font-semibold uppercase text-muted-foreground flex items-center gap-2"><CircleHelp className="w-4 h-4"/>Reward Tiers</h3>
         <ul className="grid grid-cols-3 md:grid-cols-5 gap-2 text-center">
-            {REWARDS.map((r, i) => (
+            {storeConfig.gameSettings.rewards.map((r, i) => (
                 <li key={i} className="p-2 bg-muted/50 rounded-md">
                     <p className="text-xs text-muted-foreground">Attempt {i + 1}</p>
                     <p className="font-bold text-primary">₹{r}</p>

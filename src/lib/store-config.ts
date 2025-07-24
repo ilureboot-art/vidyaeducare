@@ -1,4 +1,5 @@
 
+
 export type TicketPackage = {
   tickets: number;
   price: number; // Base price before GST
@@ -50,6 +51,12 @@ export let storeConfig = {
     } as ReferboltSubscription,
 
     referralBonus: 5,
+    
+    gameSettings: {
+        maxAttempts: 5,
+        welcomeBonus: 2,
+        rewards: [100, 75, 50, 25, 15],
+    }
 };
 
 // --- Setter functions to allow admin panel to modify the config ---
@@ -68,4 +75,8 @@ export function setReferboltSubscription(newSub: ReferboltSubscription) {
 
 export function setReferralBonus(newBonus: number) {
     storeConfig.referralBonus = newBonus;
+}
+
+export function setGameSettings(newSettings: { maxAttempts: number, welcomeBonus: number, rewards: number[] }) {
+    storeConfig.gameSettings = newSettings;
 }

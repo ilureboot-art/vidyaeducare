@@ -6,20 +6,30 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { storeConfig, setGameSettings } from "@/lib/store-config";
 
 export default function AdminGameSettingsPage() {
     const { toast } = useToast();
-    const [rewards, setRewards] = useState([100, 75, 50, 25, 15]);
+    const [settings, setSettings] = useState({ ...storeConfig.gameSettings });
+    
+    useEffect(() => {
+        setSettings({ ...storeConfig.gameSettings });
+    }, []);
 
     const handleRewardChange = (index: number, value: string) => {
-        const newRewards = [...rewards];
+        const newRewards = [...settings.rewards];
         newRewards[index] = Number(value);
-        setRewards(newRewards);
+        setSettings(prev => ({...prev, rewards: newRewards}));
+    }
+    
+    const handleSettingChange = (field: keyof typeof settings, value: string) => {
+        setSettings(prev => ({ ...prev, [field]: Number(value) }));
     }
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        setGameSettings(settings);
         toast({
             title: "Settings Saved!",
             description: "Game settings have been successfully updated.",
@@ -39,17 +49,17 @@ export default function AdminGameSettingsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                         <Label htmlFor="maxAttempts">Max Attempts</Label>
-                        <Input id="maxAttempts" type="number" defaultValue="5" />
+                        <Input id="maxAttempts" type="number" value={settings.maxAttempts} onChange={(e) => handleSettingChange('maxAttempts', e.target.value)} />
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="welcomeBonus">Welcome Bonus (Tickets)</Label>
-                        <Input id="welcomeBonus" type="number" defaultValue="2" />
+                        <Input id="welcomeBonus" type="number" value={settings.welcomeBonus} onChange={(e) => handleSettingChange('welcomeBonus', e.target.value)} />
                     </div>
                 </div>
                 <div className="space-y-2">
                     <Label>Reward Tiers (by attempt)</Label>
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-                        {rewards.map((reward, index) => (
+                        {settings.rewards.map((reward, index) => (
                             <Input 
                                 key={index}
                                 type="number" 

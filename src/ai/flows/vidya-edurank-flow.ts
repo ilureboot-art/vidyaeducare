@@ -31,6 +31,11 @@ const VidyaEdurankInputSchema = z.object({
 });
 export type VidyaEdurankInput = z.infer<typeof VidyaEdurankInputSchema>;
 
+// Define a new schema for the prompt that includes our helper flag.
+const VidyaEdurankPromptSchema = VidyaEdurankInputSchema.extend({
+  isDataUri: z.boolean()
+});
+
 const VidyaEdurankOutputSchema = z.object({
   chapterName: z.string().optional(),
   summaryNotes: z.string().optional().describe('Concept-wise summary notes in bullet points or short paragraphs.'),
@@ -45,7 +50,7 @@ export type VidyaEdurankOutput = z.infer<typeof VidyaEdurankOutputSchema>;
 
 const vidyaEdurankPrompt = ai.definePrompt({
     name: "vidyaEdurankPrompt",
-    input: { schema: VidyaEdurankInputSchema },
+    input: { schema: VidyaEdurankPromptSchema },
     output: { schema: VidyaEdurankOutputSchema },
     prompt: `You are the Vidya EduCare AI Agent, a highly intelligent, multilingual AI assistant for administrators. Your job is to understand the provided study material and generate educational content for the platform based on the admin's request.
 
@@ -58,7 +63,7 @@ Here are the user's specifications:
 
 Here is the study material you need to process. It could be plain text or an image/document provided as a data URI.
 ---
-{{#if (startsWith studyMaterial "data:")}}
+{{#if isDataUri}}
 {{media url=studyMaterial}}
 {{else}}
 {{{studyMaterial}}}
@@ -99,7 +104,12 @@ const vidyaEdurankFlow = ai.defineFlow(
     outputSchema: VidyaEdurankOutputSchema,
   },
   async (input) => {
-    const { output } = await vidyaEdurankPrompt(input);
+    // Determine if the input is a data URI and create the prompt input object.
+    const promptInput = {
+      ...input,
+      isDataUri: input.studyMaterial.startsWith('data:'),
+    };
+    const { output } = await vidyaEdurankPrompt(promptInput);
     return output || {};
   }
 );

@@ -109,7 +109,6 @@ Don't miss out on the best way to prepare for your exams and earn rewards!
           url: shareUrl,
         });
       } catch (error) {
-        // Fallback to clipboard copy if share fails for any reason
         fallbackCopy();
       }
     } else {

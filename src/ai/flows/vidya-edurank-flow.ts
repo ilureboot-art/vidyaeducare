@@ -58,7 +58,11 @@ Here are the user's specifications:
 
 Here is the study material you need to process. It could be plain text or an image/document provided as a data URI.
 ---
+{{#if (startsWith studyMaterial "data:")}}
 {{media url=studyMaterial}}
+{{else}}
+{{{studyMaterial}}}
+{{/if}}
 ---
 
 Based on the material, please generate the following outputs as requested. Format your entire response cleanly using Markdown. For each requested section, use a clear heading (e.g., "📝 Summary Notes:", "📚 MCQs:"). The chapter name should be derived from the 'topic' input.

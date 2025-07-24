@@ -356,7 +356,7 @@ export default function ProfilePage() {
                             <div key={test.id} className="flex items-center justify-between p-3 rounded-lg border">
                                 <div>
                                     <p className="font-semibold">{test.testSetName}</p>
-                                    <p className="text-sm text-muted-foreground">{format(new Date(test.date), "PPP")}</p>
+                                    <p className="text-sm text-muted-foreground">{format(new Date(test.dateTime), "PPP p")}</p>
                                 </div>
                                 <Button onClick={() => handleStartTest(test.id)}>Start Test</Button>
                             </div>

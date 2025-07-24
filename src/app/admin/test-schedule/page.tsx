@@ -10,6 +10,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { allTestSets } from '@/lib/question-bank';
 import { scheduledTests, addScheduledTest, type ScheduledTest } from '@/lib/test-schedule';
@@ -27,14 +28,15 @@ export default function TestSchedulePage() {
     const { toast } = useToast();
     const [allSchedules, setAllSchedules] = useState<ScheduledTest[]>(scheduledTests);
     const [date, setDate] = useState<Date | undefined>(new Date());
+    const [time, setTime] = useState('10:00'); // Default time
     const [selectedTestSetId, setSelectedTestSetId] = useState('');
 
     const handleScheduleTest = () => {
-        if (!date || !selectedTestSetId) {
+        if (!date || !selectedTestSetId || !time) {
             toast({
                 variant: 'destructive',
                 title: "Missing Information",
-                description: "Please select a test set and a date.",
+                description: "Please select a test set, a date, and a time.",
             });
             return;
         }
@@ -45,11 +47,15 @@ export default function TestSchedulePage() {
              return;
         }
 
+        const [hours, minutes] = time.split(':').map(Number);
+        const combinedDateTime = new Date(date);
+        combinedDateTime.setHours(hours, minutes, 0, 0);
+
         const newTest: ScheduledTest = {
             id: `SCHED-${Date.now()}`,
             testSetId: testSet.id,
             testSetName: testSet.name,
-            date: format(date, "yyyy-MM-dd"),
+            dateTime: combinedDateTime.toISOString(),
             board: testSet.board,
             standard: testSet.standard,
             subject: testSet.subject,
@@ -60,15 +66,16 @@ export default function TestSchedulePage() {
 
         toast({
             title: "Test Scheduled!",
-            description: `"${testSet.name}" has been added to the calendar.`
+            description: `"${testSet.name}" has been added to the calendar for ${format(combinedDateTime, "PPP p")}.`
         });
         
         // Reset form
         setSelectedTestSetId('');
         setDate(new Date());
+        setTime('10:00');
     };
     
-    const sortedSchedules = [...allSchedules].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const sortedSchedules = [...allSchedules].sort((a,b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
 
     return (
         <div className="space-y-6">
@@ -80,11 +87,11 @@ export default function TestSchedulePage() {
                 <CardHeader>
                     <CardTitle>Schedule a New Mock Test</CardTitle>
                     <CardDescription>
-                        Select a pre-defined test set and assign it to a date on the calendar.
+                        Select a pre-defined test set and assign it a date and time on the calendar.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                        <div className="space-y-2">
                             <Label htmlFor="test-set">Test Set</Label>
                             <Select value={selectedTestSetId} onValueChange={setSelectedTestSetId}>
@@ -112,9 +119,18 @@ export default function TestSchedulePage() {
                                 </PopoverContent>
                             </Popover>
                         </div>
+                        <div className="space-y-2">
+                             <Label htmlFor="test-time">Test Time</Label>
+                             <Input 
+                                id="test-time"
+                                type="time"
+                                value={time}
+                                onChange={(e) => setTime(e.target.value)}
+                             />
+                        </div>
                     </div>
                      <div className="flex justify-end pt-4">
-                        <Button onClick={handleScheduleTest} disabled={!selectedTestSetId || !date}>
+                        <Button onClick={handleScheduleTest} disabled={!selectedTestSetId || !date || !time}>
                             <FilePlus className="mr-2"/> Schedule Test
                         </Button>
                     </div>
@@ -129,7 +145,7 @@ export default function TestSchedulePage() {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Date</TableHead>
+                                <TableHead>Date & Time</TableHead>
                                 <TableHead>Test Name</TableHead>
                                 <TableHead>Details</TableHead>
                                 <TableHead>Status</TableHead>
@@ -137,21 +153,28 @@ export default function TestSchedulePage() {
                         </TableHeader>
                         <TableBody>
                             {sortedSchedules.length > 0 ? sortedSchedules.map(test => {
-                                const testDate = new Date(test.date);
-                                const today = new Date();
-                                today.setHours(0,0,0,0);
-                                testDate.setHours(0,0,0,0);
+                                const testDate = new Date(test.dateTime);
+                                const now = new Date();
 
                                 let status: 'Live' | 'Upcoming' | 'Completed' = 'Upcoming';
-                                if (testDate.getTime() < today.getTime()) {
+                                if (testDate < now) {
+                                    // Could add more logic here for duration to be "Live"
                                     status = 'Completed';
-                                } else if (testDate.getTime() === today.getTime()) {
-                                    status = 'Live';
                                 }
+                                
+                                // A simple check for "Live" could be if it's on the same day.
+                                // A more complex check would involve test duration.
+                                if (format(testDate, 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd') && testDate > now) {
+                                    status = 'Upcoming';
+                                } else if (format(testDate, 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd') && testDate <= now) {
+                                    // This is a rough "Live" status
+                                    status = 'Live'
+                                }
+
 
                                 return (
                                     <TableRow key={test.id}>
-                                        <TableCell>{format(new Date(test.date), "PPP")}</TableCell>
+                                        <TableCell>{format(new Date(test.dateTime), "PPP p")}</TableCell>
                                         <TableCell className="font-medium">{test.testSetName}</TableCell>
                                         <TableCell className="text-sm text-muted-foreground">{`${test.board} / ${test.standard} / ${test.subject}`}</TableCell>
                                         <TableCell>

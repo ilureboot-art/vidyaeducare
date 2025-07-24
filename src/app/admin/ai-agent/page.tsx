@@ -13,7 +13,6 @@ import { BrainCircuit, Loader2, Sparkles, Upload, Download } from "lucide-react"
 import { generateEducationalContent, type VidyaEdurankInput, type VidyaEdurankOutput } from '@/ai/flows/vidya-edurank-flow';
 import { Separator } from '@/components/ui/separator';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import mammoth from 'mammoth';
 import jsPDF from 'jspdf';
 import { Document, Packer, Paragraph, TextRun } from 'docx';
 
@@ -68,7 +67,7 @@ export default function AiAgentPage() {
 
         reader.onload = async (loadEvent) => {
             const dataUri = loadEvent.target?.result as string;
-            setStudyMaterial(dataUri); // Always set the data URI
+            setStudyMaterial(dataUri); // Always set the data URI for any file type
             toast({ title: "File Ready", description: `${file.name} is ready to be processed.` });
             setIsLoading(false);
         };
@@ -78,6 +77,7 @@ export default function AiAgentPage() {
              setIsLoading(false);
         };
         
+        // Read the file as a Data URL for all supported types
         reader.readAsDataURL(file);
     }
 
@@ -324,7 +324,7 @@ export default function AiAgentPage() {
                                 <Textarea
                                     placeholder="Paste textbook paragraph, chapter summary, or key points here... OR upload a file below."
                                     className="min-h-[150px]"
-                                    value={studyMaterial}
+                                    value={studyMaterial.startsWith('data:') ? '' : studyMaterial} // Show text only if it's not a data URI
                                     onChange={(e) => {
                                         setStudyMaterial(e.target.value);
                                         setFileName(''); // Clear filename if user types
@@ -398,3 +398,5 @@ export default function AiAgentPage() {
         </div>
     );
 }
+
+    

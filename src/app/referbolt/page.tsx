@@ -73,8 +73,6 @@ Subscribe and start your earning cycle now: ${shareUrl}
           url: shareUrl,
         });
       } catch (error) {
-        // Fallback to clipboard copy if share fails for any reason
-        console.error("Share failed, falling back to clipboard:", error);
         fallbackCopy();
       }
     } else {

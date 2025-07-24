@@ -35,6 +35,11 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
+const WhatsAppIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-green-500">
+        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+    </svg>
+)
 
 type AdminRole = "Head Admin" | "Sub-admin";
 type AdminStatus = "Active" | "Pending" | "Rejected";
@@ -50,13 +55,13 @@ type Admin = {
 };
 
 const initialAdmins: Admin[] = [
-  { id: "ADM001", name: "Super Admin", email: "super@example.com", phone: "+91 99999 88888", role: "Head Admin", status: "Active", joinDate: "2024-07-01" },
-  { id: "ADM002", name: "Sub Admin One", email: "sub1@example.com", phone: "+91 88888 77777", role: "Sub-admin", status: "Active", joinDate: "2024-07-15" },
+  { id: "ADM001", name: "Super Admin", email: "super@example.com", phone: "919999988888", role: "Head Admin", status: "Active", joinDate: "2024-07-01" },
+  { id: "ADM002", name: "Sub Admin One", email: "sub1@example.com", phone: "918888877777", role: "Sub-admin", status: "Active", joinDate: "2024-07-15" },
 ];
 
 const initialRequests: Admin[] = [
-    { id: "ADM003", name: "Charlie Request", email: "charlie@example.com", phone: "+91 77777 66666", role: "Sub-admin", status: "Pending", joinDate: "2024-08-01" },
-    { id: "ADM004", name: "Diana Applicant", email: "diana@example.com", phone: "+91 66666 55555", role: "Sub-admin", status: "Pending", joinDate: "2024-08-02" },
+    { id: "ADM003", name: "Charlie Request", email: "charlie@example.com", phone: "917777766666", role: "Sub-admin", status: "Pending", joinDate: "2024-08-01" },
+    { id: "ADM004", name: "Diana Applicant", email: "diana@example.com", phone: "916666655555", role: "Sub-admin", status: "Pending", joinDate: "2024-08-02" },
 ]
 
 export default function AdminManagementPage() {
@@ -64,6 +69,14 @@ export default function AdminManagementPage() {
   const [requests, setRequests] = useState<Admin[]>(initialRequests);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const { toast } = useToast();
+  
+  const openWhatsApp = (phone: string) => {
+    // Remove any non-digit characters and ensure it starts with country code
+    const cleanedPhone = phone.replace(/\D/g, '');
+    if (cleanedPhone) {
+      window.open(`https://wa.me/${cleanedPhone}`, '_blank');
+    }
+  }
 
   const handleRequest = (requestId: string, newStatus: "Active" | "Rejected") => {
     const requestToProcess = requests.find(req => req.id === requestId);
@@ -157,8 +170,15 @@ export default function AdminManagementPage() {
               {requests.length > 0 ? requests.map((req) => (
                 <TableRow key={req.id}>
                   <TableCell className="font-medium">{req.name}</TableCell>
-                  <TableCell>{req.phone}</TableCell>
-                  <TableCell>{req.joinDate}</TableCell>
+                  <TableCell>
+                      <div className="flex items-center gap-2">
+                        <span>+{req.phone}</span>
+                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openWhatsApp(req.phone)}>
+                            <WhatsAppIcon />
+                         </Button>
+                      </div>
+                  </TableCell>
+                  <TableCell>{new Date(req.joinDate).toLocaleDateString()}</TableCell>
                   <TableCell className="text-center">
                     <div className="flex gap-2 justify-center">
                         <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700" onClick={() => handleRequest(req.id, "Active")}>Approve</Button>
@@ -209,8 +229,8 @@ export default function AdminManagementPage() {
                             <Input id="email" name="email" type="email" required />
                         </div>
                          <div className="space-y-2">
-                            <Label htmlFor="phone">WhatsApp Number</Label>
-                            <Input id="phone" name="phone" type="tel" required />
+                            <Label htmlFor="phone">WhatsApp Number (with country code)</Label>
+                            <Input id="phone" name="phone" type="tel" required placeholder="e.g. 919876543210"/>
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="password">Password</Label>
@@ -263,7 +283,14 @@ export default function AdminManagementPage() {
                       {admin.status}
                     </Badge>
                   </TableCell>
-                  <TableCell>{admin.phone}</TableCell>
+                  <TableCell>
+                      <div className="flex items-center gap-2">
+                        <span>+{admin.phone}</span>
+                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openWhatsApp(admin.phone)}>
+                            <WhatsAppIcon />
+                         </Button>
+                      </div>
+                  </TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>

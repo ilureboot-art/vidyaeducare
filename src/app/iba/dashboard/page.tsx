@@ -82,8 +82,8 @@ I'm an Independent Business Associate with them, and I highly recommend their pl
 - 🏆 Compete on live leaderboards and win cash prizes for top scores.
 - 🎮 Fun skill games to sharpen your mind.
 
-* Become IBA & start your business journey with Vidya EduCare *
-No registration fee and investment to become IBA and start business with Vidya EduCare
+*Become an IBA & start your business journey with Vidya EduCare*
+No registration fee and no investment to become an IBA and start a business with Vidya EduCare.
 
 Use my exclusive IBA code to get a special 10% discount on your subscription!
 
@@ -110,7 +110,6 @@ Don't miss out on the best way to prepare for your exams and earn rewards!
         });
       } catch (error) {
         // Fallback to clipboard copy if share fails for any reason
-        console.error("Web Share API failed, falling back to clipboard:", error);
         fallbackCopy();
       }
     } else {

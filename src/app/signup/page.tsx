@@ -119,7 +119,7 @@ export default function SignupPage() {
           <CardHeader>
             <CardTitle>Sign Up</CardTitle>
             <CardDescription>
-              {isOtpSent ? "Verify your number with the OTP." : "Enter your information to create an account."}
+              {isOtpSent ? "Verify your WhatsApp number with the OTP we sent." : "Enter your information to create an account."}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -162,7 +162,7 @@ export default function SignupPage() {
             )}
             {isOtpSent && (
               <div className="space-y-2">
-                  <Label htmlFor="otp-signup">Enter OTP</Label>
+                  <Label htmlFor="otp-signup">Enter WhatsApp OTP</Label>
                   <Input 
                       id="otp-signup" 
                       type="text" 

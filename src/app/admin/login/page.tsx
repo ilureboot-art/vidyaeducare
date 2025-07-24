@@ -110,7 +110,7 @@ export default function AdminLoginPage() {
                     <CardHeader>
                         <CardTitle>Request Sub-admin Access</CardTitle>
                         <CardDescription>
-                           {isOtpSent ? "Enter the OTP to verify your request." : "New admins must be approved by a Head Admin."}
+                           {isOtpSent ? "Enter the OTP sent to your WhatsApp to verify your request." : "New admins must be approved by a Head Admin."}
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -132,7 +132,7 @@ export default function AdminLoginPage() {
                             </div>
                             {isOtpSent && (
                                 <div className="space-y-2">
-                                    <Label htmlFor="otp-signup">Enter OTP</Label>
+                                    <Label htmlFor="otp-signup">Enter WhatsApp OTP</Label>
                                     <Input 
                                         id="otp-signup" 
                                         type="text" 

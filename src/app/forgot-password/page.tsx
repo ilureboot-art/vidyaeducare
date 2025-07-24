@@ -83,7 +83,7 @@ export default function ForgotPasswordPage() {
             <CardHeader>
               <CardTitle>Forgot Password</CardTitle>
               <CardDescription>
-                Choose a recovery method and we'll send you an OTP to reset your password.
+                We will send a one-time password (OTP) to your registered WhatsApp number or Email.
               </CardDescription>
             </CardHeader>
         )}

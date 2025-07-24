@@ -117,10 +117,11 @@ export default function AiAgentPage() {
         }
     };
 
-    const generateContentString = () => {
+    const generateContentString = (isJson = false) => {
         if (!output) return "";
         let contentString = `Generated Content for: ${output.chapterName || formState.topic}\n\n`;
         contentString += "========================================\n\n";
+        
         if (output.summaryNotes) {
             contentString += "📝 Summary Notes\n----------------------------------------\n" + output.summaryNotes + "\n\n";
         }
@@ -131,7 +132,8 @@ export default function AiAgentPage() {
             contentString += "📖 Glossary / Keywords\n----------------------------------------\n" + output.glossary + "\n\n";
         }
         if (output.mcqs) {
-            contentString += "📚 MCQs\n----------------------------------------\n" + output.mcqs + "\n\n";
+            const mcqString = isJson ? JSON.stringify(output.mcqs, null, 2) : "MCQs are in JSON format. Please download as JSON or TXT to view.\n\n";
+            contentString += "📚 MCQs\n----------------------------------------\n" + mcqString;
         }
         if (output.questionPaper) {
             contentString += "📄 Question Paper\n----------------------------------------\n" + output.questionPaper + "\n\n";
@@ -146,7 +148,7 @@ export default function AiAgentPage() {
     }
 
     const downloadTxt = () => {
-        const contentString = generateContentString();
+        const contentString = generateContentString(true); // Pass true to get JSON string for MCQs
         const blob = new Blob([contentString], { type: 'text/plain;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -162,7 +164,7 @@ export default function AiAgentPage() {
     const downloadPdf = () => {
         if (!output) return;
         const doc = new jsPDF();
-        const contentString = generateContentString();
+        const contentString = generateContentString(false); // Pass false for user-friendly PDF
         // The default font in jsPDF doesn't support all characters.
         // For broad compatibility, splitting text and handling manually is safer.
         const splitText = doc.splitTextToSize(contentString, 180);
@@ -173,7 +175,7 @@ export default function AiAgentPage() {
 
     const downloadDocx = async () => {
         if (!output) return;
-        const contentString = generateContentString();
+        const contentString = generateContentString(false); // Pass false for user-friendly DOCX
         const paragraphs = contentString.split('\n').map(line => new Paragraph({
             children: [new TextRun(line)],
         }));
@@ -243,8 +245,10 @@ export default function AiAgentPage() {
                     )}
                     {output.mcqs && (
                         <div>
-                            <h3 className="text-xl font-semibold">📚 MCQs</h3>
-                            <div className="whitespace-pre-wrap">{output.mcqs}</div>
+                            <h3 className="text-xl font-semibold">📚 MCQs (JSON Format)</h3>
+                            <pre className="p-4 bg-muted text-sm rounded-md overflow-x-auto">
+                                <code>{JSON.stringify(output.mcqs, null, 2)}</code>
+                            </pre>
                         </div>
                     )}
                     {output.questionPaper && (

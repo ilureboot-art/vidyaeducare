@@ -36,10 +36,35 @@ const VidyaEdurankPromptSchema = VidyaEdurankInputSchema.extend({
   isDataUri: z.boolean()
 });
 
+
+const MCQQuestionSchema = z.object({
+  text: z.object({
+    en: z.string().describe("The English version of the question text."),
+    mr: z.string().describe("The Marathi version of the question text."),
+  }),
+  options: z.object({
+    en: z.array(z.string()).describe("The English versions of the multiple choice options."),
+    mr: z.array(z.string()).describe("The Marathi versions of the multiple choice options."),
+  }),
+  correctAnswer: z.object({
+    en: z.string().describe("The correct answer in English."),
+    mr: z.string().describe("The correct answer in Marathi."),
+  }),
+}).describe("A single multiple-choice question with bilingual fields.");
+
+const MCQSetSchema = z.object({
+    name: z.string().describe("The name of the test set, derived from the topic."),
+    board: z.string().describe("The curriculum board for the test set."),
+    standard: z.string().describe("The grade/standard for the test set."),
+    subject: z.string().describe("The subject of the test set."),
+    questions: z.array(MCQQuestionSchema).describe("An array of question objects."),
+}).describe("A complete set of Multiple Choice Questions in a structured JSON format.");
+
+
 const VidyaEdurankOutputSchema = z.object({
   chapterName: z.string().optional(),
   summaryNotes: z.string().optional().describe('Concept-wise summary notes in bullet points or short paragraphs.'),
-  mcqs: z.string().optional().describe('Multiple Choice Questions (with 4 options and the correct answer marked).'),
+  mcqs: MCQSetSchema.optional().describe('A structured JSON object containing the Multiple Choice Questions.'),
   questionPaper: z.string().optional().describe('A structured question paper with marks distribution.'),
   animationScript: z.string().optional().describe('An explanation script suitable for generating a study animation video.'),
   studyPlan: z.string().optional().describe('A suggested study plan or learning goals.'),
@@ -70,13 +95,19 @@ Here is the study material you need to process. It could be plain text or an ima
 {{/if}}
 ---
 
-Based on the material, please generate the following outputs as requested. Format your entire response cleanly using Markdown. For each requested section, use a clear heading (e.g., "📝 Summary Notes:", "📚 MCQs:"). The chapter name should be derived from the 'topic' input.
+Based on the material, please generate the following outputs as requested. The chapter name should be derived from the 'topic' input. For any plain text outputs, format them cleanly using Markdown with clear headings (e.g., "📝 Summary Notes:", "📄 Question Paper:").
 
 {{#if outputs.notes}}
 - **Summary Notes**: Create concept-wise summary notes using bullet points or short paragraphs. The language should be clear, concise, and appropriate for a {{{grade}}} grade student.
 {{/if}}
 {{#if outputs.mcqs}}
-- **MCQs**: Generate a numbered list of exactly {{{mcqCount}}} multiple-choice questions. Each question should have 4 options, and you must indicate the correct answer clearly (e.g., with a "✅" or by bolding it). Ensure questions and options are provided in both English and {{{language}}}.
+- **MCQs**: Generate a complete JSON object for a test set. 
+  - The JSON object must have the following keys: "name", "board", "standard", "subject", and "questions".
+  - Populate the metadata fields ("name", "board", "standard", "subject") using the user's input. The 'name' should be based on the 'topic'.
+  - The "questions" key must contain an array of exactly {{{mcqCount}}} question objects.
+  - Each question object must have three keys: "text", "options", and "correctAnswer".
+  - Each of these keys must have two sub-keys: "en" for English and "mr" for Marathi.
+  - The "options" sub-keys should contain an array of 4 string options.
 {{/if}}
 {{#if outputs.questionPaper}}
 - **Question Paper**: Create a structured question paper based on the {{{curriculum}}} board guidelines if possible. Include a variety of question types (e.g., short answer, long answer) and assign marks to each question. The total marks should be reasonable (e.g., 20-25 marks).

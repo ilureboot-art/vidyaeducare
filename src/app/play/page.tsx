@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,6 +32,7 @@ import {
   Percent,
   IndianRupee,
   Sprout,
+  Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { walletData, addTransaction } from "@/lib/user-data";
@@ -42,20 +43,20 @@ import { addNotification } from "@/lib/notifications";
 const MAX_ATTEMPTS = 5;
 const REWARDS = [100, 75, 50, 25, 15];
 const GAMES_PER_TICKET = 2;
+const GAME_DURATION = 60; // 60 seconds
 
 type GameState = "idle" | "playing" | "won" | "lost";
 type GameMode = "real" | "demo";
 
-const playerStats = {
+// In a real app, this would be fetched and persisted
+const initialPlayerStats = {
     winRate: 0,
     totalEarnings: 0,
     gamesPlayed: 0,
-    earningsHistory: [],
+    wins: 0,
+    earningsHistory: [] as {name: string, earnings: number}[],
 };
 
-const winRateData = [
-  { name: 'Win Rate', value: playerStats.winRate, fill: 'hsl(var(--primary))' },
-];
 
 const Confetti = () => (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -101,6 +102,12 @@ export default function PlayPage() {
   const [gamesLeft, setGamesLeft] = useState(tickets * GAMES_PER_TICKET);
   const [shake, setShake] = useState(false);
   
+  const [playerStats, setPlayerStats] = useState(initialPlayerStats);
+  
+  const [timeLeft, setTimeLeft] = useState(GAME_DURATION);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+
   const { toast } = useToast();
 
   const goBackToMenu = () => {
@@ -117,7 +124,67 @@ export default function PlayPage() {
     setReward(0);
     setFeedback("Guess a number between 1 and 100.");
     setGameState("playing");
+    setTimeLeft(GAME_DURATION);
   }, []);
+  
+  const stopTimer = useCallback(() => {
+    if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+    }
+  }, []);
+
+  const endGame = useCallback((endState: "won" | "lost", message: string, earnedReward: number = 0) => {
+    stopTimer();
+    setGameState(endState);
+    setFeedback(message);
+
+    if (gameMode === 'real') {
+        const newGamesPlayed = playerStats.gamesPlayed + 1;
+        const newWins = playerStats.wins + (endState === 'won' ? 1 : 0);
+        const newTotalEarnings = playerStats.totalEarnings + earnedReward;
+        
+        const newEarningsHistory = [...playerStats.earningsHistory, { name: `G${newGamesPlayed}`, earnings: earnedReward }];
+        if (newEarningsHistory.length > 7) newEarningsHistory.shift();
+
+        setPlayerStats({
+            gamesPlayed: newGamesPlayed,
+            wins: newWins,
+            winRate: Math.round((newWins / newGamesPlayed) * 100),
+            totalEarnings: newTotalEarnings,
+            earningsHistory: newEarningsHistory,
+        });
+
+        if (endState === 'won' && earnedReward > 0) {
+            addTransaction({
+              id: Date.now(),
+              type: 'deposit',
+              description: 'Game Won Reward',
+              amount: earnedReward,
+              date: new Date().toISOString(),
+              status: 'Completed',
+              user: "Alex Doe",
+            });
+            walletData.balance += earnedReward;
+            addNotification({
+                type: "deposit_received",
+                message: `You won ₹${earnedReward} in GuessMaster!`,
+                userId: 'user-alex-doe',
+            });
+            toast({
+              title: "You Won!",
+              description: `₹${earnedReward} has been added to your wallet.`,
+            });
+        }
+    } else if (endState === 'won') {
+         toast({
+            title: "You Won!",
+            description: `You guessed the number! This was a demo game, so no real money was awarded.`,
+        });
+    }
+
+  }, [gameMode, playerStats, stopTimer, toast]);
+
 
   const startGame = useCallback((mode: GameMode) => {
     setGameMode(mode);
@@ -137,40 +204,31 @@ export default function PlayPage() {
   
   useEffect(() => {
     const startMode = searchParams.get('mode');
-    if (startMode === 'demo') {
+    if (startMode === 'demo' && gameState === 'idle') {
       startGame('demo');
     }
-  }, [searchParams, startGame]);
+  }, [searchParams, startGame, gameState]);
+  
+    useEffect(() => {
+        if (gameState === 'playing' && !timerRef.current) {
+            timerRef.current = setInterval(() => {
+                setTimeLeft(prevTime => {
+                    if (prevTime <= 1) {
+                       endGame("lost", `Time's Up! The correct number was ${secretNumber}.`);
+                       return 0;
+                    }
+                    return prevTime - 1;
+                });
+            }, 1000);
+        }
+
+        return () => stopTimer();
+    }, [gameState, stopTimer, endGame, secretNumber]);
 
   const triggerShake = () => {
     setShake(true);
     setTimeout(() => setShake(false), 500);
   }
-
-  const handleSubmitTest = useCallback(() => {
-      setGameState("lost");
-      setFeedback(`Game Over! The correct number was ${secretNumber}.`);
-      toast({
-          variant: "destructive",
-          title: "Time's Up!",
-          description: `The correct number was ${secretNumber}.`,
-      });
-  }, [secretNumber, toast]);
-
-   useEffect(() => {
-        if (gameState !== "playing") return;
-
-        if (timeLeft <= 0) {
-            handleSubmitTest();
-            return;
-        }
-
-        const timer = setInterval(() => {
-            setTimeLeft((prevTime) => prevTime - 1);
-        }, 1000);
-
-        return () => clearInterval(timer);
-    }, [gameState, timeLeft, handleSubmitTest]);
 
   const handleGuessSubmit = async () => {
     const guessNum = parseInt(currentGuess);
@@ -192,36 +250,9 @@ export default function PlayPage() {
       const attemptsUsed = MAX_ATTEMPTS - newAttemptsLeft;
       const earnedReward = REWARDS[attemptsUsed - 1] || 0;
       setReward(earnedReward);
-      setGameState("won");
-      setFeedback(`Congratulations! You guessed the number in ${attemptsUsed} ${attemptsUsed > 1 ? 'attempts' : 'attempt'}.`);
       setGuessHistory([...guessHistory, { guess: guessNum, hint: 'Correct!' }]);
+      endGame("won", `Congratulations! You guessed the number in ${attemptsUsed} ${attemptsUsed > 1 ? 'attempts' : 'attempt'}.`, earnedReward);
 
-      if (gameMode === "real" && earnedReward > 0) {
-          addTransaction({
-            id: Date.now(),
-            type: 'deposit',
-            description: 'Game Won Reward',
-            amount: earnedReward,
-            date: new Date().toISOString(),
-            status: 'Completed',
-            user: "Alex Doe",
-          });
-          walletData.balance += earnedReward;
-          addNotification({
-              type: "deposit_received",
-              message: `You won ₹${earnedReward} in GuessMaster!`,
-              userId: 'user-alex-doe',
-          });
-          toast({
-            title: "You Won!",
-            description: `₹${earnedReward} has been added to your wallet.`,
-          });
-      } else if (gameMode === "demo") {
-          toast({
-            title: "You Won!",
-            description: `You guessed the number! This was a demo game, so no real money was awarded.`,
-          });
-      }
     } else {
       triggerShake();
       const direction = guessNum < secretNumber ? "higher" : "lower";
@@ -230,8 +261,7 @@ export default function PlayPage() {
       setGuessHistory([...guessHistory, { guess: guessNum, hint: `Try ${direction}` }]);
       
       if (newAttemptsLeft === 0) {
-        setGameState("lost");
-        setFeedback(`Game Over! The correct number was ${secretNumber}.`);
+        endGame("lost", `Game Over! The correct number was ${secretNumber}.`);
       }
     }
     
@@ -313,11 +343,18 @@ Join now: ${shareUrl}
         </Button>
     </div>
   );
+  
+  const minutesLeft = Math.floor(timeLeft / 60);
+  const secondsLeft = timeLeft % 60;
 
   const renderPlayingState = () => (
     <div className="space-y-4">
         <div className="flex justify-between items-center">
             <h2 className="text-lg font-semibold">{gameMode === 'real' ? 'Real Game' : 'Demo Game'}</h2>
+             <Badge variant="secondary" className="flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                {String(minutesLeft).padStart(2, '0')}:{String(secondsLeft).padStart(2, '0')}
+            </Badge>
             <Badge variant="secondary">Attempt {MAX_ATTEMPTS - attemptsLeft + 1} of {MAX_ATTEMPTS}</Badge>
         </div>
         <div className="p-4 bg-muted/50 rounded-lg text-center font-medium flex items-center justify-center gap-2 min-h-[64px]">
@@ -407,6 +444,10 @@ Join now: ${shareUrl}
         </ul>
     </div>
   );
+  
+  const winRateData = [
+    { name: 'Win Rate', value: playerStats.winRate, fill: 'hsl(var(--primary))' },
+  ];
 
   return (
     <div className="w-full max-w-md mx-auto space-y-6">
@@ -529,3 +570,5 @@ Join now: ${shareUrl}
     </div>
   );
 }
+
+    

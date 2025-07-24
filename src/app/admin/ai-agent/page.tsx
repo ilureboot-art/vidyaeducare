@@ -56,7 +56,7 @@ export default function AiAgentPage() {
         }));
     };
     
-    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
@@ -65,7 +65,7 @@ export default function AiAgentPage() {
         
         const reader = new FileReader();
 
-        reader.onload = async (loadEvent) => {
+        reader.onload = (loadEvent) => {
             const dataUri = loadEvent.target?.result as string;
             setStudyMaterial(dataUri); // Always set the data URI for any file type
             toast({ title: "File Ready", description: `${file.name} is ready to be processed.` });
@@ -299,7 +299,7 @@ export default function AiAgentPage() {
                 </CardHeader>
                 <CardContent>
                     <form onSubmit={handleSubmit} className="space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="grade">Target Grade</Label>
                                 <Input id="grade" name="grade" value={formState.grade} onChange={handleInputChange} placeholder="e.g., 10th" />
@@ -315,6 +315,10 @@ export default function AiAgentPage() {
                              <div className="space-y-2">
                                 <Label htmlFor="language">Language</Label>
                                 <Input id="language" name="language" value={formState.language} onChange={handleInputChange} placeholder="e.g., Marathi, English" />
+                            </div>
+                            <div className="space-y-2 md:col-span-2">
+                                <Label htmlFor="curriculum">Curriculum</Label>
+                                <Input id="curriculum" name="curriculum" value={formState.curriculum} onChange={handleInputChange} placeholder="e.g., SSC, CBSE, ICSE" />
                             </div>
                         </div>
                         
@@ -398,5 +402,3 @@ export default function AiAgentPage() {
         </div>
     );
 }
-
-    

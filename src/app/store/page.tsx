@@ -24,31 +24,21 @@ export default function StorePage() {
   const [balance, setBalance] = useState(walletData.balance);
   const [referralCode1, setReferralCode1] = useState("");
   const [referralCode2, setReferralCode2] = useState("");
-  const [currentPackages, setCurrentPackages] = useState<TicketPackage[]>([]);
-  const [currentReferboltSub, setCurrentReferboltSub] = useState(storeConfig.referboltSubscription);
-  const [currentMockTestSub, setCurrentMockTestSub] = useState(storeConfig.mockTestSubscription);
+  
+  const currentPackages = storeConfig.packages;
+  const currentReferboltSub = storeConfig.referboltSubscription;
+  const currentMockTestSub = storeConfig.mockTestSubscription;
 
 
   // This effect keeps the local state in sync with the central data store
   useEffect(() => {
-    setCurrentPackages([...storeConfig.packages]);
     const interval = setInterval(() => {
       if (walletData.balance !== balance) {
         setBalance(walletData.balance);
       }
-      // Check if config has changed
-      if (JSON.stringify(storeConfig.packages) !== JSON.stringify(currentPackages)) {
-        setCurrentPackages([...storeConfig.packages]);
-      }
-       if (JSON.stringify(storeConfig.referboltSubscription) !== JSON.stringify(currentReferboltSub)) {
-        setCurrentReferboltSub({...storeConfig.referboltSubscription});
-      }
-      if (JSON.stringify(storeConfig.mockTestSubscription) !== JSON.stringify(currentMockTestSub)) {
-        setCurrentMockTestSub({...storeConfig.mockTestSubscription});
-      }
     }, 500); // Check for updates periodically
     return () => clearInterval(interval);
-  }, [balance, currentPackages, currentReferboltSub, currentMockTestSub]);
+  }, [balance]);
 
   const handleSubscriptionPurchase = (index: number) => {
     setIsPurchasing(index);

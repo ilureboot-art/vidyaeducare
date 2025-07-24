@@ -24,7 +24,7 @@ const VidyaEdurankInputSchema = z.object({
     questionPaper: z.boolean(),
     animationScript: z.boolean(),
     studyPlan: z.boolean(),
-    eli5: z.boolean().describe("Generate an 'Explain Like I\'m 5' version of the content."),
+    eli5: z.boolean().describe("Generate an 'Explain Like I'm 5' version of the content."),
     glossary: z.boolean().describe("Generate a glossary of key terms."),
   }),
   studyMaterial: z.string().describe("The raw text of the study material or a data URI of a file. Data URI format: 'data:<mimetype>;base64,<encoded_data>'."),
@@ -76,7 +76,7 @@ Based on the material, please generate the following outputs as requested. Forma
 - **Summary Notes**: Create concept-wise summary notes using bullet points or short paragraphs. The language should be clear, concise, and appropriate for a {{{grade}}} grade student.
 {{/if}}
 {{#if outputs.mcqs}}
-- **MCQs**: Generate a list of exactly {{{mcqCount}}} multiple-choice questions. Each question should have 4 options, and you must indicate the correct answer clearly (e.g., with a "✅" or by bolding it). Ensure questions and options are provided in both English and {{{language}}}.
+- **MCQs**: Generate a numbered list of exactly {{{mcqCount}}} multiple-choice questions. Each question should have 4 options, and you must indicate the correct answer clearly (e.g., with a "✅" or by bolding it). Ensure questions and options are provided in both English and {{{language}}}.
 {{/if}}
 {{#if outputs.questionPaper}}
 - **Question Paper**: Create a structured question paper based on the {{{curriculum}}} board guidelines if possible. Include a variety of question types (e.g., short answer, long answer) and assign marks to each question. The total marks should be reasonable (e.g., 20-25 marks).

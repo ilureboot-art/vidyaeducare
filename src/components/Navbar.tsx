@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -9,8 +10,8 @@ const navItems = [
   { href: "/", label: "Home", icon: Home },
   { href: "/profile", label: "My Students", icon: Users },
   { href: "/play", label: "Play", icon: Gamepad2 },
-  { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
-  { href: "/wallet", label: "Wallet", icon: Wallet },
+  { href: "/store", label: "Store", icon: Store },
+  { href: "/referbolt", label: "ReferBolt", icon: Zap },
 ];
 
 export function Navbar() {

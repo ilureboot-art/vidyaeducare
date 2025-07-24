@@ -16,8 +16,6 @@ const navItems = [
     { href: "/iba/dashboard", label: "IBA Dashboard", icon: ShieldCheck },
     { href: "/play", label: "Play Game", icon: Gamepad2 },
     { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
-    { href: "/store", label: "Store", icon: Store },
-    { href: "/referbolt", label: "ReferBolt", icon: Zap },
     { href: "/wallet", label: "Wallet", icon: Wallet },
     { href: "/transactions", label: "Transactions", icon: History },
     { href: "/settings", label: "Settings", icon: Settings },

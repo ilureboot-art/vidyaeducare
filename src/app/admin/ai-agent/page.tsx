@@ -104,13 +104,22 @@ export default function AiAgentPage() {
 
         try {
             const result = await generateEducationalContent(input);
-            setOutput(result);
+            if (result) {
+                setOutput(result);
+            } else {
+                 toast({
+                    variant: 'destructive',
+                    title: "Content Generation Failed",
+                    description: "The AI was unable to generate content from the provided material. Please try again with a clearer prompt or different material.",
+                    duration: 7000,
+                });
+            }
         } catch (error) {
             console.error("Error generating content:", error);
             toast({
                 variant: 'destructive',
-                title: "An error occurred",
-                description: "Failed to generate educational content. Please try again."
+                title: "An unexpected error occurred",
+                description: "Failed to generate educational content. Please try again later."
             });
         } finally {
             setIsLoading(false);

@@ -97,13 +97,10 @@ Here is the study material you need to process. It could be plain text or an ima
 
 Based on the material, please generate the following outputs as requested. The chapter name should be derived from the 'topic' input. For any plain text outputs, format them cleanly using Markdown with clear headings (e.g., "📝 Summary Notes:", "📄 Question Paper:").
 
-{{#if outputs.notes}}
-- **Summary Notes**: Create concept-wise summary notes using bullet points or short paragraphs. The language should be clear, concise, and appropriate for a {{{grade}}} grade student.
-{{/if}}
 {{#if outputs.mcqs}}
 - **MCQs**: Generate a complete JSON object for a test set. 
   - The JSON object **MUST** have the following top-level keys: "name", "board", "standard", "subject", and "questions".
-  - Populate these metadata fields using the user's input:
+  - You **MUST** populate these metadata fields using the user's input:
     - "name": Use the 'topic' input (e.g., "{{{topic}}}").
     - "board": Use the 'curriculum' input (e.g., "{{{curriculum}}}").
     - "standard": Use the 'grade' input (e.g., "{{{grade}}}").
@@ -112,6 +109,9 @@ Based on the material, please generate the following outputs as requested. The c
   - Each question object must have three keys: "text", "options", and "correctAnswer".
   - Each of these keys must have two sub-keys: "en" for English and "mr" for Marathi.
   - The "options" sub-keys should contain an array of 4 string options.
+{{/if}}
+{{#if outputs.notes}}
+- **Summary Notes**: Create concept-wise summary notes using bullet points or short paragraphs. The language should be clear, concise, and appropriate for a {{{grade}}} grade student.
 {{/if}}
 {{#if outputs.questionPaper}}
 - **Question Paper**: Create a structured question paper based on the {{{curriculum}}} board guidelines if possible. Include a variety of question types (e.g., short answer, long answer) and assign marks to each question. The total marks should be reasonable (e.g., 20-25 marks).
@@ -136,7 +136,7 @@ const vidyaEdurankFlow = ai.defineFlow(
   {
     name: 'vidyaEdurankFlow',
     inputSchema: VidyaEdurankInputSchema,
-    outputSchema: VidyaEdurankOutputSchema,
+    outputSchema: VidyaEdurankOutputSchema.nullable(),
   },
   async (input) => {
     // Determine if the input is a data URI and create the prompt input object.
@@ -144,12 +144,18 @@ const vidyaEdurankFlow = ai.defineFlow(
       ...input,
       isDataUri: input.studyMaterial.startsWith('data:'),
     };
-    const { output } = await vidyaEdurankPrompt(promptInput);
-    return output || {};
+    try {
+        const { output } = await vidyaEdurankPrompt(promptInput);
+        return output;
+    } catch (error) {
+        console.error("AI prompt failed to generate valid output:", error);
+        // Return null if the prompt fails or the output is invalid.
+        return null;
+    }
   }
 );
 
 
-export async function generateEducationalContent(input: VidyaEdurankInput): Promise<VidyaEdurankOutput> {
+export async function generateEducationalContent(input: VidyaEdurankInput): Promise<VidyaEdurankOutput | null> {
     return await vidyaEdurankFlow(input);
 }

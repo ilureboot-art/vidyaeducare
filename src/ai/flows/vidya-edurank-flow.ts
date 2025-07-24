@@ -102,9 +102,13 @@ Based on the material, please generate the following outputs as requested. The c
 {{/if}}
 {{#if outputs.mcqs}}
 - **MCQs**: Generate a complete JSON object for a test set. 
-  - The JSON object must have the following keys: "name", "board", "standard", "subject", and "questions".
-  - Populate the metadata fields ("name", "board", "standard", "subject") using the user's input. The 'name' should be based on the 'topic'.
-  - The "questions" key must contain an array of exactly {{{mcqCount}}} question objects.
+  - The JSON object **MUST** have the following top-level keys: "name", "board", "standard", "subject", and "questions".
+  - Populate these metadata fields using the user's input:
+    - "name": Use the 'topic' input (e.g., "{{{topic}}}").
+    - "board": Use the 'curriculum' input (e.g., "{{{curriculum}}}").
+    - "standard": Use the 'grade' input (e.g., "{{{grade}}}").
+    - "subject": Use the 'subject' input (e.g., "{{{subject}}}").
+  - The "questions" key **MUST** contain an array of exactly {{{mcqCount}}} question objects.
   - Each question object must have three keys: "text", "options", and "correctAnswer".
   - Each of these keys must have two sub-keys: "en" for English and "mr" for Marathi.
   - The "options" sub-keys should contain an array of 4 string options.

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import {
   Table,
   TableBody,
@@ -67,7 +67,7 @@ export default function TestSetManagementPage() {
             const content = e.target?.result;
             if (typeof content !== 'string') throw new Error("File content is not readable.");
             
-            const uploadedSet: Omit<TestSet, 'id' | 'questions'> & { questions: Omit<TestSet['questions'][0], 'id'>[] } = JSON.parse(content);
+            const uploadedSet = JSON.parse(content);
 
             if (!uploadedSet.name || !uploadedSet.board || !uploadedSet.standard || !uploadedSet.subject || !Array.isArray(uploadedSet.questions)) {
                 throw new Error("JSON is missing required fields: name, board, standard, subject, or questions array.");
@@ -78,7 +78,7 @@ export default function TestSetManagementPage() {
             }
 
             // Basic validation for questions
-            uploadedSet.questions.forEach((q, index) => {
+            uploadedSet.questions.forEach((q: any, index: number) => {
                  if (!q.text?.en || !q.options?.en || !q.correctAnswer?.en || !q.text?.mr || !q.options?.mr || !q.correctAnswer?.mr) {
                     throw new Error(`Question at index ${index} is missing required fields (text, options, correctAnswer in both languages).`);
                  }
@@ -87,7 +87,7 @@ export default function TestSetManagementPage() {
             const newTestSet: TestSet = { 
                 ...uploadedSet, 
                 id: `SET-${String(Date.now()).slice(-6)}-${Math.random()}`,
-                questions: uploadedSet.questions.map((q, i) => ({ ...q, id: `Q-${i}`})) // Add temporary IDs
+                questions: uploadedSet.questions.map((q: any, i: number) => ({ ...q, id: `Q-${i}`})) // Add temporary IDs
             };
             
             addTestSet(newTestSet);

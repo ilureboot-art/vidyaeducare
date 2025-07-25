@@ -99,16 +99,9 @@ Based on the material, please generate the following outputs as requested. The c
 
 {{#if outputs.mcqs}}
 - **MCQs**: Generate a complete JSON object for a test set. 
-  - The JSON object **MUST** have the following top-level keys: "name", "board", "standard", "subject", and "questions".
-  - You **MUST** populate these metadata fields using the user's input:
-    - "name": Use the 'topic' input (e.g., "{{{topic}}}").
-    - "board": Use the 'curriculum' input (e.g., "{{{curriculum}}}").
-    - "standard": Use the 'grade' input (e.g., "{{{grade}}}").
-    - "subject": Use the 'subject' input (e.g., "{{{subject}}}").
+  - Populate the top-level metadata fields ("name", "board", "standard", "subject") using the user's input.
   - The "questions" key **MUST** contain an array of exactly {{{mcqCount}}} question objects.
-  - Each question object must have three keys: "text", "options", and "correctAnswer".
-  - Each of these keys must have two sub-keys: "en" for English and "mr" for Marathi.
-  - The "options" sub-keys should contain an array of 4 string options.
+  - Each question must have "text", "options", and "correctAnswer", with sub-keys for "en" (English) and "mr" (Marathi).
 {{/if}}
 {{#if outputs.notes}}
 - **Summary Notes**: Create concept-wise summary notes using bullet points or short paragraphs. The language should be clear, concise, and appropriate for a {{{grade}}} grade student.
@@ -146,9 +139,16 @@ const vidyaEdurankFlow = ai.defineFlow(
     };
     try {
         const { output } = await vidyaEdurankPrompt(promptInput);
+        
+        // This is a crucial validation step. If the AI returns a response, but it's empty,
+        // it means it failed to adhere to the schema. We should treat this as an error.
+        if (!output) {
+          throw new Error("The AI model returned a null or empty response, indicating a failure to generate content based on the provided material.");
+        }
         return output;
+
     } catch (error) {
-        console.error("AI prompt failed to generate valid output:", error);
+        console.error("AI flow 'vidyaEdurankFlow' failed:", error);
         // Return null if the prompt fails or the output is invalid.
         return null;
     }

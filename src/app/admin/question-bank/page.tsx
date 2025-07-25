@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Trash2, Edit, Upload, BookCopy } from "lucide-react";
+import { MoreHorizontal, Trash2, Edit, Upload, BookCopy, FilePlus, ScrollText, ArrowRight } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -26,13 +26,31 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { allTestSets, addTestSet, deleteTestSet, type TestSet } from "@/lib/question-bank";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { allTestSets, addTestSet, deleteTestSet, type TestSet, type Question } from "@/lib/question-bank";
+import { academicConfig } from "@/lib/academic-config";
+
+type ManualQuestion = Omit<Question, 'id'>;
+
+const initialManualQuestion: ManualQuestion = {
+  text: { en: '', mr: '' },
+  options: { en: ['', '', '', ''], mr: ['', '', '', ''] },
+  correctAnswer: { en: '', mr: '' }
+};
 
 export default function TestSetManagementPage() {
   const [testSets, setTestSets] = useState<TestSet[]>(allTestSets);
   const { toast } = useToast();
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
+  const [isManualCreateOpen, setIsManualCreateOpen] = useState(false);
   
+  // State for manual creation
+  const [step, setStep] = useState(1);
+  const [manualSetDetails, setManualSetDetails] = useState({ name: '', board: '', standard: '', subject: '' });
+  const [manualQuestions, setManualQuestions] = useState<ManualQuestion[]>(() => Array(50).fill(initialManualQuestion));
+
   const handleDelete = (testSetId: string) => {
     deleteTestSet(testSetId);
     setTestSets([...allTestSets]);
@@ -94,6 +112,56 @@ export default function TestSetManagementPage() {
     };
     reader.readAsText(file);
   }
+  
+  const handleManualSetDetailSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      if (manualSetDetails.name && manualSetDetails.board && manualSetDetails.standard && manualSetDetails.subject) {
+          setStep(2);
+      } else {
+          toast({ variant: 'destructive', title: 'Missing Details', description: 'Please fill out all fields for the test set.'});
+      }
+  }
+
+  const handleQuestionChange = (qIndex: number, field: 'text' | 'option' | 'answer', lang: 'en' | 'mr', value: string, optionIndex?: number) => {
+      const newQuestions = [...manualQuestions];
+      const question = { ...newQuestions[qIndex] };
+      if (field === 'text') {
+          question.text[lang] = value;
+      } else if (field === 'option' && optionIndex !== undefined) {
+          question.options[lang][optionIndex] = value;
+      } else if (field === 'answer') {
+          const selectedOptionIndex = question.options[lang === 'en' ? 'mr' : 'en'].findIndex(opt => opt === value);
+          question.correctAnswer[lang] = value;
+          if (lang === 'mr') {
+            question.correctAnswer.en = question.options.en[selectedOptionIndex];
+          } else {
+            question.correctAnswer.mr = question.options.mr[selectedOptionIndex];
+          }
+      }
+      newQuestions[qIndex] = question;
+      setManualQuestions(newQuestions);
+  }
+  
+  const handleManualSubmit = () => {
+      const newTestSet: TestSet = {
+          id: `MSET-${Date.now()}`,
+          name: manualSetDetails.name,
+          board: manualSetDetails.board as any,
+          standard: manualSetDetails.standard,
+          subject: manualSetDetails.subject,
+          questions: manualQuestions.map((q, i) => ({ ...q, id: `MQ-${i}`}))
+      };
+      
+      addTestSet(newTestSet);
+      setTestSets([...allTestSets]);
+      toast({ title: 'Test Set Created!', description: `"${newTestSet.name}" has been created with 50 questions.`});
+      
+      // Reset state and close
+      setIsManualCreateOpen(false);
+      setStep(1);
+      setManualSetDetails({ name: '', board: '', standard: '', subject: '' });
+      setManualQuestions(Array(50).fill(initialManualQuestion));
+  }
 
   return (
     <div className="space-y-6">
@@ -109,9 +177,103 @@ export default function TestSetManagementPage() {
                 </CardDescription>
               </div>
               <div className="flex gap-2">
+                 <Dialog open={isManualCreateOpen} onOpenChange={(isOpen) => {
+                      setIsManualCreateOpen(isOpen);
+                      if (!isOpen) { // Reset on close
+                          setStep(1);
+                          setManualSetDetails({ name: '', board: '', standard: '', subject: '' });
+                          setManualQuestions(Array(50).fill(initialManualQuestion));
+                      }
+                  }}>
+                    <DialogTrigger asChild>
+                        <Button variant="outline"><FilePlus className="mr-2 h-4 w-4" /> Create Test Set</Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-4xl h-[90vh]">
+                        {step === 1 && (
+                            <>
+                            <DialogHeader>
+                                <DialogTitle>Create New Test Set (Step 1 of 2)</DialogTitle>
+                                <DialogDescription>First, provide the details for your new test set.</DialogDescription>
+                            </DialogHeader>
+                            <form onSubmit={handleManualSetDetailSubmit} className="space-y-4 py-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="manual-name">Test Set Name</Label>
+                                    <Input id="manual-name" value={manualSetDetails.name} onChange={(e) => setManualSetDetails(s => ({...s, name: e.target.value}))} placeholder="e.g., SSC Science Final Practice" />
+                                </div>
+                                <div className="grid grid-cols-3 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="manual-board">Board</Label>
+                                        <Select value={manualSetDetails.board} onValueChange={(val) => setManualSetDetails(s => ({...s, board: val}))}><SelectTrigger id="manual-board"><SelectValue placeholder="Select..."/></SelectTrigger><SelectContent>{academicConfig.boards.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent></Select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="manual-standard">Standard</Label>
+                                        <Select value={manualSetDetails.standard} onValueChange={(val) => setManualSetDetails(s => ({...s, standard: val}))}><SelectTrigger id="manual-standard"><SelectValue placeholder="Select..."/></SelectTrigger><SelectContent>{academicConfig.standards.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="manual-subject">Subject</Label>
+                                        <Select value={manualSetDetails.subject} onValueChange={(val) => setManualSetDetails(s => ({...s, subject: val}))}><SelectTrigger id="manual-subject"><SelectValue placeholder="Select..."/></SelectTrigger><SelectContent>{academicConfig.subjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>
+                                    </div>
+                                </div>
+                                <DialogFooter>
+                                    <Button type="submit">Next: Add Questions <ArrowRight className="ml-2"/></Button>
+                                </DialogFooter>
+                            </form>
+                            </>
+                        )}
+                        {step === 2 && (
+                             <>
+                            <DialogHeader>
+                                <DialogTitle>Add Questions (Step 2 of 2)</DialogTitle>
+                                <DialogDescription>Enter all 50 questions for the "{manualSetDetails.name}" test set.</DialogDescription>
+                            </DialogHeader>
+                             <ScrollArea className="h-full -mx-6 px-6">
+                                <div className="space-y-4 py-4">
+                                    {manualQuestions.map((q, qIndex) => (
+                                        <div key={qIndex} className="p-4 border rounded-lg space-y-4 bg-muted/50">
+                                            <h4 className="font-semibold flex items-center gap-2"><ScrollText size={16}/> Question {qIndex + 1}</h4>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="space-y-2">
+                                                    <Label>Question Text (Marathi)</Label>
+                                                    <Textarea value={q.text.mr} onChange={(e) => handleQuestionChange(qIndex, 'text', 'mr', e.target.value)} />
+                                                </div>
+                                                 <div className="space-y-2">
+                                                    <Label>Question Text (English)</Label>
+                                                    <Textarea value={q.text.en} onChange={(e) => handleQuestionChange(qIndex, 'text', 'en', e.target.value)} />
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                                                {[0,1,2,3].map(optIndex => (
+                                                    <React.Fragment key={optIndex}>
+                                                        <Input placeholder={`Option ${optIndex + 1} (Marathi)`} value={q.options.mr[optIndex]} onChange={(e) => handleQuestionChange(qIndex, 'option', 'mr', e.target.value, optIndex)} />
+                                                        <Input placeholder={`Option ${optIndex + 1} (English)`} value={q.options.en[optIndex]} onChange={(e) => handleQuestionChange(qIndex, 'option', 'en', e.target.value, optIndex)} />
+                                                    </React.Fragment>
+                                                ))}
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label>Correct Answer</Label>
+                                                <Select value={q.correctAnswer.mr} onValueChange={(val) => handleQuestionChange(qIndex, 'answer', 'mr', val)}>
+                                                    <SelectTrigger><SelectValue placeholder="Select correct answer..." /></SelectTrigger>
+                                                    <SelectContent>
+                                                        {q.options.mr.map((opt, i) => opt.trim() && <SelectItem key={i} value={opt}>{opt} / {q.options.en[i]}</SelectItem>)}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                             </ScrollArea>
+                            <DialogFooter className="mt-4">
+                                <Button onClick={() => setStep(1)}>Back</Button>
+                                <Button onClick={handleManualSubmit}>Create Test Set</Button>
+                            </DialogFooter>
+                            </>
+                        )}
+                    </DialogContent>
+                 </Dialog>
+
                 <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
                     <DialogTrigger asChild>
-                        <Button><Upload className="mr-2 h-4 w-4" /> Upload Test Set</Button>
+                        <Button><Upload className="mr-2 h-4 w-4" /> Upload JSON</Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-xl">
                         <DialogHeader>

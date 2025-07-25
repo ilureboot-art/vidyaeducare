@@ -106,7 +106,7 @@ Start your journey to success now: ${url}
             </div>
         </div>
         <div>
-            <Image src="https://placehold.co/600x400.png" width={600} height={400} alt="Promotional image for Vidya EduCare" className="rounded-lg shadow-xl" data-ai-hint="promotion marketing" />
+            <Image src="https://placehold.co/600x400.png" width={600} height={400} alt="Promotional image for Vidya EduCare" className="rounded-lg shadow-xl" data-ai-hint="students learning" />
         </div>
       </section>
       
@@ -174,7 +174,7 @@ Start your journey to success now: ${url}
               </Button>
             </div>
             <div className="hidden md:block">
-              <Image src="https://placehold.co/400x300.png" width={400} height={300} alt="GuessMaster Game" className="object-cover h-full w-full" data-ai-hint="gameplay numbers" />
+              <Image src="https://placehold.co/400x300.png" width={400} height={300} alt="GuessMaster Game" className="object-cover h-full w-full" data-ai-hint="game interface" />
             </div>
           </div>
         </Card>

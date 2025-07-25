@@ -9,7 +9,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Trophy, Clock, CheckCircle, XCircle, FileQuestion, ArrowLeft, Loader2 } from "lucide-react";
+import { Trophy, Clock, CheckCircle, XCircle, FileQuestion, ArrowLeft, Loader2, Info } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -37,11 +37,13 @@ export default function MockTestPage() {
     const [timeLeft, setTimeLeft] = useState(MOCK_TEST_DURATION);
     const [answers, setAnswers] = useState<{ [key: string]: { en: string; mr: string; } }>({});
     const [score, setScore] = useState(0);
-    const [prizeEligible, setPrizeEligible] = useState(false);
+    const [isLiveTest, setIsLiveTest] = useState(false);
+    const [isPrizeEligible, setIsPrizeEligible] = useState(false);
 
     useEffect(() => {
         const studentId = searchParams.get('studentId');
         const testId = searchParams.get('testId');
+        const liveStatus = searchParams.get('isLive') === 'true';
 
         if (!studentId || !testId) {
             toast({ variant: "destructive", title: "Error", description: "Missing student or test information."});
@@ -78,6 +80,7 @@ export default function MockTestPage() {
         setStudentProfile(student);
         setScheduledTest(schedTest);
         setActiveQuestions(testSet.questions);
+        setIsLiveTest(liveStatus);
 
         // Reset state for new test
         setTimeLeft(MOCK_TEST_DURATION);
@@ -122,7 +125,7 @@ export default function MockTestPage() {
     };
 
     const handleSubmitTest = () => {
-        if (!scheduledTest) return;
+        if (!scheduledTest || !studentProfile) return;
 
         let correctAnswers = 0;
         activeQuestions.forEach(q => {
@@ -133,25 +136,29 @@ export default function MockTestPage() {
         
         const finalScore = (correctAnswers / activeQuestions.length) * 100;
         setScore(finalScore);
+        
+        // Update student stats
+        const student = studentData.find(s => s.id === studentProfile.id);
+        if (student) {
+            const newPerformanceEntry = { name: scheduledTest.subject, score: finalScore };
+            const existingEntryIndex = student.stats.performance.findIndex(p => p.name === newPerformanceEntry.name);
 
-        if (studentProfile) {
-            const student = studentData.find(s => s.id === studentProfile.id);
-            if (student) {
-                const newPerformanceEntry = { name: scheduledTest.subject, score: finalScore };
-                const existingEntryIndex = student.stats.performance.findIndex(p => p.name === newPerformanceEntry.name);
+            if (existingEntryIndex > -1) {
+                student.stats.performance[existingEntryIndex] = newPerformanceEntry;
+            } else {
+                student.stats.performance.push(newPerformanceEntry);
+            }
 
-                if (existingEntryIndex > -1) {
-                    student.stats.performance[existingEntryIndex] = newPerformanceEntry;
-                } else {
-                    student.stats.performance.push(newPerformanceEntry);
-                }
-
-                student.stats.testsTaken = student.stats.performance.length;
-                const totalScore = student.stats.performance.reduce((acc, p) => acc + p.score, 0);
-                student.stats.avgScore = totalScore / student.stats.testsTaken;
-                
-                const allScoresAreHigh = student.stats.performance.every(p => p.score > 80);
-                setPrizeEligible(allScoresAreHigh);
+            student.stats.testsTaken = student.stats.performance.length;
+            const totalScore = student.stats.performance.reduce((acc, p) => acc + p.score, 0);
+            student.stats.avgScore = totalScore / student.stats.testsTaken;
+            
+            // Check for overall prize eligibility only if this was a live test
+            const allScoresAreHigh = student.stats.performance.every(p => p.score > 80);
+            if (isLiveTest && allScoresAreHigh) {
+                 setIsPrizeEligible(true);
+            } else {
+                 setIsPrizeEligible(false);
             }
         }
 
@@ -240,16 +247,28 @@ export default function MockTestPage() {
                     <p className="text-xl">You have completed the test.</p>
                     <p className="text-4xl font-bold">Your Score: {score.toFixed(0)}%</p>
                     
-                    {prizeEligible ? (
-                        <Alert variant="default" className="bg-green-100 dark:bg-green-900 border-green-500">
+                    {!isLiveTest && (
+                         <Alert variant="default" className="bg-blue-100 dark:bg-blue-900 border-blue-500 text-left">
+                             <Info className="h-4 w-4 text-blue-700" />
+                            <AlertTitle className="text-blue-800">Practice Test Completed</AlertTitle>
+                            <AlertDescription className="text-blue-700">
+                                This was a completed test taken for practice. No prizes are awarded for non-live tests. Keep practicing to win next time!
+                            </AlertDescription>
+                        </Alert>
+                    )}
+
+                    {isLiveTest && isPrizeEligible && (
+                        <Alert variant="default" className="bg-green-100 dark:bg-green-900 border-green-500 text-left">
                              <CheckCircle className="h-4 w-4 text-green-700" />
                             <AlertTitle className="text-green-800">Congratulations! Prize Eligible!</AlertTitle>
                             <AlertDescription className="text-green-700">
                                 This student has maintained a score of over 80% in all subject tests, including this one. Rewards will be credited to your wallet shortly.
                             </AlertDescription>
                         </Alert>
-                    ) : (
-                         <Alert variant="destructive">
+                    )}
+
+                     {isLiveTest && !isPrizeEligible && (
+                         <Alert variant="destructive" className="text-left">
                              <XCircle className="h-4 w-4" />
                             <AlertTitle>Keep Practicing!</AlertTitle>
                             <AlertDescription>
@@ -285,10 +304,15 @@ export default function MockTestPage() {
                         <CardTitle className="text-xl text-primary">{scheduledTest.testSetName}</CardTitle>
                         <CardDescription>For {studentProfile?.name}</CardDescription>
                     </div>
-                    <Badge variant="secondary" className="flex items-center gap-2">
-                        <Clock className="w-4 h-4" />
-                        {String(minutesLeft).padStart(2, '0')}:{String(secondsLeft).padStart(2, '0')}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                         <Badge variant={isLiveTest ? "default" : "secondary"}>
+                            {isLiveTest ? "Live Test" : "Practice"}
+                        </Badge>
+                        <Badge variant="secondary" className="flex items-center gap-2">
+                            <Clock className="w-4 h-4" />
+                            {String(minutesLeft).padStart(2, '0')}:{String(secondsLeft).padStart(2, '0')}
+                        </Badge>
+                    </div>
                 </div>
                 <Progress value={progress} className="mt-2" />
                 <p className="text-sm text-muted-foreground text-center mt-2">Question {currentQuestionIndex + 1} of {activeQuestions.length}</p>

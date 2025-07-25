@@ -1,4 +1,5 @@
 
+
 export type ScheduledTest = {
     id: string;
     testSetId: string;
@@ -40,15 +41,11 @@ export function addScheduledTest(test: ScheduledTest) {
     }
 }
 
-// Function to get upcoming tests for a specific student profile
-export function getUpcomingTestsForStudent(board: string, standard: string): ScheduledTest[] {
-    const now = new Date();
-
-    return scheduledTests.filter(test => 
-        test.board === board &&
-        test.standard === standard &&
-        new Date(test.dateTime) >= now
-    ).sort((a,b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
+// Function to get all tests (upcoming and past) for a specific student profile
+export function getAllTestsForStudent(board: string, standard: string): ScheduledTest[] {
+    return scheduledTests
+        .filter(test => test.board === board && test.standard === standard)
+        .sort((a,b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
 }
 
 // Function to get a specific scheduled test by ID

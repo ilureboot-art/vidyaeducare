@@ -22,7 +22,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { getUpcomingTestsForStudent, type ScheduledTest } from "@/lib/test-schedule";
+import { getAllTestsForStudent, type ScheduledTest } from "@/lib/test-schedule";
 import { format } from "date-fns";
 
 function FormattedDate({ dateString }: { dateString: string }) {
@@ -53,7 +53,7 @@ export default function ProfilePage() {
     
     const [isTestDialogOpen, setIsTestDialogOpen] = useState(false);
     const [selectedStudentForTest, setSelectedStudentForTest] = useState<StudentProfile | null>(null);
-    const [upcomingTests, setUpcomingTests] = useState<ScheduledTest[]>([]);
+    const [availableTests, setAvailableTests] = useState<ScheduledTest[]>([]);
 
     useEffect(() => {
         setStudents([...studentData]);
@@ -118,13 +118,16 @@ export default function ProfilePage() {
     
     const openTestDialog = (student: StudentProfile) => {
         setSelectedStudentForTest(student);
-        setUpcomingTests(getUpcomingTestsForStudent(student.academic.board, student.academic.standard));
+        setAvailableTests(getAllTestsForStudent(student.academic.board, student.academic.standard));
         setIsTestDialogOpen(true);
     };
     
-    const handleStartTest = (testId: string) => {
+    const handleStartTest = (test: ScheduledTest) => {
         if (!selectedStudentForTest) return;
-        router.push(`/mock-test?studentId=${selectedStudentForTest.id}&testId=${testId}`);
+        const now = new Date();
+        const testDate = new Date(test.dateTime);
+        const isLive = testDate <= now;
+        router.push(`/mock-test?studentId=${selectedStudentForTest.id}&testId=${test.id}&isLive=${isLive}`);
     }
 
   return (
@@ -238,7 +241,6 @@ export default function ProfilePage() {
 
        {students.map(student => {
          const isEligible = student.stats.performance.length > 0 && student.stats.performance.every(p => p.score > 80);
-         const studentUpcomingTests = getUpcomingTestsForStudent(student.academic.board, student.academic.standard);
          return (
          <Card key={student.id} className="shadow-lg relative group overflow-hidden">
             <CardHeader className="flex flex-row items-start justify-between gap-4 bg-muted/30 p-4">
@@ -329,7 +331,7 @@ export default function ProfilePage() {
             <CardFooter className="p-4 bg-muted/30">
                  <Button className="w-full" onClick={() => openTestDialog(student)}>
                     <BookOpen className="mr-2"/>
-                    View & Start Upcoming Tests
+                    View & Start Available Tests
                 </Button>
             </CardFooter>
         </Card>
@@ -347,22 +349,33 @@ export default function ProfilePage() {
        <Dialog open={isTestDialogOpen} onOpenChange={setIsTestDialogOpen}>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Upcoming Tests for {selectedStudentForTest?.name}</DialogTitle>
-                    <DialogDescription>Select a test from the list to begin.</DialogDescription>
+                    <DialogTitle>Available Tests for {selectedStudentForTest?.name}</DialogTitle>
+                    <DialogDescription>Select a test from the list to begin. Completed tests can be taken for practice.</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-2 pt-4">
-                    {upcomingTests.length > 0 ? (
-                        upcomingTests.map(test => (
-                            <div key={test.id} className="flex items-center justify-between p-3 rounded-lg border">
-                                <div>
-                                    <p className="font-semibold">{test.testSetName}</p>
-                                    <p className="text-sm text-muted-foreground">{format(new Date(test.dateTime), "PPP p")}</p>
+                    {availableTests.length > 0 ? (
+                        availableTests.map(test => {
+                            const now = new Date();
+                            const testDate = new Date(test.dateTime);
+                            const isCompleted = testDate < now;
+
+                            return (
+                                <div key={test.id} className="flex items-center justify-between p-3 rounded-lg border">
+                                    <div>
+                                        <p className="font-semibold">{test.testSetName}</p>
+                                        <p className="text-sm text-muted-foreground">{format(testDate, "PPP p")}</p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Badge variant={isCompleted ? "secondary" : "default"}>
+                                            {isCompleted ? "Practice" : "Live"}
+                                        </Badge>
+                                        <Button onClick={() => handleStartTest(test)}>Start Test</Button>
+                                    </div>
                                 </div>
-                                <Button onClick={() => handleStartTest(test.id)}>Start Test</Button>
-                            </div>
-                        ))
+                            )
+                        })
                     ) : (
-                        <p className="text-center text-muted-foreground py-4">No upcoming tests scheduled for this student.</p>
+                        <p className="text-center text-muted-foreground py-4">No tests available for this student.</p>
                     )}
                 </div>
             </DialogContent>

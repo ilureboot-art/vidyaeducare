@@ -80,6 +80,7 @@ Start your journey to success now: ${url}
       try {
         await navigator.share({ title: 'Join Vidya EduCare!', text: message, url });
       } catch (error) {
+        // Fallback to clipboard if share fails for any reason
         fallbackCopy();
       }
     } else {
@@ -105,7 +106,7 @@ Start your journey to success now: ${url}
             </div>
         </div>
         <div>
-            <Image src="https://placehold.co/600x400.png" width={600} height={400} alt="Students learning and earning" className="rounded-lg shadow-xl" data-ai-hint="learning earning" />
+            <Image src="https://placehold.co/600x400.png" width={600} height={400} alt="Promotional image for Vidya EduCare" className="rounded-lg shadow-xl" data-ai-hint="promotion marketing" />
         </div>
       </section>
       

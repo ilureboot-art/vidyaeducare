@@ -8,16 +8,14 @@ export type Question = {
 
 export type TestSet = {
   id: string;
-  name: string; // e.g., "SSC Science Test #1"
+  name: string;
   board: "CBSE" | "ICSE" | "SSC";
   standard: string;
   subject: string;
-  questions: Question[]; // Exactly 50 questions
+  questions: Question[];
 };
 
 
-// This acts as our shared, in-memory question bank "database".
-// It now stores TestSets instead of individual questions.
 export let allTestSets: TestSet[] = [
     { 
         id: "SET-SSC-SCI-10-01",
@@ -48,20 +46,22 @@ export let allTestSets: TestSet[] = [
 ];
 
 export function addTestSet(testSet: TestSet) {
-    // Check if a set with the same name already exists for the same board/standard/subject
-    const existingIndex = allTestSets.findIndex(ts => 
-        ts.name === testSet.name &&
-        ts.board === testSet.board &&
-        ts.standard === testSet.standard &&
-        ts.subject === testSet.subject
-    );
+    const existingIndex = allTestSets.findIndex(ts => ts.id === testSet.id);
 
     if (existingIndex > -1) {
-        // Update existing test set
         allTestSets[existingIndex] = testSet;
     } else {
-        // Add new test set
         allTestSets.push(testSet);
+    }
+}
+
+export function updateTestSet(updatedTestSet: TestSet) {
+    const index = allTestSets.findIndex(ts => ts.id === updatedTestSet.id);
+    if (index > -1) {
+        allTestSets[index] = updatedTestSet;
+    } else {
+        // If it doesn't exist, add it. This can happen if an ID changes, though unlikely.
+        addTestSet(updatedTestSet);
     }
 }
 

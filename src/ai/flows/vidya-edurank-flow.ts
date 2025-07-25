@@ -37,34 +37,10 @@ const VidyaEdurankPromptSchema = VidyaEdurankInputSchema.extend({
 });
 
 
-const MCQQuestionSchema = z.object({
-  text: z.object({
-    en: z.string().describe("The English version of the question text."),
-    mr: z.string().describe("The Marathi version of the question text."),
-  }),
-  options: z.object({
-    en: z.array(z.string()).describe("The English versions of the multiple choice options."),
-    mr: z.array(z.string()).describe("The Marathi versions of the multiple choice options."),
-  }),
-  correctAnswer: z.object({
-    en: z.string().describe("The correct answer in English."),
-    mr: z.string().describe("The correct answer in Marathi."),
-  }),
-}).describe("A single multiple-choice question with bilingual fields.");
-
-const MCQSetSchema = z.object({
-    name: z.string().describe("The name of the test set, derived from the topic."),
-    board: z.string().describe("The curriculum board for the test set."),
-    standard: z.string().describe("The grade/standard for the test set."),
-    subject: z.string().describe("The subject of the test set."),
-    questions: z.array(MCQQuestionSchema).describe("An array of question objects."),
-}).describe("A complete set of Multiple Choice Questions in a structured JSON format.");
-
-
 const VidyaEdurankOutputSchema = z.object({
   chapterName: z.string().optional(),
   summaryNotes: z.string().optional().describe('Concept-wise summary notes in bullet points or short paragraphs.'),
-  mcqs: MCQSetSchema.optional().describe('A structured JSON object containing the Multiple Choice Questions.'),
+  mcqs: z.string().optional().describe('A plain text list of multiple choice questions, each with 4 options and a correct answer.'),
   questionPaper: z.string().optional().describe('A structured question paper with marks distribution.'),
   animationScript: z.string().optional().describe('An explanation script suitable for generating a study animation video.'),
   studyPlan: z.string().optional().describe('A suggested study plan or learning goals.'),
@@ -98,10 +74,20 @@ Here is the study material you need to process. It could be plain text or an ima
 Based on the material, please generate the following outputs as requested. The chapter name should be derived from the 'topic' input. For any plain text outputs, format them cleanly using Markdown with clear headings (e.g., "📝 Summary Notes:", "📄 Question Paper:").
 
 {{#if outputs.mcqs}}
-- **MCQs**: Generate a complete JSON object for a test set. 
-  - Populate the top-level metadata fields ("name", "board", "standard", "subject") using the user's input.
-  - The "questions" key **MUST** contain an array of exactly {{{mcqCount}}} question objects.
-  - Each question must have "text", "options", and "correctAnswer", with sub-keys for "en" (English) and "mr" (Marathi).
+- **MCQs**: Generate a list of {{{mcqCount}}} multiple-choice questions in plain text format, in both English and Marathi.
+  - At the top, include the metadata: Test Name (from topic), Board, Standard, and Subject.
+  - Each question must be clearly numbered.
+  - Each question must have the English and Marathi text.
+  - Each question must be followed by four lettered options (A, B, C, D), also in English and Marathi.
+  - After the options, clearly state the correct answer in both languages.
+  - **Example Format**:
+    1.  (EN) What is the capital of France?
+        (MR) फ्रान्सची राजधानी कोणती आहे?
+        A. (EN) London (MR) लंडन
+        B. (EN) Paris (MR) पॅरिस
+        C. (EN) Rome (MR) रोम
+        D. (EN) Berlin (MR) बर्लिन
+    **Answer**: B. (EN) Paris (MR) पॅरिस
 {{/if}}
 {{#if outputs.notes}}
 - **Summary Notes**: Create concept-wise summary notes using bullet points or short paragraphs. The language should be clear, concise, and appropriate for a {{{grade}}} grade student.

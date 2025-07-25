@@ -141,8 +141,7 @@ export default function AiAgentPage() {
             contentString += "📖 Glossary / Keywords\n----------------------------------------\n" + output.glossary + "\n\n";
         }
         if (output.mcqs) {
-            const mcqString = isJson ? JSON.stringify(output.mcqs, null, 2) : "MCQs are in JSON format. Please download as JSON or TXT to view.\n\n";
-            contentString += "📚 MCQs\n----------------------------------------\n" + mcqString;
+            contentString += "📚 MCQs\n----------------------------------------\n" + output.mcqs + "\n\n";
         }
         if (output.questionPaper) {
             contentString += "📄 Question Paper\n----------------------------------------\n" + output.questionPaper + "\n\n";
@@ -254,10 +253,10 @@ export default function AiAgentPage() {
                     )}
                     {output.mcqs && (
                         <div>
-                            <h3 className="text-xl font-semibold">📚 MCQs (JSON Format)</h3>
-                            <pre className="p-4 bg-muted text-sm rounded-md overflow-x-auto">
-                                <code>{JSON.stringify(output.mcqs, null, 2)}</code>
-                            </pre>
+                            <h3 className="text-xl font-semibold">📚 MCQs</h3>
+                            <div className="whitespace-pre-wrap p-4 bg-muted text-sm rounded-md overflow-x-auto">
+                                {output.mcqs}
+                            </div>
                         </div>
                     )}
                     {output.questionPaper && (

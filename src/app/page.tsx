@@ -158,6 +158,26 @@ Start your journey to success now: ${url}
           </div>
       </section>
 
+      {/* Founder's Note Section */}
+      <section className="bg-muted/50 rounded-lg p-8 md:p-12">
+        <div className="grid md:grid-cols-3 gap-8 items-center">
+          <div className="md:col-span-1">
+              <Image src="https://placehold.co/400x400.png" width={400} height={400} alt="Mr. Sanjay Vidya Vijay Gurav, Founder of Vidya EduCare" className="rounded-lg shadow-xl mx-auto" data-ai-hint="portrait professional" />
+          </div>
+          <div className="md:col-span-2">
+            <h2 className="text-3xl font-bold text-primary">A Note From Our Founder</h2>
+            <Quote className="w-10 h-10 text-primary/20 my-4" />
+            <p className="text-lg text-muted-foreground italic">
+              "Our mission at Vidya EduCare has always been to make learning an accessible, engaging, and genuinely rewarding experience. We believe that by combining serious academic preparation with skill-based gaming, we can empower students not only to excel in their exams but also to develop critical thinking skills in a fun environment. This platform is our commitment to that vision."
+            </p>
+            <div className="mt-6">
+              <p className="text-xl font-bold">Mr. Sanjay Vidya Vijay Gurav</p>
+              <p className="text-muted-foreground">Founder & Owner, Vidya EduCare</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Demo Game Section */}
       <section>
         <div className="text-center space-y-2 mb-12">

@@ -41,7 +41,7 @@ const initialManualQuestion: ManualQuestion = {
 };
 
 export default function TestSetManagementPage() {
-  const [testSets, setTestSets] = useState<TestSet[]>(allTestSets);
+  const [testSets, setTestSets] = useState<TestSet[]>([]);
   const { toast } = useToast();
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [isManualCreateOpen, setIsManualCreateOpen] = useState(false);
@@ -86,6 +86,7 @@ export default function TestSetManagementPage() {
         questionsToEdit.push({ ...initialManualQuestion, options: { en: ['', '', '', ''], mr: ['', '', '', ''] }});
     }
     setManualQuestions(questionsToEdit);
+    setStep(1); // Start at step 1 for editing details
     setIsManualCreateOpen(true);
   };
 
@@ -112,10 +113,6 @@ export default function TestSetManagementPage() {
                 throw new Error("JSON is missing required fields: name, board, standard, subject, or questions array.");
             }
             
-            if (uploadedSet.questions.length !== 50) {
-                 throw new Error(`The test set must contain exactly 50 questions. This file has ${uploadedSet.questions.length}.`);
-            }
-
             uploadedSet.questions.forEach((q: any, index: number) => {
                  if (!q.text?.en || !q.options?.en || !q.correctAnswer?.en || !q.text?.mr || !q.options?.mr || !q.correctAnswer?.mr) {
                     throw new Error(`Question at index ${index} is missing required fields (text, options, correctAnswer in both languages).`);
@@ -133,7 +130,7 @@ export default function TestSetManagementPage() {
             
             toast({
                 title: "Test Set Uploaded!",
-                description: `"${newTestSet.name}" with 50 questions has been successfully added/updated.`
+                description: `"${newTestSet.name}" with ${newTestSet.questions.length} questions has been successfully added.`
             });
             setIsBulkUploadOpen(false);
 
@@ -188,7 +185,9 @@ export default function TestSetManagementPage() {
   
   const handleManualSubmit = () => {
       // Filter out empty questions before saving
-      const finalQuestions = manualQuestions.filter(q => q.text.en.trim() !== '' && q.text.mr.trim() !== '').map((q, i) => ({ ...q, id: `Q-${manualSetDetails.id}-${i}` }));
+      const finalQuestions = manualQuestions
+        .filter(q => (q.text.en?.trim() !== '' && q.text.mr?.trim() !== '') || (q.options.en.some(o => o?.trim()) && q.options.mr.some(o => o?.trim())))
+        .map((q, i) => ({ ...q, id: `Q-${manualSetDetails.id}-${i}` }));
 
       const newTestSet: TestSet = {
           id: editingTestSet ? editingTestSet.id : `MSET-${Date.now()}`,
@@ -325,7 +324,7 @@ export default function TestSetManagementPage() {
                         <DialogHeader>
                             <DialogTitle>Upload a Test Set</DialogTitle>
                             <DialogDescription>
-                                Upload a JSON file containing a named test set with exactly 50 questions.
+                                Upload a JSON file containing a named test set.
                             </DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4 py-4">
@@ -343,7 +342,7 @@ export default function TestSetManagementPage() {
       "options": { "en": ["A","B","C","D"], "mr": ["अ","ब","क","ड"] },
       "correctAnswer": { "en": "A", "mr": "अ" }
     },
-    // ...49 more questions
+    // ...more questions
   ]
 }`}
                                 </pre>

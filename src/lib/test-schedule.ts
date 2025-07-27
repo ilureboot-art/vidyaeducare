@@ -1,5 +1,4 @@
 
-
 export type ScheduledTest = {
     id: string;
     testSetId: string;
@@ -11,26 +10,7 @@ export type ScheduledTest = {
 };
 
 // This acts as our shared, in-memory "database" for scheduled tests.
-export let scheduledTests: ScheduledTest[] = [
-    {
-        id: "SCHED-1672531200000",
-        testSetId: "SET-CBSE-MATH-10-01",
-        testSetName: "CBSE Maths Practice Set 1",
-        dateTime: new Date(new Date().setDate(new Date().getDate() + 5)).toISOString(), // 5 days from now
-        board: "CBSE",
-        standard: "10th",
-        subject: "Mathematics",
-    },
-    {
-        id: "SCHED-1675209600000",
-        testSetId: "SET-SSC-SCI-10-01",
-        testSetName: "SSC Science Practice Set 1",
-        dateTime: new Date(new Date().setDate(new Date().getDate() - 5)).toISOString(), // 5 days ago
-        board: "SSC",
-        standard: "10th",
-        subject: "Science",
-    }
-];
+export let scheduledTests: ScheduledTest[] = [];
 
 // Function to add a new scheduled test
 export function addScheduledTest(test: ScheduledTest) {

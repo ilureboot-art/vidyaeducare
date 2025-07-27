@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -26,10 +26,14 @@ import { Badge } from '@/components/ui/badge';
 
 export default function TestSchedulePage() {
     const { toast } = useToast();
-    const [allSchedules, setAllSchedules] = useState<ScheduledTest[]>(scheduledTests);
+    const [allSchedules, setAllSchedules] = useState<ScheduledTest[]>([]);
     const [date, setDate] = useState<Date | undefined>(new Date());
     const [time, setTime] = useState('10:00'); // Default time
     const [selectedTestSetId, setSelectedTestSetId] = useState('');
+
+    useEffect(() => {
+        setAllSchedules(scheduledTests);
+    }, [])
 
     const handleScheduleTest = () => {
         if (!date || !selectedTestSetId || !time) {

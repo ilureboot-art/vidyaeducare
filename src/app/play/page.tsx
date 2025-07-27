@@ -96,8 +96,8 @@ export default function PlayPage() {
   const [feedback, setFeedback] = useState("Start a new game to play!");
   const [isChecking, setIsChecking] = useState(false);
   const [reward, setReward] = useState(0);
-  const [tickets, setTickets] = useState(2);
-  const [gamesLeft, setGamesLeft] = useState(tickets * GAMES_PER_TICKET);
+  const [tickets, setTickets] = useState(0); // Start with 0 tickets
+  const [gamesLeft, setGamesLeft] = useState(0);
   const [shake, setShake] = useState(false);
   
   const [playerStats, setPlayerStats] = useState(initialPlayerStats);
@@ -509,31 +509,35 @@ Join now: ${shareUrl}
                         <CardDescription>Your winning performance.</CardDescription>
                     </CardHeader>
                     <CardContent className="flex items-center justify-center">
-                        <ResponsiveContainer width="100%" height={200}>
-                            <RadialBarChart 
-                                innerRadius="70%" 
-                                outerRadius="100%" 
-                                data={winRateData} 
-                                startAngle={90} 
-                                endAngle={-270}
-                            >
-                                <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
-                                <RadialBar background dataKey='value' angleAxisId={0} data={[{ value: 100 }]} fill="hsl(var(--muted))" cornerRadius={10} />
-                                <RadialBar dataKey='value' cornerRadius={10} />
-                                <Tooltip 
-                                    contentStyle={{
-                                        border: 'none',
-                                        background: 'transparent',
-                                        padding: 0,
-                                    }}
-                                    cursor={false}
-                                    formatter={(value) => `${value}%`}
-                                />
-                                <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="text-2xl font-bold fill-foreground">
-                                    {`${playerStats.winRate}%`}
-                                </text>
-                            </RadialBarChart>
-                        </ResponsiveContainer>
+                        {playerStats.gamesPlayed > 0 ? (
+                            <ResponsiveContainer width="100%" height={200}>
+                                <RadialBarChart 
+                                    innerRadius="70%" 
+                                    outerRadius="100%" 
+                                    data={winRateData} 
+                                    startAngle={90} 
+                                    endAngle={-270}
+                                >
+                                    <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
+                                    <RadialBar background dataKey='value' angleAxisId={0} data={[{ value: 100 }]} fill="hsl(var(--muted))" cornerRadius={10} />
+                                    <RadialBar dataKey='value' cornerRadius={10} />
+                                    <Tooltip 
+                                        contentStyle={{
+                                            border: 'none',
+                                            background: 'transparent',
+                                            padding: 0,
+                                        }}
+                                        cursor={false}
+                                        formatter={(value) => `${value}%`}
+                                    />
+                                    <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="text-2xl font-bold fill-foreground">
+                                        {`${playerStats.winRate}%`}
+                                    </text>
+                                </RadialBarChart>
+                            </ResponsiveContainer>
+                        ) : (
+                             <div className="h-[200px] flex items-center justify-center text-muted-foreground">No data yet.</div>
+                        )}
                     </CardContent>
                 </Card>
 
@@ -543,15 +547,19 @@ Join now: ${shareUrl}
                         <CardDescription>Last 7 games.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <ResponsiveContainer width="100%" height={200}>
-                            <LineChart data={playerStats.earningsHistory}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="name" fontSize={12} tick={false}/>
-                                <YAxis fontSize={12} />
-                                <Tooltip formatter={(value) => `₹${value}`} />
-                                <Line type="monotone" dataKey="earnings" name="Earnings" stroke="hsl(var(--primary))" strokeWidth={2} activeDot={{ r: 8 }} />
-                            </LineChart>
-                        </ResponsiveContainer>
+                         {playerStats.earningsHistory.length > 0 ? (
+                            <ResponsiveContainer width="100%" height={200}>
+                                <LineChart data={playerStats.earningsHistory}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="name" fontSize={12} tick={false}/>
+                                    <YAxis fontSize={12} />
+                                    <Tooltip formatter={(value) => `₹${value}`} />
+                                    <Line type="monotone" dataKey="earnings" name="Earnings" stroke="hsl(var(--primary))" strokeWidth={2} activeDot={{ r: 8 }} />
+                                </LineChart>
+                            </ResponsiveContainer>
+                         ) : (
+                             <div className="h-[200px] flex items-center justify-center text-muted-foreground">No data yet.</div>
+                         )}
                     </CardContent>
                 </Card>
             </div>

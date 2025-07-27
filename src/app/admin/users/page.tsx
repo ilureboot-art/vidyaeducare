@@ -19,7 +19,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { walletData } from "@/lib/user-data";
-import { addNotification } from "@/lib/notifications";
 
 type UserStatus = "Active" | "Banned" | "Inactive";
 type User = {
@@ -32,34 +31,7 @@ type User = {
 };
 
 // In a real app, this would be fetched from a database.
-const initialUsers: User[] = [
-    {
-        id: "PLYR-8D7F6E5C",
-        name: "Alex Doe",
-        email: "alex.doe@example.com",
-        joinDate: new Date(Date.now() - 86400000 * 5).toISOString().split('T')[0], // 5 days ago
-        status: "Active",
-        wallet: walletData.balance,
-    }
-];
-
-
-// Listen for new user notifications to add them to the list
-addNotification({
-    type: "new_user",
-    message: "A new user, Bob Smith, has just signed up.",
-    userId: 'admin'
-});
-const newUserFromNotification: User = {
-    id: "PLYR-ABCD123",
-    name: "Bob Smith",
-    email: "bob@example.com",
-    joinDate: new Date().toISOString().split('T')[0],
-    status: "Active",
-    wallet: 0,
-};
-initialUsers.push(newUserFromNotification);
-
+const initialUsers: User[] = [];
 
 const getStatusBadgeVariant = (status: string) => {
     return status === "Active" ? "default" : status === "Banned" ? "destructive" : "secondary";
@@ -69,22 +41,6 @@ export default function UserManagementPage() {
   const [users, setUsers] = useState<User[]>(initialUsers);
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
-
-  useEffect(() => {
-    // Keep the main user's wallet balance updated
-    const interval = setInterval(() => {
-        setUsers(prevUsers => {
-            const userIndex = prevUsers.findIndex(u => u.id === initialUsers[0].id);
-            if (userIndex !== -1 && prevUsers[userIndex].wallet !== walletData.balance) {
-                const newUsers = [...prevUsers];
-                newUsers[userIndex] = { ...newUsers[userIndex], wallet: walletData.balance };
-                return newUsers;
-            }
-            return prevUsers;
-        });
-    }, 500);
-    return () => clearInterval(interval);
-  }, []);
 
   const handleStatusChange = (userId: string, newStatus: UserStatus) => {
     setUsers(
@@ -203,7 +159,7 @@ export default function UserManagementPage() {
                 </TableRow>
               )) : (
                  <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground">No users found.</TableCell>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground h-24">No users found.</TableCell>
                 </TableRow>
               )}
             </TableBody>

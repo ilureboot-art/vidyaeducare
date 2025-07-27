@@ -22,27 +22,11 @@ type Chat = {
     messages: Message[];
 };
 
-const initialChats: Chat[] = [
-    { id: "CHAT001", user: "Alice", lastMessage: "I have a problem with my withdrawal...", unread: true, avatar: "A", messages: [
-        { from: 'user', text: "I have a problem with my withdrawal, it's been pending for 3 days." },
-        { from: 'admin', text: "Hi Alice, I'm looking into this for you right now." },
-    ]},
-    { id: "CHAT002", user: "Bob", lastMessage: "Thank you for your help!", unread: false, avatar: "B", messages: [
-         { from: 'user', text: "My game crashed mid-way, can I get a ticket refund?" },
-         { from: 'admin', text: "Of course, Bob. I've credited a ticket back to your account." },
-         { from: 'user', text: "Thank you for your help!" },
-    ] },
-    { id: "CHAT003", user: "Charlie", lastMessage: "My referral code isn't working.", unread: true, avatar: "C", messages: [
-        { from: 'user', text: "My referral code isn't working. Can you check REF-XYZ789?" },
-    ] },
-     { id: "CHAT004", user: "New User", lastMessage: "How do I start playing?", unread: true, avatar: "N", messages: [
-        { from: 'user', text: "Hi, I just signed up. How do I start playing the game?" },
-    ] },
-];
+const initialChats: Chat[] = [];
 
 export default function ChatManagementPage() {
     const [chats, setChats] = useState<Chat[]>(initialChats);
-    const [activeChat, setActiveChat] = useState<Chat | null>(chats[0] || null);
+    const [activeChat, setActiveChat] = useState<Chat | null>(null);
     const [reply, setReply] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
 
@@ -91,7 +75,7 @@ export default function ChatManagementPage() {
                     </div>
                 </CardHeader>
                 <CardContent className="flex-1 overflow-y-auto space-y-2">
-                    {filteredChats.map(chat => (
+                    {filteredChats.length > 0 ? filteredChats.map(chat => (
                         <div key={chat.id} onClick={() => handleSelectChat(chat)} className={`p-3 rounded-lg cursor-pointer transition-colors ${activeChat?.id === chat.id ? 'bg-primary/20' : 'hover:bg-muted/50'} ${chat.unread ? 'border-l-4 border-primary' : ''}`}>
                             <div className="flex justify-between">
                                 <p className="font-semibold">{chat.user}</p>
@@ -99,7 +83,11 @@ export default function ChatManagementPage() {
                             </div>
                             <p className="text-sm text-muted-foreground truncate">{chat.lastMessage}</p>
                         </div>
-                    ))}
+                    )) : (
+                        <div className="text-center text-muted-foreground h-full flex items-center justify-center">
+                            No active chats.
+                        </div>
+                    )}
                 </CardContent>
             </Card>
         </div>

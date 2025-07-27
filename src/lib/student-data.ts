@@ -23,39 +23,7 @@ export type StudentProfile = {
 };
 
 // This object acts as our in-memory, shared "database" for student profiles.
-export const studentData: StudentProfile[] = [
-    {
-        id: "STU-D7F6E5C",
-        name: "Anjali Singh",
-        dob: "2008-05-15",
-        avatarUrl: "https://placehold.co/100x100.png?text=A",
-        academic: {
-            standard: "10th",
-            board: "CBSE",
-            stream: "Science",
-            language: "English",
-            academicYear: "2024-2025",
-            subjects: ["Maths", "Science", "English", "History", "General Knowledge"],
-        },
-        stats: {
-            totalEarnings: 150,
-            testsTaken: 5,
-            avgScore: 88,
-            performance: [
-                { name: 'Maths', score: 85 },
-                { name: 'Science', score: 92 },
-                { name: 'English', score: 80 },
-                { name: 'History', score: 95 },
-                { name: 'GK', score: 90 },
-            ],
-            recentActivity: [
-                { name: "Science Test", score: 92 },
-                { name: "History Test", score: 95 },
-            ]
-        },
-        badges: ["Gold", "Silver"],
-    }
-];
+export const studentData: StudentProfile[] = [];
 
 // --- Simulation of Product Activation Codes ---
 

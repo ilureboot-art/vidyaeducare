@@ -10,9 +10,9 @@ import { Progress } from "@/components/ui/progress";
 
 // In a real app, this data would be fetched from a database
 const initialStats = {
-  totalCycles: 5,
-  totalCommissions: 12500,
-  activeReferrers: 32,
+  totalCycles: 0,
+  totalCommissions: 0,
+  activeReferrers: 0,
 };
 
 type Cycle = {
@@ -23,19 +23,9 @@ type Cycle = {
   subscriptionType: "Manual" | "Auto-Renewed";
 }
 
-const initialCycles: Cycle[] = [
-    { id: 'C001', referrer: 'UserA', referrals: 3, status: 'Completed', subscriptionType: 'Auto-Renewed' },
-    { id: 'C002', referrer: 'UserB', referrals: 2, status: 'In Progress', subscriptionType: 'Manual' },
-    { id: 'C003', referrer: 'UserC', referrals: 1, status: 'In Progress', subscriptionType: 'Manual' },
-    { id: 'C004', referrer: 'UserD', referrals: 3, status: 'Completed', subscriptionType: 'Manual' },
-    { id: 'C005', referrer: 'UserA', referrals: 1, status: 'In Progress', subscriptionType: 'Auto-Renewed' },
-];
+const initialCycles: Cycle[] = [];
 
-const initialReferralActivity = [
-    { id: 1, referrer: 'UserB', newUser: 'NewUser1', date: '2024-08-01', commission: '₹50', status: 'Credited' },
-    { id: 2, referrer: 'UserC', newUser: 'NewUser2', date: '2024-07-31', commission: '₹50', status: 'Credited' },
-    { id: 3, referrer: 'UserA', newUser: 'NewUser3', date: '2024-07-30', commission: '₹50', status: 'Credited' },
-]
+const initialReferralActivity: any[] = [];
 
 export default function ReferBoltManagementPage() {
   const [stats, setStats] = useState(initialStats);
@@ -56,7 +46,7 @@ export default function ReferBoltManagementPage() {
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalCycles}</div>
             <p className="text-xs text-muted-foreground">
-              +2 from last month
+              No data yet
             </p>
           </CardContent>
         </Card>
@@ -130,7 +120,7 @@ export default function ReferBoltManagementPage() {
                 </TableRow>
               )) : (
                 <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground">No active cycles.</TableCell>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground h-24">No active cycles.</TableCell>
                 </TableRow>
               )}
             </TableBody>
@@ -154,7 +144,7 @@ export default function ReferBoltManagementPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-                {referrals.length > 0 ? referrals.map((ref) => (
+                {referrals.length > 0 ? referrals.map((ref: any) => (
                      <TableRow key={ref.id}>
                         <TableCell className="font-medium">{ref.referrer}</TableCell>
                         <TableCell>{ref.newUser}</TableCell>
@@ -164,7 +154,7 @@ export default function ReferBoltManagementPage() {
                     </TableRow>
                 )) : (
                     <TableRow>
-                        <TableCell colSpan={5} className="text-center text-muted-foreground">No referral activity yet.</TableCell>
+                        <TableCell colSpan={5} className="text-center text-muted-foreground h-24">No referral activity yet.</TableCell>
                     </TableRow>
                 )}
             </TableBody>

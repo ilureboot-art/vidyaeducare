@@ -26,26 +26,13 @@ import {
 
 
 const initialReferralData = {
-  referralCode: "ALEX-IBA-5C",
-  totalReferrals: 5,
-  totalCommission: 441.25,
-  dailySales: 2,
-  monthlySales: 32,
-  recentReferrals: [
-    { id: 1, name: "Rohan Patel", date: "2024-08-02", commission: 88.25 },
-    { id: 2, name: "Priya Singh", date: "2024-08-02", commission: 88.25 },
-    { id: 3, name: "Amit Kumar", date: "2024-08-01", commission: 88.25 },
-    { id: 4, name: "Sneha Reddy", date: "2024-07-30", commission: 88.25 },
-    { id: 5, name: "Vikas Sharma", date: "2024-07-29", commission: 88.25 },
-  ],
-  salesHistory: [
-      { month: "Jan", sales: 12 },
-      { month: "Feb", sales: 19 },
-      { month: "Mar", sales: 15 },
-      { month: "Apr", sales: 25 },
-      { month: "May", sales: 21 },
-      { month: "Jun", sales: 32 },
-  ]
+  referralCode: "ALEX-IBA-5C", // This can be dynamically generated for the user
+  totalReferrals: 0,
+  totalCommission: 0,
+  dailySales: 0,
+  monthlySales: 0,
+  recentReferrals: [],
+  salesHistory: []
 };
 
 const dailyTarget = 5;
@@ -116,8 +103,8 @@ Don't miss out on the best way to prepare for your exams and earn rewards!
     }
   };
   
-  const dailyProgress = (referralData.dailySales / dailyTarget) * 100;
-  const monthlyProgress = (referralData.monthlySales / monthlyTarget) * 100;
+  const dailyProgress = referralData.dailySales > 0 ? (referralData.dailySales / dailyTarget) * 100 : 0;
+  const monthlyProgress = referralData.monthlySales > 0 ? (referralData.monthlySales / monthlyTarget) * 100 : 0;
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-6">
@@ -156,27 +143,25 @@ Don't miss out on the best way to prepare for your exams and earn rewards!
                     <CardDescription>Visualize your sales performance and growth over time.</CardDescription>
                 </CardHeader>
                 <CardContent className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={referralData.salesHistory}>
-                            <XAxis dataKey="month" stroke="#888888" fontSize={12} tickLine={false} axisLine={false}/>
-                            <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`}/>
-                            <Tooltip
-                              contentStyle={{
-                                background: "hsl(var(--background))",
-                                border: "1px solid hsl(var(--border))",
-                                borderRadius: "var(--radius)",
-                              }}
-                            />
-                            <Bar dataKey="sales" name="Monthly Sales" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                        </BarChart>
-                    </ResponsiveContainer>
+                    {referralData.salesHistory.length > 0 ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={referralData.salesHistory}>
+                                <XAxis dataKey="month" stroke="#888888" fontSize={12} tickLine={false} axisLine={false}/>
+                                <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`}/>
+                                <Tooltip
+                                  contentStyle={{
+                                    background: "hsl(var(--background))",
+                                    border: "1px solid hsl(var(--border))",
+                                    borderRadius: "var(--radius)",
+                                  }}
+                                />
+                                <Bar dataKey="sales" name="Monthly Sales" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    ) : (
+                        <div className="flex items-center justify-center h-full text-muted-foreground">No sales data yet.</div>
+                    )}
                 </CardContent>
-                <CardFooter>
-                    <div className="flex items-center text-sm text-muted-foreground">
-                        <TrendingUp className="mr-2 text-green-500" />
-                        <span>Your sales are trending upwards this year. Keep up the great work!</span>
-                    </div>
-                </CardFooter>
             </Card>
 
             <Card>

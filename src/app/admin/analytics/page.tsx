@@ -6,32 +6,16 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { BarChart, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Line, Bar, ResponsiveContainer } from "recharts";
 import { Users, Gamepad2, IndianRupee } from "lucide-react";
 
-// Mock data for charts
-const userActivityData = [
-  { name: 'Day 1', users: 400 },
-  { name: 'Day 2', users: 300 },
-  { name: 'Day 3', users: 200 },
-  { name: 'Day 4', users: 278 },
-  { name: 'Day 5', users: 189 },
-  { name: 'Day 6', users: 239 },
-  { name: 'Day 7', users: 349 },
-];
+// In a real app, this data would be fetched from a server
+const userActivityData: any[] = [];
 
-const revenueData = [
-  { name: 'Mon', revenue: 2400 },
-  { name: 'Tue', revenue: 1398 },
-  { name: 'Wed', revenue: 9800 },
-  { name: 'Thu', revenue: 3908 },
-  { name: 'Fri', revenue: 4800 },
-  { name: 'Sat', revenue: 3800 },
-  { name: 'Sun', revenue: 4300 },
-];
+const revenueData: any[] = [];
 
 export default function AnalyticsPage() {
   // In a real app, this data would be fetched and updated
-  const [activeUsers] = useState(1245);
-  const [gamesPlayed] = useState(5678);
-  const [todaysRevenue] = useState(12450);
+  const [activeUsers] = useState(0);
+  const [gamesPlayed] = useState(0);
+  const [todaysRevenue] = useState(0);
 
   return (
     <div className="space-y-6">
@@ -43,7 +27,7 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold">{activeUsers.toLocaleString()}</p>
-            <p className="text-xs text-muted-foreground">+5% from yesterday</p>
+            <p className="text-xs text-muted-foreground">No data yet</p>
           </CardContent>
         </Card>
         <Card>
@@ -52,7 +36,7 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold">{gamesPlayed.toLocaleString()}</p>
-            <p className="text-xs text-muted-foreground">Average 4.5 games per user</p>
+            <p className="text-xs text-muted-foreground">No data yet</p>
           </CardContent>
         </Card>
         <Card>
@@ -61,7 +45,7 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold">₹{todaysRevenue.toLocaleString()}</p>
-            <p className="text-xs text-muted-foreground">+12% from yesterday</p>
+            <p className="text-xs text-muted-foreground">No data yet</p>
           </CardContent>
         </Card>
       </div>
@@ -73,16 +57,22 @@ export default function AnalyticsPage() {
             <CardDescription>Tracks the number of active users daily.</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={userActivityData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line type="monotone" dataKey="users" stroke="hsl(var(--primary))" activeDot={{ r: 8 }} />
-              </LineChart>
-            </ResponsiveContainer>
+            {userActivityData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={userActivityData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Line type="monotone" dataKey="users" stroke="hsl(var(--primary))" activeDot={{ r: 8 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+             ) : (
+                <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                    No user activity data to display.
+                </div>
+            )}
           </CardContent>
         </Card>
         <Card>
@@ -91,16 +81,22 @@ export default function AnalyticsPage() {
             <CardDescription>Tracks revenue generated from ticket sales and other sources.</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={revenueData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="revenue" fill="hsl(var(--primary))" />
-                </BarChart>
-            </ResponsiveContainer>
+            {revenueData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={revenueData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" />
+                        <YAxis />
+                        <Tooltip />
+                        <Legend />
+                        <Bar dataKey="revenue" fill="hsl(var(--primary))" />
+                    </BarChart>
+                </ResponsiveContainer>
+            ) : (
+                 <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                    No revenue data to display.
+                </div>
+            )}
           </CardContent>
         </Card>
       </div>

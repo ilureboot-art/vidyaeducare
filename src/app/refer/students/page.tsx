@@ -36,13 +36,7 @@ type Client = {
 };
 
 // In a real app, this data would be fetched from a database for the specific IBA
-const initialClients: Client[] = [
-    { id: "USR001", name: "Priya Sharma", type: "Direct", product: "1 Year Subscription", purchaseDate: "2024-07-01", validity: "2025-06-30", status: "Active" },
-    { id: "USR002", name: "Ankit Gupta", type: "Direct", product: "6 Months Subscription", purchaseDate: "2024-03-15", validity: "2024-09-14", status: "Active" },
-    { id: "USR003", name: "Sneha Reddy", type: "Indirect", product: "1 Year Subscription", purchaseDate: "2024-02-20", validity: "2025-02-19", status: "Active" },
-    { id: "USR004", name: "Rahul Kumar", type: "Direct", product: "1 Year Subscription", purchaseDate: "2023-05-10", validity: "2024-05-09", status: "Expired" },
-    { id: "USR005", name: "Meera Singh", type: "Direct", product: "1 Year Subscription", purchaseDate: "2023-09-01", validity: new Date(new Date().setDate(new Date().getDate() + 20)).toISOString().split('T')[0], status: "Active" },
-];
+const initialClients: Client[] = [];
 
 
 export default function StudentAccessPage() {
@@ -123,7 +117,7 @@ export default function StudentAccessPage() {
                   </TableRow>
                 )) : (
                   <TableRow>
-                      <TableCell colSpan={5} className="text-center text-muted-foreground">No client data found.</TableCell>
+                      <TableCell colSpan={5} className="text-center text-muted-foreground h-24">No client data found.</TableCell>
                   </TableRow>
                 )}
               </TableBody>

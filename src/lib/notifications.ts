@@ -48,10 +48,3 @@ export function markUserNotificationsAsRead(userId: string) {
         }
     });
 }
-
-// Seed with some initial data for demonstration if needed
-// addNotification({
-//     type: 'new_user',
-//     message: 'A new user, Bob, has just signed up.',
-//     userId: 'admin',
-// });

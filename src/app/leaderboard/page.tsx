@@ -31,14 +31,7 @@ const getRankColor = (rank: number) => {
 }
 
 // In a real app, this data would be fetched from a server.
-const initialLeaderboardData: Player[] = [
-    { rank: 1, name: "Priya Sharma", avatar: "PS", score: 48, time: "18:45", prize: 1500 },
-    { rank: 2, name: "Ankit Gupta", avatar: "AG", score: 45, time: "21:12", prize: 1000 },
-    { rank: 3, name: "Sneha Reddy", avatar: "SR", score: 42, time: "23:01", prize: 500 },
-    { rank: 4, name: "Rahul Kumar", avatar: "RK", score: 41, time: "25:50", prize: 250 },
-    { rank: 5, name: "Amit Singh", avatar: "AS", score: 41, time: "28:33", prize: 250 },
-    { rank: 6, name: "Neha Patil", avatar: "NP", score: 40, time: "29:15" },
-];
+const initialLeaderboardData: Player[] = [];
 
 export default function LeaderboardPage() {
   const [leaderboardData, setLeaderboardData] = useState<Player[]>(initialLeaderboardData);

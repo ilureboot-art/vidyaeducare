@@ -56,13 +56,9 @@ type Admin = {
 
 const initialAdmins: Admin[] = [
   { id: "ADM001", name: "Super Admin", email: "super@example.com", phone: "919999988888", role: "Head Admin", status: "Active", joinDate: "2024-07-01" },
-  { id: "ADM002", name: "Sub Admin One", email: "sub1@example.com", phone: "918888877777", role: "Sub-admin", status: "Active", joinDate: "2024-07-15" },
 ];
 
-const initialRequests: Admin[] = [
-    { id: "ADM003", name: "Charlie Request", email: "charlie@example.com", phone: "917777766666", role: "Sub-admin", status: "Pending", joinDate: "2024-08-01" },
-    { id: "ADM004", name: "Diana Applicant", email: "diana@example.com", phone: "916666655555", role: "Sub-admin", status: "Pending", joinDate: "2024-08-02" },
-]
+const initialRequests: Admin[] = []
 
 export default function AdminManagementPage() {
   const [admins, setAdmins] = useState<Admin[]>(initialAdmins);
@@ -188,7 +184,7 @@ export default function AdminManagementPage() {
                 </TableRow>
               )) : (
                 <TableRow>
-                    <TableCell colSpan={4} className="text-center text-muted-foreground">No pending requests.</TableCell>
+                    <TableCell colSpan={4} className="text-center text-muted-foreground h-24">No pending requests.</TableCell>
                 </TableRow>
               )}
             </TableBody>

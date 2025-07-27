@@ -28,7 +28,7 @@ export const walletData: {
   };
   transactions: Transaction[];
 } = {
-  balance: 50.00,
+  balance: 0.00,
   adminPaymentMethods: {
     accountHolderName: "Sanjay Gurav (Founder/owner : Vidya Educare)",
     accountNumber: "123101501925",

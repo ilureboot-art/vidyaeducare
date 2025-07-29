@@ -28,6 +28,7 @@ const VidyaEdurankInputSchema = z.object({
     glossary: z.boolean().describe("Generate a glossary of key terms."),
   }),
   studyMaterial: z.string().describe("The raw text of the study material."),
+  studyMaterialImage: z.string().optional().describe("An optional image of the study material, as a data URI."),
 });
 export type VidyaEdurankInput = z.infer<typeof VidyaEdurankInputSchema>;
 
@@ -47,7 +48,7 @@ const vidyaEdurankPrompt = ai.definePrompt({
     name: "vidyaEdurankPrompt",
     input: { schema: VidyaEdurankInputSchema },
     output: { schema: VidyaEdurankOutputSchema },
-    prompt: `You are the Vidya EduCare AI Agent, a highly intelligent, multilingual AI assistant for administrators. Your job is to understand the provided study material and generate educational content for the platform based on the admin's request.
+    prompt: `You are the Vidya EduCare AI Agent, a highly intelligent, multilingual AI assistant for administrators. Your job is to understand the provided study material (which can be text and/or an image) and generate educational content for the platform based on the admin's request.
 
 Here are the user's specifications:
 - Input Language: {{{language}}}
@@ -58,7 +59,15 @@ Here are the user's specifications:
 
 Here is the study material you need to process:
 ---
+{{#if studyMaterial}}
+**Text Content:**
 {{{studyMaterial}}}
+{{/if}}
+
+{{#if studyMaterialImage}}
+**Image Content:**
+{{media url=studyMaterialImage}}
+{{/if}}
 ---
 
 Based on the material, please generate the following outputs as requested. The chapter name should be derived from the 'topic' input. For any plain text outputs, format them cleanly using Markdown with clear headings (e.g., "📝 Summary Notes:", "📄 Question Paper:").

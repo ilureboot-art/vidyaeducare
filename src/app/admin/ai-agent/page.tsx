@@ -9,18 +9,19 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { BrainCircuit, Loader2, Sparkles, Download } from "lucide-react";
+import { BrainCircuit, Loader2, Sparkles, Download, Image as ImageIcon, X } from "lucide-react";
 import { generateEducationalContent, type VidyaEdurankInput, type VidyaEdurankOutput } from '@/ai/flows/vidya-edurank-flow';
 import { Separator } from '@/components/ui/separator';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import jsPDF from 'jspdf';
 import { Document, Packer, Paragraph, TextRun } from 'docx';
+import Image from 'next/image';
 
 export default function AiAgentPage() {
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(false);
     const [output, setOutput] = useState<VidyaEdurankOutput | null>(null);
-    const [formState, setFormState] = useState<Omit<VidyaEdurankInput, 'studyMaterial'>>({
+    const [formState, setFormState] = useState<Omit<VidyaEdurankInput, 'studyMaterial' | 'studyMaterialImage'>>({
         language: 'Marathi',
         grade: '10th',
         subject: 'Science',
@@ -38,6 +39,8 @@ export default function AiAgentPage() {
         },
     });
     const [studyMaterial, setStudyMaterial] = useState('');
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [imageDataUri, setImageDataUri] = useState<string | null>(null);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -53,15 +56,32 @@ export default function AiAgentPage() {
             }
         }));
     };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            if (file.size > 4 * 1024 * 1024) { // 4MB limit
+                toast({ variant: 'destructive', title: 'File too large', description: 'Please upload an image smaller than 4MB.' });
+                return;
+            }
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const result = reader.result as string;
+                setImagePreview(result);
+                setImageDataUri(result);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
     
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         
-        if (!formState.topic.trim() || !studyMaterial.trim()) {
+        if (!formState.topic.trim() || (!studyMaterial.trim() && !imageDataUri)) {
             toast({
                 variant: 'destructive',
                 title: "Missing Information",
-                description: "Please provide the Topic/Chapter and the study material text."
+                description: "Please provide the Topic and either study material text or an image."
             });
             return;
         }
@@ -72,6 +92,7 @@ export default function AiAgentPage() {
         const input: VidyaEdurankInput = {
             ...formState,
             studyMaterial: studyMaterial,
+            studyMaterialImage: imageDataUri || undefined,
         };
 
         try {
@@ -276,7 +297,7 @@ export default function AiAgentPage() {
                         <BrainCircuit /> Vidya EduCare AI Agent
                     </CardTitle>
                     <CardDescription>
-                        Generate educational materials for the platform from any text.
+                        Generate educational materials for the platform from any text or image.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -304,15 +325,44 @@ export default function AiAgentPage() {
                             </div>
                         </div>
                         
-                        <div className="space-y-2">
-                            <Label htmlFor="studyMaterial">Study Material</Label>
-                            <Textarea
-                                id="studyMaterial"
-                                placeholder="Paste textbook paragraph, chapter summary, or key points here..."
-                                className="min-h-[200px]"
-                                value={studyMaterial}
-                                onChange={(e) => setStudyMaterial(e.target.value)}
-                            />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                            <div className="space-y-2">
+                                <Label htmlFor="studyMaterial">Study Material (Text)</Label>
+                                <Textarea
+                                    id="studyMaterial"
+                                    placeholder="Paste textbook paragraph, chapter summary, or key points here..."
+                                    className="min-h-[200px]"
+                                    value={studyMaterial}
+                                    onChange={(e) => setStudyMaterial(e.target.value)}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="studyImage">Study Material (Image)</Label>
+                                <Input 
+                                    id="studyImage"
+                                    type="file" 
+                                    onChange={handleFileChange} 
+                                    accept="image/png, image/jpeg"
+                                    className="file:text-primary file:font-semibold"
+                                />
+                                {imagePreview && (
+                                    <div className="relative mt-2">
+                                        <Image src={imagePreview} alt="Image preview" width={200} height={150} className="rounded-md border object-contain h-36 w-auto" />
+                                        <Button 
+                                            variant="destructive" 
+                                            size="icon" 
+                                            className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                                            onClick={() => {
+                                                setImagePreview(null);
+                                                setImageDataUri(null);
+                                                (document.getElementById('studyImage') as HTMLInputElement).value = ''; // Reset file input
+                                            }}
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
 

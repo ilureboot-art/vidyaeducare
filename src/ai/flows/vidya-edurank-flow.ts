@@ -28,7 +28,7 @@ const VidyaEdurankInputSchema = z.object({
     glossary: z.boolean().describe("Generate a glossary of key terms."),
   }),
   studyMaterial: z.string().describe("The raw text of the study material."),
-  studyMaterialImage: z.string().optional().describe("An optional image of the study material, as a data URI."),
+  studyMaterialImages: z.array(z.string()).optional().describe("An optional array of study material images, each as a data URI."),
 });
 export type VidyaEdurankInput = z.infer<typeof VidyaEdurankInputSchema>;
 
@@ -48,7 +48,7 @@ const vidyaEdurankPrompt = ai.definePrompt({
     name: "vidyaEdurankPrompt",
     input: { schema: VidyaEdurankInputSchema },
     output: { schema: VidyaEdurankOutputSchema },
-    prompt: `You are the Vidya EduCare AI Agent, a highly intelligent, multilingual AI assistant for administrators. Your job is to understand the provided study material (which can be text and/or an image) and generate educational content for the platform based on the admin's request.
+    prompt: `You are the Vidya EduCare AI Agent, a highly intelligent, multilingual AI assistant for administrators. Your job is to understand the provided study material (which can be text and/or a series of images) and generate educational content for the platform based on the admin's request.
 
 Here are the user's specifications:
 - Input Language: {{{language}}}
@@ -64,9 +64,11 @@ Here is the study material you need to process:
 {{{studyMaterial}}}
 {{/if}}
 
-{{#if studyMaterialImage}}
-**Image Content:**
-{{media url=studyMaterialImage}}
+{{#if studyMaterialImages}}
+**Image Content (in order):**
+{{#each studyMaterialImages}}
+{{media url=this}}
+{{/each}}
 {{/if}}
 ---
 

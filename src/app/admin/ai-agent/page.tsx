@@ -21,7 +21,7 @@ export default function AiAgentPage() {
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(false);
     const [output, setOutput] = useState<VidyaEdurankOutput | null>(null);
-    const [formState, setFormState] = useState<Omit<VidyaEdurankInput, 'studyMaterial' | 'studyMaterialImage'>>({
+    const [formState, setFormState] = useState<Omit<VidyaEdurankInput, 'studyMaterial' | 'studyMaterialImages'>>({
         language: 'Marathi',
         grade: '10th',
         subject: 'Science',
@@ -39,8 +39,8 @@ export default function AiAgentPage() {
         },
     });
     const [studyMaterial, setStudyMaterial] = useState('');
-    const [imagePreview, setImagePreview] = useState<string | null>(null);
-    const [imageDataUri, setImageDataUri] = useState<string | null>(null);
+    const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+    const [imageDataUris, setImageDataUris] = useState<string[]>([]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -58,30 +58,51 @@ export default function AiAgentPage() {
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            if (file.size > 4 * 1024 * 1024) { // 4MB limit
-                toast({ variant: 'destructive', title: 'File too large', description: 'Please upload an image smaller than 4MB.' });
-                return;
-            }
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const result = reader.result as string;
-                setImagePreview(result);
-                setImageDataUri(result);
-            };
-            reader.readAsDataURL(file);
+        const files = e.target.files;
+        if (files) {
+            const newImagePreviews: string[] = [];
+            const newImageDataUris: string[] = [];
+            const fileArray = Array.from(files);
+
+            let hasError = false;
+            fileArray.forEach(file => {
+                 if (file.size > 4 * 1024 * 1024) { // 4MB limit per file
+                    toast({ variant: 'destructive', title: 'File too large', description: `${file.name} is larger than 4MB.` });
+                    hasError = true;
+                }
+            });
+
+            if(hasError) return;
+
+            fileArray.forEach(file => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    const result = reader.result as string;
+                    newImagePreviews.push(result);
+                    newImageDataUris.push(result);
+                    if (newImagePreviews.length === fileArray.length) {
+                        setImagePreviews(prev => [...prev, ...newImagePreviews]);
+                        setImageDataUris(prev => [...prev, ...newImageDataUris]);
+                    }
+                };
+                reader.readAsDataURL(file);
+            });
         }
     };
     
+    const removeImage = (indexToRemove: number) => {
+        setImagePreviews(prev => prev.filter((_, index) => index !== indexToRemove));
+        setImageDataUris(prev => prev.filter((_, index) => index !== indexToRemove));
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         
-        if (!formState.topic.trim() || (!studyMaterial.trim() && !imageDataUri)) {
+        if (!formState.topic.trim() || (!studyMaterial.trim() && imageDataUris.length === 0)) {
             toast({
                 variant: 'destructive',
                 title: "Missing Information",
-                description: "Please provide the Topic and either study material text or an image."
+                description: "Please provide the Topic and either study material text or at least one image."
             });
             return;
         }
@@ -92,7 +113,7 @@ export default function AiAgentPage() {
         const input: VidyaEdurankInput = {
             ...formState,
             studyMaterial: studyMaterial,
-            studyMaterialImage: imageDataUri || undefined,
+            studyMaterialImages: imageDataUris.length > 0 ? imageDataUris : undefined,
         };
 
         try {
@@ -297,7 +318,7 @@ export default function AiAgentPage() {
                         <BrainCircuit /> Vidya EduCare AI Agent
                     </CardTitle>
                     <CardDescription>
-                        Generate educational materials for the platform from any text or image.
+                        Generate educational materials for the platform from any text or image(s).
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -344,22 +365,23 @@ export default function AiAgentPage() {
                                     onChange={handleFileChange} 
                                     accept="image/png, image/jpeg"
                                     className="file:text-primary file:font-semibold"
+                                    multiple
                                 />
-                                {imagePreview && (
-                                    <div className="relative mt-2">
-                                        <Image src={imagePreview} alt="Image preview" width={200} height={150} className="rounded-md border object-contain h-36 w-auto" />
-                                        <Button 
-                                            variant="destructive" 
-                                            size="icon" 
-                                            className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
-                                            onClick={() => {
-                                                setImagePreview(null);
-                                                setImageDataUri(null);
-                                                (document.getElementById('studyImage') as HTMLInputElement).value = ''; // Reset file input
-                                            }}
-                                        >
-                                            <X className="h-4 w-4" />
-                                        </Button>
+                                {imagePreviews.length > 0 && (
+                                    <div className="mt-2 grid grid-cols-3 gap-2">
+                                        {imagePreviews.map((preview, index) => (
+                                            <div key={index} className="relative">
+                                                <Image src={preview} alt={`Image preview ${index + 1}`} width={100} height={100} className="rounded-md border object-cover w-full aspect-square" />
+                                                <Button 
+                                                    variant="destructive" 
+                                                    size="icon" 
+                                                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                                                    onClick={() => removeImage(index)}
+                                                >
+                                                    <X className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        ))}
                                     </div>
                                 )}
                             </div>

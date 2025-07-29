@@ -27,15 +27,9 @@ const VidyaEdurankInputSchema = z.object({
     eli5: z.boolean().describe("Generate an 'Explain Like I'm 5' version of the content."),
     glossary: z.boolean().describe("Generate a glossary of key terms."),
   }),
-  studyMaterial: z.string().describe("The raw text of the study material or a data URI of a file. Data URI format: 'data:<mimetype>;base64,<encoded_data>'."),
+  studyMaterial: z.string().describe("The raw text of the study material."),
 });
 export type VidyaEdurankInput = z.infer<typeof VidyaEdurankInputSchema>;
-
-// Define a new schema for the prompt that includes our helper flag.
-const VidyaEdurankPromptSchema = VidyaEdurankInputSchema.extend({
-  isDataUri: z.boolean()
-});
-
 
 const VidyaEdurankOutputSchema = z.object({
   chapterName: z.string().optional(),
@@ -51,7 +45,7 @@ export type VidyaEdurankOutput = z.infer<typeof VidyaEdurankOutputSchema>;
 
 const vidyaEdurankPrompt = ai.definePrompt({
     name: "vidyaEdurankPrompt",
-    input: { schema: VidyaEdurankPromptSchema },
+    input: { schema: VidyaEdurankInputSchema },
     output: { schema: VidyaEdurankOutputSchema },
     prompt: `You are the Vidya EduCare AI Agent, a highly intelligent, multilingual AI assistant for administrators. Your job is to understand the provided study material and generate educational content for the platform based on the admin's request.
 
@@ -62,13 +56,9 @@ Here are the user's specifications:
 - Topic/Chapter: {{{topic}}}
 - Curriculum: {{{curriculum}}}
 
-Here is the study material you need to process. It could be plain text or an image/document provided as a data URI.
+Here is the study material you need to process:
 ---
-{{#if isDataUri}}
-{{media url=studyMaterial}}
-{{else}}
 {{{studyMaterial}}}
-{{/if}}
 ---
 
 Based on the material, please generate the following outputs as requested. The chapter name should be derived from the 'topic' input. For any plain text outputs, format them cleanly using Markdown with clear headings (e.g., "📝 Summary Notes:", "📄 Question Paper:").
@@ -116,13 +106,8 @@ const vidyaEdurankFlow = ai.defineFlow(
     outputSchema: VidyaEdurankOutputSchema.nullable(),
   },
   async (input) => {
-    // Determine if the input is a data URI and create the prompt input object.
-    const promptInput = {
-      ...input,
-      isDataUri: input.studyMaterial.startsWith('data:'),
-    };
     try {
-        const { output } = await vidyaEdurankPrompt(promptInput);
+        const { output } = await vidyaEdurankPrompt(input);
         
         // This is a crucial validation step. If the AI returns a response, but it's empty,
         // it means it failed to adhere to the schema. We should treat this as an error.

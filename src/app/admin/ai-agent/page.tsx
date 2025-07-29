@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { BrainCircuit, Loader2, Sparkles, Upload, Download } from "lucide-react";
+import { BrainCircuit, Loader2, Sparkles, Download } from "lucide-react";
 import { generateEducationalContent, type VidyaEdurankInput, type VidyaEdurankOutput } from '@/ai/flows/vidya-edurank-flow';
 import { Separator } from '@/components/ui/separator';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -37,9 +37,7 @@ export default function AiAgentPage() {
             glossary: false,
         },
     });
-    // UNIFIED STATE for study material
     const [studyMaterial, setStudyMaterial] = useState('');
-    const [fileName, setFileName] = useState('');
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -56,32 +54,6 @@ export default function AiAgentPage() {
         }));
     };
     
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        setFileName(file.name);
-        setIsLoading(true); // Show loader while processing file
-        
-        const reader = new FileReader();
-
-        reader.onload = (loadEvent) => {
-            const dataUri = loadEvent.target?.result as string;
-            setStudyMaterial(dataUri); // Always set the data URI for any file type
-            toast({ title: "File Ready", description: `${file.name} is ready to be processed.` });
-            setIsLoading(false);
-        };
-        
-        reader.onerror = () => {
-             toast({ variant: "destructive", title: "Error", description: "Could not read the selected file." });
-             setIsLoading(false);
-        };
-        
-        // Read the file as a Data URL for all supported types
-        reader.readAsDataURL(file);
-    }
-
-
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         
@@ -89,7 +61,7 @@ export default function AiAgentPage() {
             toast({
                 variant: 'destructive',
                 title: "Missing Information",
-                description: "Please provide the Topic/Chapter and the study material (either text or a file)."
+                description: "Please provide the Topic/Chapter and the study material text."
             });
             return;
         }
@@ -156,7 +128,7 @@ export default function AiAgentPage() {
     }
 
     const downloadTxt = () => {
-        const contentString = generateContentString(true); // Pass true to get JSON string for MCQs
+        const contentString = generateContentString(true);
         const blob = new Blob([contentString], { type: 'text/plain;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -172,9 +144,7 @@ export default function AiAgentPage() {
     const downloadPdf = () => {
         if (!output) return;
         const doc = new jsPDF();
-        const contentString = generateContentString(false); // Pass false for user-friendly PDF
-        // The default font in jsPDF doesn't support all characters.
-        // For broad compatibility, splitting text and handling manually is safer.
+        const contentString = generateContentString(false);
         const splitText = doc.splitTextToSize(contentString, 180);
         doc.text(splitText, 10, 10);
         const fileName = `${(output.chapterName || formState.topic).replace(/\s+/g, '_') || 'ai-content'}.pdf`;
@@ -183,7 +153,7 @@ export default function AiAgentPage() {
 
     const downloadDocx = async () => {
         if (!output) return;
-        const contentString = generateContentString(false); // Pass false for user-friendly DOCX
+        const contentString = generateContentString(false);
         const paragraphs = contentString.split('\n').map(line => new Paragraph({
             children: [new TextRun(line)],
         }));
@@ -306,7 +276,7 @@ export default function AiAgentPage() {
                         <BrainCircuit /> Vidya EduCare AI Agent
                     </CardTitle>
                     <CardDescription>
-                        Generate educational materials for the platform from any text or file.
+                        Generate educational materials for the platform from any text.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -335,31 +305,14 @@ export default function AiAgentPage() {
                         </div>
                         
                         <div className="space-y-2">
-                            <Label>Study Material</Label>
-                             <div className="grid grid-cols-1 gap-4">
-                                <Textarea
-                                    placeholder="Paste textbook paragraph, chapter summary, or key points here... OR upload a file below."
-                                    className="min-h-[150px]"
-                                    value={studyMaterial.startsWith('data:') ? '' : studyMaterial} // Show text only if it's not a data URI
-                                    onChange={(e) => {
-                                        setStudyMaterial(e.target.value);
-                                        setFileName(''); // Clear filename if user types
-                                    }}
-                                />
-                                <div className="relative border-dashed border-2 border-muted-foreground/50 rounded-lg p-6 text-center hover:border-primary transition-colors">
-                                    <Upload className="mx-auto h-12 w-12 text-muted-foreground" />
-                                    <p className="mt-2 text-sm text-muted-foreground">Click to browse or drag & drop a file</p>
-                                    <p className="text-xs text-muted-foreground">DOCX, PDF, PNG, or JPG</p>
-                                    <Input 
-                                        id="fileUpload" 
-                                        type="file"
-                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                        onChange={handleFileChange}
-                                        accept=".pdf,.png,.jpg,.jpeg,.docx"
-                                    />
-                                </div>
-                                {fileName && <p className="text-sm text-center mt-2 text-muted-foreground">Selected file: <span className="font-semibold">{fileName}</span></p>}
-                             </div>
+                            <Label htmlFor="studyMaterial">Study Material</Label>
+                            <Textarea
+                                id="studyMaterial"
+                                placeholder="Paste textbook paragraph, chapter summary, or key points here..."
+                                className="min-h-[200px]"
+                                value={studyMaterial}
+                                onChange={(e) => setStudyMaterial(e.target.value)}
+                            />
                         </div>
 
 

@@ -74,20 +74,18 @@ Here is the study material you need to process. It could be plain text or an ima
 Based on the material, please generate the following outputs as requested. The chapter name should be derived from the 'topic' input. For any plain text outputs, format them cleanly using Markdown with clear headings (e.g., "📝 Summary Notes:", "📄 Question Paper:").
 
 {{#if outputs.mcqs}}
-- **MCQs**: Generate a list of {{{mcqCount}}} multiple-choice questions in plain text format, in both English and Marathi.
+- **MCQs**: Generate a list of {{{mcqCount}}} multiple-choice questions in plain text English format.
   - At the top, include the metadata: Test Name (from topic), Board, Standard, and Subject.
   - Each question must be clearly numbered.
-  - Each question must have the English and Marathi text.
-  - Each question must be followed by four lettered options (A, B, C, D), also in English and Marathi.
-  - After the options, clearly state the correct answer in both languages.
+  - Each question must be followed by four lettered options (A, B, C, D).
+  - After the options, clearly state the correct answer.
   - **Example Format**:
-    1.  (EN) What is the capital of France?
-        (MR) फ्रान्सची राजधानी कोणती आहे?
-        A. (EN) London (MR) लंडन
-        B. (EN) Paris (MR) पॅरिस
-        C. (EN) Rome (MR) रोम
-        D. (EN) Berlin (MR) बर्लिन
-    **Answer**: B. (EN) Paris (MR) पॅरिस
+    1.  What is the capital of France?
+        A. London
+        B. Paris
+        C. Rome
+        D. Berlin
+    **Answer**: B. Paris
 {{/if}}
 {{#if outputs.notes}}
 - **Summary Notes**: Create concept-wise summary notes using bullet points or short paragraphs. The language should be clear, concise, and appropriate for a {{{grade}}} grade student.

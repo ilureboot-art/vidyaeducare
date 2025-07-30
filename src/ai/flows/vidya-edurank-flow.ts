@@ -41,14 +41,14 @@ const VidyaEdurankOutputSchema = z.object({
   studyPlan: z.string().optional().describe('A suggested study plan or learning goals.'),
   eli5: z.string().optional().describe("A very simple explanation of the content, as if for a 5-year-old."),
   glossary: z.string().optional().describe("A list of important keywords and their definitions from the text."),
-});
+}).optional();
 export type VidyaEdurankOutput = z.infer<typeof VidyaEdurankOutputSchema>;
 
 const vidyaEdurankPrompt = ai.definePrompt({
     name: "vidyaEdurankPrompt",
     input: { schema: VidyaEdurankInputSchema },
     output: { schema: VidyaEdurankOutputSchema },
-    prompt: `You are the Vidya EduCare AI Agent, a highly intelligent, multilingual AI assistant for administrators. Your job is to understand the provided study material (which can be text and/or a series of images) and generate educational content for the platform based on the admin's request.
+    prompt: `You are the Vidya EduCare AI Agent, a highly intelligent, multilingual AI assistant. Your job is to understand the provided study material (text and/or images) and generate the specific educational content requested.
 
 Here are the user's specifications:
 - Input Language: {{{language}}}
@@ -72,15 +72,10 @@ Here is the study material you need to process:
 {{/if}}
 ---
 
-Based on the material, please generate the following outputs as requested. The chapter name should be derived from the 'topic' input. For any plain text outputs, format them cleanly using Markdown with clear headings (e.g., "📝 Summary Notes:", "📄 Question Paper:").
+Based on the material, please generate the following outputs as requested. The chapter name should be derived from the 'topic' input. Format any plain text outputs with clear Markdown headings.
 
 {{#if outputs.mcqs}}
-- **MCQs**: Generate a list of {{{mcqCount}}} multiple-choice questions in plain text format.
-  - At the top, include the metadata: Test Name (from topic), Board, Standard, and Subject.
-  - Each question must be clearly numbered.
-  - Each question must be followed by four lettered options (A, B, C, D).
-  - After the options, clearly state the correct answer.
-  - **Example Format**:
+- **MCQs**: Generate {{{mcqCount}}} multiple-choice questions. Each question needs four lettered options (A, B, C, D) and a clearly stated correct answer. Example:
     1.  What is the capital of France?
         A. London
         B. Paris
@@ -89,22 +84,16 @@ Based on the material, please generate the following outputs as requested. The c
     **Answer**: B. Paris
 {{/if}}
 {{#if outputs.notes}}
-- **Summary Notes**: Create concept-wise summary notes using bullet points or short paragraphs. The language should be clear, concise, and appropriate for a {{{grade}}} grade student.
-{{/if}}
-{{#if outputs.questionPaper}}
-- **Question Paper**: Create a structured question paper based on the {{{curriculum}}} board guidelines if possible. Include a variety of question types (e.g., short answer, long answer) and assign marks to each question. The total marks should be reasonable (e.g., 20-25 marks).
+- **Summary Notes**: Create concept-wise summary notes in clear, concise language for a {{{grade}}} grade student.
 {{/if}}
 {{#if outputs.animationScript}}
-- **Animation Script**: Write a simple, engaging script that explains the core concepts from the material. This script should be suitable for creating a short animated learning video.
-{{/if}}
-{{#if outputs.studyPlan}}
-- **Study Plan**: Suggest a simple, actionable study plan (e.g., a 5-day plan) to help a student master this topic.
+- **Animation Script**: Write a simple script explaining the core concepts.
 {{/if}}
 {{#if outputs.eli5}}
-- **Explain Like I'm 5**: Provide a very simple, easy-to-understand explanation of the main topic, using simple analogies and avoiding jargon.
+- **Explain Like I'm 5**: Provide a very simple explanation of the main topic.
 {{/if}}
 {{#if outputs.glossary}}
-- **Glossary / Keywords**: Identify 5-10 important keywords from the text and provide a brief definition for each.
+- **Glossary**: Identify 5-10 important keywords and provide brief definitions.
 {{/if}}
 `
 });
@@ -114,24 +103,21 @@ const vidyaEdurankFlow = ai.defineFlow(
   {
     name: 'vidyaEdurankFlow',
     inputSchema: VidyaEdurankInputSchema,
-    outputSchema: VidyaEdurankOutputSchema.nullable(),
+    outputSchema: VidyaEdurankOutputSchema,
   },
   async (input) => {
     try {
         const result = await vidyaEdurankPrompt(input);
         const output = result.output;
         
-        // This is a crucial validation step. If the AI returns a response, but it's empty,
-        // it means it failed to adhere to the schema. We should treat this as an error.
         if (!output) {
-          console.error("AI model returned a null or empty response object.", { candidates: result.candidates, usage: result.usage });
+          console.error("AI model returned a null or empty response object.", { usage: result.usage });
           throw new Error("The AI model returned a null or empty response, indicating a failure to generate content based on the provided material.");
         }
         return output;
 
     } catch (error) {
         console.error("AI flow 'vidyaEdurankFlow' failed:", error);
-        // Return null if the prompt fails or the output is invalid. This will be caught by the frontend.
         return null;
     }
   }

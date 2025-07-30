@@ -106,24 +106,28 @@ const vidyaEdurankFlow = ai.defineFlow(
     outputSchema: VidyaEdurankOutputSchema,
   },
   async (input) => {
-    try {
-        const result = await vidyaEdurankPrompt(input);
-        const output = result.output;
-        
-        if (!output) {
-          console.error("AI model returned a null or empty response object.", { usage: result.usage });
-          throw new Error("The AI model returned a null or empty response, indicating a failure to generate content based on the provided material.");
-        }
-        return output;
-
-    } catch (error) {
-        console.error("AI flow 'vidyaEdurankFlow' failed:", error);
-        return null;
+    const result = await vidyaEdurankPrompt(input);
+    const output = result.output;
+    
+    if (!output) {
+      console.error("AI model returned a null or empty response object.", { usage: result.usage });
+      throw new Error("The AI model returned a null or empty response, indicating a failure to generate content based on the provided material.");
     }
+    return output;
   }
 );
 
 
-export async function generateEducationalContent(input: VidyaEdurankInput): Promise<VidyaEdurankOutput | null> {
-    return await vidyaEdurankFlow(input);
+export async function generateEducationalContent(input: VidyaEdurankInput): Promise<VidyaEdurankOutput> {
+    try {
+        const result = await vidyaEdurankFlow(input);
+        if (result === undefined) {
+             throw new Error("Content generation resulted in an undefined output.");
+        }
+        return result;
+    } catch (error) {
+        console.error("Error in generateEducationalContent:", error);
+        // Re-throw the error to be caught by the client-side caller
+        throw error;
+    }
 }

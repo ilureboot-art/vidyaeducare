@@ -75,7 +75,7 @@ Here is the study material you need to process:
 Based on the material, please generate the following outputs as requested. The chapter name should be derived from the 'topic' input. For any plain text outputs, format them cleanly using Markdown with clear headings (e.g., "📝 Summary Notes:", "📄 Question Paper:").
 
 {{#if outputs.mcqs}}
-- **MCQs**: Generate a list of {{{mcqCount}}} multiple-choice questions in plain text English format.
+- **MCQs**: Generate a list of {{{mcqCount}}} multiple-choice questions in plain text format.
   - At the top, include the metadata: Test Name (from topic), Board, Standard, and Subject.
   - Each question must be clearly numbered.
   - Each question must be followed by four lettered options (A, B, C, D).
@@ -118,18 +118,20 @@ const vidyaEdurankFlow = ai.defineFlow(
   },
   async (input) => {
     try {
-        const { output } = await vidyaEdurankPrompt(input);
+        const result = await vidyaEdurankPrompt(input);
+        const output = result.output;
         
         // This is a crucial validation step. If the AI returns a response, but it's empty,
         // it means it failed to adhere to the schema. We should treat this as an error.
         if (!output) {
+          console.error("AI model returned a null or empty response object.", { candidates: result.candidates, usage: result.usage });
           throw new Error("The AI model returned a null or empty response, indicating a failure to generate content based on the provided material.");
         }
         return output;
 
     } catch (error) {
         console.error("AI flow 'vidyaEdurankFlow' failed:", error);
-        // Return null if the prompt fails or the output is invalid.
+        // Return null if the prompt fails or the output is invalid. This will be caught by the frontend.
         return null;
     }
   }

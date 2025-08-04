@@ -79,27 +79,26 @@ Use my exclusive IBA code to get a special 10% discount on your subscription!
 
 Don't miss out on the best way to prepare for your exams and earn rewards!
 #VidyaEduCare #MockTest #ExamPrep #StudySmart #IBA #Referral #Discount`;
+    
+    const encodedMessage = encodeURIComponent(message);
+    const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
 
     const fallbackCopy = () => {
       navigator.clipboard.writeText(message);
       toast({
           title: "Promotional Message Copied!",
-          description: "Referral link and message copied to clipboard.",
+          description: "Referral link and message copied to clipboard. You can now paste it into WhatsApp.",
       });
     };
 
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'Boost Your Exam Prep with Vidya EduCare!',
-          text: message,
-          url: shareUrl,
-        });
-      } catch (error) {
+    // Try to open WhatsApp link, and if it fails (e.g. on a desktop without whatsapp installed), copy to clipboard
+    try {
+        const newWindow = window.open(whatsappUrl, '_blank');
+        if(!newWindow || newWindow.closed || typeof newWindow.closed=='undefined') {
+            fallbackCopy();
+        }
+    } catch(e) {
         fallbackCopy();
-      }
-    } else {
-      fallbackCopy();
     }
   };
   

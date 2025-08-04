@@ -9,6 +9,7 @@ import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
 import { storeConfig } from "@/lib/store-config";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { walletData } from "@/lib/user-data";
 
 const features = [
   {
@@ -54,7 +55,7 @@ export default function HomePage() {
   const { toast } = useToast();
 
   const handleShare = async () => {
-    const referralCode = "ALEX-D7F6E5C"; // Example code for the current user
+    const referralCode = walletData.referralCode;
     const url = `${window.location.origin}/signup?ref=${referralCode}`;
     const message = `🎓 Check out Vidya EduCare! It's an amazing platform for mock tests, skill-based games, and earning rewards. 
     

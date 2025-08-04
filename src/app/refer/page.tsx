@@ -6,12 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Share2, IndianRupee, Gift } from "lucide-react";
 import { storeConfig } from "@/lib/store-config";
+import { walletData } from "@/lib/user-data";
 
 export default function ReferAndEarnPage() {
     const { toast } = useToast();
 
     const handleShare = async () => {
-        const referralCode = "ALEX-D7F6E5C"; // Example code for the logged-in user
+        const referralCode = walletData.referralCode;
         const url = `${window.location.origin}/signup?ref=${referralCode}`;
         const bonusAmount = storeConfig.referralBonus;
         

@@ -23,6 +23,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { walletData } from "@/lib/user-data";
 
 
 const initialReferralData = {
@@ -49,9 +50,10 @@ const bonusTiers = [
 export default function IBADashboardPage() {
   const { toast } = useToast();
   const [referralData, setReferralData] = useState(initialReferralData);
+  const ibaReferralCode = "ALEX-IBA-5C"; // This is specific to the IBA program
 
   const handleCopyToClipboard = () => {
-    navigator.clipboard.writeText(referralData.referralCode);
+    navigator.clipboard.writeText(ibaReferralCode);
     toast({
       title: "Copied!",
       description: "IBA Referral code copied to clipboard.",
@@ -59,7 +61,7 @@ export default function IBADashboardPage() {
   };
 
   const handleShare = async () => {
-    const shareUrl = `${window.location.origin}/signup?ref=${referralData.referralCode}`;
+    const shareUrl = `${window.location.origin}/signup?ref=${ibaReferralCode}`;
     const message = `🚀 Ace your exams with Vidya EduCare! 🚀
 
 I'm an Independent Business Associate with them, and I highly recommend their platform for serious students.
@@ -74,7 +76,7 @@ No registration fee and no investment to become an IBA and start a business with
 
 Use my exclusive IBA code to get a special 10% discount on your subscription!
 
-🔑 **My IBA Code**: ${referralData.referralCode}
+🔑 **My IBA Code**: ${ibaReferralCode}
 🔗 **Sign Up Here**: ${shareUrl}
 
 Don't miss out on the best way to prepare for your exams and earn rewards!
@@ -113,7 +115,7 @@ Don't miss out on the best way to prepare for your exams and earn rewards!
           <div className="text-center p-4 bg-muted rounded-lg">
             <h3 className="text-lg font-semibold">Your Unique IBA Code</h3>
             <div className="flex items-center justify-center gap-2 mt-2">
-              <p className="text-2xl font-mono p-3 bg-background rounded-md w-full max-w-xs text-center tracking-widest">{referralData.referralCode}</p>
+              <p className="text-2xl font-mono p-3 bg-background rounded-md w-full max-w-xs text-center tracking-widest">{ibaReferralCode}</p>
             </div>
           </div>
            <div className="flex items-center gap-4">

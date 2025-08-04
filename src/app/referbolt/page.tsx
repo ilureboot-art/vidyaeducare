@@ -40,8 +40,7 @@ export default function ReferBoltPage() {
 
 
   const handleShare = async () => {
-    // In a real app, this code would be fetched for the logged-in user
-    const referralCode = "ALEX-D7F6E5";
+    const referralCode = walletData.referralCode;
     const shareUrl = `${window.location.origin}/signup?ref=${referralCode}`;
     const benefitsText = benefits.map(b => `✅ ${b.text}`).join("\n");
 

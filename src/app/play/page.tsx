@@ -275,7 +275,7 @@ export default function PlayPage() {
   };
 
   const handleShare = async () => {
-    const referralCode = "ALEX-D7F6E5C";
+    const referralCode = walletData.referralCode;
     const shareUrl = `${window.location.origin}/signup?ref=${referralCode}`;
     const rewardsList = storeConfig.gameSettings.rewards.map((r, i) => `${i+1}${i === 0 ? 'st' : i === 1 ? 'nd' : i === 2 ? 'rd' : 'th'} Attempt: ₹${r}`).join('\n');
     const message = `🎮 Join GuessMaster - India's Best Skill Gaming Platform! 🎮

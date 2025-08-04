@@ -14,6 +14,7 @@ export type Transaction = {
 // This object acts as our in-memory, shared "database".
 export const walletData: {
   balance: number;
+  referralCode: string;
   adminPaymentMethods: {
     upiId: string;
     gpayNumber: string;
@@ -29,6 +30,7 @@ export const walletData: {
   transactions: Transaction[];
 } = {
   balance: 0.00,
+  referralCode: "ALEX-D7F6E5C",
   adminPaymentMethods: {
     accountHolderName: "Sanjay Gurav (Founder/owner : Vidya Educare)",
     accountNumber: "123101501925",

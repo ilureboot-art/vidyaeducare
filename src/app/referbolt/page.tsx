@@ -57,6 +57,9 @@ Subscribe and start your earning cycle now: ${shareUrl}
 
 #VidyaEduCare #ReferBolt #PassiveIncome #ReferAndEarn #SkillGaming`;
 
+    const encodedMessage = encodeURIComponent(message);
+    const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
+
     const fallbackCopy = () => {
         navigator.clipboard.writeText(message);
         toast({
@@ -65,18 +68,13 @@ Subscribe and start your earning cycle now: ${shareUrl}
         });
     }
 
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'Unlock Your Earnings with Vidya EduCare ReferBolt!',
-          text: message,
-          url: shareUrl,
-        });
-      } catch (error) {
+    try {
+        const newWindow = window.open(whatsappUrl, '_blank');
+        if(!newWindow || newWindow.closed || typeof newWindow.closed=='undefined') {
+            fallbackCopy();
+        }
+    } catch(e) {
         fallbackCopy();
-      }
-    } else {
-      fallbackCopy();
     }
   };
 

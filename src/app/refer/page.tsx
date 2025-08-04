@@ -23,6 +23,9 @@ My Referral Code: ${referralCode}
 
 Click here to join: ${url}`;
     
+        const encodedMessage = encodeURIComponent(message);
+        const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
+
         const fallbackCopy = () => {
             navigator.clipboard.writeText(message);
             toast({
@@ -31,13 +34,12 @@ Click here to join: ${url}`;
             });
         };
 
-        if (navigator.share) {
-            try {
-                await navigator.share({ title: 'Join Vidya EduCare!', text: message, url });
-            } catch (error) {
+        try {
+            const newWindow = window.open(whatsappUrl, '_blank');
+            if(!newWindow || newWindow.closed || typeof newWindow.closed=='undefined') {
                 fallbackCopy();
             }
-        } else {
+        } catch(e) {
             fallbackCopy();
         }
     };

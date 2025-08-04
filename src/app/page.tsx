@@ -68,6 +68,9 @@ Here's what you get:
 Start your journey to success now: ${url}
 #VidyaEduCare #EdTech #MockTest #SkillGames #ReferAndEarn`;
     
+    const encodedMessage = encodeURIComponent(message);
+    const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
+
     const fallbackCopy = () => {
         navigator.clipboard.writeText(message);
         toast({
@@ -76,15 +79,13 @@ Start your journey to success now: ${url}
         });
     };
 
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: 'Join Vidya EduCare!', text: message, url });
-      } catch (error) {
-        // Fallback to clipboard if share fails for any reason
+    try {
+        const newWindow = window.open(whatsappUrl, '_blank');
+        if(!newWindow || newWindow.closed || typeof newWindow.closed=='undefined') {
+            fallbackCopy();
+        }
+    } catch(e) {
         fallbackCopy();
-      }
-    } else {
-      fallbackCopy();
     }
   };
 

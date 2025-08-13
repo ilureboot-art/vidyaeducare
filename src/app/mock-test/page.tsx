@@ -120,7 +120,7 @@ export default function MockTestPage() {
 
     const handlePrevQuestion = () => {
         if (currentQuestionIndex > 0) {
-            setCurrentQuestionIndex(prev => prev - 1);
+            setCurrentQuestionIndex(prev => prev + 1);
         }
     };
 
@@ -295,6 +295,9 @@ export default function MockTestPage() {
     const progress = ((currentQuestionIndex + 1) / activeQuestions.length) * 100;
     const minutesLeft = Math.floor(timeLeft / 60);
     const secondsLeft = timeLeft % 60;
+    const solvedCount = Object.keys(answers).length;
+    const unsolvedCount = activeQuestions.length - solvedCount;
+
 
     return (
         <Card className="w-full max-w-3xl">
@@ -304,13 +307,21 @@ export default function MockTestPage() {
                         <CardTitle className="text-xl text-primary">{scheduledTest.testSetName}</CardTitle>
                         <CardDescription>For {studentProfile?.name}</CardDescription>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap justify-end">
                          <Badge variant={isLiveTest ? "default" : "secondary"}>
                             {isLiveTest ? "Live Test" : "Practice"}
                         </Badge>
                         <Badge variant="secondary" className="flex items-center gap-2">
                             <Clock className="w-4 h-4" />
                             {String(minutesLeft).padStart(2, '0')}:{String(secondsLeft).padStart(2, '0')}
+                        </Badge>
+                         <Badge variant="outline" className="flex items-center gap-2 text-green-600 border-green-500">
+                            <CheckCircle className="w-4 h-4" />
+                            Solved: {solvedCount}
+                        </Badge>
+                        <Badge variant="outline" className="flex items-center gap-2 text-muted-foreground">
+                            <FileQuestion className="w-4 h-4" />
+                            Unsolved: {unsolvedCount}
                         </Badge>
                     </div>
                 </div>
@@ -361,3 +372,5 @@ export default function MockTestPage() {
         </Card>
     )
 }
+
+    

@@ -96,8 +96,6 @@ export default function PlayPage() {
   const [feedback, setFeedback] = useState("Start a new game to play!");
   const [isChecking, setIsChecking] = useState(false);
   const [reward, setReward] = useState(0);
-  const [tickets, setTickets] = useState(0); // Start with 0 tickets
-  const [gamesLeft, setGamesLeft] = useState(0);
   const [shake, setShake] = useState(false);
   
   const [playerStats, setPlayerStats] = useState(initialPlayerStats);
@@ -184,26 +182,15 @@ export default function PlayPage() {
     endTimeRef.current = Date.now() + GAME_DURATION * 1000;
   }, []);
   
-  const startGame = useCallback((mode: GameMode) => {
-    setGameMode(mode);
-    if (mode === "real") {
-        if (gamesLeft <= 0) {
-            toast({
-                variant: "destructive",
-                title: "No Games Left",
-                description: "You need to buy more tickets to play.",
-            });
-            return;
-        }
-        setGamesLeft((prev) => prev - 1);
-    }
+  const startGame = useCallback(() => {
+    setGameMode("real"); // All games are "real" now, meaning they can earn rewards
     resetGame();
-  }, [gamesLeft, resetGame, toast]);
+  }, [resetGame]);
   
   useEffect(() => {
     const startMode = searchParams.get('mode');
     if (startMode === 'demo' && gameState === 'idle') {
-      startGame('demo');
+      startGame();
     }
   }, [searchParams, startGame, gameState]);
   
@@ -315,14 +302,8 @@ Join now: ${shareUrl}
 
   const renderGameInfo = () => (
     <div className="flex items-center justify-between text-sm text-muted-foreground">
-        <div className="flex items-center gap-2">
-            <Ticket className="w-5 h-5 text-primary" />
-            <span>Tickets: {tickets}</span>
-        </div>
-         {gameMode === 'demo' && <Badge variant="outline">Demo Game</Badge>}
-        <div className="flex items-center gap-2">
-            <Gamepad2 className="w-5 h-5 text-primary" />
-            <span>Games Left: {gamesLeft}</span>
+        <div>
+            {gameMode === 'demo' && <Badge variant="outline">Demo Game</Badge>}
         </div>
     </div>
   );
@@ -333,9 +314,8 @@ Join now: ${shareUrl}
             <h1 className="text-4xl font-bold text-primary">GuessMaster</h1>
             <p className="text-muted-foreground mt-2">Guess the secret number between 1 and 100 in {storeConfig.gameSettings.maxAttempts} tries!</p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Button size="lg" onClick={() => startGame("real")}><Star className="mr-2 h-5 w-5"/> Start Real Game</Button>
-            <Button size="lg" variant="secondary" onClick={() => startGame("demo")}><Sprout className="mr-2 h-5 w-5"/> Play Demo</Button>
+        <div>
+            <Button size="lg" onClick={startGame} className="w-full md:w-auto"><Star className="mr-2 h-5 w-5"/> Play Game</Button>
         </div>
         <Button variant="ghost" onClick={handleShare} className="w-full">
             <Share2 className="mr-2 h-4 w-4"/>
@@ -350,7 +330,7 @@ Join now: ${shareUrl}
   const renderPlayingState = () => (
     <div className="space-y-4">
         <div className="flex justify-between items-center">
-            <h2 className="text-lg font-semibold">{gameMode === 'real' ? 'Real Game' : 'Demo Game'}</h2>
+            <h2 className="text-lg font-semibold">GuessMaster</h2>
              <Badge variant="secondary" className="flex items-center gap-2">
                 <Clock className="w-4 h-4" />
                 {String(minutesLeft).padStart(2, '0')}:{String(secondsLeft).padStart(2, '0')}
@@ -404,14 +384,14 @@ Join now: ${shareUrl}
         {gameState === 'won' ? <Trophy className="w-16 h-16 text-yellow-500" /> : <HeartCrack className="w-16 h-16 text-destructive" />}
         <h2 className="text-2xl font-bold">{gameState === 'won' ? "You Won!" : "Game Over"}</h2>
         <p className="text-muted-foreground">{feedback}</p>
-        {gameState === 'won' && reward > 0 && gameMode === 'real' && (
+        {gameState === 'won' && reward > 0 && (
             <div className="flex items-center gap-2 p-3 bg-green-100 dark:bg-green-900/50 rounded-lg">
                 <Award className="w-6 h-6 text-green-600 dark:text-green-400"/>
                 <span className="font-semibold text-green-700 dark:text-green-300">You earned ₹{reward}!</span>
             </div>
         )}
         <div className="flex gap-4 pt-4">
-            <Button onClick={() => startGame(gameMode)}><RefreshCw className="mr-2 h-4 w-4"/> Play Again</Button>
+            <Button onClick={() => startGame()}><RefreshCw className="mr-2 h-4 w-4"/> Play Again</Button>
             <Button variant="outline" onClick={goBackToMenu}>Exit to Home</Button>
         </div>
     </div>

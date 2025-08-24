@@ -54,8 +54,9 @@ export let storeConfig = {
     
     gameSettings: {
         maxAttempts: 5,
-        welcomeBonus: 2,
-        rewards: [100, 75, 50, 25, 15],
+        welcomeBonus: 2, // This is in tickets
+        welcomeCoins: 50, // New welcome bonus in coins
+        rewards: [100, 75, 50, 25, 10], // Now represents coins
     }
 };
 
@@ -77,6 +78,6 @@ export function setReferralBonus(newBonus: number) {
     storeConfig.referralBonus = newBonus;
 }
 
-export function setGameSettings(newSettings: { maxAttempts: number, welcomeBonus: number, rewards: number[] }) {
+export function setGameSettings(newSettings: { maxAttempts: number, welcomeBonus: number, rewards: number[], welcomeCoins: number }) {
     storeConfig.gameSettings = newSettings;
 }

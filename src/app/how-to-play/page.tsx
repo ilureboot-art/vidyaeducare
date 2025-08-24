@@ -3,7 +3,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { List, CheckCircle, Award, Ticket, Share2, Zap } from "lucide-react";
+import { List, CheckCircle, Award, Ticket, Share2, Zap, Coins } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { storeConfig } from "@/lib/store-config";
@@ -28,7 +28,7 @@ export default function HowToPlayPage() {
               GuessMaster is a simple number guessing game. The goal is to guess a secret number between <Badge>1</Badge> and <Badge>100</Badge>. You have a limited number of attempts to guess the correct number.
             </p>
              <ul className="list-disc list-inside space-y-2 pl-4">
-              <li>You start with <Badge variant="secondary">{storeConfig.gameSettings.maxAttempts}</Badge> attempts per game.</li>
+              <li>You have <Badge variant="secondary">{storeConfig.gameSettings.maxAttempts}</Badge> attempts per game.</li>
               <li>Enter your guess in the input box and click "Guess".</li>
               <li>After each guess, you'll get a hint: <Badge variant="outline">higher</Badge> or <Badge variant="outline">lower</Badge>.</li>
               <li>Use the hints to narrow down the possible numbers.</li>
@@ -38,13 +38,11 @@ export default function HowToPlayPage() {
            <div className="space-y-4">
             <h2 className="text-2xl font-semibold flex items-center gap-2">
               <Ticket className="text-accent" />
-              Tickets & Gameplay
+              Free Gameplay
             </h2>
              <ul className="list-disc list-inside space-y-2 pl-4">
-               <li>Each game session requires one <Badge variant="secondary">Game Play</Badge>.</li>
-               <li>Every <Badge>Ticket</Badge> you own gives you <Badge>2 Game Plays</Badge>.</li>
-               <li>You can purchase more tickets from the <Button variant="link" asChild className="p-0 text-lg"><Link href="/store">Store</Link></Button>.</li>
-                <li>You can play a <Button variant="link" asChild className="p-0 text-lg"><Link href="/play?mode=demo">Demo Game</Link></Button> anytime to practice without using your tickets.</li>
+               <li>The GuessMaster game is completely free to play!</li>
+               <li>You can play as many times as you want to practice and win coins.</li>
             </ul>
           </div>
 
@@ -55,11 +53,11 @@ export default function HowToPlayPage() {
               Winning & Rewards
             </h2>
             <span>
-              You win the game by guessing the secret number within your {storeConfig.gameSettings.maxAttempts} attempts. The faster you guess, the higher your reward!
+              You win the game by guessing the secret number within your {storeConfig.gameSettings.maxAttempts} attempts. The faster you guess, the more coins you win!
             </span>
             <ul className="list-disc list-inside space-y-2 pl-4">
               {storeConfig.gameSettings.rewards.map((reward, index) => (
-                <li key={index}><span className="font-bold">{index + 1}{index === 0 ? 'st' : index === 1 ? 'nd' : index === 2 ? 'rd' : 'th'} Attempt:</span> ₹{reward}</li>
+                <li key={index}><span className="font-bold">{index + 1}{index === 0 ? 'st' : index === 1 ? 'nd' : index === 2 ? 'rd' : 'th'} Attempt:</span> <span className="font-semibold text-primary flex items-center gap-1">{reward} <Coins size={16} /></span></li>
               ))}
             </ul>
           </div>

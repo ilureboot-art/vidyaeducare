@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { PlusCircle, MinusCircle, Info, History, ArrowUpRight, ArrowDownLeft } from "lucide-react";
+import { PlusCircle, MinusCircle, Info, History, ArrowUpRight, ArrowDownLeft, Coins } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { walletData, addTransaction, type Transaction } from "@/lib/user-data";
@@ -65,6 +65,7 @@ function FormattedDate({ dateString }: { dateString: string }) {
 export default function WalletPage() {
   const { toast } = useToast();
   const [balance, setBalance] = useState(walletData.balance);
+  const [coins, setCoins] = useState(walletData.coins);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [addFundsOpen, setAddFundsOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
@@ -76,13 +77,16 @@ export default function WalletPage() {
       if (walletData.balance !== balance) {
         setBalance(walletData.balance);
       }
+      if (walletData.coins !== coins) {
+        setCoins(walletData.coins);
+      }
       if (walletData.transactions.length !== transactions.length) {
         setTransactions([...walletData.transactions]);
       }
     }, 500); 
 
     return () => clearInterval(interval);
-  }, [balance, transactions.length]);
+  }, [balance, coins, transactions.length]);
 
   const handleAddFunds = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -191,10 +195,16 @@ export default function WalletPage() {
           <CardDescription>Your balance and recent activity.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <Card className="text-center p-6 bg-primary/10">
-            <p className="text-sm font-medium text-primary">CURRENT BALANCE</p>
-            <p className="text-5xl font-bold text-primary">₹{balance.toFixed(2)}</p>
-          </Card>
+          <div className="grid grid-cols-2 gap-4">
+              <Card className="text-center p-6 bg-primary/10">
+                <p className="text-sm font-medium text-primary">CASH BALANCE</p>
+                <p className="text-5xl font-bold text-primary">₹{balance.toFixed(2)}</p>
+              </Card>
+              <Card className="text-center p-6 bg-amber-400/10">
+                 <p className="text-sm font-medium text-amber-600 flex items-center justify-center gap-2"><Coins/> COIN BALANCE</p>
+                <p className="text-5xl font-bold text-amber-600">{coins.toLocaleString()}</p>
+              </Card>
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <Dialog open={addFundsOpen} onOpenChange={setAddFundsOpen}>
               <DialogTrigger asChild>

@@ -33,6 +33,7 @@ import {
   IndianRupee,
   Sprout,
   Clock,
+  Coins,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { walletData, addTransaction } from "@/lib/user-data";
@@ -125,51 +126,36 @@ export default function PlayPage() {
     setGameState(endState);
     setFeedback(message);
 
-    if (gameMode === 'real') {
-        const newGamesPlayed = playerStats.gamesPlayed + 1;
-        const newWins = playerStats.wins + (endState === 'won' ? 1 : 0);
-        const newTotalEarnings = playerStats.totalEarnings + earnedReward;
-        
-        const newEarningsHistory = [...playerStats.earningsHistory, { name: `G${newGamesPlayed}`, earnings: earnedReward }];
-        if (newEarningsHistory.length > 7) newEarningsHistory.shift();
+    // No real money involved, but we can track stats
+    const newGamesPlayed = playerStats.gamesPlayed + 1;
+    const newWins = playerStats.wins + (endState === 'won' ? 1 : 0);
+    const newTotalEarnings = playerStats.totalEarnings + earnedReward;
+    
+    const newEarningsHistory = [...playerStats.earningsHistory, { name: `G${newGamesPlayed}`, earnings: earnedReward }];
+    if (newEarningsHistory.length > 7) newEarningsHistory.shift();
 
-        setPlayerStats({
-            gamesPlayed: newGamesPlayed,
-            wins: newWins,
-            winRate: Math.round((newWins / newGamesPlayed) * 100),
-            totalEarnings: newTotalEarnings,
-            earningsHistory: newEarningsHistory,
+    setPlayerStats({
+        gamesPlayed: newGamesPlayed,
+        wins: newWins,
+        winRate: Math.round((newWins / newGamesPlayed) * 100),
+        totalEarnings: newTotalEarnings,
+        earningsHistory: newEarningsHistory,
+    });
+
+    if (endState === 'won' && earnedReward > 0) {
+        walletData.coins += earnedReward;
+        addNotification({
+            type: "deposit_received",
+            message: `You won ${earnedReward} coins in GuessMaster!`,
+            userId: 'user-alex-doe',
         });
-
-        if (endState === 'won' && earnedReward > 0) {
-            addTransaction({
-              id: Date.now(),
-              type: 'deposit',
-              description: 'Game Won Reward',
-              amount: earnedReward,
-              date: new Date().toISOString(),
-              status: 'Completed',
-              user: "Alex Doe",
-            });
-            walletData.balance += earnedReward;
-            addNotification({
-                type: "deposit_received",
-                message: `You won ₹${earnedReward} in GuessMaster!`,
-                userId: 'user-alex-doe',
-            });
-            toast({
-              title: "You Won!",
-              description: `₹${earnedReward} has been added to your wallet.`,
-            });
-        }
-    } else if (endState === 'won') {
-         toast({
-            title: "You Won!",
-            description: `You guessed the number! This was a demo game, so no real money was awarded.`,
+        toast({
+          title: "You Won!",
+          description: `${earnedReward} coins have been added to your balance.`,
         });
     }
 
-  }, [gameMode, playerStats, stopTimer, toast]);
+  }, [playerStats, stopTimer, toast]);
 
   const resetGame = useCallback(() => {
     setSecretNumber(Math.floor(Math.random() * 100) + 1);
@@ -183,7 +169,6 @@ export default function PlayPage() {
   }, []);
   
   const startGame = useCallback(() => {
-    setGameMode("real"); // All games are "real" now, meaning they can earn rewards
     resetGame();
   }, [resetGame]);
   
@@ -264,20 +249,20 @@ export default function PlayPage() {
   const handleShare = async () => {
     const referralCode = walletData.referralCode;
     const shareUrl = `${window.location.origin}/signup?ref=${referralCode}`;
-    const rewardsList = storeConfig.gameSettings.rewards.map((r, i) => `${i+1}${i === 0 ? 'st' : i === 1 ? 'nd' : i === 2 ? 'rd' : 'th'} Attempt: ₹${r}`).join('\n');
-    const message = `🎮 Join GuessMaster - India's Best Skill Gaming Platform! 🎮
+    const rewardsList = storeConfig.gameSettings.rewards.map((r, i) => `${i+1}${i === 0 ? 'st' : i === 1 ? 'nd' : i === 2 ? 'rd' : 'th'} Attempt: ${r} coins`).join('\n');
+    const message = `🎮 Join me on GuessMaster on the Vidya EduCare platform! 🎮
 
 🚀 Use my referral code: ${referralCode}
-💰 Get a ₹${storeConfig.referralBonus} instant bonus on signup!
+💰 Get a ₹${storeConfig.referralBonus} instant cash bonus on signup!
 
-🎯 Play exciting skill-based number guessing games and win real cash.
+🎯 Play a fun skill-based number guessing game and win coins.
 💰 **Prize structure for correct guesses:**
 ${rewardsList}
 
-💸 Test your logic and win real cash prizes!
+💸 Test your logic and have fun!
 Join now: ${shareUrl}
 
-#GuessMaster #SkillGaming #CashPrizes #ReferralBonus`;
+#GuessMaster #SkillGaming #VidyaEduCare #ReferralBonus`;
 
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
@@ -302,9 +287,6 @@ Join now: ${shareUrl}
 
   const renderGameInfo = () => (
     <div className="flex items-center justify-between text-sm text-muted-foreground">
-        <div>
-            {gameMode === 'demo' && <Badge variant="outline">Demo Game</Badge>}
-        </div>
     </div>
   );
 
@@ -387,7 +369,7 @@ Join now: ${shareUrl}
         {gameState === 'won' && reward > 0 && (
             <div className="flex items-center gap-2 p-3 bg-green-100 dark:bg-green-900/50 rounded-lg">
                 <Award className="w-6 h-6 text-green-600 dark:text-green-400"/>
-                <span className="font-semibold text-green-700 dark:text-green-300">You earned ₹{reward}!</span>
+                <span className="font-semibold text-green-700 dark:text-green-300">You earned {reward} coins!</span>
             </div>
         )}
         <div className="flex gap-4 pt-4">
@@ -418,7 +400,7 @@ Join now: ${shareUrl}
             {storeConfig.gameSettings.rewards.map((r, i) => (
                 <li key={i} className="p-2 bg-muted/50 rounded-md">
                     <p className="text-xs text-muted-foreground">Attempt {i + 1}</p>
-                    <p className="font-bold text-primary">₹{r}</p>
+                    <p className="font-bold text-primary flex items-center justify-center gap-1">{r} <Coins size={12}/></p>
                 </li>
             ))}
         </ul>
@@ -468,9 +450,9 @@ Join now: ${shareUrl}
                         <p className="text-xs text-muted-foreground">Win Rate</p>
                     </div>
                      <div className="p-3 bg-green-100 dark:bg-green-900/50 rounded-lg">
-                        <IndianRupee className="w-5 h-5 mx-auto text-green-600 dark:text-green-400 mb-1"/>
-                        <p className="text-xl font-bold">₹{playerStats.totalEarnings}</p>
-                        <p className="text-xs text-muted-foreground">Earnings</p>
+                        <Coins className="w-5 h-5 mx-auto text-green-600 dark:text-green-400 mb-1"/>
+                        <p className="text-xl font-bold">{playerStats.totalEarnings.toLocaleString()}</p>
+                        <p className="text-xs text-muted-foreground">Coins Won</p>
                     </div>
                      <div className="p-3 bg-pink-100 dark:bg-pink-900/50 rounded-lg">
                         <Gamepad2 className="w-5 h-5 mx-auto text-pink-600 dark:text-pink-400 mb-1"/>
@@ -521,8 +503,8 @@ Join now: ${shareUrl}
 
                 <Card>
                     <CardHeader>
-                        <CardTitle className="text-lg">Recent Earnings</CardTitle>
-                        <CardDescription>Last 7 games.</CardDescription>
+                        <CardTitle className="text-lg">Recent Winnings</CardTitle>
+                        <CardDescription>Coins from last 7 games.</CardDescription>
                     </CardHeader>
                     <CardContent>
                          {playerStats.earningsHistory.length > 0 ? (
@@ -531,8 +513,8 @@ Join now: ${shareUrl}
                                     <CartesianGrid strokeDasharray="3 3" />
                                     <XAxis dataKey="name" fontSize={12} tick={false}/>
                                     <YAxis fontSize={12} />
-                                    <Tooltip formatter={(value) => `₹${value}`} />
-                                    <Line type="monotone" dataKey="earnings" name="Earnings" stroke="hsl(var(--primary))" strokeWidth={2} activeDot={{ r: 8 }} />
+                                    <Tooltip formatter={(value) => `${value} Coins`} />
+                                    <Line type="monotone" dataKey="earnings" name="Coins" stroke="hsl(var(--primary))" strokeWidth={2} activeDot={{ r: 8 }} />
                                 </LineChart>
                             </ResponsiveContainer>
                          ) : (

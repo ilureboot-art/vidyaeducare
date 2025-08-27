@@ -88,7 +88,7 @@ export default function TestSetManagementPage() {
     while (questionsToEdit.length < 50) {
         questionsToEdit.push({ ...initialManualQuestion, id: '', options: { en: ['', '', '', ''], mr: ['', '', '', ''] }});
     }
-    setManualQuestions(questionsToEdit);
+    setManualQuestions(questionsToEdit.map(({ id, ...rest }) => rest)); // remove id for manual question type
     setStep(1); // Start at step 1 for editing details
     setIsManualCreateOpen(true);
   };
@@ -179,31 +179,32 @@ export default function TestSetManagementPage() {
 
   const handleQuestionChange = (qIndex: number, field: 'text' | 'option' | 'answer', lang: 'en' | 'mr', value: string, optionIndex?: number) => {
       setManualQuestions(prevQuestions => {
-          const newQuestions = [...prevQuestions];
-          const questionToUpdate = { ...newQuestions[qIndex] };
+        return prevQuestions.map((q, index) => {
+            if (index !== qIndex) {
+                return q;
+            }
 
-          if (field === 'text') {
-              questionToUpdate.text = { ...questionToUpdate.text, [lang]: value };
-          } else if (field === 'option' && optionIndex !== undefined) {
-              const newOptions = { ...questionToUpdate.options };
-              newOptions[lang] = [...newOptions[lang]];
-              newOptions[lang][optionIndex] = value;
-              questionToUpdate.options = newOptions;
-          } else if (field === 'answer') {
-              const selectedOptionMr = value;
-              const selectedOptionIndex = questionToUpdate.options.mr.findIndex(opt => opt === selectedOptionMr);
-              
-              if (selectedOptionIndex !== -1) {
-                  questionToUpdate.correctAnswer = {
-                      mr: selectedOptionMr,
-                      en: questionToUpdate.options.en[selectedOptionIndex]
-                  };
-              } else {
-                  questionToUpdate.correctAnswer = { mr: '', en: '' };
-              }
-          }
-          newQuestions[qIndex] = questionToUpdate;
-          return newQuestions;
+            // Create a deep copy to avoid mutation
+            const updatedQuestion = JSON.parse(JSON.stringify(q));
+
+            if (field === 'text') {
+                updatedQuestion.text[lang] = value;
+            } else if (field === 'option' && optionIndex !== undefined) {
+                updatedQuestion.options[lang][optionIndex] = value;
+            } else if (field === 'answer') {
+                const selectedOptionMr = value;
+                const selectedOptionIndex = updatedQuestion.options.mr.findIndex((opt: string) => opt === selectedOptionMr);
+                
+                if (selectedOptionIndex !== -1) {
+                    updatedQuestion.correctAnswer.mr = selectedOptionMr;
+                    updatedQuestion.correctAnswer.en = updatedQuestion.options.en[selectedOptionIndex];
+                } else {
+                    updatedQuestion.correctAnswer.mr = '';
+                    updatedQuestion.correctAnswer.en = '';
+                }
+            }
+            return updatedQuestion;
+        });
       });
   };
   
@@ -230,12 +231,11 @@ export default function TestSetManagementPage() {
         updateTestSet(newTestSetData); // Update central store
         setTestSets(prevSets => {
             const index = prevSets.findIndex(ts => ts.id === newTestSetData.id);
+            const updatedSets = [...prevSets];
             if (index > -1) {
-                const updatedSets = [...prevSets];
                 updatedSets[index] = newTestSetData;
-                return updatedSets;
             }
-            return prevSets;
+            return updatedSets;
         });
     } else {
         addTestSet(newTestSetData); // Update central store

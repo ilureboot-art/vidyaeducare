@@ -31,7 +31,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { allTestSets, addTestSet, deleteTestSet, updateTestSet, type TestSet, type Question } from "@/lib/question-bank";
 import { academicConfig } from "@/lib/academic-config";
-import { Packer, Document as DocxDocument } from "docx";
+import mammoth from "mammoth";
 import { parseQuestionsFromText } from "@/ai/flows/question-parser-flow";
 
 
@@ -114,8 +114,7 @@ export default function TestSetManagementPage() {
             uploadedSet = JSON.parse(content);
         } else if (file.name.endsWith('.docx')) {
             const arrayBuffer = await file.arrayBuffer();
-            const doc = new DocxDocument({ sections: [] }); // Temporary doc to use parser
-            const text = await doc.readText(arrayBuffer);
+            const { value: text } = await mammoth.extractRawText({ arrayBuffer });
             
             if (!text.trim()) {
                 throw new Error("The DOCX file appears to be empty or could not be read.");
@@ -225,14 +224,13 @@ export default function TestSetManagementPage() {
 
     if (editingTestSet) {
         updateTestSet(newTestSet);
-        setTestSets(prevSets => prevSets.map(ts => (ts.id === newTestSet.id ? newTestSet : ts)));
-        toast({ title: 'Test Set Updated!', description: `"${newTestSet.name}" has been saved.` });
+        setTestSets(allTestSets);
     } else {
         addTestSet(newTestSet);
         setTestSets(prevSets => [...prevSets, newTestSet]);
-        toast({ title: 'Test Set Created!', description: `"${newTestSet.name}" has been created with ${finalQuestions.length} questions.` });
     }
-
+    
+    toast({ title: editingTestSet ? 'Test Set Updated!' : 'Test Set Created!', description: `"${newTestSet.name}" has been saved.` });
     setIsManualCreateOpen(false);
     resetManualForm();
 };

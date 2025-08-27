@@ -69,7 +69,7 @@ export default function TestSetManagementPage() {
 
   const handleOpenCreateDialog = () => {
     resetManualForm();
-    setManualQuestions(Array(50).fill(0).map(() => ({ ...initialManualQuestion, options: { en: ['', '', '', ''], mr: ['', '', '', ''] }})));
+    setManualQuestions(Array(50).fill(0).map(() => JSON.parse(JSON.stringify(initialManualQuestion))));
     setIsManualCreateOpen(true);
   };
 
@@ -84,12 +84,12 @@ export default function TestSetManagementPage() {
         subject: testSet.subject,
     });
     // Pad with empty questions to ensure there are always 50 fields
-    const questionsToEdit = [...testSet.questions];
+    const questionsToEdit = JSON.parse(JSON.stringify(testSet.questions));
     while (questionsToEdit.length < 50) {
-        questionsToEdit.push({ ...initialManualQuestion, id: '', options: { en: ['', '', '', ''], mr: ['', '', '', ''] }});
+        questionsToEdit.push(JSON.parse(JSON.stringify(initialManualQuestion)));
     }
-    setManualQuestions(questionsToEdit.map(({ id, ...rest }) => rest)); // remove id for manual question type
-    setStep(1); // Start at step 1 for editing details
+    setManualQuestions(questionsToEdit.map(({ id, ...rest }: Question) => rest));
+    setStep(1);
     setIsManualCreateOpen(true);
   };
 
@@ -177,7 +177,7 @@ export default function TestSetManagementPage() {
       }
   }
 
-  const handleQuestionChange = (qIndex: number, field: 'text' | 'option' | 'answer', lang: 'en' | 'mr', value: string, optionIndex?: number) => {
+ const handleQuestionChange = (qIndex: number, field: 'text' | 'option' | 'answer', lang: 'en' | 'mr', value: string, optionIndex?: number) => {
       setManualQuestions(prevQuestions => {
         return prevQuestions.map((q, index) => {
             if (index !== qIndex) {
@@ -211,14 +211,14 @@ export default function TestSetManagementPage() {
  const handleManualSubmit = () => {
     const finalQuestions = manualQuestions
         .filter(q => q.text.en?.trim() !== '' && q.text.mr?.trim() !== '')
-        .map((q, i) => ({ ...q, id: `Q-${manualSetDetails.id}-${i}` }));
+        .map((q, i) => ({ ...q, id: `Q-${editingTestSet ? editingTestSet.id : 'NEW'}-${i}` }));
 
     if (finalQuestions.length === 0) {
         toast({ variant: 'destructive', title: 'No Questions Added', description: 'Please add at least one complete question.' });
         return;
     }
 
-    const newTestSetData: TestSet = {
+    const newTestSetData = {
         id: editingTestSet ? editingTestSet.id : `MSET-${Date.now()}`,
         name: manualSetDetails.name,
         board: manualSetDetails.board as any,
@@ -228,18 +228,11 @@ export default function TestSetManagementPage() {
     };
 
     if (editingTestSet) {
-        updateTestSet(newTestSetData); // Update central store
-        setTestSets(prevSets => {
-            const index = prevSets.findIndex(ts => ts.id === newTestSetData.id);
-            const updatedSets = [...prevSets];
-            if (index > -1) {
-                updatedSets[index] = newTestSetData;
-            }
-            return updatedSets;
-        });
+        updateTestSet(newTestSetData);
+        setTestSets(prev => prev.map(ts => ts.id === newTestSetData.id ? newTestSetData : ts));
     } else {
-        addTestSet(newTestSetData); // Update central store
-        setTestSets(prevSets => [...prevSets, newTestSetData]);
+        addTestSet(newTestSetData);
+        setTestSets(prev => [...prev, newTestSetData]);
     }
     
     toast({ title: editingTestSet ? 'Test Set Updated!' : 'Test Set Created!', description: `"${newTestSetData.name}" has been saved.` });
@@ -450,5 +443,3 @@ export default function TestSetManagementPage() {
     </div>
   );
 }
-
-    

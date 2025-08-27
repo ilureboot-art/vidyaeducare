@@ -224,7 +224,7 @@ export default function TestSetManagementPage() {
 
     if (editingTestSet) {
         updateTestSet(newTestSet);
-        setTestSets(allTestSets);
+        setTestSets([...allTestSets]);
     } else {
         addTestSet(newTestSet);
         setTestSets(prevSets => [...prevSets, newTestSet]);

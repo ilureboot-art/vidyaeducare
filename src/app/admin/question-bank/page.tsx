@@ -93,7 +93,7 @@ export default function TestSetManagementPage() {
 
   const handleDelete = (testSetId: string) => {
     deleteTestSet(testSetId);
-    setTestSets([...allTestSets]);
+    setTestSets(prevSets => prevSets.filter(ts => ts.id !== testSetId));
     toast({ title: "Test Set Deleted", description: "The test set has been removed from the bank."});
   }
 
@@ -126,7 +126,7 @@ export default function TestSetManagementPage() {
             };
             
             addTestSet(newTestSet);
-            setTestSets([...allTestSets]);
+            setTestSets(prevSets => [...prevSets, newTestSet]);
             
             toast({
                 title: "Test Set Uploaded!",
@@ -200,13 +200,13 @@ export default function TestSetManagementPage() {
       
       if (editingTestSet) {
         updateTestSet(newTestSet);
+        setTestSets(prevSets => prevSets.map(ts => ts.id === newTestSet.id ? newTestSet : ts));
         toast({ title: 'Test Set Updated!', description: `"${newTestSet.name}" has been saved.`});
       } else {
         addTestSet(newTestSet);
+        setTestSets(prevSets => [...prevSets, newTestSet]);
         toast({ title: 'Test Set Created!', description: `"${newTestSet.name}" has been created with ${finalQuestions.length} questions.`});
       }
-      
-      setTestSets([...allTestSets]);
       
       setIsManualCreateOpen(false);
       resetManualForm();

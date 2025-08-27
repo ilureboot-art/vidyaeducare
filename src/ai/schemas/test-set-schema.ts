@@ -19,17 +19,17 @@ const QuestionSchema = z.object({
     mr: z.array(z.string()).length(4).describe('An array of 4 Marathi options.'),
   }),
   correctAnswer: z.object({
-    en: z.string().describe('The correct English answer, which must match one of the English options.'),
-    mr: z.string().describe('The correct Marathi answer, which must match one of the Marathi options.'),
+    en: z.string().describe('The correct English answer, which must exactly match one of the English options.'),
+    mr: z.string().describe('The correct Marathi answer, which must exactly match one of the Marathi options.'),
   }),
 });
 
 export const TestSetSchema = z.object({
   name: z.string().describe("A suitable name for the test set, derived from the content (e.g., 'Science Practice Test 1')."),
-  board: z.enum(["CBSE", "ICSE", "SSC"]).describe("The educational board, inferred from the content."),
+  board: z.enum(["CBSE", "ICSE", "SSC"]).describe("The educational board (CBSE, ICSE, or SSC), inferred from the content."),
   standard: z.string().describe("The grade or standard (e.g., '10th'), inferred from the content."),
   subject: z.string().describe("The subject (e.g., 'Science'), inferred from the content."),
-  questions: z.array(QuestionSchema),
+  questions: z.array(QuestionSchema).describe("An array of all the questions extracted from the document."),
 });
 
 export type TestSetPayload = z.infer<typeof TestSetSchema>;

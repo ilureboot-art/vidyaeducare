@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Trash2, Edit, Upload, BookCopy, FilePlus, ScrollText, ArrowRight, Save } from "lucide-react";
+import { MoreHorizontal, Trash2, Edit, Upload, BookCopy, FilePlus, ScrollText, ArrowRight, Save, Loader2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -31,6 +31,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { allTestSets, addTestSet, deleteTestSet, updateTestSet, type TestSet, type Question } from "@/lib/question-bank";
 import { academicConfig } from "@/lib/academic-config";
+import { Packer, Document as DocxDocument } from "docx";
+import { parseQuestionsFromText } from "@/ai/flows/question-parser-flow";
+
 
 type ManualQuestion = Omit<Question, 'id'>;
 
@@ -45,6 +48,7 @@ export default function TestSetManagementPage() {
   const { toast } = useToast();
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [isManualCreateOpen, setIsManualCreateOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   
   // State for manual creation/editing
   const [step, setStep] = useState(1);
@@ -53,7 +57,6 @@ export default function TestSetManagementPage() {
   const [manualQuestions, setManualQuestions] = useState<ManualQuestion[]>([]);
 
   useEffect(() => {
-    // Refresh local state if the central data store changes
     setTestSets([...allTestSets]);
   }, []);
 
@@ -97,55 +100,73 @@ export default function TestSetManagementPage() {
     toast({ title: "Test Set Deleted", description: "The test set has been removed from the bank."});
   }
 
-  const handleBulkUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleBulkUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        try {
-            const content = e.target?.result;
-            if (typeof content !== 'string') throw new Error("File content is not readable.");
-            
-            const uploadedSet = JSON.parse(content);
 
-            if (!uploadedSet.name || !uploadedSet.board || !uploadedSet.standard || !uploadedSet.subject || !Array.isArray(uploadedSet.questions)) {
-                throw new Error("JSON is missing required fields: name, board, standard, subject, or questions array.");
+    setIsUploading(true);
+
+    try {
+        let uploadedSet: Omit<TestSet, 'id' | 'questions'> & { questions: Omit<Question, 'id'>[] };
+
+        if (file.type === 'application/json') {
+            const content = await file.text();
+            uploadedSet = JSON.parse(content);
+        } else if (file.name.endsWith('.docx')) {
+            const arrayBuffer = await file.arrayBuffer();
+            const doc = new DocxDocument({ sections: [] }); // Temporary doc to use parser
+            const text = await doc.readText(arrayBuffer);
+            
+            if (!text.trim()) {
+                throw new Error("The DOCX file appears to be empty or could not be read.");
             }
             
-            uploadedSet.questions.forEach((q: any, index: number) => {
-                 if (!q.text?.en || !q.options?.en || !q.correctAnswer?.en || !q.text?.mr || !q.options?.mr || !q.correctAnswer?.mr) {
-                    throw new Error(`Question at index ${index} is missing required fields (text, options, correctAnswer in both languages).`);
-                 }
-            });
+            toast({ title: "Parsing Document...", description: "The AI is analyzing your document. This may take a moment." });
+            uploadedSet = await parseQuestionsFromText({ documentText: text });
 
-            const newTestSet: TestSet = { 
-                ...uploadedSet, 
-                id: `SET-${String(Date.now()).slice(-6)}-${Math.random()}`,
-                questions: uploadedSet.questions.map((q: any, i: number) => ({ ...q, id: `Q-${i}`}))
-            };
-            
-            addTestSet(newTestSet);
-            setTestSets(prevSets => [...prevSets, newTestSet]);
-            
-            toast({
-                title: "Test Set Uploaded!",
-                description: `"${newTestSet.name}" with ${newTestSet.questions.length} questions has been successfully added.`
-            });
-            setIsBulkUploadOpen(false);
-
-        } catch (error) {
-            console.error("Bulk upload error:", error);
-            const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-             toast({
-                variant: 'destructive',
-                title: "Upload Failed",
-                description: `Failed to parse JSON file. ${errorMessage}`,
-                duration: 9000
-             });
+        } else {
+            throw new Error("Unsupported file type. Please upload a .json or .docx file.");
         }
-    };
-    reader.readAsText(file);
+
+        if (!uploadedSet.name || !uploadedSet.board || !uploadedSet.standard || !uploadedSet.subject || !Array.isArray(uploadedSet.questions)) {
+            throw new Error("Processed data is missing required fields: name, board, standard, subject, or questions array.");
+        }
+        
+        uploadedSet.questions.forEach((q: any, index: number) => {
+             if (!q.text?.en || !q.options?.en || !q.correctAnswer?.en || !q.text?.mr || !q.options?.mr || !q.correctAnswer?.mr) {
+                throw new Error(`Question at index ${index} is missing required fields (text, options, correctAnswer in both languages).`);
+             }
+        });
+
+        const newTestSet: TestSet = { 
+            ...uploadedSet, 
+            id: `SET-${String(Date.now()).slice(-6)}-${Math.random()}`,
+            questions: uploadedSet.questions.map((q, i) => ({ ...q, id: `Q-${i}`}))
+        };
+        
+        addTestSet(newTestSet);
+        setTestSets(prevSets => [...prevSets, newTestSet]);
+        
+        toast({
+            title: "Test Set Uploaded!",
+            description: `"${newTestSet.name}" with ${newTestSet.questions.length} questions has been successfully added.`
+        });
+        setIsBulkUploadOpen(false);
+
+    } catch (error) {
+        console.error("Bulk upload error:", error);
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+         toast({
+            variant: 'destructive',
+            title: "Upload Failed",
+            description: `Failed to process file. ${errorMessage}`,
+            duration: 9000
+         });
+    } finally {
+        setIsUploading(false);
+         // Reset file input
+        event.target.value = '';
+    }
   }
   
   const handleManualSetDetailSubmit = (e: React.FormEvent) => {
@@ -183,34 +204,38 @@ export default function TestSetManagementPage() {
       });
   }
   
-  const handleManualSubmit = () => {
-      // Filter out empty questions before saving
-      const finalQuestions = manualQuestions
-        .filter(q => (q.text.en?.trim() !== '' && q.text.mr?.trim() !== '') || (q.options.en.some(o => o?.trim()) && q.options.mr.some(o => o?.trim())))
+ const handleManualSubmit = () => {
+    const finalQuestions = manualQuestions
+        .filter(q => q.text.en?.trim() !== '' && q.text.mr?.trim() !== '')
         .map((q, i) => ({ ...q, id: `Q-${manualSetDetails.id}-${i}` }));
 
-      const newTestSet: TestSet = {
-          id: editingTestSet ? editingTestSet.id : `MSET-${Date.now()}`,
-          name: manualSetDetails.name,
-          board: manualSetDetails.board as any,
-          standard: manualSetDetails.standard,
-          subject: manualSetDetails.subject,
-          questions: finalQuestions
-      };
-      
-      if (editingTestSet) {
+    if (finalQuestions.length === 0) {
+        toast({ variant: 'destructive', title: 'No Questions Added', description: 'Please add at least one complete question.' });
+        return;
+    }
+
+    const newTestSet: TestSet = {
+        id: editingTestSet ? editingTestSet.id : `MSET-${Date.now()}`,
+        name: manualSetDetails.name,
+        board: manualSetDetails.board as any,
+        standard: manualSetDetails.standard,
+        subject: manualSetDetails.subject,
+        questions: finalQuestions,
+    };
+
+    if (editingTestSet) {
         updateTestSet(newTestSet);
-        setTestSets(prevSets => prevSets.map(ts => ts.id === newTestSet.id ? newTestSet : ts));
-        toast({ title: 'Test Set Updated!', description: `"${newTestSet.name}" has been saved.`});
-      } else {
+        setTestSets(prevSets => prevSets.map(ts => (ts.id === newTestSet.id ? newTestSet : ts)));
+        toast({ title: 'Test Set Updated!', description: `"${newTestSet.name}" has been saved.` });
+    } else {
         addTestSet(newTestSet);
         setTestSets(prevSets => [...prevSets, newTestSet]);
-        toast({ title: 'Test Set Created!', description: `"${newTestSet.name}" has been created with ${finalQuestions.length} questions.`});
-      }
-      
-      setIsManualCreateOpen(false);
-      resetManualForm();
-  }
+        toast({ title: 'Test Set Created!', description: `"${newTestSet.name}" has been created with ${finalQuestions.length} questions.` });
+    }
+
+    setIsManualCreateOpen(false);
+    resetManualForm();
+};
 
   return (
     <div className="space-y-6">
@@ -222,7 +247,7 @@ export default function TestSetManagementPage() {
               <div>
                 <CardTitle>All Test Sets</CardTitle>
                 <CardDescription>
-                    Upload and manage pre-defined sets of questions for mock tests.
+                    Create or upload sets of questions for mock tests.
                 </CardDescription>
               </div>
               <div className="flex gap-2">
@@ -231,7 +256,7 @@ export default function TestSetManagementPage() {
                       setIsManualCreateOpen(isOpen);
                   }}>
                     <DialogTrigger asChild>
-                        <Button variant="outline" onClick={handleOpenCreateDialog}><FilePlus className="mr-2 h-4 w-4" /> Create Test Set</Button>
+                        <Button variant="outline" onClick={handleOpenCreateDialog}><FilePlus className="mr-2 h-4 w-4" /> Create Manually</Button>
                     </DialogTrigger>
                     <DialogContent className="max-w-4xl h-[90vh]">
                         {step === 1 && (
@@ -318,13 +343,13 @@ export default function TestSetManagementPage() {
 
                 <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
                     <DialogTrigger asChild>
-                        <Button><Upload className="mr-2 h-4 w-4" /> Upload JSON</Button>
+                        <Button><Upload className="mr-2 h-4 w-4" /> Bulk Upload</Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-xl">
                         <DialogHeader>
-                            <DialogTitle>Upload a Test Set</DialogTitle>
+                            <DialogTitle>Bulk Upload a Test Set</DialogTitle>
                             <DialogDescription>
-                                Upload a JSON file containing a named test set.
+                                Upload a JSON or DOCX file containing a test set. The AI will parse DOCX files automatically.
                             </DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4 py-4">
@@ -341,16 +366,22 @@ export default function TestSetManagementPage() {
       "text": { "en": "Q1 Text", "mr": "Q1 मजकूर" },
       "options": { "en": ["A","B","C","D"], "mr": ["अ","ब","क","ड"] },
       "correctAnswer": { "en": "A", "mr": "अ" }
-    },
-    // ...more questions
+    }
   ]
 }`}
                                 </pre>
+                                <p className="text-sm text-muted-foreground">For DOCX files, just provide the questions, options, and answers in a clear list format.</p>
                             </div>
                              <div className="space-y-2">
-                                <Label htmlFor="json-upload">Test Set JSON File</Label>
-                                <Input id="json-upload" type="file" accept=".json" onChange={handleBulkUpload} />
+                                <Label htmlFor="json-upload">Test Set File</Label>
+                                <Input id="json-upload" type="file" accept=".json,.docx" onChange={handleBulkUpload} disabled={isUploading} />
                             </div>
+                             {isUploading && (
+                                <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                                    <Loader2 className="animate-spin h-5 w-5" />
+                                    <span>Processing file...</span>
+                                </div>
+                             )}
                         </div>
                     </DialogContent>
                 </Dialog>

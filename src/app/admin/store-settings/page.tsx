@@ -26,64 +26,66 @@ export default function AdminStoreSettingsPage() {
   const [referralBonus, setLocalReferralBonus] = useState(0);
   const [referboltSub, setLocalReferboltSub] = useState<ReferboltSubscription>({ name: '', price: 0, description: '', ticketBonus: 0, gstRate: 0, hsnSacCode: '' });
   
-  // State for academic config
   const [boards, setLocalBoards] = useState<string[]>([]);
   const [standards, setLocalStandards] = useState<string[]>([]);
   const [subjects, setLocalSubjects] = useState<string[]>([]);
 
   useEffect(() => {
-    setLocalPackages(storeConfig.packages);
-    setLocalMockTestPackages(storeConfig.mockTestPackages);
+    setLocalPackages([...storeConfig.packages]);
+    setLocalMockTestPackages([...storeConfig.mockTestPackages]);
     setLocalReferralBonus(storeConfig.referralBonus);
-    setLocalReferboltSub(storeConfig.referboltSubscription);
-    // Load academic configs
+    setLocalReferboltSub({...storeConfig.referboltSubscription});
     setLocalBoards([...academicConfig.boards]);
     setLocalStandards([...academicConfig.standards]);
     setLocalSubjects([...academicConfig.subjects]);
   }, []);
 
   const handlePackageChange = (index: number, field: keyof TicketPackage, value: string | number | boolean) => {
-    const newPackages = [...packages];
-    const pkg = { ...newPackages[index] };
+    setLocalPackages(currentPackages => {
+        const newPackages = [...currentPackages];
+        const pkg = { ...newPackages[index] };
 
-    if (field === 'price' || field === 'tickets' || field === 'games' || field === 'gstRate') {
-        value = Number(value) || 0;
-    }
-    
-    (pkg as any)[field] = value;
+        if (field === 'price' || field === 'tickets' || field === 'games' || field === 'gstRate') {
+            value = Number(value) || 0;
+        }
+        
+        (pkg as any)[field] = value;
 
-    if (field === 'bestValue' && value === true) {
-        newPackages.forEach((p, i) => {
-            if (i !== index) {
-                p.bestValue = false;
-            }
-        });
-    }
+        if (field === 'bestValue' && value === true) {
+            newPackages.forEach((p, i) => {
+                if (i !== index) {
+                    p.bestValue = false;
+                }
+            });
+        }
 
-    newPackages[index] = pkg;
-    setLocalPackages(newPackages);
+        newPackages[index] = pkg;
+        return newPackages;
+    });
   };
   
   const handleMockTestPackageChange = (index: number, field: keyof MockTestPackage, value: string | number | boolean) => {
-    const newPackages = [...mockTestPackages];
-    const pkg = { ...newPackages[index] };
+    setLocalMockTestPackages(currentPackages => {
+        const newPackages = [...currentPackages];
+        const pkg = { ...newPackages[index] };
 
-    if (field === 'price' || field === 'months' || field === 'gstRate') {
-        value = Number(value) || 0;
-    }
-    
-    (pkg as any)[field] = value;
+        if (field === 'price' || field === 'months' || field === 'gstRate') {
+            value = Number(value) || 0;
+        }
+        
+        (pkg as any)[field] = value;
 
-    if (field === 'bestValue' && value === true) {
-        newPackages.forEach((p, i) => {
-            if (i !== index) {
-                p.bestValue = false;
-            }
-        });
-    }
+        if (field === 'bestValue' && value === true) {
+            newPackages.forEach((p, i) => {
+                if (i !== index) {
+                    p.bestValue = false;
+                }
+            });
+        }
 
-    newPackages[index] = pkg;
-    setLocalMockTestPackages(newPackages);
+        newPackages[index] = pkg;
+        return newPackages;
+    });
   };
   
   const handleReferboltChange = (field: keyof ReferboltSubscription, value: string | number) => {
@@ -98,19 +100,19 @@ export default function AdminStoreSettingsPage() {
   };
 
   const addPackage = () => {
-    setLocalPackages([...packages, { tickets: 0, price: 0, bestValue: false, games: 0, gstRate: 28, hsnSacCode: '998439' }]);
+    setLocalPackages(prev => [...prev, { tickets: 0, price: 0, bestValue: false, games: 0, gstRate: 28, hsnSacCode: '998439' }]);
   };
 
   const removePackage = (index: number) => {
-    setLocalPackages(packages.filter((_, i) => i !== index));
+    setLocalPackages(prev => prev.filter((_, i) => i !== index));
   };
   
   const addMockTestPackage = () => {
-    setLocalMockTestPackages([...mockTestPackages, { name: 'New Subscription', price: 0, months: 1, bestValue: false, gstRate: 18, hsnSacCode: '999294' }]);
+    setLocalMockTestPackages(prev => [...prev, { name: 'New Subscription', price: 0, months: 1, bestValue: false, gstRate: 18, hsnSacCode: '999294' }]);
   };
   
   const removeMockTestPackage = (index: number) => {
-      setLocalMockTestPackages(mockTestPackages.filter((_,i) => i !== index));
+      setLocalMockTestPackages(prev => prev.filter((_,i) => i !== index));
   };
 
   const handleDynamicListChange = (setter: React.Dispatch<React.SetStateAction<string[]>>, index: number, value: string) => {
@@ -301,7 +303,7 @@ export default function AdminStoreSettingsPage() {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="referralBonus">Referral & Welcome Bonus (₹)</Label>
+                <Label htmlFor="referralBonus">Referral &amp; Welcome Bonus (₹)</Label>
                 <Input id="referralBonus" type="number" value={referralBonus} onChange={(e) => setLocalReferralBonus(Number(e.target.value))} />
                 <p className="text-xs text-muted-foreground">This amount is given to both the referrer and the new user.</p>
               </div>

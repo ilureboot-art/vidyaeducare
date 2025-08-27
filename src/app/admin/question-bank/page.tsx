@@ -50,7 +50,6 @@ export default function TestSetManagementPage() {
   const [isManualCreateOpen, setIsManualCreateOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   
-  // State for manual creation/editing
   const [step, setStep] = useState(1);
   const [editingTestSet, setEditingTestSet] = useState<TestSet | null>(null);
   const [manualSetDetails, setManualSetDetails] = useState({ id: '', name: '', board: '', standard: '', subject: '' });
@@ -83,7 +82,6 @@ export default function TestSetManagementPage() {
         standard: testSet.standard,
         subject: testSet.subject,
     });
-    // Pad with empty questions to ensure there are always 50 fields
     const questionsToEdit = JSON.parse(JSON.stringify(testSet.questions));
     while (questionsToEdit.length < 50) {
         questionsToEdit.push(JSON.parse(JSON.stringify(initialManualQuestion)));
@@ -163,7 +161,6 @@ export default function TestSetManagementPage() {
          });
     } finally {
         setIsUploading(false);
-         // Reset file input
         event.target.value = '';
     }
   }
@@ -187,16 +184,9 @@ export default function TestSetManagementPage() {
         } else if (field === 'option' && optionIndex !== undefined) {
             updatedQuestion.options[lang][optionIndex] = value;
         } else if (field === 'answer') {
-            const selectedOptionMr = value;
-            const selectedOptionIndex = updatedQuestion.options.mr.findIndex((opt: string) => opt === selectedOptionMr);
-            
-            if (selectedOptionIndex !== -1) {
-                updatedQuestion.correctAnswer.mr = selectedOptionMr;
-                updatedQuestion.correctAnswer.en = updatedQuestion.options.en[selectedOptionIndex];
-            } else {
-                updatedQuestion.correctAnswer.mr = '';
-                updatedQuestion.correctAnswer.en = '';
-            }
+            updatedQuestion.correctAnswer.mr = value;
+            const selectedOptionIndex = updatedQuestion.options.mr.findIndex((opt: string) => opt === value);
+            updatedQuestion.correctAnswer.en = selectedOptionIndex !== -1 ? updatedQuestion.options.en[selectedOptionIndex] : '';
         }
         newQuestions[qIndex] = updatedQuestion;
         return newQuestions;

@@ -223,18 +223,18 @@ export default function TestSetManagementPage() {
     };
 
     if (editingTestSet) {
-        updateTestSet(newTestSet);
-        setTestSets(prev => {
-            const index = prev.findIndex(ts => ts.id === newTestSet.id);
+        updateTestSet(newTestSet); // Update central store
+        setTestSets(prevSets => {
+            const index = prevSets.findIndex(ts => ts.id === newTestSet.id);
             if (index > -1) {
-                const updatedSets = [...prev];
+                const updatedSets = [...prevSets];
                 updatedSets[index] = newTestSet;
                 return updatedSets;
             }
-            return prev; // Should not happen if editing
+            return prevSets;
         });
     } else {
-        addTestSet(newTestSet);
+        addTestSet(newTestSet); // Update central store
         setTestSets(prevSets => [...prevSets, newTestSet]);
     }
     

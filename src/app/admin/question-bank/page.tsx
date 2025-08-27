@@ -224,7 +224,15 @@ export default function TestSetManagementPage() {
 
     if (editingTestSet) {
         updateTestSet(newTestSet);
-        setTestSets([...allTestSets]);
+        setTestSets(prev => {
+            const index = prev.findIndex(ts => ts.id === newTestSet.id);
+            if (index > -1) {
+                const updatedSets = [...prev];
+                updatedSets[index] = newTestSet;
+                return updatedSets;
+            }
+            return prev; // Should not happen if editing
+        });
     } else {
         addTestSet(newTestSet);
         setTestSets(prevSets => [...prevSets, newTestSet]);

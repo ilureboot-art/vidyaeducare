@@ -86,7 +86,7 @@ export default function TestSetManagementPage() {
     // Pad with empty questions to ensure there are always 50 fields
     const questionsToEdit = [...testSet.questions];
     while (questionsToEdit.length < 50) {
-        questionsToEdit.push({ ...initialManualQuestion, options: { en: ['', '', '', ''], mr: ['', '', '', ''] }});
+        questionsToEdit.push({ ...initialManualQuestion, id: '', options: { en: ['', '', '', ''], mr: ['', '', '', ''] }});
     }
     setManualQuestions(questionsToEdit);
     setStep(1); // Start at step 1 for editing details
@@ -179,29 +179,33 @@ export default function TestSetManagementPage() {
 
   const handleQuestionChange = (qIndex: number, field: 'text' | 'option' | 'answer', lang: 'en' | 'mr', value: string, optionIndex?: number) => {
       setManualQuestions(prevQuestions => {
-        const newQuestions = [...prevQuestions];
-        const question = { ...newQuestions[qIndex], text: {...newQuestions[qIndex].text}, options: {en: [...newQuestions[qIndex].options.en], mr: [...newQuestions[qIndex].options.mr]}, correctAnswer: {...newQuestions[qIndex].correctAnswer} };
+          const newQuestions = [...prevQuestions];
+          const questionToUpdate = { ...newQuestions[qIndex] };
 
-        if (field === 'text') {
-            question.text[lang] = value;
-        } else if (field === 'option' && optionIndex !== undefined) {
-            question.options[lang][optionIndex] = value;
-        } else if (field === 'answer') {
-            const selectedOptionMr = value;
-            const selectedOptionIndex = question.options.mr.findIndex(opt => opt === selectedOptionMr);
-            
-            if (selectedOptionIndex !== -1) {
-                question.correctAnswer.mr = selectedOptionMr;
-                question.correctAnswer.en = question.options.en[selectedOptionIndex];
-            } else {
-                question.correctAnswer.mr = '';
-                question.correctAnswer.en = '';
-            }
-        }
-        newQuestions[qIndex] = question;
-        return newQuestions;
+          if (field === 'text') {
+              questionToUpdate.text = { ...questionToUpdate.text, [lang]: value };
+          } else if (field === 'option' && optionIndex !== undefined) {
+              const newOptions = { ...questionToUpdate.options };
+              newOptions[lang] = [...newOptions[lang]];
+              newOptions[lang][optionIndex] = value;
+              questionToUpdate.options = newOptions;
+          } else if (field === 'answer') {
+              const selectedOptionMr = value;
+              const selectedOptionIndex = questionToUpdate.options.mr.findIndex(opt => opt === selectedOptionMr);
+              
+              if (selectedOptionIndex !== -1) {
+                  questionToUpdate.correctAnswer = {
+                      mr: selectedOptionMr,
+                      en: questionToUpdate.options.en[selectedOptionIndex]
+                  };
+              } else {
+                  questionToUpdate.correctAnswer = { mr: '', en: '' };
+              }
+          }
+          newQuestions[qIndex] = questionToUpdate;
+          return newQuestions;
       });
-  }
+  };
   
  const handleManualSubmit = () => {
     const finalQuestions = manualQuestions
@@ -213,7 +217,7 @@ export default function TestSetManagementPage() {
         return;
     }
 
-    const newTestSet: TestSet = {
+    const newTestSetData: TestSet = {
         id: editingTestSet ? editingTestSet.id : `MSET-${Date.now()}`,
         name: manualSetDetails.name,
         board: manualSetDetails.board as any,
@@ -223,22 +227,22 @@ export default function TestSetManagementPage() {
     };
 
     if (editingTestSet) {
-        updateTestSet(newTestSet); // Update central store
+        updateTestSet(newTestSetData); // Update central store
         setTestSets(prevSets => {
-            const index = prevSets.findIndex(ts => ts.id === newTestSet.id);
+            const index = prevSets.findIndex(ts => ts.id === newTestSetData.id);
             if (index > -1) {
                 const updatedSets = [...prevSets];
-                updatedSets[index] = newTestSet;
+                updatedSets[index] = newTestSetData;
                 return updatedSets;
             }
             return prevSets;
         });
     } else {
-        addTestSet(newTestSet); // Update central store
-        setTestSets(prevSets => [...prevSets, newTestSet]);
+        addTestSet(newTestSetData); // Update central store
+        setTestSets(prevSets => [...prevSets, newTestSetData]);
     }
     
-    toast({ title: editingTestSet ? 'Test Set Updated!' : 'Test Set Created!', description: `"${newTestSet.name}" has been saved.` });
+    toast({ title: editingTestSet ? 'Test Set Updated!' : 'Test Set Created!', description: `"${newTestSetData.name}" has been saved.` });
     setIsManualCreateOpen(false);
     resetManualForm();
 };
@@ -446,3 +450,5 @@ export default function TestSetManagementPage() {
     </div>
   );
 }
+
+    

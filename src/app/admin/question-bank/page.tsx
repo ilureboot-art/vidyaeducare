@@ -178,35 +178,31 @@ export default function TestSetManagementPage() {
   }
 
  const handleQuestionChange = (qIndex: number, field: 'text' | 'option' | 'answer', lang: 'en' | 'mr', value: string, optionIndex?: number) => {
-      setManualQuestions(prevQuestions => {
-        return prevQuestions.map((q, index) => {
-            if (index !== qIndex) {
-                return q;
-            }
+    setManualQuestions(prevQuestions => {
+        const newQuestions = [...prevQuestions];
+        const updatedQuestion = JSON.parse(JSON.stringify(newQuestions[qIndex]));
 
-            // Create a deep copy to avoid mutation
-            const updatedQuestion = JSON.parse(JSON.stringify(q));
-
-            if (field === 'text') {
-                updatedQuestion.text[lang] = value;
-            } else if (field === 'option' && optionIndex !== undefined) {
-                updatedQuestion.options[lang][optionIndex] = value;
-            } else if (field === 'answer') {
-                const selectedOptionMr = value;
-                const selectedOptionIndex = updatedQuestion.options.mr.findIndex((opt: string) => opt === selectedOptionMr);
-                
-                if (selectedOptionIndex !== -1) {
-                    updatedQuestion.correctAnswer.mr = selectedOptionMr;
-                    updatedQuestion.correctAnswer.en = updatedQuestion.options.en[selectedOptionIndex];
-                } else {
-                    updatedQuestion.correctAnswer.mr = '';
-                    updatedQuestion.correctAnswer.en = '';
-                }
+        if (field === 'text') {
+            updatedQuestion.text[lang] = value;
+        } else if (field === 'option' && optionIndex !== undefined) {
+            updatedQuestion.options[lang][optionIndex] = value;
+        } else if (field === 'answer') {
+            const selectedOptionMr = value;
+            const selectedOptionIndex = updatedQuestion.options.mr.findIndex((opt: string) => opt === selectedOptionMr);
+            
+            if (selectedOptionIndex !== -1) {
+                updatedQuestion.correctAnswer.mr = selectedOptionMr;
+                updatedQuestion.correctAnswer.en = updatedQuestion.options.en[selectedOptionIndex];
+            } else {
+                updatedQuestion.correctAnswer.mr = '';
+                updatedQuestion.correctAnswer.en = '';
             }
-            return updatedQuestion;
-        });
-      });
-  };
+        }
+        newQuestions[qIndex] = updatedQuestion;
+        return newQuestions;
+    });
+};
+
   
  const handleManualSubmit = () => {
     const finalQuestions = manualQuestions

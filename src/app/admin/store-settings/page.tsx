@@ -87,12 +87,14 @@ export default function AdminStoreSettingsPage() {
   };
   
   const handleReferboltChange = (field: keyof ReferboltSubscription, value: string | number) => {
-    const newSub = { ...referboltSub };
-     if (field === 'price' || field === 'ticketBonus' || field === 'gstRate') {
-      value = Number(value) || 0;
-    }
-    (newSub as any)[field] = value;
-    setLocalReferboltSub(newSub);
+    setLocalReferboltSub(prev => {
+        const newSub = { ...prev };
+        if (field === 'price' || field === 'ticketBonus' || field === 'gstRate') {
+            value = Number(value) || 0;
+        }
+        (newSub as any)[field] = value;
+        return newSub;
+    });
   };
 
   const addPackage = () => {
@@ -204,7 +206,7 @@ export default function AdminStoreSettingsPage() {
                     <Label htmlFor={`games-${index}`}>Games Equivalent</Label>
                     <Input id={`games-${index}`} type="number" value={pkg.games} onChange={(e) => handlePackageChange(index, 'games', e.target.value)} />
                  </div>
-                <Button variant="ghost" size="icon" className="absolute top-2 right-2 text-muted-foreground hover:text-destructive" onClick={() => removePackage(index)}>
+                <Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2 text-muted-foreground hover:text-destructive" onClick={() => removePackage(index)}>
                   <Trash2 className="h-4 w-4" />
                   <span className="sr-only">Remove Package</span>
                 </Button>
@@ -251,7 +253,7 @@ export default function AdminStoreSettingsPage() {
                         <Checkbox id={`mt-best-value-${index}`} checked={pkg.bestValue} onCheckedChange={(checked) => handleMockTestPackageChange(index, 'bestValue', !!checked)} />
                         <Label htmlFor={`mt-best-value-${index}`}>Mark as 'Best Value'</Label>
                     </div>
-                    <Button variant="ghost" size="icon" className="absolute top-2 right-2 text-muted-foreground hover:text-destructive" onClick={() => removeMockTestPackage(index)}>
+                    <Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2 text-muted-foreground hover:text-destructive" onClick={() => removeMockTestPackage(index)}>
                         <Trash2 className="h-4 w-4" />
                         <span className="sr-only">Remove Package</span>
                     </Button>

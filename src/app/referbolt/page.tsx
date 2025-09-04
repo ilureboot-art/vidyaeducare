@@ -16,7 +16,7 @@ import { storeConfig } from "@/lib/store-config";
 
 // Data for ReferBolt would come from a backend for the logged-in user
 const initialReferboltData = {
-  isSubscribed: true,
+  isSubscribed: false, // Set to false to show the splash page initially
   autoRenew: false,
   totalCommissions: 0,
   totalReferrals: 0,
@@ -31,6 +31,7 @@ const benefits = [
     { text: "Earn from both direct & indirect referrals as your network grows." },
     { text: "Get a bonus of 4 game tickets ( worth 8 games ₹100/-) upon subscribing." },
     { text: "Unlimited earning potential through continuous cycles." },
+    { text: "Get free access by purchasing any Mock Test subscription." },
 ];
 
 export default function ReferBoltPage() {

@@ -87,33 +87,50 @@ export default function StorePage() {
 
       // Simulate IBA commission
       if (hasReferral) {
-        const totalCommission = discountedBasePrice * 0.1765;
+        const baseCommissionRate = 0.1765;
+        // In a real app, you would check if the IBA is a ReferBolt subscriber
+        const isIbaReferboltSubscriber = true; // Simulating for demo
+        const bonusCommission = isIbaReferboltSubscriber ? (storeConfig.referboltSettings.ibaBonusCommission / 100) : 0;
+        const totalCommissionRate = baseCommissionRate + bonusCommission;
+        const totalCommission = discountedBasePrice * totalCommissionRate;
+
+        let commissionToastDescription = "";
+
         if (referralCode2.trim() !== "") {
             // Split commission
             const commissionPerIba = totalCommission / 2;
-            toast({
-                title: "IBA Commission Logged (Split)",
-                description: `Commission of ₹${commissionPerIba.toFixed(2)} each for IBA codes ${referralCode1} and ${referralCode2} has been logged. (Simulation)`,
-                duration: 7000
-            });
+            commissionToastDescription = `Commission of ₹${commissionPerIba.toFixed(2)} each for IBA codes ${referralCode1} and ${referralCode2} has been logged.`;
         } else {
             // 100% commission
-            toast({
-                title: "IBA Commission Logged",
-                description: `A commission of ₹${totalCommission.toFixed(2)} for IBA code ${referralCode1} has been logged for this sale. (Simulation)`,
-                 duration: 7000
-            });
+             commissionToastDescription = `A commission of ₹${totalCommission.toFixed(2)} for IBA code ${referralCode1} has been logged for this sale.`;
         }
+        
+        if (bonusCommission > 0) {
+            commissionToastDescription += ` (Includes a ${storeConfig.referboltSettings.ibaBonusCommission}% ReferBolt bonus!)`;
+        }
+        
+        toast({
+            title: "IBA Commission Logged (Simulation)",
+            description: commissionToastDescription,
+            duration: 9000
+        });
       }
       
       setBalance(walletData.balance);
       
       const activationCode = `PROD-${String(Date.now()).slice(-5)}`;
       validActivationCodes.push(activationCode);
+      
+      let successDescription = `You've purchased the ${product.name}. Your Activation Code is: ${activationCode}. Use this code in 'My Students' to add a profile.`;
+      
+      if (storeConfig.referboltSettings.freeAccessWithMockTest) {
+        // In a real app, you'd set the user's referbolt status to true in the DB.
+        successDescription += " As a bonus, you've been granted free access to the ReferBolt system!"
+      }
 
       toast({
         title: "Purchase Successful!",
-        description: `You've purchased the ${product.name}. Your Activation Code is: ${activationCode}. Use this code in 'My Students' to add a profile.`,
+        description: successDescription,
         duration: 10000,
       });
 

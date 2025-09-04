@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Share2, Copy, Users, IndianRupee, Goal, Percent, ShieldCheck, ChevronRight, BarChart3, TrendingUp, HelpCircle } from "lucide-react";
+import { Share2, Copy, Users, IndianRupee, Goal, Percent, ShieldCheck, ChevronRight, BarChart3, TrendingUp, HelpCircle, Zap } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -24,6 +24,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { walletData } from "@/lib/user-data";
+import { storeConfig } from "@/lib/store-config";
 
 
 const initialReferralData = {
@@ -177,6 +178,15 @@ Don't miss out on the best way to prepare for your exams and earn rewards!
                              <p className="text-2xl font-bold text-primary">17.65%</p>
                              <p className="text-sm text-muted-foreground">of base price</p>
                         </div>
+                    </div>
+                     <div className="p-4 bg-primary/10 rounded-lg border border-primary/20">
+                        <h4 className="font-semibold flex items-center gap-2"><Zap className="text-primary"/> ReferBolt Bonus</h4>
+                        <p className="text-muted-foreground text-sm mt-1">
+                            Subscribe to ReferBolt to get an additional <span className="font-bold text-primary">{storeConfig.referboltSettings.ibaBonusCommission}% commission</span> on all mock test sales you refer!
+                        </p>
+                        <Button asChild size="sm" className="mt-3">
+                            <Link href="/referbolt">Learn More</Link>
+                        </Button>
                     </div>
                      <div className="flex items-center text-sm text-muted-foreground">
                         <HelpCircle className="w-4 h-4 mr-2"/>

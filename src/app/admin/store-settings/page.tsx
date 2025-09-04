@@ -8,16 +8,18 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
-import { PlusCircle, Trash2, Zap, BookOpen, GraduationCap } from "lucide-react";
+import { PlusCircle, Trash2, Zap, BookOpen, GraduationCap, Percent } from "lucide-react";
 import type { TicketPackage, ReferboltSubscription, MockTestPackage } from "@/lib/store-config";
 import {
   storeConfig,
   setPackages,
   setReferralBonus,
   setReferboltSubscription,
-  setMockTestPackages
+  setMockTestPackages,
+  setReferboltSettings
 } from "@/lib/store-config";
 import { academicConfig, setBoards, setStandards, setSubjects } from "@/lib/academic-config";
+import { Switch } from "@/components/ui/switch";
 
 export default function AdminStoreSettingsPage() {
   const { toast } = useToast();
@@ -25,16 +27,18 @@ export default function AdminStoreSettingsPage() {
   const [mockTestPackages, setLocalMockTestPackages] = useState<MockTestPackage[]>([]);
   const [referralBonus, setLocalReferralBonus] = useState(0);
   const [referboltSub, setLocalReferboltSub] = useState<ReferboltSubscription>({ name: '', price: 0, description: '', ticketBonus: 0, gstRate: 0, hsnSacCode: '' });
+  const [referboltSettings, setLocalReferboltSettings] = useState({ freeAccessWithMockTest: true, ibaBonusCommission: 5 });
   
   const [boards, setLocalBoards] = useState<string[]>([]);
   const [standards, setLocalStandards] = useState<string[]>([]);
   const [subjects, setLocalSubjects] = useState<string[]>([]);
 
   useEffect(() => {
-    setLocalPackages([...storeConfig.packages]);
-    setLocalMockTestPackages([...storeConfig.mockTestPackages]);
+    setLocalPackages(storeConfig.packages.map(p => ({...p})));
+    setLocalMockTestPackages(storeConfig.mockTestPackages.map(p => ({...p})));
     setLocalReferralBonus(storeConfig.referralBonus);
     setLocalReferboltSub({...storeConfig.referboltSubscription});
+    setLocalReferboltSettings({...storeConfig.referboltSettings});
     setLocalBoards([...academicConfig.boards]);
     setLocalStandards([...academicConfig.standards]);
     setLocalSubjects([...academicConfig.subjects]);
@@ -138,6 +142,7 @@ export default function AdminStoreSettingsPage() {
     setMockTestPackages(mockTestPackages);
     setReferralBonus(referralBonus);
     setReferboltSubscription(referboltSub);
+    setReferboltSettings(referboltSettings);
     setBoards(boards);
     setStandards(standards);
     setSubjects(subjects);
@@ -271,7 +276,7 @@ export default function AdminStoreSettingsPage() {
         <Card className="mt-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Zap /> ReferBolt System</CardTitle>
-            <CardDescription>Configure the ReferBolt subscription and commissions.</CardDescription>
+            <CardDescription>Configure the ReferBolt subscription and access rules.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -290,6 +295,28 @@ export default function AdminStoreSettingsPage() {
                <div className="space-y-2">
                 <Label htmlFor="referbolt-hsn">HSN/SAC Code</Label>
                 <Input id="referbolt-hsn" type="text" value={referboltSub.hsnSacCode} onChange={(e) => handleReferboltChange('hsnSacCode', e.target.value)} />
+              </div>
+               <div className="md:col-span-2 space-y-4">
+                 <div className="flex items-center space-x-2 p-4 border rounded-lg">
+                    <Switch
+                        id="free-access"
+                        checked={referboltSettings.freeAccessWithMockTest}
+                        onCheckedChange={(checked) => setLocalReferboltSettings(s => ({...s, freeAccessWithMockTest: checked}))}
+                    />
+                    <Label htmlFor="free-access">Grant free ReferBolt access with any mock test purchase</Label>
+                </div>
+                 <div className="space-y-2 p-4 border rounded-lg">
+                    <Label htmlFor="iba-bonus" className="flex items-center gap-2"><Percent/> IBA Bonus Commission</Label>
+                    <Input 
+                        id="iba-bonus" 
+                        type="number" 
+                        value={referboltSettings.ibaBonusCommission} 
+                        onChange={(e) => setLocalReferboltSettings(s => ({...s, ibaBonusCommission: Number(e.target.value) || 0}))} 
+                    />
+                    <p className="text-xs text-muted-foreground">
+                        Additional commission (%) for IBAs who are also ReferBolt subscribers.
+                    </p>
+                </div>
               </div>
             </div>
           </CardContent>

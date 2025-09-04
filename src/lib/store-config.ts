@@ -57,6 +57,11 @@ export let storeConfig = {
         welcomeBonus: 2, // This is in tickets
         welcomeCoins: 50, // New welcome bonus in coins
         rewards: [100, 75, 50, 25, 10], // Now represents coins
+    },
+    
+    referboltSettings: {
+        freeAccessWithMockTest: true,
+        ibaBonusCommission: 5, // Additional 5%
     }
 };
 
@@ -80,4 +85,8 @@ export function setReferralBonus(newBonus: number) {
 
 export function setGameSettings(newSettings: { maxAttempts: number, welcomeBonus: number, rewards: number[], welcomeCoins: number }) {
     storeConfig.gameSettings = newSettings;
+}
+
+export function setReferboltSettings(newSettings: { freeAccessWithMockTest: boolean, ibaBonusCommission: number }) {
+    storeConfig.referboltSettings = newSettings;
 }

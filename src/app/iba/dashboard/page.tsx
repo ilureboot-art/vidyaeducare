@@ -182,7 +182,7 @@ Don't miss out on the best way to prepare for your exams and earn rewards!
                      <div className="p-4 bg-primary/10 rounded-lg border border-primary/20">
                         <h4 className="font-semibold flex items-center gap-2"><Zap className="text-primary"/> ReferBolt Bonus</h4>
                         <p className="text-muted-foreground text-sm mt-1">
-                            Subscribe to ReferBolt to get an additional <span className="font-bold text-primary">{storeConfig.referboltSettings.ibaBonusCommission}% commission</span> on all mock test sales you refer!
+                            Subscribe to ReferBolt to get an additional bonus commission on all mock test sales you refer!
                         </p>
                         <Button asChild size="sm" className="mt-3">
                             <Link href="/referbolt">Learn More</Link>

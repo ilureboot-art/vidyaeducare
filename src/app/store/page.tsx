@@ -216,9 +216,8 @@ export default function StorePage() {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="tests" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="tests">Mock Tests</TabsTrigger>
-              <TabsTrigger value="tickets">Game Tickets</TabsTrigger>
               <TabsTrigger value="referbolt">ReferBolt</TabsTrigger>
             </TabsList>
             <TabsContent value="tests" className="space-y-6 pt-6">

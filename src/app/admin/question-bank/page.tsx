@@ -34,13 +34,19 @@ import { academicConfig } from "@/lib/academic-config";
 import mammoth from "mammoth";
 import { parseQuestionsFromText } from "@/ai/flows/question-parser-flow";
 
-
-type ManualQuestion = Omit<Question, 'id'>;
-
-const initialManualQuestion: ManualQuestion = {
+const initialQuestionState: Omit<Question, 'id'> = {
   text: { en: '', mr: '' },
   options: { en: ['', '', '', ''], mr: ['', '', '', ''] },
   correctAnswer: { en: '', mr: '' }
+};
+
+const initialTestSetState: TestSet = {
+  id: '',
+  name: '',
+  board: 'SSC',
+  standard: '',
+  subject: '',
+  questions: [],
 };
 
 export default function TestSetManagementPage() {
@@ -52,8 +58,6 @@ export default function TestSetManagementPage() {
   
   const [step, setStep] = useState(1);
   const [editingTestSet, setEditingTestSet] = useState<TestSet | null>(null);
-  const [manualSetDetails, setManualSetDetails] = useState({ id: '', name: '', board: '', standard: '', subject: '' });
-  const [manualQuestions, setManualQuestions] = useState<ManualQuestion[]>([]);
 
   useEffect(() => {
     setTestSets([...allTestSets]);
@@ -62,31 +66,21 @@ export default function TestSetManagementPage() {
   const resetManualForm = () => {
       setStep(1);
       setEditingTestSet(null);
-      setManualSetDetails({ id: '', name: '', board: '', standard: '', subject: '' });
-      setManualQuestions([]);
   };
 
   const handleOpenCreateDialog = () => {
-    resetManualForm();
-    setManualQuestions(Array(50).fill(0).map(() => JSON.parse(JSON.stringify(initialManualQuestion))));
+    const newEmptyQuestions = Array(50).fill(null).map(() => JSON.parse(JSON.stringify(initialQuestionState)));
+    setEditingTestSet({ ...initialTestSetState, questions: newEmptyQuestions });
+    setStep(1);
     setIsManualCreateOpen(true);
   };
 
   const handleOpenEditDialog = (testSet: TestSet) => {
-    resetManualForm();
-    setEditingTestSet(testSet);
-    setManualSetDetails({
-        id: testSet.id,
-        name: testSet.name,
-        board: testSet.board,
-        standard: testSet.standard,
-        subject: testSet.subject,
-    });
-    const questionsToEdit = JSON.parse(JSON.stringify(testSet.questions));
-    while (questionsToEdit.length < 50) {
-        questionsToEdit.push(JSON.parse(JSON.stringify(initialManualQuestion)));
+    const testSetCopy = JSON.parse(JSON.stringify(testSet));
+    while (testSetCopy.questions.length < 50) {
+        testSetCopy.questions.push(JSON.parse(JSON.stringify(initialQuestionState)));
     }
-    setManualQuestions(questionsToEdit.map(({ id, ...rest }: Question) => rest));
+    setEditingTestSet(testSetCopy);
     setStep(1);
     setIsManualCreateOpen(true);
   };
@@ -165,9 +159,14 @@ export default function TestSetManagementPage() {
     }
   }
   
+  const handleSetDetailChange = (field: keyof Omit<TestSet, 'id'|'questions'>, value: string) => {
+      if (!editingTestSet) return;
+      setEditingTestSet({ ...editingTestSet, [field]: value });
+  };
+  
   const handleManualSetDetailSubmit = (e: React.FormEvent) => {
       e.preventDefault();
-      if (manualSetDetails.name && manualSetDetails.board && manualSetDetails.standard && manualSetDetails.subject) {
+      if (editingTestSet && editingTestSet.name && editingTestSet.board && editingTestSet.standard && editingTestSet.subject) {
           setStep(2);
       } else {
           toast({ variant: 'destructive', title: 'Missing Details', description: 'Please fill out all fields for the test set.'});
@@ -175,53 +174,54 @@ export default function TestSetManagementPage() {
   }
 
  const handleQuestionChange = (qIndex: number, field: 'text' | 'option' | 'answer', lang: 'en' | 'mr', value: string, optionIndex?: number) => {
-    setManualQuestions(prevQuestions => {
-        const newQuestions = [...prevQuestions];
-        const updatedQuestion = JSON.parse(JSON.stringify(newQuestions[qIndex]));
+    if (!editingTestSet) return;
 
-        if (field === 'text') {
-            updatedQuestion.text[lang] = value;
-        } else if (field === 'option' && optionIndex !== undefined) {
-            updatedQuestion.options[lang][optionIndex] = value;
-        } else if (field === 'answer') {
-            updatedQuestion.correctAnswer.mr = value;
-            const selectedOptionIndex = updatedQuestion.options.mr.findIndex((opt: string) => opt === value);
-            updatedQuestion.correctAnswer.en = selectedOptionIndex !== -1 ? updatedQuestion.options.en[selectedOptionIndex] : '';
-        }
-        newQuestions[qIndex] = updatedQuestion;
-        return newQuestions;
-    });
+    const newQuestions = [...editingTestSet.questions];
+    const questionToUpdate = JSON.parse(JSON.stringify(newQuestions[qIndex]));
+
+    if (field === 'text') {
+        questionToUpdate.text[lang] = value;
+    } else if (field === 'option' && optionIndex !== undefined) {
+        questionToUpdate.options[lang][optionIndex] = value;
+    } else if (field === 'answer') {
+        questionToUpdate.correctAnswer.mr = value;
+        const selectedOptionIndex = questionToUpdate.options.mr.findIndex((opt: string) => opt === value);
+        questionToUpdate.correctAnswer.en = selectedOptionIndex !== -1 ? questionToUpdate.options.en[selectedOptionIndex] : '';
+    }
+    
+    newQuestions[qIndex] = questionToUpdate;
+    setEditingTestSet({ ...editingTestSet, questions: newQuestions });
 };
 
   
  const handleManualSubmit = () => {
-    const finalQuestions = manualQuestions
+    if (!editingTestSet) return;
+
+    const finalQuestions = editingTestSet.questions
         .filter(q => q.text.en?.trim() !== '' && q.text.mr?.trim() !== '')
-        .map((q, i) => ({ ...q, id: `Q-${editingTestSet ? editingTestSet.id : 'NEW'}-${i}` }));
+        .map((q, i) => ({ ...q, id: q.id || `Q-${editingTestSet.id}-${i}` }));
 
     if (finalQuestions.length === 0) {
         toast({ variant: 'destructive', title: 'No Questions Added', description: 'Please add at least one complete question.' });
         return;
     }
-
-    const newTestSetData = {
-        id: editingTestSet ? editingTestSet.id : `MSET-${Date.now()}`,
-        name: manualSetDetails.name,
-        board: manualSetDetails.board as any,
-        standard: manualSetDetails.standard,
-        subject: manualSetDetails.subject,
+    
+    const finalTestSetData: TestSet = {
+        ...editingTestSet,
+        id: editingTestSet.id || `MSET-${Date.now()}`,
         questions: finalQuestions,
     };
 
-    if (editingTestSet) {
-        updateTestSet(newTestSetData);
-        setTestSets(prev => prev.map(ts => ts.id === newTestSetData.id ? newTestSetData : ts));
+    if (allTestSets.some(ts => ts.id === finalTestSetData.id)) {
+        updateTestSet(finalTestSetData);
+        setTestSets(allTestSets.map(ts => ts.id === finalTestSetData.id ? finalTestSetData : ts));
+         toast({ title: 'Test Set Updated!', description: `"${finalTestSetData.name}" has been saved.` });
     } else {
-        addTestSet(newTestSetData);
-        setTestSets(prev => [...prev, newTestSetData]);
+        addTestSet(finalTestSetData);
+        setTestSets([...allTestSets]);
+        toast({ title: 'Test Set Created!', description: `"${finalTestSetData.name}" has been saved.` });
     }
     
-    toast({ title: editingTestSet ? 'Test Set Updated!' : 'Test Set Created!', description: `"${newTestSetData.name}" has been saved.` });
     setIsManualCreateOpen(false);
     resetManualForm();
 };
@@ -248,29 +248,29 @@ export default function TestSetManagementPage() {
                         <Button variant="outline" onClick={handleOpenCreateDialog}><FilePlus className="mr-2 h-4 w-4" /> Create Manually</Button>
                     </DialogTrigger>
                     <DialogContent className="max-w-4xl h-[90vh]">
-                        {step === 1 && (
+                        {editingTestSet && step === 1 && (
                             <>
                             <DialogHeader>
-                                <DialogTitle>{editingTestSet ? 'Edit Test Set Details' : 'Create New Test Set'} (Step 1 of 2)</DialogTitle>
+                                <DialogTitle>{editingTestSet.id ? 'Edit Test Set Details' : 'Create New Test Set'} (Step 1 of 2)</DialogTitle>
                                 <DialogDescription>First, provide the details for your new test set.</DialogDescription>
                             </DialogHeader>
                             <form onSubmit={handleManualSetDetailSubmit} className="space-y-4 py-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="manual-name">Test Set Name</Label>
-                                    <Input id="manual-name" value={manualSetDetails.name} onChange={(e) => setManualSetDetails(s => ({...s, name: e.target.value}))} placeholder="e.g., SSC Science Final Practice" />
+                                    <Input id="manual-name" value={editingTestSet.name} onChange={(e) => handleSetDetailChange('name', e.target.value)} placeholder="e.g., SSC Science Final Practice" />
                                 </div>
                                 <div className="grid grid-cols-3 gap-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="manual-board">Board</Label>
-                                        <Select value={manualSetDetails.board} onValueChange={(val) => setManualSetDetails(s => ({...s, board: val}))}><SelectTrigger id="manual-board"><SelectValue placeholder="Select..."/></SelectTrigger><SelectContent>{academicConfig.boards.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent></Select>
+                                        <Select value={editingTestSet.board} onValueChange={(val) => handleSetDetailChange('board', val as 'SSC' | 'CBSE' | 'ICSE')}><SelectTrigger id="manual-board"><SelectValue placeholder="Select..."/></SelectTrigger><SelectContent>{academicConfig.boards.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent></Select>
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="manual-standard">Standard</Label>
-                                        <Select value={manualSetDetails.standard} onValueChange={(val) => setManualSetDetails(s => ({...s, standard: val}))}><SelectTrigger id="manual-standard"><SelectValue placeholder="Select..."/></SelectTrigger><SelectContent>{academicConfig.standards.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>
+                                        <Select value={editingTestSet.standard} onValueChange={(val) => handleSetDetailChange('standard', val)}><SelectTrigger id="manual-standard"><SelectValue placeholder="Select..."/></SelectTrigger><SelectContent>{academicConfig.standards.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="manual-subject">Subject</Label>
-                                        <Select value={manualSetDetails.subject} onValueChange={(val) => setManualSetDetails(s => ({...s, subject: val}))}><SelectTrigger id="manual-subject"><SelectValue placeholder="Select..."/></SelectTrigger><SelectContent>{academicConfig.subjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>
+                                        <Select value={editingTestSet.subject} onValueChange={(val) => handleSetDetailChange('subject', val)}><SelectTrigger id="manual-subject"><SelectValue placeholder="Select..."/></SelectTrigger><SelectContent>{academicConfig.subjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>
                                     </div>
                                 </div>
                                 <DialogFooter>
@@ -279,15 +279,15 @@ export default function TestSetManagementPage() {
                             </form>
                             </>
                         )}
-                        {step === 2 && (
+                        {editingTestSet && step === 2 && (
                              <>
                             <DialogHeader>
-                                <DialogTitle>{editingTestSet ? 'Edit' : 'Add'} Questions (Step 2 of 2)</DialogTitle>
-                                <DialogDescription>Enter questions for the "{manualSetDetails.name}" test set. You can save your progress and add more later.</DialogDescription>
+                                <DialogTitle>{editingTestSet.id ? 'Edit' : 'Add'} Questions (Step 2 of 2)</DialogTitle>
+                                <DialogDescription>Enter questions for the "{editingTestSet.name}" test set. You can save your progress and add more later.</DialogDescription>
                             </DialogHeader>
                              <ScrollArea className="h-full -mx-6 px-6">
                                 <div className="space-y-4 py-4">
-                                    {manualQuestions.map((q, qIndex) => (
+                                    {editingTestSet.questions.map((q, qIndex) => (
                                         <div key={qIndex} className="p-4 border rounded-lg space-y-4 bg-muted/50">
                                             <h4 className="font-semibold flex items-center gap-2"><ScrollText size={16}/> Question {qIndex + 1}</h4>
                                             <div className="grid grid-cols-2 gap-4">

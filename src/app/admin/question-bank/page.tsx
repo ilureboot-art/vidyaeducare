@@ -69,8 +69,8 @@ export default function TestSetManagementPage() {
   };
 
   const handleOpenCreateDialog = () => {
-    const newEmptyQuestions = Array(50).fill(null).map(() => JSON.parse(JSON.stringify(initialQuestionState)));
-    setEditingTestSet({ ...initialTestSetState, questions: newEmptyQuestions });
+    const newEmptyQuestions = Array(50).fill(null).map((_, i) => ({ ...JSON.parse(JSON.stringify(initialQuestionState)), id: `temp-${i}` }));
+    setEditingTestSet({ ...initialTestSetState, id: `NEW-${Date.now()}`, questions: newEmptyQuestions });
     setStep(1);
     setIsManualCreateOpen(true);
   };
@@ -78,7 +78,7 @@ export default function TestSetManagementPage() {
   const handleOpenEditDialog = (testSet: TestSet) => {
     const testSetCopy = JSON.parse(JSON.stringify(testSet));
     while (testSetCopy.questions.length < 50) {
-        testSetCopy.questions.push(JSON.parse(JSON.stringify(initialQuestionState)));
+        testSetCopy.questions.push({ ...JSON.parse(JSON.stringify(initialQuestionState)), id: `temp-${testSetCopy.questions.length}`});
     }
     setEditingTestSet(testSetCopy);
     setStep(1);
@@ -176,21 +176,26 @@ export default function TestSetManagementPage() {
  const handleQuestionChange = (qIndex: number, field: 'text' | 'option' | 'answer', lang: 'en' | 'mr', value: string, optionIndex?: number) => {
     if (!editingTestSet) return;
 
-    const newQuestions = [...editingTestSet.questions];
-    const questionToUpdate = JSON.parse(JSON.stringify(newQuestions[qIndex]));
+    setEditingTestSet(currentTestSet => {
+        if (!currentTestSet) return null;
 
-    if (field === 'text') {
-        questionToUpdate.text[lang] = value;
-    } else if (field === 'option' && optionIndex !== undefined) {
-        questionToUpdate.options[lang][optionIndex] = value;
-    } else if (field === 'answer') {
-        questionToUpdate.correctAnswer.mr = value;
-        const selectedOptionIndex = questionToUpdate.options.mr.findIndex((opt: string) => opt === value);
-        questionToUpdate.correctAnswer.en = selectedOptionIndex !== -1 ? questionToUpdate.options.en[selectedOptionIndex] : '';
-    }
-    
-    newQuestions[qIndex] = questionToUpdate;
-    setEditingTestSet({ ...editingTestSet, questions: newQuestions });
+        // Create a deep copy of the questions array to avoid mutation
+        const newQuestions = JSON.parse(JSON.stringify(currentTestSet.questions));
+        const questionToUpdate = newQuestions[qIndex];
+
+        if (field === 'text') {
+            questionToUpdate.text[lang] = value;
+        } else if (field === 'option' && optionIndex !== undefined) {
+            questionToUpdate.options[lang][optionIndex] = value;
+        } else if (field === 'answer') {
+            questionToUpdate.correctAnswer.mr = value;
+            const selectedOptionIndex = questionToUpdate.options.mr.findIndex((opt: string) => opt === value);
+            questionToUpdate.correctAnswer.en = selectedOptionIndex !== -1 ? questionToUpdate.options.en[selectedOptionIndex] : '';
+        }
+        
+        // Return a new state object with the updated questions array
+        return { ...currentTestSet, questions: newQuestions };
+    });
 };
 
   
@@ -199,7 +204,7 @@ export default function TestSetManagementPage() {
 
     const finalQuestions = editingTestSet.questions
         .filter(q => q.text.en?.trim() !== '' && q.text.mr?.trim() !== '')
-        .map((q, i) => ({ ...q, id: q.id || `Q-${editingTestSet.id}-${i}` }));
+        .map((q, i) => ({ ...q, id: q.id.startsWith('temp-') ? `Q-${editingTestSet.id}-${i}`: q.id }));
 
     if (finalQuestions.length === 0) {
         toast({ variant: 'destructive', title: 'No Questions Added', description: 'Please add at least one complete question.' });
@@ -208,18 +213,20 @@ export default function TestSetManagementPage() {
     
     const finalTestSetData: TestSet = {
         ...editingTestSet,
-        id: editingTestSet.id || `MSET-${Date.now()}`,
         questions: finalQuestions,
     };
+    
+    const isEditing = !finalTestSetData.id.startsWith("NEW-");
 
-    if (allTestSets.some(ts => ts.id === finalTestSetData.id)) {
+    if (isEditing) {
         updateTestSet(finalTestSetData);
-        setTestSets(allTestSets.map(ts => ts.id === finalTestSetData.id ? finalTestSetData : ts));
-         toast({ title: 'Test Set Updated!', description: `"${finalTestSetData.name}" has been saved.` });
+        setTestSets(currentSets => currentSets.map(ts => ts.id === finalTestSetData.id ? finalTestSetData : ts));
+        toast({ title: 'Test Set Updated!', description: `"${finalTestSetData.name}" has been saved.` });
     } else {
-        addTestSet(finalTestSetData);
-        setTestSets([...allTestSets]);
-        toast({ title: 'Test Set Created!', description: `"${finalTestSetData.name}" has been saved.` });
+        const newSetWithFinalId = {...finalTestSetData, id: `SET-${Date.now()}`};
+        addTestSet(newSetWithFinalId);
+        setTestSets(currentSets => [...currentSets, newSetWithFinalId]);
+        toast({ title: 'Test Set Created!', description: `"${newSetWithFinalId.name}" has been saved.` });
     }
     
     setIsManualCreateOpen(false);
@@ -251,7 +258,7 @@ export default function TestSetManagementPage() {
                         {editingTestSet && step === 1 && (
                             <>
                             <DialogHeader>
-                                <DialogTitle>{editingTestSet.id ? 'Edit Test Set Details' : 'Create New Test Set'} (Step 1 of 2)</DialogTitle>
+                                <DialogTitle>{editingTestSet.id.startsWith('NEW-') ? 'Create New Test Set' : 'Edit Test Set Details'} (Step 1 of 2)</DialogTitle>
                                 <DialogDescription>First, provide the details for your new test set.</DialogDescription>
                             </DialogHeader>
                             <form onSubmit={handleManualSetDetailSubmit} className="space-y-4 py-4">
@@ -288,7 +295,7 @@ export default function TestSetManagementPage() {
                              <ScrollArea className="h-full -mx-6 px-6">
                                 <div className="space-y-4 py-4">
                                     {editingTestSet.questions.map((q, qIndex) => (
-                                        <div key={qIndex} className="p-4 border rounded-lg space-y-4 bg-muted/50">
+                                        <div key={q.id || `q-${qIndex}`} className="p-4 border rounded-lg space-y-4 bg-muted/50">
                                             <h4 className="font-semibold flex items-center gap-2"><ScrollText size={16}/> Question {qIndex + 1}</h4>
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div className="space-y-2">

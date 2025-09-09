@@ -179,7 +179,7 @@ export default function TestSetManagementPage() {
     setEditingTestSet(currentTestSet => {
         if (!currentTestSet) return null;
 
-        // Create a deep copy of the questions array to avoid mutation
+        // Create a deep copy of the questions array to avoid direct mutation
         const newQuestions = JSON.parse(JSON.stringify(currentTestSet.questions));
         const questionToUpdate = newQuestions[qIndex];
 
@@ -188,12 +188,16 @@ export default function TestSetManagementPage() {
         } else if (field === 'option' && optionIndex !== undefined) {
             questionToUpdate.options[lang][optionIndex] = value;
         } else if (field === 'answer') {
+            // When Marathi answer is selected, find its index and set the corresponding English answer
             questionToUpdate.correctAnswer.mr = value;
             const selectedOptionIndex = questionToUpdate.options.mr.findIndex((opt: string) => opt === value);
-            questionToUpdate.correctAnswer.en = selectedOptionIndex !== -1 ? questionToUpdate.options.en[selectedOptionIndex] : '';
+            if (selectedOptionIndex !== -1) {
+                questionToUpdate.correctAnswer.en = questionToUpdate.options.en[selectedOptionIndex];
+            } else {
+                questionToUpdate.correctAnswer.en = ''; // Reset if Marathi option not found
+            }
         }
         
-        // Return a new state object with the updated questions array
         return { ...currentTestSet, questions: newQuestions };
     });
 };

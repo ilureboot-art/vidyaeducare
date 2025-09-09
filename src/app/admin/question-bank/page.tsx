@@ -207,7 +207,7 @@ export default function TestSetManagementPage() {
     if (!editingTestSet) return;
 
     const finalQuestions = editingTestSet.questions
-        .filter(q => q.text.en?.trim() !== '' && q.text.mr?.trim() !== '')
+        .filter(q => q.text.en?.trim() !== '' || q.text.mr?.trim() !== '')
         .map((q, i) => ({ ...q, id: q.id.startsWith('temp-') ? `Q-${editingTestSet.id}-${i}`: q.id }));
 
     if (finalQuestions.length === 0) {

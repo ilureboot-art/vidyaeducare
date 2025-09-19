@@ -177,30 +177,30 @@ export default function TestSetManagementPage() {
     setEditingTestSet(currentTestSet => {
         if (!currentTestSet) return null;
 
-        // Create a new array for questions to ensure immutability
-        const newQuestions = [...currentTestSet.questions];
-        
-        // Create a deep copy of the specific question being changed
-        const updatedQuestion = JSON.parse(JSON.stringify(newQuestions[qIndex]));
-
-        if (field === 'text') {
-            updatedQuestion.text[lang] = value;
-        } else if (field === 'option' && optionIndex !== undefined) {
-            updatedQuestion.options[lang][optionIndex] = value;
-        } else if (field === 'answer') {
-            updatedQuestion.correctAnswer.mr = value;
-            const selectedOptionIndex = updatedQuestion.options.mr.findIndex((opt: string) => opt === value);
-            if (selectedOptionIndex !== -1) {
-                updatedQuestion.correctAnswer.en = updatedQuestion.options.en[selectedOptionIndex];
-            } else {
-                updatedQuestion.correctAnswer.en = ''; // Reset if Marathi option not found
+        const newQuestions = currentTestSet.questions.map((q, index) => {
+            if (index !== qIndex) {
+                return q;
             }
-        }
+
+            // Create a deep copy of the question to be modified
+            const updatedQuestion = JSON.parse(JSON.stringify(q));
+
+            if (field === 'text') {
+                updatedQuestion.text[lang] = value;
+            } else if (field === 'option' && optionIndex !== undefined) {
+                updatedQuestion.options[lang][optionIndex] = value;
+            } else if (field === 'answer') {
+                updatedQuestion.correctAnswer.mr = value;
+                const selectedOptionIndex = updatedQuestion.options.mr.findIndex((opt: string) => opt === value);
+                if (selectedOptionIndex !== -1) {
+                    updatedQuestion.correctAnswer.en = updatedQuestion.options.en[selectedOptionIndex];
+                } else {
+                    updatedQuestion.correctAnswer.en = ''; // Reset if Marathi option not found
+                }
+            }
+            return updatedQuestion;
+        });
         
-        // Replace the old question with the updated one in the new array
-        newQuestions[qIndex] = updatedQuestion;
-        
-        // Return the new state object
         return { ...currentTestSet, questions: newQuestions };
     });
 };

@@ -174,30 +174,33 @@ export default function TestSetManagementPage() {
   }
 
  const handleQuestionChange = (qIndex: number, field: 'text' | 'option' | 'answer', lang: 'en' | 'mr', value: string, optionIndex?: number) => {
-    if (!editingTestSet) return;
-
     setEditingTestSet(currentTestSet => {
         if (!currentTestSet) return null;
 
-        // Create a deep copy of the questions array to avoid direct mutation
-        const newQuestions = JSON.parse(JSON.stringify(currentTestSet.questions));
-        const questionToUpdate = newQuestions[qIndex];
+        // Create a new array for questions to ensure immutability
+        const newQuestions = [...currentTestSet.questions];
+        
+        // Create a deep copy of the specific question being changed
+        const updatedQuestion = JSON.parse(JSON.stringify(newQuestions[qIndex]));
 
         if (field === 'text') {
-            questionToUpdate.text[lang] = value;
+            updatedQuestion.text[lang] = value;
         } else if (field === 'option' && optionIndex !== undefined) {
-            questionToUpdate.options[lang][optionIndex] = value;
+            updatedQuestion.options[lang][optionIndex] = value;
         } else if (field === 'answer') {
-            // When Marathi answer is selected, find its index and set the corresponding English answer
-            questionToUpdate.correctAnswer.mr = value;
-            const selectedOptionIndex = questionToUpdate.options.mr.findIndex((opt: string) => opt === value);
+            updatedQuestion.correctAnswer.mr = value;
+            const selectedOptionIndex = updatedQuestion.options.mr.findIndex((opt: string) => opt === value);
             if (selectedOptionIndex !== -1) {
-                questionToUpdate.correctAnswer.en = questionToUpdate.options.en[selectedOptionIndex];
+                updatedQuestion.correctAnswer.en = updatedQuestion.options.en[selectedOptionIndex];
             } else {
-                questionToUpdate.correctAnswer.en = ''; // Reset if Marathi option not found
+                updatedQuestion.correctAnswer.en = ''; // Reset if Marathi option not found
             }
         }
         
+        // Replace the old question with the updated one in the new array
+        newQuestions[qIndex] = updatedQuestion;
+        
+        // Return the new state object
         return { ...currentTestSet, questions: newQuestions };
     });
 };
@@ -293,7 +296,7 @@ export default function TestSetManagementPage() {
                         {editingTestSet && step === 2 && (
                              <>
                             <DialogHeader>
-                                <DialogTitle>{editingTestSet.id ? 'Edit' : 'Add'} Questions (Step 2 of 2)</DialogTitle>
+                                <DialogTitle>{editingTestSet.id.startsWith("NEW-") ? 'Add' : 'Edit'} Questions (Step 2 of 2)</DialogTitle>
                                 <DialogDescription>Enter questions for the "{editingTestSet.name}" test set. You can save your progress and add more later.</DialogDescription>
                             </DialogHeader>
                              <ScrollArea className="h-full -mx-6 px-6">

@@ -37,9 +37,10 @@ const questionParserFlow = ai.defineFlow(
     outputSchema: TestSetSchema,
   },
   async (input) => {
-    const { output } = await questionParserPrompt(input);
+    const { output, usage } = await questionParserPrompt(input);
     if (!output) {
-      throw new Error("The AI model failed to parse the document into a valid test set.");
+      console.error('AI model returned null output.', { usage });
+      throw new Error("The AI model failed to parse the document. The output was empty. This can happen if the document content is unclear or doesn't resemble a test set.");
     }
     return output;
   }
@@ -51,6 +52,7 @@ export async function parseQuestionsFromText(input: QuestionParserInput): Promis
     return result;
   } catch (error) {
     console.error("Error in parseQuestionsFromText:", error);
-    throw new Error("Failed to process the document. Please ensure it's well-formatted and try again.");
+    // Re-throw the original, more specific error from the flow.
+    throw error;
   }
 }

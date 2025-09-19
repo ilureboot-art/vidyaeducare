@@ -177,9 +177,10 @@ export default function TestSetManagementPage() {
     setEditingTestSet(currentTestSet => {
         if (!currentTestSet) return null;
 
+        // Create a new questions array using map to ensure immutability
         const newQuestions = currentTestSet.questions.map((q, index) => {
             if (index !== qIndex) {
-                return q;
+                return q; // Return the original object if it's not the one we're updating
             }
 
             // Create a deep copy of the question to be modified
@@ -190,17 +191,21 @@ export default function TestSetManagementPage() {
             } else if (field === 'option' && optionIndex !== undefined) {
                 updatedQuestion.options[lang][optionIndex] = value;
             } else if (field === 'answer') {
-                updatedQuestion.correctAnswer.mr = value;
-                const selectedOptionIndex = updatedQuestion.options.mr.findIndex((opt: string) => opt === value);
-                if (selectedOptionIndex !== -1) {
-                    updatedQuestion.correctAnswer.en = updatedQuestion.options.en[selectedOptionIndex];
-                } else {
-                    updatedQuestion.correctAnswer.en = ''; // Reset if Marathi option not found
+                updatedQuestion.correctAnswer[lang] = value;
+                // If Marathi answer is changed, automatically update the English one based on index
+                if (lang === 'mr') {
+                    const selectedOptionIndex = updatedQuestion.options.mr.findIndex((opt: string) => opt === value);
+                    if (selectedOptionIndex !== -1) {
+                        updatedQuestion.correctAnswer.en = updatedQuestion.options.en[selectedOptionIndex];
+                    } else {
+                        updatedQuestion.correctAnswer.en = ''; // Reset if Marathi option not found
+                    }
                 }
             }
             return updatedQuestion;
         });
         
+        // Return a new test set object with the new questions array
         return { ...currentTestSet, questions: newQuestions };
     });
 };

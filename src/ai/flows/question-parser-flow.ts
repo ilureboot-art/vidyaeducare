@@ -45,7 +45,10 @@ const questionParserFlow = ai.defineFlow(
     
     // Cleanup step: Filter out any empty or incomplete question objects from the array.
     const cleanedQuestions = output.questions.filter(q => 
-        q && q.text && q.options && q.correctAnswer
+        q && 
+        q.text && q.text.en && q.text.mr &&
+        q.options && q.options.en && q.options.en.length === 4 && q.options.mr && q.options.mr.length === 4 &&
+        q.correctAnswer && q.correctAnswer.en && q.correctAnswer.mr
     );
 
     return { ...output, questions: cleanedQuestions };

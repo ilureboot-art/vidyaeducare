@@ -31,6 +31,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { allTestSets, addTestSet, deleteTestSet, updateTestSet, type TestSet, type Question } from "@/lib/question-bank";
 import { academicConfig } from "@/lib/academic-config";
+import { parseQuestionsFromDocument } from "@/ai/flows/document-parser-flow";
+import { TestSetSchema } from "@/ai/schemas/test-set-schema";
+import mammoth from "mammoth";
+
 
 const initialQuestionState: Omit<Question, 'id'> = {
   text: { en: '', mr: '' },
@@ -51,7 +55,6 @@ export default function TestSetManagementPage() {
   const [testSets, setTestSets] = useState<TestSet[]>([]);
   const { toast } = useToast();
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
-  const [isManualCreateOpen, setIsManualCreateOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   
   const [step, setStep] = useState(1);
@@ -94,24 +97,40 @@ export default function TestSetManagementPage() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (file.type !== 'application/json') {
-      toast({
-        variant: 'destructive',
-        title: "Invalid File Type",
-        description: `Please upload a .json file.`,
-      });
-      return;
-    }
-
     setIsUploading(true);
 
     try {
-      const content = await file.text();
-      const uploadedSet: Omit<TestSet, 'id'|'questions'> & { questions: Omit<Question, 'id'>[] } = JSON.parse(content);
+        let uploadedSet: Omit<TestSet, 'id'|'questions'> & { questions: Omit<Question, 'id'>[] };
+
+        if (file.type === 'application/json') {
+            const content = await file.text();
+            uploadedSet = JSON.parse(content);
+        } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+            const arrayBuffer = await file.arrayBuffer();
+            const { value: documentText } = await mammoth.extractRawText({ arrayBuffer });
+            const aiResult = await parseQuestionsFromDocument({ documentText });
+            
+            // Validate the AI's output against the Zod schema
+            const validationResult = TestSetSchema.safeParse(aiResult);
+            if (!validationResult.success) {
+                console.error("AI output validation failed:", validationResult.error);
+                throw new Error(`The AI failed to produce a valid test set structure. Please check the document format. Details: ${validationResult.error.flatten().fieldErrors}`);
+            }
+            uploadedSet = validationResult.data;
+
+        } else {
+            toast({
+                variant: 'destructive',
+                title: "Invalid File Type",
+                description: `Please upload a .json or .docx file.`,
+            });
+            setIsUploading(false);
+            return;
+        }
       
       // Basic validation
       if (!uploadedSet.name || !uploadedSet.board || !uploadedSet.standard || !uploadedSet.subject || !Array.isArray(uploadedSet.questions)) {
-          throw new Error("The JSON file is missing required fields: name, board, standard, subject, or questions array.");
+          throw new Error("The processed file is missing required fields: name, board, standard, subject, or questions array.");
       }
       
       const newTestSet: TestSet = { 
@@ -140,7 +159,9 @@ export default function TestSetManagementPage() {
          });
     } finally {
         setIsUploading(false);
-        event.target.value = '';
+        if (event.target) {
+            event.target.value = '';
+        }
     }
   }
   
@@ -162,13 +183,11 @@ export default function TestSetManagementPage() {
     setEditingTestSet(currentTestSet => {
         if (!currentTestSet) return null;
 
-        // Create a new questions array using map to ensure immutability
         const newQuestions = currentTestSet.questions.map((q, index) => {
             if (index !== qIndex) {
-                return q; // Return the original object if it's not the one we're updating
+                return q; 
             }
 
-            // Create a deep copy of the question to be modified
             const updatedQuestion = JSON.parse(JSON.stringify(q));
 
             if (field === 'text') {
@@ -177,20 +196,18 @@ export default function TestSetManagementPage() {
                 updatedQuestion.options[lang][optionIndex] = value;
             } else if (field === 'answer') {
                 updatedQuestion.correctAnswer[lang] = value;
-                // If Marathi answer is changed, automatically update the English one based on index
                 if (lang === 'mr') {
                     const selectedOptionIndex = updatedQuestion.options.mr.findIndex((opt: string) => opt === value);
                     if (selectedOptionIndex !== -1) {
                         updatedQuestion.correctAnswer.en = updatedQuestion.options.en[selectedOptionIndex];
                     } else {
-                        updatedQuestion.correctAnswer.en = ''; // Reset if Marathi option not found
+                        updatedQuestion.correctAnswer.en = '';
                     }
                 }
             }
             return updatedQuestion;
         });
         
-        // Return a new test set object with the new questions array
         return { ...currentTestSet, questions: newQuestions };
     });
 };
@@ -342,36 +359,34 @@ export default function TestSetManagementPage() {
                         <DialogHeader>
                             <DialogTitle>Bulk Upload a Test Set</DialogTitle>
                             <DialogDescription>
-                                Upload a JSON file containing a test set. This is the most reliable way to upload many questions at once.
+                                Upload a JSON or DOCX file. For DOCX, ensure the format is clear for the AI to parse.
                             </DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4 py-4">
-                            <div className="space-y-2 pt-4">
-                                <Label className="font-semibold">Required JSON Format:</Label>
+                            <div className="space-y-2">
+                                <Label className="font-semibold">Recommended DOCX Format:</Label>
                                 <pre className="p-2 bg-muted text-xs rounded-md overflow-x-auto">
-{`{
-  "name": "SSC Science Test #1",
-  "board": "SSC",
-  "standard": "10th",
-  "subject": "Science",
-  "questions": [
-    {
-      "text": { "en": "Q1 Text", "mr": "Q1 मजकूर" },
-      "options": { "en": ["A","B","C","D"], "mr": ["अ","ब","क","ड"] },
-      "correctAnswer": { "en": "A", "mr": "अ" }
-    }
-  ]
-}`}
+{`**Test Set Name:** SSC Science Mock Test
+**Board:** SSC
+**Standard:** 10th
+**Subject:** Science
+
+1. Question Text (English) / (Marathi)
+A. Option 1 (English) / (Marathi)
+B. Option 2 (English) / (Marathi)
+C. Option 3 (English) / (Marathi)
+D. Option 4 (English) / (Marathi)
+Answer: B`}
                                 </pre>
                             </div>
                              <div className="space-y-2">
-                                <Label htmlFor="json-upload">Test Set File (.json only)</Label>
-                                <Input id="json-upload" type="file" accept=".json" onChange={handleBulkUpload} disabled={isUploading} />
+                                <Label htmlFor="file-upload">Test Set File (.json or .docx)</Label>
+                                <Input id="file-upload" type="file" accept=".json, .docx, application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={handleBulkUpload} disabled={isUploading} />
                             </div>
                              {isUploading && (
                                 <div className="flex items-center justify-center gap-2 text-muted-foreground">
                                     <Loader2 className="animate-spin h-5 w-5" />
-                                    <span>Processing file...</span>
+                                    <span>Processing file... This may take a moment.</span>
                                 </div>
                              )}
                         </div>
@@ -432,3 +447,4 @@ export default function TestSetManagementPage() {
     </div>
   );
 }
+

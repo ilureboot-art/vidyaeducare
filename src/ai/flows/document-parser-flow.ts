@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview An AI flow for parsing MCQ test sets from raw document text.
@@ -15,7 +16,6 @@ import { TestSetSchema, type TestSetPayload, QuestionParserInputSchema, type Que
 const questionParserPrompt = ai.definePrompt({
     name: "questionParserPrompt",
     input: { schema: QuestionParserInputSchema },
-    output: { schema: TestSetSchema },
     prompt: `You are an expert data extractor. Your task is to parse the following unstructured text from a document and convert it into a structured JSON object representing a test set of Multiple Choice Questions (MCQs).
 
 You must identify the overall details of the test set and then extract each question individually.
@@ -27,8 +27,8 @@ You must identify the overall details of the test set and then extract each ques
     *   'text': The question text itself, in both 'en' and 'mr'.
     *   'options': Exactly 4 options, each with an 'en' and 'mr' version.
     *   'correctAnswer': The correct answer, in both 'en' and 'mr'. The correct answer text **must exactly match** one of the provided options.
-4.  **Output Format**: The final output must be a single, valid JSON object that strictly adheres to the provided schema. Do not add any conversational text, markdown, or other wrappers around the JSON.
-5.  **Strictness**: Be extremely strict. If a question is incomplete (e.g., missing options, no clear answer), you must ignore it and move to the next one. Do not output incomplete or malformed questions in the array.
+4.  **Strictness**: Be extremely strict. If a question is incomplete (e.g., missing options, no clear answer), you must ignore it and move to the next one. Do not output incomplete or malformed questions in the array.
+5.  **Output Format**: The final output must be a single, valid JSON object. Do not add any conversational text, markdown, or other wrappers around the JSON.
 
 **Example Input Text:**
 \`\`\`
@@ -60,14 +60,14 @@ const documentParserFlow = ai.defineFlow(
   },
   async (input) => {
     const result = await questionParserPrompt(input);
-    const parsedJson = result.output;
+    const rawOutput = result.output;
 
-    if (!parsedJson) {
+    if (!rawOutput) {
       throw new Error("The AI model failed to produce any output. Please check the document's formatting.");
     }
     
-    // Final and robust filtering step to ensure data integrity before validation.
-    const validQuestions = (parsedJson.questions || []).filter((q: any) => 
+    // Robust filtering step to ensure data integrity before validation.
+    const validQuestions = (rawOutput.questions || []).filter((q: any) => 
         q &&
         q.text && typeof q.text.en === 'string' && q.text.en.trim() !== '' &&
         typeof q.text.mr === 'string' && q.text.mr.trim() !== '' &&
@@ -78,18 +78,18 @@ const documentParserFlow = ai.defineFlow(
         q.correctAnswer && typeof q.correctAnswer.en === 'string' && q.correctAnswer.en.trim() !== '' &&
         typeof q.correctAnswer.mr === 'string' && q.correctAnswer.mr.trim() !== ''
     );
-
-    if (validQuestions.length === 0) {
-        throw new Error("No valid questions could be parsed from the document. Please ensure all questions have text, 4 options, and a clear answer.");
-    }
     
-    const finalResult = { ...parsedJson, questions: validQuestions };
+    const finalPayload = { ...rawOutput, questions: validQuestions };
 
     // Final validation against the Zod schema before returning
-    const validationResult = TestSetSchema.safeParse(finalResult);
+    const validationResult = TestSetSchema.safeParse(finalPayload);
     if (!validationResult.success) {
         console.error("Final validation failed:", validationResult.error.flatten());
         throw new Error(`The processed data is invalid. Details: ${validationResult.error.message}`);
+    }
+
+    if (validationResult.data.questions.length === 0) {
+        throw new Error("No valid questions could be parsed from the document. Please ensure all questions have text, 4 options, and a clear answer.");
     }
 
     return validationResult.data;

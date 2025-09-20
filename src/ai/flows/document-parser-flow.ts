@@ -15,9 +15,7 @@ import { TestSetSchema, type TestSetPayload, QuestionParserInputSchema, type Que
 const questionParserPrompt = ai.definePrompt({
     name: "questionParserPrompt",
     input: { schema: QuestionParserInputSchema },
-    // IMPORTANT: We do not define an output schema here.
-    // We will handle parsing and validation manually in the flow
-    // to allow for more robust error handling and data cleaning.
+    output: { schema: TestSetSchema },
     prompt: `You are an expert data extractor. Your task is to parse the following unstructured text from a document and convert it into a structured JSON object representing a test set of Multiple Choice Questions (MCQs).
 
 You must identify the overall details of the test set and then extract each question individually.
@@ -29,9 +27,8 @@ You must identify the overall details of the test set and then extract each ques
     *   'text': The question text itself, in both 'en' and 'mr'.
     *   'options': Exactly 4 options, each with an 'en' and 'mr' version.
     *   'correctAnswer': The correct answer, in both 'en' and 'mr'. The correct answer text **must exactly match** one of the provided options.
-4.  **Strictness**: If a question is incomplete (e.g., missing options, no clear answer), you must ignore it and move to the next one. Do not include malformed questions in the output.
-5.  **Output Format**: The final output must be a single, valid JSON object. Do not add any conversational text, markdown, or other wrappers around the JSON.
-6.  **Final Instruction**: Be extremely strict. If you encounter any data that doesn't fit the structure perfectly, discard that question entirely. Do not output incomplete objects.
+4.  **Output Format**: The final output must be a single, valid JSON object that strictly adheres to the provided schema. Do not add any conversational text, markdown, or other wrappers around the JSON.
+5.  **Strictness**: Be extremely strict. If a question is incomplete (e.g., missing options, no clear answer), you must ignore it and move to the next one. Do not output incomplete or malformed questions in the array.
 
 **Example Input Text:**
 \`\`\`
@@ -63,30 +60,12 @@ const documentParserFlow = ai.defineFlow(
   },
   async (input) => {
     const result = await questionParserPrompt(input);
-    const rawOutput = result.output;
+    const parsedJson = result.output;
 
-    if (!rawOutput) {
+    if (!parsedJson) {
       throw new Error("The AI model failed to produce any output. Please check the document's formatting.");
     }
     
-    // The output from the LLM is a string, so we need to parse it into a JSON object.
-    let parsedJson: any;
-    try {
-        // The model might wrap the JSON in markdown or have leading/trailing text.
-        // This more robust regex finds the JSON object.
-        const jsonMatch = (rawOutput as string).match(/(?:```json)?\s*({[\s\S]*?})\s*(?:```)?/);
-        if (jsonMatch && jsonMatch[1]) {
-            parsedJson = JSON.parse(jsonMatch[1]);
-        } else {
-            // As a fallback, try parsing the whole string.
-            parsedJson = JSON.parse(rawOutput as string);
-        }
-    } catch (e) {
-        console.error("Failed to parse JSON from model output:", rawOutput);
-        throw new Error("The AI model returned invalid JSON. Please check the document's formatting.");
-    }
-
-
     // Final and robust filtering step to ensure data integrity before validation.
     const validQuestions = (parsedJson.questions || []).filter((q: any) => 
         q &&

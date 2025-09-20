@@ -100,16 +100,16 @@ export default function TestSetManagementPage() {
     setIsUploading(true);
 
     try {
-        let uploadedSet: TestSetPayload;
+        let parsedPayload: TestSetPayload;
 
         if (file.type === 'application/json') {
             const content = await file.text();
-            uploadedSet = JSON.parse(content);
+            parsedPayload = JSON.parse(content);
         } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
             const arrayBuffer = await file.arrayBuffer();
             const { value: documentText } = await mammoth.extractRawText({ arrayBuffer });
-            uploadedSet = await parseQuestionsFromDocument({ documentText });
-
+            // The AI flow is now only responsible for parsing, not saving.
+            parsedPayload = await parseQuestionsFromDocument({ documentText });
         } else {
             toast({
                 variant: 'destructive',
@@ -120,17 +120,18 @@ export default function TestSetManagementPage() {
             return;
         }
       
-      // Basic validation
-      if (!uploadedSet.name || !uploadedSet.board || !uploadedSet.standard || !uploadedSet.subject || !Array.isArray(uploadedSet.questions)) {
+      // Basic validation on the payload returned from parsing
+      if (!parsedPayload.name || !parsedPayload.board || !parsedPayload.standard || !parsedPayload.subject || !Array.isArray(parsedPayload.questions)) {
           throw new Error("The processed file is missing required fields: name, board, standard, subject, or questions array.");
       }
       
       const newTestSet: TestSet = { 
-          ...uploadedSet, 
+          ...parsedPayload, 
           id: `SET-${String(Date.now()).slice(-6)}-${Math.random()}`,
-          questions: uploadedSet.questions.map((q, i) => ({ ...q, id: `Q-${i}`}))
+          questions: parsedPayload.questions.map((q, i) => ({ ...q, id: `Q-${i}`}))
       };
       
+      // Saving is now handled here on the client-side component
       addTestSet(newTestSet);
       setTestSets(prevSets => [...prevSets, newTestSet]);
       

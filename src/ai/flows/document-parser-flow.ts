@@ -25,9 +25,9 @@ You must identify the overall details of the test set and then extract each ques
 1.  **Test Set Details**: Identify the 'Test Set Name', 'Board', 'Standard', and 'Subject' from the beginning of the document.
 2.  **Bilingual Parsing**: The document contains text in both English and Marathi. They can be on the same line separated by a '/' or on separate lines. You must extract both versions for each piece of text.
 3.  **Question Structure**: For each question, you must extract:
-    *   text: The question text itself, in both 'en' and 'mr'.
-    *   options: Exactly 4 options, each with an 'en' and 'mr' version.
-    *   correctAnswer: The correct answer, in both 'en' and 'mr'. The correct answer text **must exactly match** one of the provided options.
+    *   'text': The question text itself, in both 'en' and 'mr'.
+    *   'options': Exactly 4 options, each with an 'en' and 'mr' version.
+    *   'correctAnswer': The correct answer, in both 'en' and 'mr'. The correct answer text **must exactly match** one of the provided options.
 4.  **Strictness**: If a question is incomplete (e.g., missing options, no clear answer), you must ignore it and move to the next one. Do not include malformed questions in the output.
 5.  **Output Format**: The final output must be a single, valid JSON object conforming to the provided schema. Do not add any conversational text, markdown, or other wrappers around the JSON.
 
@@ -44,13 +44,6 @@ B. Option 2 (English) / (Marathi)
 C. Option 3 (English) / (Marathi)
 D. Option 4 (English) / (Marathi)
 Answer: B. Option 2 (English) / (Marathi)
-
-2. Which planet is known as the Red Planet? / मंगळ ग्रहाला लाल ग्रह म्हणून का ओळखले जाते?
-A. Earth / पृथ्वी
-B. Mars / मंगळ
-C. Jupiter / बृहस्पति
-D. Venus / शुक्र
-Answer: B. Mars / मंगळ
 \`\`\`
 
 **Document Text to Parse:**

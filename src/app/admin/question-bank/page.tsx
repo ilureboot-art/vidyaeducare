@@ -131,7 +131,7 @@ export default function TestSetManagementPage() {
           questions: uploadedSet.questions.map((q, i) => ({ ...q, id: `Q-${i}`}))
       };
       
-      addTestSet(newTestSet); // This line was missing
+      addTestSet(newTestSet);
       setTestSets(prevSets => [...prevSets, newTestSet]);
       
       toast({
@@ -439,7 +439,3 @@ Answer: B. Option 2 (English) / (Marathi)`}
     </div>
   );
 }
-
-    
-
-    

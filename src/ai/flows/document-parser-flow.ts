@@ -33,20 +33,19 @@ You must identify the overall details of the test set and then extract each ques
 
 **Example Input Text:**
 \`\`\`
-**Test Set Name:** SSC Science Mock Test - Gravitation
+**Test Set Name:** SSC Science Mock Test
 **Board:** SSC
 **Standard:** 10th
 **Subject:** Science
 
-1. Why is it very difficult to detect gravitational waves? / गुरुत्वीय लहरी शोधणे खूप कठीण का आहे?
-A. Because they are very fast / कारण त्या खूप वेगवान असतात
-B. Because they are very weak / कारण त्या खूप क्षीण असतात
-C. Because they are imaginary / कारण त्या काल्पनिक आहेत
-D. Because they do not travel to Earth / कारण त्या पृथ्वीपर्यंत पोहोचत नाहीत
-Answer: B. Because they are very weak / कारण त्या खूप क्षीण असतात
+1. Question Text (English) / (Marathi)
+A. Option 1 (English) / (Marathi)
+B. Option 2 (English) / (Marathi)
+C. Option 3 (English) / (Marathi)
+D. Option 4 (English) / (Marathi)
+Answer: B. Option 2 (English) / (Marathi)
 
-2. Which planet is known as the Red Planet?
-मंगळ ग्रहाला लाल ग्रह म्हणून का ओळखले जाते?
+2. Which planet is known as the Red Planet? / मंगळ ग्रहाला लाल ग्रह म्हणून का ओळखले जाते?
 A. Earth / पृथ्वी
 B. Mars / मंगळ
 C. Jupiter / बृहस्पति
@@ -130,3 +129,4 @@ export async function parseQuestionsFromDocument(input: QuestionParserInput): Pr
         throw new Error("An unknown error occurred while parsing the document.");
     }
 }
+

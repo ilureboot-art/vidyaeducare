@@ -16,7 +16,7 @@ import { TestSetSchema, type TestSetPayload, QuestionParserInputSchema, type Que
 const questionParserPrompt = ai.definePrompt({
     name: "questionParserPrompt",
     input: { schema: QuestionParserInputSchema },
-    output: { schema: TestSetSchema },
+    // REMOVED output schema to handle validation manually
     prompt: `You are an expert data extractor. Your task is to parse the following unstructured text from a document and convert it into a structured JSON object representing a test set of Multiple Choice Questions (MCQs).
 
 You must identify the overall details of the test set and then extract each question individually.
@@ -68,26 +68,45 @@ const documentParserFlow = ai.defineFlow(
     outputSchema: TestSetSchema,
   },
   async (input) => {
-    const { output } = await questionParserPrompt(input);
+    const { output: rawOutput } = await questionParserPrompt(input);
 
-    if (!output) {
+    if (!rawOutput) {
       throw new Error("The AI model failed to produce any output. Please check the document's formatting.");
     }
     
+    // The AI might return the JSON as a string, sometimes with markdown.
+    // We need to parse it manually.
+    let parsedOutput;
+    try {
+        parsedOutput = typeof rawOutput === 'string' ? JSON.parse(rawOutput) : rawOutput;
+    } catch (e) {
+        throw new Error("The AI returned a malformed JSON response. Please check the document's formatting.");
+    }
+
     // Final filtering step to ensure data integrity
-    const validQuestions = output.questions.filter(q => 
+    const validQuestions = parsedOutput.questions.filter((q: any) => 
+        q &&
         q.text?.en && q.text?.mr &&
         q.options?.en?.length === 4 && q.options?.mr?.length === 4 &&
         q.correctAnswer?.en && q.correctAnswer?.mr &&
-        q.options.en.every(opt => opt.trim() !== '') &&
-        q.options.mr.every(opt => opt.trim() !== '')
+        q.options.en.every((opt: string) => opt && opt.trim() !== '') &&
+        q.options.mr.every((opt: string) => opt && opt.trim() !== '')
     );
 
     if (validQuestions.length === 0) {
         throw new Error("No valid questions could be parsed from the document. Please ensure questions, options, and answers are clearly formatted.");
     }
+    
+    const finalResult = { ...parsedOutput, questions: validQuestions };
 
-    return { ...output, questions: validQuestions };
+    // Final validation against the Zod schema before returning
+    const validationResult = TestSetSchema.safeParse(finalResult);
+    if (!validationResult.success) {
+        console.error("Final validation failed:", validationResult.error.flatten());
+        throw new Error(`The processed data is invalid. Details: ${validationResult.error.message}`);
+    }
+
+    return validationResult.data;
   }
 );
 

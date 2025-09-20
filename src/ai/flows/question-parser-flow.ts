@@ -46,9 +46,9 @@ const questionParserFlow = ai.defineFlow(
     // Cleanup step: Filter out any empty or incomplete question objects from the array.
     const cleanedQuestions = output.questions.filter(q => 
         q && 
-        q.text && q.text.en && q.text.mr &&
-        q.options && q.options.en && q.options.en.length === 4 && q.options.mr && q.options.mr.length === 4 &&
-        q.correctAnswer && q.correctAnswer.en && q.correctAnswer.mr
+        q.text?.en && q.text?.mr &&
+        q.options?.en && q.options.en.length === 4 && q.options?.mr && q.options.mr.length === 4 &&
+        q.correctAnswer?.en && q.correctAnswer?.mr
     );
 
     return { ...output, questions: cleanedQuestions };
@@ -61,7 +61,7 @@ export async function parseQuestionsFromText(input: QuestionParserInput): Promis
     if (!result.questions || result.questions.length === 0) {
         throw new Error("No valid questions could be parsed from the document. Please check the file's formatting and content.");
     }
-    return result;
+    return result as TestSetPayload;
   } catch (error) {
     console.error("Error in parseQuestionsFromText:", error);
     // Re-throw a more user-friendly error.

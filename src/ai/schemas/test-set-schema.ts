@@ -11,17 +11,17 @@ import { z } from 'zod';
 
 const QuestionSchema = z.object({
   text: z.object({
-    en: z.string().describe('The English version of the question text.'),
-    mr: z.string().describe('The Marathi version of the question text.'),
-  }),
+    en: z.string().describe('The English version of the question text.').optional(),
+    mr: z.string().describe('The Marathi version of the question text.').optional(),
+  }).optional(),
   options: z.object({
-    en: z.array(z.string()).length(4).describe('An array of 4 English options.'),
-    mr: z.array(z.string()).length(4).describe('An array of 4 Marathi options.'),
-  }),
+    en: z.array(z.string()).length(4).describe('An array of 4 English options.').optional(),
+    mr: z.array(z.string()).length(4).describe('An array of 4 Marathi options.').optional(),
+  }).optional(),
   correctAnswer: z.object({
-    en: z.string().describe('The correct English answer, which must exactly match one of the English options.'),
-    mr: z.string().describe('The correct Marathi answer, which must exactly match one of the Marathi options.'),
-  }),
+    en: z.string().describe('The correct English answer, which must exactly match one of the English options.').optional(),
+    mr: z.string().describe('The correct Marathi answer, which must exactly match one of the Marathi options.').optional(),
+  }).optional(),
 });
 
 export const TestSetSchema = z.object({

@@ -55,6 +55,7 @@ export default function TestSetManagementPage() {
   const [testSets, setTestSets] = useState<TestSet[]>([]);
   const { toast } = useToast();
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
+  const [isManualCreateOpen, setIsManualCreateOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   
   const [step, setStep] = useState(1);
@@ -447,4 +448,3 @@ Answer: B`}
     </div>
   );
 }
-

@@ -78,7 +78,10 @@ const documentParserFlow = ai.defineFlow(
     // We need to parse it manually.
     let parsedOutput;
     try {
-        parsedOutput = typeof rawOutput === 'string' ? JSON.parse(rawOutput) : rawOutput;
+        const jsonString = typeof rawOutput === 'string' 
+            ? rawOutput.substring(rawOutput.indexOf('{'), rawOutput.lastIndexOf('}') + 1)
+            : JSON.stringify(rawOutput);
+        parsedOutput = JSON.parse(jsonString);
     } catch (e) {
         throw new Error("The AI returned a malformed JSON response. Please check the document's formatting.");
     }

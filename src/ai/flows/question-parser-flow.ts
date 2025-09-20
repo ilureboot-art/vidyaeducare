@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview An AI flow for parsing unstructured text into a structured TestSet JSON object.
@@ -77,8 +76,8 @@ const questionParserFlow = ai.defineFlow(
     const cleanedQuestions = outputWithQuestions.questions.filter(q => 
         q && 
         q.text?.en && q.text?.mr &&
-        q.options?.en && Array.isArray(q.options.en) && q.options.en.length === 4 && 
-        q.options?.mr && Array.isArray(q.options.mr) && q.options.mr.length === 4 &&
+        q.options?.en && Array.isArray(q.options.en) && q.options.en.length === 4 && q.options.en.every(opt => typeof opt === 'string' && opt.trim() !== '') &&
+        q.options?.mr && Array.isArray(q.options.mr) && q.options.mr.length === 4 && q.options.mr.every(opt => typeof opt === 'string' && opt.trim() !== '') &&
         q.correctAnswer?.en && q.correctAnswer?.mr
     );
     

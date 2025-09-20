@@ -96,7 +96,7 @@ Start your journey to success now: ${url}
       {/* Hero Section */}
       <section className="grid md:grid-cols-2 gap-12 items-center text-center md:text-left">
         <div>
-            <h1 className="text-5xl lg:text-6xl font-bold text-primary tracking-tighter">Welcome to GuessMaster</h1>
+            <h1 className="text-5xl lg:text-6xl font-bold text-primary tracking-tighter">Welcome to Vidya Educare</h1>
             <p className="text-xl text-muted-foreground mt-4">The ultimate platform combining academic excellence with skill-based gaming to make learning rewarding.</p>
             <div className="mt-8 flex gap-4 justify-center md:justify-start flex-wrap">
                 <Button asChild size="lg">

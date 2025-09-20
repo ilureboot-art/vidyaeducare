@@ -21,9 +21,14 @@ const questionParserPrompt = ai.definePrompt({
   output: { schema: z.string().describe('A raw JSON string. Do not wrap it in markdown.') },
   prompt: `You are an expert data processor. Your task is to analyze the following unstructured text, which contains a series of multiple-choice questions, and convert it into a structured JSON object that strictly conforms to the provided schema.
 
-The text includes questions, options (A, B, C, D), and correct answers, potentially in both English and Marathi. You must accurately extract all details and format them. Infer the name, board, standard, and subject from the overall content. 
+The text includes questions, options (A, B, C, D), and correct answers, potentially in both English and Marathi. You must accurately extract all details and format them. The English and Marathi text for a single field might be on separate lines or on the same line separated by a '/'.
 
-Crucially, ensure that every single question object in the 'questions' array is complete and contains the 'text', 'options', and 'correctAnswer' fields. Each of these must have their 'en' and 'mr' sub-fields populated. The 'options' arrays must have exactly 4 string elements. The 'correctAnswer' must exactly match one of the corresponding options. Do not generate incomplete or empty question objects.
+- Infer the name, board, standard, and subject from headers like **Test Set Name:** at the top of the document.
+- For each numbered question, extract both the English and Marathi text.
+- For each option (A, B, C, D), extract both the English and Marathi text.
+- For the answer, extract both the English and Marathi text of the correct option. The correct answer must exactly match one of the corresponding options.
+
+Crucially, ensure that every single question object in the 'questions' array is complete and contains the 'text', 'options', and 'correctAnswer' fields. Each of these must have their 'en' and 'mr' sub-fields populated. The 'options' arrays must have exactly 4 string elements. Do not generate incomplete or empty question objects.
 
 Here is the document text:
 ---
@@ -49,20 +54,19 @@ const questionParserFlow = ai.defineFlow(
     
     let parsedOutput;
     try {
-        parsedOutput = JSON.parse(jsonString);
+        // Find the start and end of the JSON object
+        const startIndex = jsonString.indexOf('{');
+        const endIndex = jsonString.lastIndexOf('}');
+        if (startIndex === -1 || endIndex === -1) {
+            throw new Error("No valid JSON object found in the AI's response.");
+        }
+        const cleanedJsonString = jsonString.substring(startIndex, endIndex + 1);
+        parsedOutput = JSON.parse(cleanedJsonString);
     } catch(e) {
-        console.error("Failed to parse JSON string from AI:", e);
+        console.error("Failed to parse JSON string from AI:", e, { jsonString });
         throw new Error("The AI returned malformed JSON. Please try again or check the source document.");
     }
 
-    // Validate and clean the parsed output
-    const validatedOutput = TestSetSchema.safeParse(parsedOutput);
-    
-    if (!validatedOutput.success) {
-        console.error("AI output failed Zod validation", validatedOutput.error);
-         // Even if initial validation fails, try to clean up the questions
-    }
-    
     const outputWithQuestions = parsedOutput as Partial<TestSetPayload>;
 
     if (!outputWithQuestions.questions || !Array.isArray(outputWithQuestions.questions)) {
@@ -77,6 +81,10 @@ const questionParserFlow = ai.defineFlow(
         q.options?.mr && Array.isArray(q.options.mr) && q.options.mr.length === 4 &&
         q.correctAnswer?.en && q.correctAnswer?.mr
     );
+    
+    if (cleanedQuestions.length === 0) {
+        throw new Error("No valid questions could be parsed from the document. Please check the file's formatting and content.");
+    }
 
     return { 
         name: outputWithQuestions.name || 'Untitled Test Set',

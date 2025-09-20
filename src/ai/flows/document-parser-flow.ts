@@ -15,7 +15,7 @@ import { TestSetSchema, type TestSetPayload, QuestionParserInputSchema, type Que
 const questionParserPrompt = ai.definePrompt({
     name: "questionParserPrompt",
     input: { schema: QuestionParserInputSchema },
-    // IMPORTANT: We do not define an output schema here. 
+    // IMPORTANT: We do not define an output schema here.
     // We will handle parsing and validation manually in the flow
     // to allow for more robust error handling and data cleaning.
     prompt: `You are an expert data extractor. Your task is to parse the following unstructured text from a document and convert it into a structured JSON object representing a test set of Multiple Choice Questions (MCQs).
@@ -72,12 +72,14 @@ const documentParserFlow = ai.defineFlow(
     // The output from the LLM is a string, so we need to parse it into a JSON object.
     let parsedJson: any;
     try {
-        // The model might wrap the JSON in markdown, so we need to extract it.
-        const jsonMatch = (rawOutput as string).match(/```json\n([\s\S]*?)\n```|({[\s\S]*})/);
-        if (jsonMatch && (jsonMatch[1] || jsonMatch[2])) {
-            parsedJson = JSON.parse(jsonMatch[1] || jsonMatch[2]);
+        // The model might wrap the JSON in markdown or have leading/trailing text.
+        // This more robust regex finds the JSON object.
+        const jsonMatch = (rawOutput as string).match(/(?:```json)?\s*({[\s\S]*?})\s*(?:```)?/);
+        if (jsonMatch && jsonMatch[1]) {
+            parsedJson = JSON.parse(jsonMatch[1]);
         } else {
-             parsedJson = JSON.parse(rawOutput as string);
+            // As a fallback, try parsing the whole string.
+            parsedJson = JSON.parse(rawOutput as string);
         }
     } catch (e) {
         console.error("Failed to parse JSON from model output:", rawOutput);

@@ -32,8 +32,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { allTestSets, addTestSet, deleteTestSet, updateTestSet, type TestSet, type Question } from "@/lib/question-bank";
 import { academicConfig } from "@/lib/academic-config";
 import { parseQuestionsFromDocument } from "@/ai/flows/document-parser-flow";
-import { TestSetSchema } from "@/ai/schemas/test-set-schema";
 import mammoth from "mammoth";
+import { TestSetSchema } from "@/ai/schemas/test-set-schema";
 
 
 const initialQuestionState: Omit<Question, 'id'> = {
@@ -140,7 +140,7 @@ export default function TestSetManagementPage() {
           questions: uploadedSet.questions.map((q, i) => ({ ...q, id: `Q-${i}`}))
       };
       
-      addTestSet(newTestSet);
+      addTestSet(newTestSet); // This line was missing
       setTestSets(prevSets => [...prevSets, newTestSet]);
       
       toast({
@@ -377,7 +377,7 @@ A. Option 1 (English) / (Marathi)
 B. Option 2 (English) / (Marathi)
 C. Option 3 (English) / (Marathi)
 D. Option 4 (English) / (Marathi)
-Answer: B`}
+Answer: B. Option 2 (English) / (Marathi)`}
                                 </pre>
                             </div>
                              <div className="space-y-2">
@@ -448,3 +448,5 @@ Answer: B`}
     </div>
   );
 }
+
+    

@@ -30,7 +30,7 @@ You must identify the overall details of the test set and then extract each ques
     *   'options': Exactly 4 options, each with an 'en' and 'mr' version.
     *   'correctAnswer': The correct answer, in both 'en' and 'mr'. The correct answer text **must exactly match** one of the provided options.
 4.  **Strictness**: If a question is incomplete (e.g., missing options, no clear answer), you must ignore it and move to the next one. Do not include malformed questions in the output.
-5.  **Output Format**: The final output must be a single, valid JSON object conforming to the provided schema. Do not add any conversational text, markdown, or other wrappers around the JSON.
+5.  **Output Format**: The final output must be a single, valid JSON object. Do not add any conversational text, markdown, or other wrappers around the JSON.
 6.  **Final Instruction**: Be extremely strict. If you encounter any data that doesn't fit the structure perfectly, discard that question entirely. Do not output incomplete objects.
 
 **Example Input Text:**
@@ -72,8 +72,15 @@ const documentParserFlow = ai.defineFlow(
     // The output from the LLM is a string, so we need to parse it into a JSON object.
     let parsedJson: any;
     try {
-        parsedJson = JSON.parse(rawOutput as string);
+        // The model might wrap the JSON in markdown, so we need to extract it.
+        const jsonMatch = (rawOutput as string).match(/```json\n([\s\S]*?)\n```|({[\s\S]*})/);
+        if (jsonMatch && (jsonMatch[1] || jsonMatch[2])) {
+            parsedJson = JSON.parse(jsonMatch[1] || jsonMatch[2]);
+        } else {
+             parsedJson = JSON.parse(rawOutput as string);
+        }
     } catch (e) {
+        console.error("Failed to parse JSON from model output:", rawOutput);
         throw new Error("The AI model returned invalid JSON. Please check the document's formatting.");
     }
 

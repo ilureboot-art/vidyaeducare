@@ -30,6 +30,7 @@ You must identify the overall details of the test set and then extract each ques
     *   'correctAnswer': The correct answer, in both 'en' and 'mr'. The correct answer text **must exactly match** one of the provided options.
 4.  **Strictness**: If a question is incomplete (e.g., missing options, no clear answer), you must ignore it and move to the next one. Do not include malformed questions in the output.
 5.  **Output Format**: The final output must be a single, valid JSON object conforming to the provided schema. Do not add any conversational text, markdown, or other wrappers around the JSON.
+6.  **Final Instruction**: Be extremely strict. If you encounter any data that doesn't fit the structure perfectly, discard that question entirely. Do not output incomplete objects.
 
 **Example Input Text:**
 \`\`\`
@@ -69,11 +70,12 @@ const documentParserFlow = ai.defineFlow(
     // Final filtering step to ensure data integrity
     const validQuestions = output.questions.filter((q: any) => 
         q &&
-        q.text?.en && q.text?.mr &&
-        q.options?.en?.length === 4 && q.options?.mr?.length === 4 &&
-        q.correctAnswer?.en && q.correctAnswer?.mr &&
-        q.options.en.every((opt: string) => opt && opt.trim() !== '') &&
-        q.options.mr.every((opt: string) => opt && opt.trim() !== '')
+        q.text && q.text.en && q.text.mr &&
+        q.options && q.options.en && q.options.mr &&
+        q.options.en.length === 4 && q.options.mr.length === 4 &&
+        q.correctAnswer && q.correctAnswer.en && q.correctAnswer.mr &&
+        q.options.en.every((opt: string) => typeof opt === 'string' && opt.trim() !== '') &&
+        q.options.mr.every((opt: string) => typeof opt === 'string' && opt.trim() !== '')
     );
 
     if (validQuestions.length === 0) {

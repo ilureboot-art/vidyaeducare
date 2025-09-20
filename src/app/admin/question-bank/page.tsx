@@ -31,9 +31,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { allTestSets, addTestSet, deleteTestSet, updateTestSet, type TestSet, type Question } from "@/lib/question-bank";
 import { academicConfig } from "@/lib/academic-config";
-import { parseQuestionsFromDocument } from "@/ai/flows/document-parser-flow";
+import { parseQuestionsFromDocument, type TestSetPayload } from "@/ai/flows/document-parser-flow";
 import mammoth from "mammoth";
-import { TestSetSchema } from "@/ai/schemas/test-set-schema";
 
 
 const initialQuestionState: Omit<Question, 'id'> = {
@@ -101,7 +100,7 @@ export default function TestSetManagementPage() {
     setIsUploading(true);
 
     try {
-        let uploadedSet: Omit<TestSet, 'id'|'questions'> & { questions: Omit<Question, 'id'>[] };
+        let uploadedSet: TestSetPayload;
 
         if (file.type === 'application/json') {
             const content = await file.text();
@@ -109,15 +108,7 @@ export default function TestSetManagementPage() {
         } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
             const arrayBuffer = await file.arrayBuffer();
             const { value: documentText } = await mammoth.extractRawText({ arrayBuffer });
-            const aiResult = await parseQuestionsFromDocument({ documentText });
-            
-            // Validate the AI's output against the Zod schema
-            const validationResult = TestSetSchema.safeParse(aiResult);
-            if (!validationResult.success) {
-                console.error("AI output validation failed:", validationResult.error);
-                throw new Error(`The AI failed to produce a valid test set structure. Please check the document format. Details: ${validationResult.error.flatten().fieldErrors}`);
-            }
-            uploadedSet = validationResult.data;
+            uploadedSet = await parseQuestionsFromDocument({ documentText });
 
         } else {
             toast({
@@ -448,5 +439,7 @@ Answer: B. Option 2 (English) / (Marathi)`}
     </div>
   );
 }
+
+    
 
     

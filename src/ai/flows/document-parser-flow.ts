@@ -4,18 +4,18 @@
  * @fileOverview An AI flow for parsing MCQ test sets from raw document text.
  *
  * - parseQuestionsFromDocument - A function that takes unstructured text and returns a structured test set.
- * - DocumentParserInput - The input type for the parser function.
+ * - QuestionParserInput - The input type for the parser function.
  * - TestSetPayload - The Zod schema-inferred type for the structured test set output.
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import { TestSetSchema, type TestSetPayload, DocumentParserInputSchema, type DocumentParserInput } from '../schemas/test-set-schema';
+import { TestSetSchema, type TestSetPayload, QuestionParserInputSchema, type QuestionParserInput } from '../schemas/test-set-schema';
 
 
 const questionParserPrompt = ai.definePrompt({
     name: "questionParserPrompt",
-    input: { schema: DocumentParserInputSchema },
+    input: { schema: QuestionParserInputSchema },
     output: { schema: TestSetSchema },
     prompt: `You are an expert data extractor. Your task is to parse the following unstructured text from a document and convert it into a structured JSON object representing a test set of Multiple Choice Questions (MCQs).
 
@@ -25,9 +25,9 @@ You must identify the overall details of the test set and then extract each ques
 1.  **Test Set Details**: Identify the 'Test Set Name', 'Board', 'Standard', and 'Subject' from the beginning of the document.
 2.  **Bilingual Parsing**: The document contains text in both English and Marathi. They can be on the same line separated by a '/' or on separate lines. You must extract both versions for each piece of text.
 3.  **Question Structure**: For each question, you must extract:
-    *   `text`: The question text itself, in both 'en' and 'mr'.
-    *   `options`: Exactly 4 options, each with an 'en' and 'mr' version.
-    *   `correctAnswer`: The correct answer, in both 'en' and 'mr'. The correct answer text **must exactly match** one of the provided options.
+    *   text: The question text itself, in both 'en' and 'mr'.
+    *   options: Exactly 4 options, each with an 'en' and 'mr' version.
+    *   correctAnswer: The correct answer, in both 'en' and 'mr'. The correct answer text **must exactly match** one of the provided options.
 4.  **Strictness**: If a question is incomplete (e.g., missing options, no clear answer), you must ignore it and move to the next one. Do not include malformed questions in the output.
 5.  **Output Format**: The final output must be a single, valid JSON object conforming to the provided schema. Do not add any conversational text, markdown, or other wrappers around the JSON.
 
@@ -64,7 +64,7 @@ Answer: B. Mars / मंगळ
 const documentParserFlow = ai.defineFlow(
   {
     name: 'documentParserFlow',
-    inputSchema: DocumentParserInputSchema,
+    inputSchema: QuestionParserInputSchema,
     outputSchema: TestSetSchema,
   },
   async (input) => {
@@ -90,7 +90,7 @@ const documentParserFlow = ai.defineFlow(
 );
 
 
-export async function parseQuestionsFromDocument(input: DocumentParserInput): Promise<TestSetPayload> {
+export async function parseQuestionsFromDocument(input: QuestionParserInput): Promise<TestSetPayload> {
     try {
         const result = await documentParserFlow(input);
         if (result === undefined) {

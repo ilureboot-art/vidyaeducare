@@ -78,7 +78,9 @@ const documentParserFlow = ai.defineFlow(
     const validQuestions = output.questions.filter(q => 
         q.text?.en && q.text?.mr &&
         q.options?.en?.length === 4 && q.options?.mr?.length === 4 &&
-        q.correctAnswer?.en && q.correctAnswer?.mr
+        q.correctAnswer?.en && q.correctAnswer?.mr &&
+        q.options.en.every(opt => opt.trim() !== '') &&
+        q.options.mr.every(opt => opt.trim() !== '')
     );
 
     if (validQuestions.length === 0) {

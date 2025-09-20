@@ -42,7 +42,13 @@ const questionParserFlow = ai.defineFlow(
       console.error('AI model returned null output.', { usage });
       throw new Error("The AI model failed to parse the document. The output was empty. This can happen if the document content is unclear or doesn't resemble a test set.");
     }
-    return output;
+    
+    // Cleanup step: Filter out any empty or incomplete question objects from the array.
+    const cleanedQuestions = output.questions.filter(q => 
+        q && q.text && q.options && q.correctAnswer
+    );
+
+    return { ...output, questions: cleanedQuestions };
   }
 );
 

@@ -62,6 +62,9 @@ export async function parseQuestionsFromText(input: QuestionParserInput): Promis
   } catch (error) {
     console.error("Error in parseQuestionsFromText:", error);
     // Re-throw the original, more specific error from the flow.
-    throw error;
+    if (error instanceof Error) {
+        throw new Error(`Failed to process the document. Please ensure it's well-formatted. Details: ${error.message}`);
+    }
+    throw new Error("An unknown error occurred while parsing the document.");
   }
 }

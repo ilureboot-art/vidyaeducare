@@ -16,6 +16,7 @@ import { TestSetSchema, type TestSetPayload, QuestionParserInputSchema, type Que
 const questionParserPrompt = ai.definePrompt({
     name: "questionParserPrompt",
     input: { schema: QuestionParserInputSchema },
+    output: { schema: TestSetSchema },
     prompt: `You are an expert data extractor. Your task is to parse the following unstructured text from a document and convert it into a structured JSON object representing a test set of Multiple Choice Questions (MCQs).
 
 You must identify the overall details of the test set and then extract each question individually.
@@ -79,7 +80,13 @@ const documentParserFlow = ai.defineFlow(
         typeof q.correctAnswer.mr === 'string' && q.correctAnswer.mr.trim() !== ''
     );
     
-    const finalPayload = { ...rawOutput, questions: validQuestions };
+    const finalPayload = {
+      name: rawOutput.name,
+      board: rawOutput.board,
+      standard: rawOutput.standard,
+      subject: rawOutput.subject,
+      questions: validQuestions
+    };
 
     // Final validation against the Zod schema before returning
     const validationResult = TestSetSchema.safeParse(finalPayload);

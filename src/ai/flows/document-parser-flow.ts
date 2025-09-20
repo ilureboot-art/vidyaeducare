@@ -16,7 +16,7 @@ import { TestSetSchema, type TestSetPayload, QuestionParserInputSchema, type Que
 const questionParserPrompt = ai.definePrompt({
     name: "questionParserPrompt",
     input: { schema: QuestionParserInputSchema },
-    // REMOVED output schema to handle validation manually
+    output: { schema: TestSetSchema },
     prompt: `You are an expert data extractor. Your task is to parse the following unstructured text from a document and convert it into a structured JSON object representing a test set of Multiple Choice Questions (MCQs).
 
 You must identify the overall details of the test set and then extract each question individually.
@@ -67,26 +67,14 @@ const documentParserFlow = ai.defineFlow(
     outputSchema: TestSetSchema,
   },
   async (input) => {
-    const { output: rawOutput } = await questionParserPrompt(input);
+    const { output } = await questionParserPrompt(input);
 
-    if (!rawOutput) {
-      throw new Error("The AI model failed to produce any output. Please check the document's formatting.");
+    if (!output || !output.questions) {
+      throw new Error("The AI model failed to produce a valid output. Please check the document's formatting.");
     }
     
-    // The AI might return the JSON as a string, sometimes with markdown.
-    // We need to parse it manually.
-    let parsedOutput;
-    try {
-        const jsonString = typeof rawOutput === 'string' 
-            ? rawOutput.substring(rawOutput.indexOf('{'), rawOutput.lastIndexOf('}') + 1)
-            : JSON.stringify(rawOutput);
-        parsedOutput = JSON.parse(jsonString);
-    } catch (e) {
-        throw new Error("The AI returned a malformed JSON response. Please check the document's formatting.");
-    }
-
     // Final filtering step to ensure data integrity
-    const validQuestions = parsedOutput.questions.filter((q: any) => 
+    const validQuestions = output.questions.filter((q: any) => 
         q &&
         q.text?.en && q.text?.mr &&
         q.options?.en?.length === 4 && q.options?.mr?.length === 4 &&
@@ -96,10 +84,10 @@ const documentParserFlow = ai.defineFlow(
     );
 
     if (validQuestions.length === 0) {
-        throw new Error("No valid questions could be parsed from the document. Please ensure questions, options, and answers are clearly formatted.");
+        throw new Error("No valid questions could be parsed from the document. Please ensure all questions have text, 4 options, and a clear answer.");
     }
     
-    const finalResult = { ...parsedOutput, questions: validQuestions };
+    const finalResult = { ...output, questions: validQuestions };
 
     // Final validation against the Zod schema before returning
     const validationResult = TestSetSchema.safeParse(finalResult);
@@ -129,4 +117,3 @@ export async function parseQuestionsFromDocument(input: QuestionParserInput): Pr
         throw new Error("An unknown error occurred while parsing the document.");
     }
 }
-

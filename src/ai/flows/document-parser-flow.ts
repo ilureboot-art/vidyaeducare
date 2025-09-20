@@ -28,7 +28,7 @@ You must identify the overall details of the test set and then extract each ques
     *   'text': The question text itself, in both 'en' and 'mr'.
     *   'options': Exactly 4 options, each with an 'en' and 'mr' version.
     *   'correctAnswer': The correct answer, in both 'en' and 'mr'. The correct answer text **must exactly match** one of the provided options.
-4.  **Strictness**: Be extremely strict. If a question is incomplete (e.g., missing options, no clear answer), you must ignore it and move to the next one. Do not output incomplete or malformed questions in the array.
+4.  **Strictness**: Be extremely strict. If a question is incomplete (e.g., missing text, options, or a clear answer), you must ignore it and move to the next one. Do not output incomplete or malformed questions in the array.
 5.  **Output Format**: The final output must be a single, valid JSON object. Do not add any conversational text, markdown, or other wrappers around the JSON.
 
 **Example Input Text:**
@@ -60,15 +60,14 @@ const documentParserFlow = ai.defineFlow(
     outputSchema: TestSetSchema,
   },
   async (input) => {
-    const result = await questionParserPrompt(input);
-    const rawOutput = result.output;
+    const { output } = await questionParserPrompt(input);
 
-    if (!rawOutput) {
+    if (!output) {
       throw new Error("The AI model failed to produce any output. Please check the document's formatting.");
     }
     
     // Robust filtering step to ensure data integrity before validation.
-    const validQuestions = (rawOutput.questions || []).filter((q: any) => 
+    const validQuestions = (output.questions || []).filter((q: any) => 
         q &&
         q.text && typeof q.text.en === 'string' && q.text.en.trim() !== '' &&
         typeof q.text.mr === 'string' && q.text.mr.trim() !== '' &&
@@ -80,11 +79,11 @@ const documentParserFlow = ai.defineFlow(
         typeof q.correctAnswer.mr === 'string' && q.correctAnswer.mr.trim() !== ''
     );
     
-    const finalPayload = {
-      name: rawOutput.name,
-      board: rawOutput.board,
-      standard: rawOutput.standard,
-      subject: rawOutput.subject,
+    const finalPayload: TestSetPayload = {
+      name: output.name,
+      board: output.board,
+      standard: output.standard,
+      subject: output.subject,
       questions: validQuestions
     };
 

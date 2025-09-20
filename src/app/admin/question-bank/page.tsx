@@ -108,7 +108,6 @@ export default function TestSetManagementPage() {
         } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
             const arrayBuffer = await file.arrayBuffer();
             const { value: documentText } = await mammoth.extractRawText({ arrayBuffer });
-            // The AI flow is now only responsible for parsing, not saving.
             parsedPayload = await parseQuestionsFromDocument({ documentText });
         } else {
             toast({
@@ -120,7 +119,6 @@ export default function TestSetManagementPage() {
             return;
         }
       
-      // Basic validation on the payload returned from parsing
       if (!parsedPayload.name || !parsedPayload.board || !parsedPayload.standard || !parsedPayload.subject || !Array.isArray(parsedPayload.questions)) {
           throw new Error("The processed file is missing required fields: name, board, standard, subject, or questions array.");
       }
@@ -131,7 +129,6 @@ export default function TestSetManagementPage() {
           questions: parsedPayload.questions.map((q, i) => ({ ...q, id: `Q-${i}`}))
       };
       
-      // Saving is now handled here on the client-side component
       addTestSet(newTestSet);
       setTestSets(prevSets => [...prevSets, newTestSet]);
       

@@ -21,7 +21,7 @@ const questionParserPrompt = ai.definePrompt({
   output: { schema: z.string().describe('A raw JSON string. Do not wrap it in markdown.') },
   prompt: `You are an expert data processor. Your task is to analyze the following unstructured text, which contains a series of multiple-choice questions, and convert it into a structured JSON object that strictly conforms to the provided schema.
 
-The text includes questions, options (A, B, C, D), and correct answers, potentially in both English and Marathi. You must accurately extract all details and format them. The English and Marathi text for a single field might be on separate lines or on the same line separated by a '/'.
+The text includes questions, options (A, B, C, D), and correct answers, potentially in both English and Marathi. You must accurately extract all details and format them. The English and Marathi text for a single field might be on the same line separated by a '/' or on separate lines.
 
 - Infer the name, board, standard, and subject from headers like **Test Set Name:** at the top of the document.
 - For each numbered question, extract both the English and Marathi text.

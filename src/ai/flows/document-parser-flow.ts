@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview An AI flow for parsing MCQ test sets from raw document text.
@@ -16,7 +15,9 @@ import { TestSetSchema, type TestSetPayload, QuestionParserInputSchema, type Que
 const questionParserPrompt = ai.definePrompt({
     name: "questionParserPrompt",
     input: { schema: QuestionParserInputSchema },
-    output: { schema: TestSetSchema },
+    // IMPORTANT: We do not define an output schema here. 
+    // We will handle parsing and validation manually in the flow
+    // to allow for more robust error handling and data cleaning.
     prompt: `You are an expert data extractor. Your task is to parse the following unstructured text from a document and convert it into a structured JSON object representing a test set of Multiple Choice Questions (MCQs).
 
 You must identify the overall details of the test set and then extract each question individually.
@@ -61,28 +62,40 @@ const documentParserFlow = ai.defineFlow(
     outputSchema: TestSetSchema,
   },
   async (input) => {
-    const { output } = await questionParserPrompt(input);
+    const result = await questionParserPrompt(input);
+    const rawOutput = result.output;
 
-    if (!output || !output.questions) {
-      throw new Error("The AI model failed to produce a valid output. Please check the document's formatting.");
+    if (!rawOutput) {
+      throw new Error("The AI model failed to produce any output. Please check the document's formatting.");
     }
     
-    // Final filtering step to ensure data integrity
-    const validQuestions = output.questions.filter((q: any) => 
+    // The output from the LLM is a string, so we need to parse it into a JSON object.
+    let parsedJson: any;
+    try {
+        parsedJson = JSON.parse(rawOutput as string);
+    } catch (e) {
+        throw new Error("The AI model returned invalid JSON. Please check the document's formatting.");
+    }
+
+
+    // Final and robust filtering step to ensure data integrity before validation.
+    const validQuestions = (parsedJson.questions || []).filter((q: any) => 
         q &&
-        q.text && q.text.en && q.text.mr &&
-        q.options && q.options.en && q.options.mr &&
+        q.text && typeof q.text.en === 'string' && q.text.en.trim() !== '' &&
+        typeof q.text.mr === 'string' && q.text.mr.trim() !== '' &&
+        q.options && Array.isArray(q.options.en) && Array.isArray(q.options.mr) &&
         q.options.en.length === 4 && q.options.mr.length === 4 &&
-        q.correctAnswer && q.correctAnswer.en && q.correctAnswer.mr &&
-        q.options.en.every((opt: string) => typeof opt === 'string' && opt.trim() !== '') &&
-        q.options.mr.every((opt: string) => typeof opt === 'string' && opt.trim() !== '')
+        q.options.en.every((opt: any) => typeof opt === 'string' && opt.trim() !== '') &&
+        q.options.mr.every((opt: any) => typeof opt === 'string' && opt.trim() !== '') &&
+        q.correctAnswer && typeof q.correctAnswer.en === 'string' && q.correctAnswer.en.trim() !== '' &&
+        typeof q.correctAnswer.mr === 'string' && q.correctAnswer.mr.trim() !== ''
     );
 
     if (validQuestions.length === 0) {
         throw new Error("No valid questions could be parsed from the document. Please ensure all questions have text, 4 options, and a clear answer.");
     }
     
-    const finalResult = { ...output, questions: validQuestions };
+    const finalResult = { ...parsedJson, questions: validQuestions };
 
     // Final validation against the Zod schema before returning
     const validationResult = TestSetSchema.safeParse(finalResult);

@@ -1,6 +1,8 @@
+
 /**
  * @fileOverview Zod schemas for the question parsing functionality.
  *
+ * - QuestionSchema - The Zod schema for a single parsed question.
  * - TestSetSchema - The Zod schema for a complete test set.
  * - TestSetPayload - The TypeScript type inferred from TestSetSchema.
  * - QuestionParserInputSchema - The Zod schema for the question parser input.
@@ -9,7 +11,7 @@
 
 import { z } from 'zod';
 
-const QuestionSchema = z.object({
+export const QuestionSchema = z.object({
   text: z.object({
     en: z.string().describe('The English version of the question text.'),
     mr: z.string().describe('The Marathi version of the question text.'),
@@ -25,10 +27,10 @@ const QuestionSchema = z.object({
 });
 
 export const TestSetSchema = z.object({
-  name: z.string().describe("A suitable name for the test set, derived from the content (e.g., 'Science Practice Test 1')."),
+  name: z.string().min(1, "Test set name is required.").describe("A suitable name for the test set, derived from the content (e.g., 'Science Practice Test 1')."),
   board: z.enum(["CBSE", "ICSE", "SSC"]).describe("The educational board (CBSE, ICSE, or SSC), inferred from the content."),
-  standard: z.string().describe("The grade or standard (e.g., '10th'), inferred from the content."),
-  subject: z.string().describe("The subject (e.g., 'Science'), inferred from the content."),
+  standard: z.string().min(1, "Standard is required.").describe("The grade or standard (e.g., '10th'), inferred from the content."),
+  subject: z.string().min(1, "Subject is required.").describe("The subject (e.g., 'Science'), inferred from the content."),
   questions: z.array(QuestionSchema).describe("An array of all the questions extracted from the document."),
 });
 

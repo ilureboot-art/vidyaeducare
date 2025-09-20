@@ -22,6 +22,7 @@ export function addTestSet(testSet: TestSet) {
     const existingIndex = allTestSets.findIndex(ts => ts.id === testSet.id);
 
     if (existingIndex > -1) {
+        console.warn(`Test set with ID ${testSet.id} already exists. It will be overwritten.`);
         allTestSets[existingIndex] = testSet;
     } else {
         allTestSets.push(testSet);

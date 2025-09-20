@@ -3,33 +3,37 @@
 /**
  * @fileOverview An AI flow for parsing MCQ test sets from raw document text.
  *
- * - parseQuestionsFromDocument - A function that takes unstructured text and returns a structured test set.
+ * - parseQuestionsFromDocument - A function that takes unstructured text and returns a structured list of questions.
  * - QuestionParserInput - The input type for the parser function.
- * - TestSetPayload - The Zod schema-inferred type for the structured test set output.
+ * - QuestionParserOutput - The Zod schema-inferred type for the structured question list output.
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import { TestSetSchema, type TestSetPayload, QuestionParserInputSchema, type QuestionParserInput } from '../schemas/test-set-schema';
+import { QuestionSchema, QuestionParserInputSchema, type QuestionParserInput } from '../schemas/test-set-schema';
+
+// Define the output schema for the list of questions only
+const QuestionParserOutputSchema = z.object({
+  questions: z.array(QuestionSchema).describe("An array of all the questions extracted from the document."),
+});
+export type QuestionParserOutput = z.infer<typeof QuestionParserOutputSchema>;
 
 
 const questionParserPrompt = ai.definePrompt({
     name: "questionParserPrompt",
     input: { schema: QuestionParserInputSchema },
-    output: { schema: TestSetSchema },
-    prompt: `You are an expert data extractor. Your task is to parse the following unstructured text from a document and convert it into a structured JSON object representing a test set of Multiple Choice Questions (MCQs).
-
-You must identify the overall details of the test set and then extract each question individually.
+    output: { schema: QuestionParserOutputSchema },
+    prompt: `You are an expert data extractor. Your task is to parse the following unstructured text and extract every Multiple Choice Question (MCQ) you find into a structured JSON object.
 
 **Extraction Rules:**
-1.  **Test Set Details**: Identify the 'Test Set Name', 'Board', 'Standard', and 'Subject' from the beginning of the document.
+1.  **Focus on Questions**: Your primary goal is to extract the 'questions' array. Ignore top-level document details like 'Test Set Name', 'Board', etc.
 2.  **Bilingual Parsing**: The document contains text in both English and Marathi. They can be on the same line separated by a '/' or on separate lines. You must extract both versions for each piece of text.
 3.  **Question Structure**: For each question, you must extract:
     *   'text': The question text itself, in both 'en' and 'mr'.
     *   'options': Exactly 4 options, each with an 'en' and 'mr' version.
     *   'correctAnswer': The correct answer, in both 'en' and 'mr'. The correct answer text **must exactly match** one of the provided options.
 4.  **Strictness**: Be extremely strict. If a question is incomplete (e.g., missing text, options, or a clear answer), you must ignore it and move to the next one. Do not output incomplete or malformed questions in the array.
-5.  **Output Format**: The final output must be a single, valid JSON object. Do not add any conversational text, markdown, or other wrappers around the JSON.
+5.  **Output Format**: The final output must be a single, valid JSON object containing only the 'questions' array. Do not add any conversational text, markdown, or other wrappers.
 
 **Example Input Text:**
 \`\`\`
@@ -57,17 +61,17 @@ const documentParserFlow = ai.defineFlow(
   {
     name: 'documentParserFlow',
     inputSchema: QuestionParserInputSchema,
-    outputSchema: TestSetSchema,
+    outputSchema: QuestionParserOutputSchema,
   },
   async (input) => {
     const { output } = await questionParserPrompt(input);
 
-    if (!output) {
-      throw new Error("The AI model failed to produce any output. Please check the document's formatting.");
+    if (!output || !Array.isArray(output.questions)) {
+      throw new Error("The AI model failed to produce a valid questions array.");
     }
     
-    // Robust filtering step to ensure data integrity before validation.
-    const validQuestions = (output.questions || []).filter((q: any) => 
+    // Robust filtering step to ensure data integrity before returning.
+    const validQuestions = output.questions.filter((q: any): q is z.infer<typeof QuestionSchema> => 
         q &&
         q.text && typeof q.text.en === 'string' && q.text.en.trim() !== '' &&
         typeof q.text.mr === 'string' && q.text.mr.trim() !== '' &&
@@ -76,34 +80,26 @@ const documentParserFlow = ai.defineFlow(
         q.options.en.every((opt: any) => typeof opt === 'string' && opt.trim() !== '') &&
         q.options.mr.every((opt: any) => typeof opt === 'string' && opt.trim() !== '') &&
         q.correctAnswer && typeof q.correctAnswer.en === 'string' && q.correctAnswer.en.trim() !== '' &&
-        typeof q.correctAnswer.mr === 'string' && q.correctAnswer.mr.trim() !== ''
+        typeof q.correctAnswer.mr === 'string' && q.correctAnswer.mr.trim() !== '' &&
+        // Ensure the correct answer is one of the options
+        q.options.en.includes(q.correctAnswer.en) &&
+        q.options.mr.includes(q.correctAnswer.mr)
     );
     
-    const finalPayload: TestSetPayload = {
-      name: output.name,
-      board: output.board,
-      standard: output.standard,
-      subject: output.subject,
+    const finalPayload: QuestionParserOutput = {
       questions: validQuestions
     };
-
-    // Final validation against the Zod schema before returning
-    const validationResult = TestSetSchema.safeParse(finalPayload);
-    if (!validationResult.success) {
-        console.error("Final validation failed:", validationResult.error.flatten());
-        throw new Error(`The processed data is invalid. Details: ${validationResult.error.message}`);
-    }
-
-    if (validationResult.data.questions.length === 0) {
+    
+    if (finalPayload.questions.length === 0) {
         throw new Error("No valid questions could be parsed from the document. Please ensure all questions have text, 4 options, and a clear answer.");
     }
 
-    return validationResult.data;
+    return finalPayload;
   }
 );
 
 
-export async function parseQuestionsFromDocument(input: QuestionParserInput): Promise<TestSetPayload> {
+export async function parseQuestionsFromDocument(input: QuestionParserInput): Promise<QuestionParserOutput> {
     try {
         const result = await documentParserFlow(input);
         if (result === undefined) {

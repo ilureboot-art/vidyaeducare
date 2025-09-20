@@ -31,8 +31,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { allTestSets, addTestSet, deleteTestSet, updateTestSet, type TestSet, type Question } from "@/lib/question-bank";
 import { academicConfig } from "@/lib/academic-config";
-import mammoth from "mammoth";
-import { parseQuestionsFromText } from "@/ai/flows/question-parser-flow";
 
 const initialQuestionState: Omit<Question, 'id'> = {
   text: { en: '', mr: '' },
@@ -96,53 +94,40 @@ export default function TestSetManagementPage() {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    if (file.type !== 'application/json') {
+      toast({
+        variant: 'destructive',
+        title: "Invalid File Type",
+        description: `Please upload a .json file.`,
+      });
+      return;
+    }
+
     setIsUploading(true);
 
     try {
-        let uploadedSet: Omit<TestSet, 'id' | 'questions'> & { questions: Omit<Question, 'id'>[] };
-
-        if (file.type === 'application/json') {
-            const content = await file.text();
-            uploadedSet = JSON.parse(content);
-        } else if (file.name.endsWith('.docx')) {
-            const arrayBuffer = await file.arrayBuffer();
-            const { value: text } = await mammoth.extractRawText({ arrayBuffer });
-            
-            if (!text.trim()) {
-                throw new Error("The DOCX file appears to be empty or could not be read.");
-            }
-            
-            toast({ title: "Parsing Document...", description: "The AI is analyzing your document. This may take a moment." });
-            uploadedSet = await parseQuestionsFromText({ documentText: text });
-
-        } else {
-            throw new Error("Unsupported file type. Please upload a .json or .docx file.");
-        }
-
-        if (!uploadedSet.name || !uploadedSet.board || !uploadedSet.standard || !uploadedSet.subject || !Array.isArray(uploadedSet.questions)) {
-            throw new Error("Processed data is missing required fields: name, board, standard, subject, or questions array.");
-        }
-        
-        uploadedSet.questions.forEach((q: any, index: number) => {
-             if (!q.text?.en || !q.options?.en || !q.correctAnswer?.en || !q.text?.mr || !q.options?.mr || !q.correctAnswer?.mr) {
-                throw new Error(`Question at index ${index} is missing required fields (text, options, correctAnswer in both languages).`);
-             }
-        });
-
-        const newTestSet: TestSet = { 
-            ...uploadedSet, 
-            id: `SET-${String(Date.now()).slice(-6)}-${Math.random()}`,
-            questions: uploadedSet.questions.map((q, i) => ({ ...q, id: `Q-${i}`}))
-        };
-        
-        addTestSet(newTestSet);
-        setTestSets(prevSets => [...prevSets, newTestSet]);
-        
-        toast({
-            title: "Test Set Uploaded!",
-            description: `"${newTestSet.name}" with ${newTestSet.questions.length} questions has been successfully added.`
-        });
-        setIsBulkUploadOpen(false);
+      const content = await file.text();
+      const uploadedSet: Omit<TestSet, 'id'|'questions'> & { questions: Omit<Question, 'id'>[] } = JSON.parse(content);
+      
+      // Basic validation
+      if (!uploadedSet.name || !uploadedSet.board || !uploadedSet.standard || !uploadedSet.subject || !Array.isArray(uploadedSet.questions)) {
+          throw new Error("The JSON file is missing required fields: name, board, standard, subject, or questions array.");
+      }
+      
+      const newTestSet: TestSet = { 
+          ...uploadedSet, 
+          id: `SET-${String(Date.now()).slice(-6)}-${Math.random()}`,
+          questions: uploadedSet.questions.map((q, i) => ({ ...q, id: `Q-${i}`}))
+      };
+      
+      addTestSet(newTestSet);
+      setTestSets(prevSets => [...prevSets, newTestSet]);
+      
+      toast({
+          title: "Test Set Uploaded!",
+          description: `"${newTestSet.name}" with ${newTestSet.questions.length} questions has been successfully added.`
+      });
+      setIsBulkUploadOpen(false);
 
     } catch (error) {
         console.error("Bulk upload error:", error);
@@ -357,7 +342,7 @@ export default function TestSetManagementPage() {
                         <DialogHeader>
                             <DialogTitle>Bulk Upload a Test Set</DialogTitle>
                             <DialogDescription>
-                                Upload a JSON or DOCX file containing a test set. The AI will parse DOCX files automatically.
+                                Upload a JSON file containing a test set. This is the most reliable way to upload many questions at once.
                             </DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4 py-4">
@@ -378,11 +363,10 @@ export default function TestSetManagementPage() {
   ]
 }`}
                                 </pre>
-                                <p className="text-sm text-muted-foreground">For DOCX files, just provide the questions, options, and answers in a clear list format.</p>
                             </div>
                              <div className="space-y-2">
-                                <Label htmlFor="json-upload">Test Set File</Label>
-                                <Input id="json-upload" type="file" accept=".json,.docx" onChange={handleBulkUpload} disabled={isUploading} />
+                                <Label htmlFor="json-upload">Test Set File (.json only)</Label>
+                                <Input id="json-upload" type="file" accept=".json" onChange={handleBulkUpload} disabled={isUploading} />
                             </div>
                              {isUploading && (
                                 <div className="flex items-center justify-center gap-2 text-muted-foreground">

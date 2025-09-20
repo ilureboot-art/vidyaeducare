@@ -58,10 +58,13 @@ const questionParserFlow = ai.defineFlow(
 export async function parseQuestionsFromText(input: QuestionParserInput): Promise<TestSetPayload> {
   try {
     const result = await questionParserFlow(input);
+    if (!result.questions || result.questions.length === 0) {
+        throw new Error("No valid questions could be parsed from the document. Please check the file's formatting and content.");
+    }
     return result;
   } catch (error) {
     console.error("Error in parseQuestionsFromText:", error);
-    // Re-throw the original, more specific error from the flow.
+    // Re-throw a more user-friendly error.
     if (error instanceof Error) {
         throw new Error(`Failed to process the document. Please ensure it's well-formatted. Details: ${error.message}`);
     }

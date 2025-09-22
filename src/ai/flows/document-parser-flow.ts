@@ -67,27 +67,29 @@ const documentParserFlow = ai.defineFlow(
     const result = await questionParserPrompt(input);
     const rawOutput = result.output as any;
 
-    if (!rawOutput || !Array.isArray(rawOutput.questions)) {
-      throw new Error("The AI model failed to produce a valid 'questions' array.");
+    if (!rawOutput || !Array.isArray(rawOutput)) {
+      throw new Error("The AI model failed to produce a valid questions array.");
     }
     
     // Robust filtering step to ensure data integrity before final validation.
     // This will silently skip any incomplete or malformed question objects.
-    const validQuestions = rawOutput.questions.filter((q: any): q is z.infer<typeof QuestionSchema> => {
+    const validQuestions = rawOutput.filter((q: any): q is z.infer<typeof QuestionSchema> => {
         if (!q) return false;
         
-        const textIsValid = q.text && typeof q.text.en === 'string' && q.text.en.trim() !== '' && typeof q.text.mr === 'string' && q.text.mr.trim() !== '';
-        const optionsAreValid = q.options && Array.isArray(q.options.en) && Array.isArray(q.options.mr) && q.options.en.length === 4 && q.options.mr.length === 4 && q.options.en.every((opt: any) => typeof opt === 'string' && opt.trim() !== '') && q.options.mr.every((opt: any) => typeof opt === 'string' && opt.trim() !== '');
-        const answerIsValid = q.correctAnswer && typeof q.correctAnswer.en === 'string' && q.correctAnswer.en.trim() !== '' && typeof q.correctAnswer.mr === 'string' && q.correctAnswer.mr.trim() !== '';
+        // Relaxed validation: Check if at least one language is present for text, options, and answer.
+        const textIsValid = q.text && ( (typeof q.text.en === 'string' && q.text.en.trim() !== '') || (typeof q.text.mr === 'string' && q.text.mr.trim() !== '') );
+        const optionsAreValid = q.options && Array.isArray(q.options.en) && Array.isArray(q.options.mr) && q.options.en.length === 4 && q.options.mr.length === 4;
+        const answerIsValid = q.correctAnswer && ( (typeof q.correctAnswer.en === 'string' && q.correctAnswer.en.trim() !== '') || (typeof q.correctAnswer.mr === 'string' && q.correctAnswer.mr.trim() !== '') );
 
         if (!textIsValid || !optionsAreValid || !answerIsValid) {
             return false;
         }
 
-        // Final check: ensure the correct answer is one of the provided options
-        const answerInOptions = q.options.en.includes(q.correctAnswer.en) && q.options.mr.includes(q.correctAnswer.mr);
-        
-        return answerInOptions;
+        // Final check: ensure the correct answer is one of the provided options in at least one language
+        const enAnswerInOptions = typeof q.correctAnswer.en === 'string' ? q.options.en.some((opt:string) => opt.trim() === q.correctAnswer.en.trim()) : false;
+        const mrAnswerInOptions = typeof q.correctAnswer.mr === 'string' ? q.options.mr.some((opt:string) => opt.trim() === q.correctAnswer.mr.trim()) : false;
+
+        return enAnswerInOptions || mrAnswerInOptions;
     });
     
     // Now, perform a final validation on the cleaned array.

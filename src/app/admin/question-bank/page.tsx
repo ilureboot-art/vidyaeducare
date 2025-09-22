@@ -113,37 +113,36 @@ export default function TestSetManagementPage() {
     setIsBulkUploadOpen(false);
 
     try {
-        let parsedOutput: QuestionParserOutput;
+        let parsedData: QuestionParserOutput;
+        let inferredDetails: Omit<TestSet, 'id' | 'questions'> = { name: '', board: 'SSC', standard: '', subject: '' };
 
         if (file.type === 'application/json') {
             const content = await file.text();
             const jsonObj = JSON.parse(content);
-            parsedOutput = { questions: jsonObj.questions || [] };
-            setTestDetails({
+            parsedData = { questions: jsonObj.questions || [] };
+            inferredDetails = {
                 name: jsonObj.name || file.name.replace('.json', ''),
                 board: jsonObj.board || 'SSC',
                 standard: jsonObj.standard || '',
                 subject: jsonObj.subject || ''
-            });
-
+            };
         } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
             const arrayBuffer = await file.arrayBuffer();
             const { value: documentText } = await mammoth.extractRawText({ arrayBuffer });
-            parsedOutput = await parseQuestionsFromDocument({ documentText });
             
-            // Try to infer details from text for pre-filling the form
+            parsedData = await parseQuestionsFromDocument({ documentText });
+            
             const nameMatch = documentText.match(/\*\*Test Set Name:\*\*\s*(.*)/);
             const boardMatch = documentText.match(/\*\*Board:\*\*\s*(.*)/);
             const standardMatch = documentText.match(/\*\*Standard:\*\*\s*(.*)/);
             const subjectMatch = documentText.match(/\*\*Subject:\*\*\s*(.*)/);
             
-            setTestDetails({
+            inferredDetails = {
                 name: nameMatch ? nameMatch[1].trim() : file.name.replace('.docx', ''),
                 board: boardMatch ? boardMatch[1].trim() as any : 'SSC',
                 standard: standardMatch ? standardMatch[1].trim() : '',
                 subject: subjectMatch ? subjectMatch[1].trim() : '',
-            });
-
+            };
         } else {
             toast({
                 variant: 'destructive',
@@ -153,10 +152,16 @@ export default function TestSetManagementPage() {
             setIsUploading(false);
             return;
         }
+
+        if (!parsedData || !parsedData.questions || parsedData.questions.length === 0) {
+            throw new Error("No valid questions could be parsed from the document.");
+        }
       
-      const questionsWithIds = parsedOutput.questions.map((q, i) => ({ ...q, id: `Q-${Date.now()}-${i}`}));
-      setParsedQuestions(questionsWithIds);
-      setIsReviewing(true); // Open the review dialog
+        const questionsWithIds = parsedData.questions.map((q, i) => ({ ...q, id: `Q-${Date.now()}-${i}`}));
+        
+        setParsedQuestions(questionsWithIds);
+        setTestDetails(inferredDetails);
+        setIsReviewing(true);
 
     } catch (error) {
         console.error("Bulk upload error:", error);

@@ -77,31 +77,19 @@ const documentParserFlow = ai.defineFlow(
     }
     
     // Filter out any potentially incomplete questions the AI might have included.
+    // This is a robust way to ensure every item in the final array is valid.
     const validQuestions = aiOutput.questions.filter((q: any): q is z.infer<typeof QuestionSchema> => {
-        if (!q || !q.text || !q.options || !q.correctAnswer) return false;
-        
-        // Ensure there is some text for the question and answer.
-        const textIsValid = (q.text.en?.trim() !== '') || (q.text.mr?.trim() !== '');
-        const answerIsValid = (q.correctAnswer.en?.trim() !== '') || (q.correctAnswer.mr?.trim() !== '');
-
-        // Ensure there are exactly 4 options.
-        const optionsAreValid = Array.isArray(q.options.en) && Array.isArray(q.options.mr) && q.options.en.length === 4 && q.options.mr.length === 4;
-        
-        return textIsValid && answerIsValid && optionsAreValid;
+        // Use safeParse on each individual question object.
+        // This prevents a single bad object from failing the whole batch.
+        const validationResult = QuestionSchema.safeParse(q);
+        return validationResult.success;
     });
 
-    // Final validation on the cleaned array.
-    const finalValidation = QuestionParserOutputSchema.safeParse(validQuestions);
-
-    if (!finalValidation.success) {
-        throw new Error(`The processed data is invalid even after filtering. Details: ${finalValidation.error.message}`);
-    }
-
-    if (finalValidation.data.length === 0) {
+    if (validQuestions.length === 0) {
         throw new Error("No valid questions could be parsed from the document. Please ensure all questions have text, 4 options, and a clear answer.");
     }
 
-    return finalValidation.data;
+    return validQuestions;
   }
 );
 

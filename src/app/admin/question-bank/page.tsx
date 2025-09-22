@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -51,31 +51,23 @@ const initialTestSetState: TestSet = {
 };
 
 export default function TestSetManagementPage() {
-  const [testSets, setTestSets] = useState<TestSet[]>([...allTestSets]);
+  const [testSets, setTestSets] = useState<TestSet[]>([]);
   const { toast } = useToast();
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [isManualCreateOpen, setIsManualCreateOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [isReviewing, setIsReviewing] = useState(false);
-  
-  const [parsedQuestions, setParsedQuestions] = useState<Question[]>([]);
-  const [testDetails, setTestDetails] = useState<Omit<TestSet, 'id' | 'questions'>>({ name: '', board: 'SSC', standard: '', subject: '' });
-
 
   const [step, setStep] = useState(1);
   const [editingTestSet, setEditingTestSet] = useState<TestSet | null>(null);
+  
+   useEffect(() => {
+    setTestSets([...allTestSets]);
+  });
 
   const resetManualForm = () => {
       setStep(1);
       setEditingTestSet(null);
   };
-  
-  const resetUploadState = () => {
-    setIsBulkUploadOpen(false);
-    setIsReviewing(false);
-    setParsedQuestions([]);
-    setTestDetails({ name: '', board: 'SSC', standard: '', subject: '' });
-  }
 
   const handleOpenCreateDialog = () => {
     const newEmptyQuestions = Array(50).fill(null).map((_, i) => ({ ...JSON.parse(JSON.stringify(initialQuestionState)), id: `temp-${i}` }));
@@ -111,6 +103,7 @@ export default function TestSetManagementPage() {
     try {
         let parsedQuestionArray: QuestionParserOutput = [];
         let inferredDetails: Omit<TestSet, 'id' | 'questions'> = { name: '', board: 'SSC', standard: '', subject: '' };
+        let documentText = '';
 
         if (file.type === 'application/json') {
             const content = await file.text();
@@ -124,7 +117,8 @@ export default function TestSetManagementPage() {
             };
         } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
             const arrayBuffer = await file.arrayBuffer();
-            const { value: documentText } = await mammoth.extractRawText({ arrayBuffer });
+            const result = await mammoth.extractRawText({ arrayBuffer });
+            documentText = result.value;
             
             parsedQuestionArray = await parseQuestionsFromDocument({ documentText });
             
@@ -155,9 +149,19 @@ export default function TestSetManagementPage() {
       
         const questionsWithIds = parsedQuestionArray.map((q, i) => ({ ...q, id: `Q-${Date.now()}-${i}`}));
         
-        setParsedQuestions(questionsWithIds);
-        setTestDetails(inferredDetails);
-        setIsReviewing(true);
+        const newTestSet: TestSet = {
+            ...inferredDetails,
+            id: `SET-${Date.now()}`,
+            questions: questionsWithIds
+        };
+
+        addTestSet(newTestSet);
+        setTestSets([...allTestSets]);
+        
+        toast({
+          title: "Test Set Saved!",
+          description: `"${newTestSet.name}" with ${newTestSet.questions.length} questions has been added.`
+        });
 
     } catch (error) {
         console.error("Bulk upload error:", error);
@@ -168,40 +172,12 @@ export default function TestSetManagementPage() {
             description: `Failed to process file. ${errorMessage}`,
             duration: 9000
          });
-         resetUploadState();
     } finally {
         setIsUploading(false);
         if (event.target) {
             event.target.value = '';
         }
     }
-  }
-
-  const handleSaveReviewedSet = () => {
-    if (!testDetails.name || !testDetails.board || !testDetails.standard || !testDetails.subject) {
-        toast({ variant: 'destructive', title: "Missing Details", description: "Please fill out all test set details."});
-        return;
-    }
-    if (parsedQuestions.length === 0) {
-        toast({ variant: 'destructive', title: "No Questions", description: "No valid questions were found to save."});
-        return;
-    }
-    
-    const newTestSet: TestSet = {
-        ...testDetails,
-        id: `SET-${Date.now()}`,
-        questions: parsedQuestions
-    };
-
-    addTestSet(newTestSet);
-    setTestSets([...allTestSets]);
-    
-    toast({
-      title: "Test Set Saved!",
-      description: `"${newTestSet.name}" with ${newTestSet.questions.length} questions has been added.`
-    });
-    
-    resetUploadState();
   }
   
   const handleSetDetailChange = (field: keyof Omit<TestSet, 'id'|'questions'>, value: string) => {
@@ -397,7 +373,7 @@ export default function TestSetManagementPage() {
                         <DialogHeader>
                             <DialogTitle>Bulk Upload a Test Set</DialogTitle>
                             <DialogDescription>
-                                Upload a JSON or DOCX file. The system will parse the questions and ask you to confirm the details.
+                                Upload a JSON or DOCX file. The system will parse the questions and save the test set immediately.
                             </DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4 py-4">
@@ -433,44 +409,6 @@ Answer: B. Option 2 (English) / (Marathi)`}
                         </div>
                     </div>
                  )}
-                 
-                 <Dialog open={isReviewing} onOpenChange={(isOpen) => { if (!isOpen) resetUploadState() }}>
-                    <DialogContent className="max-w-2xl">
-                         <DialogHeader>
-                            <DialogTitle>Review and Save Uploaded Test</DialogTitle>
-                            <DialogDescription>
-                                We've parsed {parsedQuestions.length} questions from your file. Please confirm the details below before saving.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="space-y-4 py-4">
-                             <div className="space-y-2">
-                                <Label htmlFor="review-name">Test Set Name</Label>
-                                <Input id="review-name" value={testDetails.name} onChange={(e) => setTestDetails(d => ({...d, name: e.target.value}))} />
-                            </div>
-                            <div className="grid grid-cols-3 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="review-board">Board</Label>
-                                    <Select value={testDetails.board} onValueChange={(val) => setTestDetails(d => ({...d, board: val as any}))}><SelectTrigger id="review-board"><SelectValue /></SelectTrigger><SelectContent>{academicConfig.boards.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent></Select>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="review-standard">Standard</Label>
-                                    <Select value={testDetails.standard} onValueChange={(val) => setTestDetails(d => ({...d, standard: val}))}><SelectTrigger id="review-standard"><SelectValue placeholder="Select..."/></SelectTrigger><SelectContent>{academicConfig.standards.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="review-subject">Subject</Label>
-                                    <Select value={testDetails.subject} onValueChange={(val) => setTestDetails(d => ({...d, subject: val}))}><SelectTrigger id="review-subject"><SelectValue placeholder="Select..."/></SelectTrigger><SelectContent>{academicConfig.subjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>
-                                </div>
-                            </div>
-                            <div className="text-sm text-muted-foreground pt-2">
-                                A total of <span className="font-bold text-primary">{parsedQuestions.length}</span> valid questions were parsed and will be saved.
-                            </div>
-                        </div>
-                        <DialogFooter>
-                            <Button variant="outline" onClick={resetUploadState}>Cancel</Button>
-                            <Button onClick={handleSaveReviewedSet}><Save className="mr-2" /> Confirm & Save</Button>
-                        </DialogFooter>
-                    </DialogContent>
-                 </Dialog>
 
               </div>
             </div>
@@ -527,5 +465,7 @@ Answer: B. Option 2 (English) / (Marathi)`}
     </div>
   );
 }
+
+    
 
     

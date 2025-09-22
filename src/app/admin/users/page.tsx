@@ -18,7 +18,6 @@ import { Search, UserPlus, MoreHorizontal, Trash2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { walletData } from "@/lib/user-data";
 
 type UserStatus = "Active" | "Banned" | "Inactive";
 type User = {
@@ -31,23 +30,28 @@ type User = {
 };
 
 // In a real app, this would be fetched from a database.
-const initialUsers: User[] = [];
+let initialUsers: User[] = [];
 
 const getStatusBadgeVariant = (status: string) => {
     return status === "Active" ? "default" : status === "Banned" ? "destructive" : "secondary";
 }
 
 export default function UserManagementPage() {
-  const [users, setUsers] = useState<User[]>(initialUsers);
+  const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
 
+  useEffect(() => {
+    // Simulate fetching users
+    setUsers(initialUsers);
+  }, []);
+
   const handleStatusChange = (userId: string, newStatus: UserStatus) => {
-    setUsers(
-      users.map((user) =>
+    const updatedUsers = users.map((user) =>
         user.id === userId ? { ...user, status: newStatus } : user
-      )
-    );
+      );
+    setUsers(updatedUsers);
+    initialUsers = updatedUsers; // Update the "database"
     toast({
       title: `User ${newStatus}`,
       description: `User ${userId} has been ${newStatus.toLowerCase()}.`,
@@ -56,7 +60,9 @@ export default function UserManagementPage() {
 
   const handleDeleteUser = (userId: string) => {
     const userToDelete = users.find(user => user.id === userId);
-    setUsers(users.filter(user => user.id !== userId));
+    const updatedUsers = users.filter(user => user.id !== userId);
+    setUsers(updatedUsers);
+    initialUsers = updatedUsers; // Update the "database"
     toast({
         title: "User Deleted",
         description: `User account for ${userToDelete?.name} has been deleted.`

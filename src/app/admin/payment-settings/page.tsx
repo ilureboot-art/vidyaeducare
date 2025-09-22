@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,10 @@ export default function PaymentSettingsPage() {
     const { toast } = useToast();
     const [methods, setMethods] = useState(walletData.adminPaymentMethods);
     const [qrFile, setQrFile] = useState<File | null>(null);
+
+    useEffect(() => {
+        setMethods({...walletData.adminPaymentMethods});
+    }, [])
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -44,6 +48,7 @@ export default function PaymentSettingsPage() {
             reader.onloadend = () => {
                 const dataUrl = reader.result as string;
                 walletData.adminPaymentMethods.qrCodeUrl = dataUrl;
+                setMethods(prev => ({...prev, qrCodeUrl: dataUrl}));
                 updateConfig();
             };
             reader.readAsDataURL(qrFile);

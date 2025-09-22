@@ -32,8 +32,8 @@ export default function TestSchedulePage() {
     const [selectedTestSetId, setSelectedTestSetId] = useState('');
 
     useEffect(() => {
-        setAllSchedules(scheduledTests);
-    }, [])
+        setAllSchedules([...scheduledTests]);
+    }, []);
 
     const handleScheduleTest = () => {
         if (!date || !selectedTestSetId || !time) {

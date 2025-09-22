@@ -71,22 +71,10 @@ export default function WalletPage() {
   const [withdrawOpen, setWithdrawOpen] = useState(false);
 
   useEffect(() => {
+    setBalance(walletData.balance);
+    setCoins(walletData.coins);
     setTransactions([...walletData.transactions]);
-
-    const interval = setInterval(() => {
-      if (walletData.balance !== balance) {
-        setBalance(walletData.balance);
-      }
-      if (walletData.coins !== coins) {
-        setCoins(walletData.coins);
-      }
-      if (walletData.transactions.length !== transactions.length) {
-        setTransactions([...walletData.transactions]);
-      }
-    }, 500); 
-
-    return () => clearInterval(interval);
-  }, [balance, coins, transactions.length]);
+  }, []);
 
   const handleAddFunds = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -155,7 +143,8 @@ export default function WalletPage() {
         return;
     }
     
-    walletData.balance -= amount; 
+    // Optimistically update the UI, but the real balance change happens on admin approval.
+    // walletData.balance -= amount; 
     
     const newTransaction: Transaction = {
         id: Date.now(),
@@ -174,7 +163,7 @@ export default function WalletPage() {
         message: `Alex Doe requested to withdraw ₹${amount}.`,
         userId: 'admin'
     });
-    setBalance(walletData.balance); 
+    // setBalance(walletData.balance); 
     setTransactions([...walletData.transactions]);
 
     toast({

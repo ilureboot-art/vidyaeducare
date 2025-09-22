@@ -13,6 +13,8 @@ export default function AdminGameSettingsPage() {
     const { toast } = useToast();
     const [settings, setSettings] = useState({ ...storeConfig.gameSettings });
     
+    // This effect ensures that if the settings are updated elsewhere,
+    // this component reflects the changes.
     useEffect(() => {
         setSettings({ ...storeConfig.gameSettings });
     }, []);

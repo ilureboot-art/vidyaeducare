@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -83,7 +83,9 @@ export default function AdminManagementPage() {
     const updatedAdmin: Admin = { ...requestToProcess, status: newStatus };
 
     if (newStatus === "Active") {
-        setAdmins([...admins, updatedAdmin]);
+        const newAdmins = [...admins, updatedAdmin];
+        setAdmins(newAdmins);
+        // Note: In a real app, this would also be persisted to a database.
     }
 
     toast({
@@ -117,7 +119,8 @@ export default function AdminManagementPage() {
         joinDate: new Date().toISOString().split('T')[0],
     };
 
-    setAdmins([...admins, newAdmin]);
+    const newAdmins = [...admins, newAdmin];
+    setAdmins(newAdmins);
     toast({
         title: "Admin Created",
         description: `Admin account for ${name} has been created successfully.`

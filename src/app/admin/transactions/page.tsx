@@ -39,19 +39,13 @@ const getTypeIcon = (type: string, amount: number) => {
 }
 
 export default function TransactionsPage() {
-  const [transactions, setTransactions] = useState<Transaction[]>([...walletData.transactions]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      // A simple poll to check for changes in the shared data
-      if (walletData.transactions.length !== transactions.length) {
-        setTransactions([...walletData.transactions]);
-      }
-    }, 500);
-    return () => clearInterval(interval);
-  }, [transactions]);
+    setTransactions([...walletData.transactions]);
+  }, []);
 
   const handleTransactionStatus = (id: number, newStatus: "Completed" | "Rejected") => {
     const txIndex = walletData.transactions.findIndex((tx) => tx.id === id);

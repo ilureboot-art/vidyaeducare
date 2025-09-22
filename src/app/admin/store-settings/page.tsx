@@ -33,7 +33,7 @@ export default function AdminStoreSettingsPage() {
   const [standards, setLocalStandards] = useState<string[]>([]);
   const [subjects, setLocalSubjects] = useState<string[]>([]);
 
-  useEffect(() => {
+  const loadData = () => {
     setLocalPackages(storeConfig.packages.map(p => ({...p})));
     setLocalMockTestPackages(storeConfig.mockTestPackages.map(p => ({...p})));
     setLocalReferralBonus(storeConfig.referralBonus);
@@ -42,6 +42,10 @@ export default function AdminStoreSettingsPage() {
     setLocalBoards([...academicConfig.boards]);
     setLocalStandards([...academicConfig.standards]);
     setLocalSubjects([...academicConfig.subjects]);
+  }
+
+  useEffect(() => {
+    loadData();
   }, []);
 
   const handlePackageChange = (index: number, field: keyof TicketPackage, value: string | number | boolean) => {

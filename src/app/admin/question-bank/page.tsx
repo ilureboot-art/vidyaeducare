@@ -67,7 +67,7 @@ export default function TestSetManagementPage() {
 
   useEffect(() => {
     setTestSets([...allTestSets]);
-  }, []);
+  });
 
   const resetManualForm = () => {
       setStep(1);
@@ -532,5 +532,3 @@ Answer: B. Option 2 (English) / (Marathi)`}
     </div>
   );
 }
-
-    

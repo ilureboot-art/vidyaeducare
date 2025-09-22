@@ -30,12 +30,12 @@ const questionParserPrompt = ai.definePrompt({
 
 **Extraction Rules:**
 1.  **Focus on Questions**: Your primary goal is to extract the 'questions' array. Ignore top-level document details like 'Test Set Name', 'Board', etc. for now.
-2.  **Bilingual Parsing**: The document contains text in both English and Marathi. They can be on the same line separated by a '/' or on separate lines. You must extract both versions for each piece of text. If one language is missing for a field, leave it as an empty string.
+2.  **Bilingual Parsing**: The document may contain text in both English and Marathi. They can be on the same line separated by a '/' or on separate lines. You must extract both versions for each piece of text. If one language is missing for a field, leave it as an empty string.
 3.  **Question Structure**: For each question, you must extract:
     *   'text': The question text itself, in both 'en' and 'mr'.
-    *   'options': Exactly 4 options, each with an 'en' and 'mr' version.
+    *   'options': Exactly 4 options, each with an 'en' and 'mr' version. If an option is missing a language, that specific string can be empty.
     *   'correctAnswer': The correct answer, in both 'en' and 'mr'. The correct answer text **must exactly match** one of the provided options.
-4.  **Strictness**: Be very strict. If a question is incomplete (e.g., missing text, has fewer than 4 options, or has no clear answer), you must ignore it and move to the next one. Do not output incomplete or malformed questions in the array.
+4.  **Strictness**: Be very strict. If a question is fundamentally incomplete (e.g., missing the question text, has fewer than 4 options, or has no clear answer), you must ignore it and move to the next one. Do not output incomplete or malformed questions in the final array.
 5.  **Output Format**: The final output must be a single, valid JSON object containing only the 'questions' array. Do not add any conversational text, markdown, or other wrappers.
 
 **Example Input Text:**

@@ -51,7 +51,7 @@ const initialTestSetState: TestSet = {
 };
 
 export default function TestSetManagementPage() {
-  const [testSets, setTestSets] = useState<TestSet[]>([]);
+  const [testSets, setTestSets] = useState<TestSet[]>([...allTestSets]);
   const { toast } = useToast();
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [isManualCreateOpen, setIsManualCreateOpen] = useState(false);
@@ -64,10 +64,6 @@ export default function TestSetManagementPage() {
 
   const [step, setStep] = useState(1);
   const [editingTestSet, setEditingTestSet] = useState<TestSet | null>(null);
-
-  useEffect(() => {
-    setTestSets([...allTestSets]);
-  });
 
   const resetManualForm = () => {
       setStep(1);
@@ -101,7 +97,7 @@ export default function TestSetManagementPage() {
 
   const handleDelete = (testSetId: string) => {
     deleteTestSet(testSetId);
-    setTestSets(prevSets => prevSets.filter(ts => ts.id !== testSetId));
+    setTestSets([...allTestSets]);
     toast({ title: "Test Set Deleted", description: "The test set has been removed from the bank."});
   }
 
@@ -198,7 +194,7 @@ export default function TestSetManagementPage() {
     };
 
     addTestSet(newTestSet);
-    setTestSets(prev => [...prev, newTestSet]);
+    setTestSets([...allTestSets]);
     
     toast({
       title: "Test Set Saved!",
@@ -277,12 +273,12 @@ export default function TestSetManagementPage() {
 
     if (isEditing) {
         updateTestSet(finalTestSetData);
-        setTestSets(currentSets => currentSets.map(ts => ts.id === finalTestSetData.id ? finalTestSetData : ts));
+        setTestSets(allTestSets.map(ts => ts.id === finalTestSetData.id ? finalTestSetData : ts));
         toast({ title: 'Test Set Updated!', description: `"${finalTestSetData.name}" has been saved.` });
     } else {
         const newSetWithFinalId = {...finalTestSetData, id: `SET-${Date.now()}`};
         addTestSet(newSetWithFinalId);
-        setTestSets(currentSets => [...currentSets, newSetWithFinalId]);
+        setTestSets([...allTestSets]);
         toast({ title: 'Test Set Created!', description: `"${newSetWithFinalId.name}" has been saved.` });
     }
     

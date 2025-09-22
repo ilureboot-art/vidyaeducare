@@ -51,7 +51,7 @@ const initialTestSetState: TestSet = {
 };
 
 export default function TestSetManagementPage() {
-  const [testSets, setTestSets] = useState<TestSet[]>([]);
+  const [testSets, setTestSets] = useState<TestSet[]>([...allTestSets]);
   const { toast } = useToast();
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [isManualCreateOpen, setIsManualCreateOpen] = useState(false);
@@ -62,7 +62,7 @@ export default function TestSetManagementPage() {
   
    useEffect(() => {
     setTestSets([...allTestSets]);
-  }, []);
+  });
 
   const resetManualForm = () => {
       setStep(1);
@@ -373,13 +373,24 @@ export default function TestSetManagementPage() {
                         <DialogHeader>
                             <DialogTitle>Bulk Upload a Test Set</DialogTitle>
                             <DialogDescription>
-                                Upload a JSON or DOCX file. The system will parse the questions and save the test set immediately.
+                                A simple, one-click way to upload your MCQs.
                             </DialogDescription>
                         </DialogHeader>
-                        <div className="space-y-4 py-4">
+                        <div className="space-y-6 py-4">
+                            <div className="space-y-2">
+                               <h3 className="font-semibold text-md">How to Upload:</h3>
+                               <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
+                                   <li>
+                                       **Prepare your file:** Create a `.docx` file. The system works best with this format.
+                                   </li>
+                                   <li>
+                                       **Format your content:** Inside the file, just write your questions naturally. The AI is smart enough to pick up the question text, options (A, B, C, D), and the answer. For best results, follow this simple format:
+                                   </li>
+                               </ol>
+                            </div>
                             <div className="space-y-2">
                                 <Label className="font-semibold">Recommended DOCX Format:</Label>
-                                <pre className="p-2 bg-muted text-xs rounded-md overflow-x-auto">
+                                <pre className="p-3 bg-muted text-xs rounded-md overflow-x-auto whitespace-pre-wrap">
 {`**Test Set Name:** SSC Science Mock Test
 **Board:** SSC
 **Standard:** 10th
@@ -394,8 +405,9 @@ Answer: B. Option 2 (English) / (Marathi)`}
                                 </pre>
                             </div>
                              <div className="space-y-2">
-                                <Label htmlFor="file-upload">Test Set File (.json or .docx)</Label>
-                                <Input id="file-upload" type="file" accept=".json, .docx, application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={handleBulkUpload} disabled={isUploading} />
+                                <Label htmlFor="file-upload" className="font-semibold">3. Upload Your File (.docx or .json)</Label>
+                                <Input id="file-upload" type="file" accept=".json, .docx, application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={handleBulkUpload} disabled={isUploading} className="file:text-primary file:font-semibold" />
+                                <p className="text-xs text-muted-foreground">The test set will be saved immediately after upload.</p>
                             </div>
                         </div>
                     </DialogContent>

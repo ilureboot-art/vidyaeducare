@@ -20,7 +20,8 @@ export type QuestionParserOutput = z.infer<typeof QuestionParserOutputSchema>;
 const questionParserPrompt = ai.definePrompt({
     name: "questionParserPrompt",
     input: { schema: QuestionParserInputSchema },
-    output: { schema: z.object({ questions: QuestionParserOutputSchema }) },
+    // IMPORTANT: We do not define an output schema here to prevent Genkit from crashing on
+    // partially malformed data. We will validate the raw output manually.
     prompt: `You are an expert data extractor. Your task is to parse the following unstructured text and extract every Multiple Choice Question (MCQ) you find into a structured JSON object.
 
 **Extraction Rules:**
@@ -62,33 +63,46 @@ const documentParserFlow = ai.defineFlow(
     outputSchema: QuestionParserOutputSchema,
   },
   async (input) => {
-    const { output } = await questionParserPrompt(input);
+    // Get the raw output from the AI without immediate validation
+    const result = await questionParserPrompt(input);
+    const rawOutput = result.output as any;
 
-    if (!output || !Array.isArray(output.questions)) {
-      throw new Error("The AI model failed to produce a valid questions array.");
+    if (!rawOutput || !Array.isArray(rawOutput.questions)) {
+      throw new Error("The AI model failed to produce a valid 'questions' array.");
     }
     
-    // Robust filtering step to ensure data integrity before returning.
-    const validQuestions = output.questions.filter((q: any): q is z.infer<typeof QuestionSchema> => 
-        q &&
-        q.text && typeof q.text.en === 'string' && q.text.en.trim() !== '' &&
-        typeof q.text.mr === 'string' && q.text.mr.trim() !== '' &&
-        q.options && Array.isArray(q.options.en) && Array.isArray(q.options.mr) &&
-        q.options.en.length === 4 && q.options.mr.length === 4 &&
-        q.options.en.every((opt: any) => typeof opt === 'string' && opt.trim() !== '') &&
-        q.options.mr.every((opt: any) => typeof opt === 'string' && opt.trim() !== '') &&
-        q.correctAnswer && typeof q.correctAnswer.en === 'string' && q.correctAnswer.en.trim() !== '' &&
-        typeof q.correctAnswer.mr === 'string' && q.correctAnswer.mr.trim() !== '' &&
-        // Ensure the correct answer is one of the options
-        q.options.en.includes(q.correctAnswer.en) &&
-        q.options.mr.includes(q.correctAnswer.mr)
-    );
+    // Robust filtering step to ensure data integrity before final validation.
+    // This will silently skip any incomplete or malformed question objects.
+    const validQuestions = rawOutput.questions.filter((q: any): q is z.infer<typeof QuestionSchema> => {
+        if (!q) return false;
+        
+        const textIsValid = q.text && typeof q.text.en === 'string' && q.text.en.trim() !== '' && typeof q.text.mr === 'string' && q.text.mr.trim() !== '';
+        const optionsAreValid = q.options && Array.isArray(q.options.en) && Array.isArray(q.options.mr) && q.options.en.length === 4 && q.options.mr.length === 4 && q.options.en.every((opt: any) => typeof opt === 'string' && opt.trim() !== '') && q.options.mr.every((opt: any) => typeof opt === 'string' && opt.trim() !== '');
+        const answerIsValid = q.correctAnswer && typeof q.correctAnswer.en === 'string' && q.correctAnswer.en.trim() !== '' && typeof q.correctAnswer.mr === 'string' && q.correctAnswer.mr.trim() !== '';
+
+        if (!textIsValid || !optionsAreValid || !answerIsValid) {
+            return false;
+        }
+
+        // Final check: ensure the correct answer is one of the provided options
+        const answerInOptions = q.options.en.includes(q.correctAnswer.en) && q.options.mr.includes(q.correctAnswer.mr);
+        
+        return answerInOptions;
+    });
     
-    if (validQuestions.length === 0) {
+    // Now, perform a final validation on the cleaned array.
+    const finalValidation = QuestionParserOutputSchema.safeParse(validQuestions);
+
+    if (!finalValidation.success) {
+        // This error should now rarely happen, but it's a critical safeguard.
+        throw new Error(`The processed data is invalid even after filtering. Details: ${finalValidation.error.message}`);
+    }
+
+    if (finalValidation.data.length === 0) {
         throw new Error("No valid questions could be parsed from the document. Please ensure all questions have text, 4 options, and a clear answer.");
     }
 
-    return validQuestions;
+    return finalValidation.data;
   }
 );
 

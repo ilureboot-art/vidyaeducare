@@ -1,7 +1,8 @@
 
+
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import {
   Table,
   TableBody,
@@ -12,7 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Trash2, Edit, Upload, BookCopy, FilePlus, ScrollText, ArrowRight, Save, Loader2 } from "lucide-react";
+import { MoreHorizontal, Trash2, Edit, Upload, BookCopy, FilePlus, ScrollText, ArrowRight, Save, Loader2, UploadCloud } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -56,6 +57,9 @@ export default function TestSetManagementPage() {
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [isManualCreateOpen, setIsManualCreateOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isAppendDialogOpen, setIsAppendDialogOpen] = useState(false);
+  const [testSetToAppend, setTestSetToAppend] = useState<TestSet | null>(null);
+  const appendFileInputRef = useRef<HTMLInputElement>(null);
 
   const [step, setStep] = useState(1);
   const [editingTestSet, setEditingTestSet] = useState<TestSet | null>(null);
@@ -81,6 +85,11 @@ export default function TestSetManagementPage() {
     setStep(1);
     setIsManualCreateOpen(true);
   };
+  
+  const handleOpenAppendDialog = (testSet: TestSet) => {
+    setTestSetToAppend(testSet);
+    setIsAppendDialogOpen(true);
+  };
 
 
   const handleDelete = (testSetId: string) => {
@@ -88,55 +97,48 @@ export default function TestSetManagementPage() {
     setTestSets([...allTestSets]);
     toast({ title: "Test Set Deleted", description: "The test set has been removed from the bank."});
   }
-
-  const handleBulkUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
+  
+  const processAndSaveFile = async (file: File, existingTestSetId: string | null = null) => {
     setIsUploading(true);
-    setIsBulkUploadOpen(false);
 
     try {
         let parsedQuestionArray: QuestionParserOutput = [];
         let inferredDetails: Omit<TestSet, 'id' | 'questions'> = { name: '', board: 'SSC', standard: '', subject: '' };
-        let documentText = '';
-
+        
         if (file.type === 'application/json') {
             const content = await file.text();
             const jsonObj = JSON.parse(content);
             parsedQuestionArray = jsonObj.questions || [];
-            inferredDetails = {
-                name: jsonObj.name || file.name.replace('.json', ''),
-                board: jsonObj.board || 'SSC',
-                standard: jsonObj.standard || '',
-                subject: jsonObj.subject || ''
-            };
+            if (!existingTestSetId) {
+                inferredDetails = {
+                    name: jsonObj.name || file.name.replace('.json', ''),
+                    board: jsonObj.board || 'SSC',
+                    standard: jsonObj.standard || '',
+                    subject: jsonObj.subject || ''
+                };
+            }
         } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
             const arrayBuffer = await file.arrayBuffer();
             const result = await mammoth.extractRawText({ arrayBuffer });
-            documentText = result.value;
+            const documentText = result.value;
             
             parsedQuestionArray = await parseQuestionsFromDocument({ documentText });
             
-            const nameMatch = documentText.match(/\*\*Test Set Name:\*\*\s*(.*)/);
-            const boardMatch = documentText.match(/\*\*Board:\*\*\s*(.*)/);
-            const standardMatch = documentText.match(/\*\*Standard:\*\*\s*(.*)/);
-            const subjectMatch = documentText.match(/\*\*Subject:\*\*\s*(.*)/);
-            
-            inferredDetails = {
-                name: nameMatch ? nameMatch[1].trim() : file.name.replace('.docx', ''),
-                board: boardMatch ? boardMatch[1].trim() as any : 'SSC',
-                standard: standardMatch ? standardMatch[1].trim() : '',
-                subject: subjectMatch ? subjectMatch[1].trim() : '',
-            };
+            if (!existingTestSetId) {
+                const nameMatch = documentText.match(/\*\*Test Set Name:\*\*\s*(.*)/);
+                const boardMatch = documentText.match(/\*\*Board:\*\*\s*(.*)/);
+                const standardMatch = documentText.match(/\*\*Standard:\*\*\s*(.*)/);
+                const subjectMatch = documentText.match(/\*\*Subject:\*\*\s*(.*)/);
+                
+                inferredDetails = {
+                    name: nameMatch ? nameMatch[1].trim() : file.name.replace('.docx', ''),
+                    board: boardMatch ? boardMatch[1].trim() as any : 'SSC',
+                    standard: standardMatch ? standardMatch[1].trim() : '',
+                    subject: subjectMatch ? subjectMatch[1].trim() : '',
+                };
+            }
         } else {
-            toast({
-                variant: 'destructive',
-                title: "Invalid File Type",
-                description: `Please upload a .json or .docx file.`,
-            });
-            setIsUploading(false);
-            return;
+            throw new Error("Invalid File Type. Please upload a .json or .docx file.");
         }
 
         if (!parsedQuestionArray || parsedQuestionArray.length === 0) {
@@ -145,22 +147,33 @@ export default function TestSetManagementPage() {
       
         const questionsWithIds = parsedQuestionArray.map((q, i) => ({ ...q, id: `Q-${Date.now()}-${i}`}));
         
-        const newTestSet: TestSet = {
-            ...inferredDetails,
-            id: `SET-${Date.now()}`,
-            questions: questionsWithIds
-        };
-
-        addTestSet(newTestSet);
-        setTestSets([...allTestSets]);
+        if (existingTestSetId) {
+            const existingSet = allTestSets.find(ts => ts.id === existingTestSetId);
+            if (!existingSet) throw new Error("Could not find the test set to append to.");
+            
+            existingSet.questions.push(...questionsWithIds);
+            updateTestSet(existingSet);
+            toast({
+              title: "Questions Appended!",
+              description: `${questionsWithIds.length} new questions have been added to "${existingSet.name}".`
+            });
+        } else {
+            const newTestSet: TestSet = {
+                ...inferredDetails,
+                id: `SET-${Date.now()}`,
+                questions: questionsWithIds
+            };
+            addTestSet(newTestSet);
+            toast({
+              title: "Test Set Saved!",
+              description: `"${newTestSet.name}" with ${newTestSet.questions.length} questions has been added.`
+            });
+        }
         
-        toast({
-          title: "Test Set Saved!",
-          description: `"${newTestSet.name}" with ${newTestSet.questions.length} questions has been added.`
-        });
+        setTestSets([...allTestSets]);
 
     } catch (error) {
-        console.error("Bulk upload error:", error);
+        console.error("File processing error:", error);
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
          toast({
             variant: 'destructive',
@@ -170,11 +183,25 @@ export default function TestSetManagementPage() {
          });
     } finally {
         setIsUploading(false);
-        if (event.target) {
-            event.target.value = '';
-        }
     }
   }
+
+  const handleBulkUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setIsBulkUploadOpen(false);
+    await processAndSaveFile(file);
+    if (event.target) event.target.value = '';
+  }
+  
+  const handleAppendUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file || !testSetToAppend) return;
+      setIsAppendDialogOpen(false);
+      await processAndSaveFile(file, testSetToAppend.id);
+      if (event.target) event.target.value = '';
+      setTestSetToAppend(null);
+  };
   
   const handleSetDetailChange = (field: keyof Omit<TestSet, 'id'|'questions'>, value: string) => {
       if (!editingTestSet) return;
@@ -366,27 +393,16 @@ export default function TestSetManagementPage() {
                         <Button><Upload className="mr-2 h-4 w-4" /> Bulk Upload</Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-xl">
-                        <DialogHeader>
-                            <DialogTitle>Bulk Upload a Test Set</DialogTitle>
+                         <DialogHeader>
+                            <DialogTitle>Bulk Upload a New Test Set</DialogTitle>
                             <DialogDescription>
-                                A simple, one-click way to upload your MCQs.
+                                This will create a brand new test set from your file.
                             </DialogDescription>
                         </DialogHeader>
                         <div className="space-y-6 py-4">
-                            <div className="space-y-2">
-                               <h3 className="font-semibold text-md">How to Upload:</h3>
-                               <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
-                                   <li>
-                                       **Prepare your file:** Create a `.docx` file. The system works best with this format.
-                                   </li>
-                                   <li>
-                                       **Format your content:** Inside the file, just write your questions naturally. The AI is smart enough to pick up the question text, options (A, B, C, D), and the answer. For best results, follow this simple format:
-                                   </li>
-                               </ol>
-                            </div>
-                            <div className="space-y-2">
-                                <Label className="font-semibold">Recommended DOCX Format:</Label>
-                                <pre className="p-3 bg-muted text-xs rounded-md overflow-x-auto whitespace-pre-wrap">
+                           <div className="space-y-2">
+                               <Label className="font-semibold">Recommended DOCX Format:</Label>
+                               <pre className="p-3 bg-muted text-xs rounded-md overflow-x-auto whitespace-pre-wrap">
 {`**Test Set Name:** SSC Science Mock Test
 **Board:** SSC
 **Standard:** 10th
@@ -398,10 +414,10 @@ B. Option 2 (English) / (Marathi)
 C. Option 3 (English) / (Marathi)
 D. Option 4 (English) / (Marathi)
 Answer: B. Option 2 (English) / (Marathi)`}
-                                </pre>
-                            </div>
+                               </pre>
+                           </div>
                              <div className="space-y-2">
-                                <Label htmlFor="file-upload" className="font-semibold">3. Upload Your File (.docx or .json)</Label>
+                                <Label htmlFor="file-upload" className="font-semibold">Upload Your File (.docx or .json)</Label>
                                 <Input id="file-upload" type="file" accept=".json, .docx, application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={handleBulkUpload} disabled={isUploading} className="file:text-primary file:font-semibold" />
                                 <p className="text-xs text-muted-foreground">The test set will be saved immediately after upload.</p>
                             </div>
@@ -454,6 +470,9 @@ Answer: B. Option 2 (English) / (Marathi)`}
                         <DropdownMenuItem onClick={() => handleOpenEditDialog(ts)}>
                             <Edit className="mr-2 h-4 w-4"/> View/Edit
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleOpenAppendDialog(ts)}>
+                            <UploadCloud className="mr-2 h-4 w-4" /> Upload & Append
+                        </DropdownMenuItem>
                         <DropdownMenuItem className="text-red-600 focus:text-red-500 focus:bg-red-950/50" onClick={() => handleDelete(ts.id)}>
                             <Trash2 className="mr-2 h-4 w-4"/> Delete
                         </DropdownMenuItem>
@@ -470,6 +489,32 @@ Answer: B. Option 2 (English) / (Marathi)`}
           </Table>
         </CardContent>
       </Card>
+      
+      <Dialog open={isAppendDialogOpen} onOpenChange={setIsAppendDialogOpen}>
+          <DialogContent>
+              <DialogHeader>
+                  <DialogTitle>Append Questions to "{testSetToAppend?.name}"</DialogTitle>
+                  <DialogDescription>
+                      Upload a DOCX or JSON file. The questions inside will be added to the end of this test set.
+                  </DialogDescription>
+              </DialogHeader>
+              <div className="py-4">
+                  <Label htmlFor="append-file-upload">File to Upload</Label>
+                  <Input 
+                      id="append-file-upload" 
+                      type="file" 
+                      ref={appendFileInputRef}
+                      onChange={handleAppendUpload}
+                      accept=".json, .docx, application/vnd.openxmlformats-officedocument.wordprocessingml.document" 
+                      disabled={isUploading} 
+                      className="file:text-primary file:font-semibold" 
+                  />
+              </div>
+          </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
+
+    

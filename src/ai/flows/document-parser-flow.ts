@@ -22,10 +22,10 @@ const questionParserPrompt = ai.definePrompt({
     input: { schema: QuestionParserInputSchema },
     // IMPORTANT: We do not define an output schema here to prevent Genkit from crashing on
     // partially malformed data. We will validate the raw output manually.
-    prompt: `You are an expert data extractor. Your task is to parse the following unstructured text and extract every Multiple Choice Question (MCQ) you find into a structured JSON object.
+    prompt: `You are an expert data extractor. Your task is to parse the following unstructured text and extract every Multiple Choice Question (MCQ) you find into a structured JSON object containing a 'questions' array.
 
 **Extraction Rules:**
-1.  **Focus on Questions**: Your primary goal is to extract the 'questions' array. Ignore top-level document details like 'Test Set Name', 'Board', etc.
+1.  **Focus on Questions**: Your primary goal is to extract the 'questions' array. Ignore top-level document details like 'Test Set Name', 'Board', etc. for now.
 2.  **Bilingual Parsing**: The document contains text in both English and Marathi. They can be on the same line separated by a '/' or on separate lines. You must extract both versions for each piece of text.
 3.  **Question Structure**: For each question, you must extract:
     *   'text': The question text itself, in both 'en' and 'mr'.

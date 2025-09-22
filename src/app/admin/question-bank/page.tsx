@@ -151,11 +151,15 @@ export default function TestSetManagementPage() {
             const existingSet = allTestSets.find(ts => ts.id === existingTestSetId);
             if (!existingSet) throw new Error("Could not find the test set to append to.");
             
-            existingSet.questions.push(...questionsWithIds);
+            const existingQuestionTexts = new Set(existingSet.questions.map(q => q.text.en.trim()));
+            const uniqueNewQuestions = questionsWithIds.filter(q => !existingQuestionTexts.has(q.text.en.trim()));
+            const skippedCount = questionsWithIds.length - uniqueNewQuestions.length;
+
+            existingSet.questions.push(...uniqueNewQuestions);
             updateTestSet(existingSet);
             toast({
               title: "Questions Appended!",
-              description: `${questionsWithIds.length} new questions have been added to "${existingSet.name}".`
+              description: `${uniqueNewQuestions.length} new questions added to "${existingSet.name}". ${skippedCount} duplicates were skipped.`
             });
         } else {
             const newTestSet: TestSet = {

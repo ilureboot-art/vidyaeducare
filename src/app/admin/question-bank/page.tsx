@@ -59,10 +59,6 @@ export default function TestSetManagementPage() {
 
   const [step, setStep] = useState(1);
   const [editingTestSet, setEditingTestSet] = useState<TestSet | null>(null);
-  
-   useEffect(() => {
-    setTestSets([...allTestSets]);
-  });
 
   const resetManualForm = () => {
       setStep(1);

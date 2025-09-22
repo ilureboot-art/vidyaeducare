@@ -3,9 +3,9 @@
 /**
  * @fileOverview An AI flow for parsing MCQ test sets from raw document text.
  *
- * - parseQuestionsFromDocument - A function that takes unstructured text and returns a structured list of questions.
+ * - parseQuestionsFromDocument - A function that takes unstructured text and returns a structured array of questions.
  * - QuestionParserInput - The input type for the parser function.
- * - QuestionParserOutput - The Zod schema-inferred type for the structured question list output.
+ * - Question[] - The return type for the parser function.
  */
 
 import { ai } from '@/ai/genkit';
@@ -13,16 +13,14 @@ import { z } from 'zod';
 import { QuestionSchema, QuestionParserInputSchema, type QuestionParserInput } from '../schemas/test-set-schema';
 
 // Define the output schema for the list of questions only
-const QuestionParserOutputSchema = z.object({
-  questions: z.array(QuestionSchema).describe("An array of all the questions extracted from the document."),
-});
+const QuestionParserOutputSchema = z.array(QuestionSchema).describe("An array of all the questions extracted from the document.");
 export type QuestionParserOutput = z.infer<typeof QuestionParserOutputSchema>;
 
 
 const questionParserPrompt = ai.definePrompt({
     name: "questionParserPrompt",
     input: { schema: QuestionParserInputSchema },
-    output: { schema: QuestionParserOutputSchema },
+    output: { schema: z.object({ questions: QuestionParserOutputSchema }) },
     prompt: `You are an expert data extractor. Your task is to parse the following unstructured text and extract every Multiple Choice Question (MCQ) you find into a structured JSON object.
 
 **Extraction Rules:**
@@ -86,15 +84,11 @@ const documentParserFlow = ai.defineFlow(
         q.options.mr.includes(q.correctAnswer.mr)
     );
     
-    const finalPayload: QuestionParserOutput = {
-      questions: validQuestions
-    };
-    
-    if (finalPayload.questions.length === 0) {
+    if (validQuestions.length === 0) {
         throw new Error("No valid questions could be parsed from the document. Please ensure all questions have text, 4 options, and a clear answer.");
     }
 
-    return finalPayload;
+    return validQuestions;
   }
 );
 

@@ -113,13 +113,13 @@ export default function TestSetManagementPage() {
     setIsBulkUploadOpen(false);
 
     try {
-        let parsedData: QuestionParserOutput;
+        let parsedQuestionArray: QuestionParserOutput;
         let inferredDetails: Omit<TestSet, 'id' | 'questions'> = { name: '', board: 'SSC', standard: '', subject: '' };
 
         if (file.type === 'application/json') {
             const content = await file.text();
             const jsonObj = JSON.parse(content);
-            parsedData = { questions: jsonObj.questions || [] };
+            parsedQuestionArray = jsonObj.questions || [];
             inferredDetails = {
                 name: jsonObj.name || file.name.replace('.json', ''),
                 board: jsonObj.board || 'SSC',
@@ -130,7 +130,7 @@ export default function TestSetManagementPage() {
             const arrayBuffer = await file.arrayBuffer();
             const { value: documentText } = await mammoth.extractRawText({ arrayBuffer });
             
-            parsedData = await parseQuestionsFromDocument({ documentText });
+            parsedQuestionArray = await parseQuestionsFromDocument({ documentText });
             
             const nameMatch = documentText.match(/\*\*Test Set Name:\*\*\s*(.*)/);
             const boardMatch = documentText.match(/\*\*Board:\*\*\s*(.*)/);
@@ -153,11 +153,11 @@ export default function TestSetManagementPage() {
             return;
         }
 
-        if (!parsedData || !parsedData.questions || parsedData.questions.length === 0) {
+        if (!parsedQuestionArray || parsedQuestionArray.length === 0) {
             throw new Error("No valid questions could be parsed from the document.");
         }
       
-        const questionsWithIds = parsedData.questions.map((q, i) => ({ ...q, id: `Q-${Date.now()}-${i}`}));
+        const questionsWithIds = parsedQuestionArray.map((q, i) => ({ ...q, id: `Q-${Date.now()}-${i}`}));
         
         setParsedQuestions(questionsWithIds);
         setTestDetails(inferredDetails);

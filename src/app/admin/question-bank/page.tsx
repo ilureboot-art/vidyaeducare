@@ -22,7 +22,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -113,7 +112,7 @@ export default function TestSetManagementPage() {
     setIsBulkUploadOpen(false);
 
     try {
-        let parsedQuestionArray: QuestionParserOutput;
+        let parsedQuestionArray: QuestionParserOutput = [];
         let inferredDetails: Omit<TestSet, 'id' | 'questions'> = { name: '', board: 'SSC', standard: '', subject: '' };
 
         if (file.type === 'application/json') {
@@ -130,6 +129,7 @@ export default function TestSetManagementPage() {
             const arrayBuffer = await file.arrayBuffer();
             const { value: documentText } = await mammoth.extractRawText({ arrayBuffer });
             
+            // Correctly await and assign the result from the AI flow
             parsedQuestionArray = await parseQuestionsFromDocument({ documentText });
             
             const nameMatch = documentText.match(/\*\*Test Set Name:\*\*\s*(.*)/);
@@ -532,3 +532,5 @@ Answer: B. Option 2 (English) / (Marathi)`}
     </div>
   );
 }
+
+    

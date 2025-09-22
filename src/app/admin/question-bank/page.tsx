@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Table,
   TableBody,
@@ -273,14 +273,13 @@ export default function TestSetManagementPage() {
 
     if (isEditing) {
         updateTestSet(finalTestSetData);
-        setTestSets(allTestSets.map(ts => ts.id === finalTestSetData.id ? finalTestSetData : ts));
-        toast({ title: 'Test Set Updated!', description: `"${finalTestSetData.name}" has been saved.` });
     } else {
         const newSetWithFinalId = {...finalTestSetData, id: `SET-${Date.now()}`};
         addTestSet(newSetWithFinalId);
-        setTestSets([...allTestSets]);
-        toast({ title: 'Test Set Created!', description: `"${newSetWithFinalId.name}" has been saved.` });
     }
+    
+    setTestSets([...allTestSets]);
+    toast({ title: isEditing ? 'Test Set Updated!' : 'Test Set Created!', description: `"${finalTestSetData.name}" has been saved.` });
     
     setIsManualCreateOpen(false);
     resetManualForm();
@@ -528,3 +527,5 @@ Answer: B. Option 2 (English) / (Marathi)`}
     </div>
   );
 }
+
+    

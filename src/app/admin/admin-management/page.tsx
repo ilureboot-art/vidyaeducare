@@ -13,7 +13,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { UserCog, UserPlus, MoreHorizontal, Trash2 } from "lucide-react";
+import { UserCog, UserPlus, MoreHorizontal, Trash2, MessageSquare } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -66,12 +66,24 @@ export default function AdminManagementPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const { toast } = useToast();
   
-  const openWhatsApp = (phone: string) => {
-    // Remove any non-digit characters and ensure it starts with country code
+  const openWhatsApp = (phone: string, message?: string) => {
     const cleanedPhone = phone.replace(/\D/g, '');
     if (cleanedPhone) {
-      window.open(`https://wa.me/${cleanedPhone}`, '_blank');
+        let url = `https://wa.me/${cleanedPhone}`;
+        if (message) {
+            url += `?text=${encodeURIComponent(message)}`;
+        }
+        window.open(url, '_blank');
     }
+  }
+
+  const handleSendWelcome = (admin: Admin) => {
+    const message = `Hello ${admin.name}, welcome to the GuessMaster Admin team! We're excited to have you on board as a ${admin.role}.`;
+    openWhatsApp(admin.phone, message);
+    toast({
+        title: "WhatsApp Opened",
+        description: `A welcome message for ${admin.name} is ready to be sent.`,
+    });
   }
 
   const handleRequest = (requestId: string, newStatus: "Active" | "Rejected") => {
@@ -300,6 +312,10 @@ export default function AdminManagementPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => handleSendWelcome(admin)}>
+                            <MessageSquare className="mr-2 h-4 w-4"/>
+                            Send Welcome Message
+                        </DropdownMenuItem>
                         <DropdownMenuItem>Edit Details</DropdownMenuItem>
                         <DropdownMenuItem>Reset Password</DropdownMenuItem>
                          {admin.role !== "Head Admin" && (
@@ -320,3 +336,5 @@ export default function AdminManagementPage() {
     </div>
   );
 }
+
+    

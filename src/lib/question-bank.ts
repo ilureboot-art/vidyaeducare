@@ -278,131 +278,6 @@ export let allTestSets: TestSet[] = [
       {
         id: "Q-172234567890-10",
         text: {
-          en: "Which force is necessary for an object to move in a circular path around the Earth?",
-          mr: "पृथ्वीभोवती चक्राकार फिरणाऱ्या वस्तूला कोणता बल आवश्यक असतो?"
-        },
-        options: {
-          en: [
-            "Gravitational Force",
-            "Centrifugal Force",
-            "Centripetal Force",
-            "Frictional Force"
-          ],
-          mr: [
-            "गुरुत्वाकर्षण बल",
-            "अपकेंद्रित बल",
-            "अभिकेंद्रित बल",
-            "घर्षण बल"
-          ]
-        },
-        correctAnswer: {
-          en: "Centripetal Force",
-          mr: "अभिकेंद्रित बल"
-        }
-      },
-      {
-        id: "Q-172234567890-11",
-        text: {
-          en: "While rotating a stone tied to a string, in which direction does the force act on the stone?",
-          mr: "एका दोरीच्या टोकाला दगड बांधून फिरवताना दगडाला कोणत्या दिशेने बल लागते?"
-        },
-        options: {
-          en: [
-            "Outward",
-            "Upward",
-            "Towards the center",
-            "Downward"
-          ],
-          mr: [
-            "बाहेरच्या दिशेने",
-            "वरच्या दिशेने",
-            "अभिकेंद्रित दिशेने",
-            "खालीच्या दिशेने"
-          ]
-        },
-        correctAnswer: {
-          en: "Towards the center",
-          mr: "अभिकेंद्रित दिशेने"
-        }
-      },
-      {
-        id: "Q-172234567890-12",
-        text: {
-          en: "According to Kepler's laws, planets revolve around the Sun in which type of orbit?",
-          mr: "केप्लरच्या नियमांनुसार ग्रह कोणत्या प्रकारच्या कक्षेत सूर्याभोवती फिरतात?"
-        },
-        options: {
-          en: [
-            "Circular",
-            "Elliptical",
-            "Straight",
-            "Zigzag"
-          ],
-          mr: [
-            "वर्तुळाकार",
-            "लांबटवर्तुळाकार",
-            "सरळ",
-            "झिगझॅग"
-          ]
-        },
-        correctAnswer: {
-          en: "Elliptical",
-          mr: "लांबटवर्तुळाकार"
-        }
-      },
-      {
-        id: "Q-172234567890-13",
-        text: {
-          en: "What is the formula for gravitational force?",
-          mr: "गुरुत्वाकर्षण बलाचे सूत्र काय आहे?"
-        },
-        options: {
-          en: [
-            "F = m × g",
-            "F = G × (m₁m₂)/d²",
-            "F = m × a",
-            "F = mv²/r"
-          ],
-          mr: [
-            "F = m × g",
-            "F = G × (m₁m₂)/d²",
-            "F = m × a",
-            "F = mv²/r"
-          ]
-        },
-        correctAnswer: {
-          en: "F = G × (m₁m₂)/d²",
-          mr: "F = G × (m₁m₂)/d²"
-        }
-      },
-      {
-        id: "Q-172234567890-14",
-        text: {
-          en: "What is the value of G?",
-          mr: "G चे मूल्य किती आहे?"
-        },
-        options: {
-          en: [
-            "9.8 m/s²",
-            "6.67 × 10⁻¹¹ Nm²/kg²",
-            "3 × 10⁸ m/s",
-            "1.6 × 10⁻¹⁹ C"
-          ],
-          mr: [
-            "9.8 m/s²",
-            "6.67 × 10⁻¹¹ Nm²/kg²",
-            "3 × 10⁸ m/s",
-            "1.6 × 10⁻¹⁹ C"
-          ]
-        },
-        correctAnswer: {
-          en: "6.67 × 10⁻¹¹ Nm²/kg²",
-          mr: "6.67 × 10⁻¹¹ Nm²/kg²"
-        }
-      },
-      {
-        id: "Q-172234567890-15",
-        text: {
           en: "What did Newton conclude from the falling apple?",
           mr: "सफरचंद पडल्यावर न्यूटनने कोणता निष्कर्ष काढला?"
         },
@@ -426,7 +301,7 @@ export let allTestSets: TestSet[] = [
         }
       },
       {
-        id: "Q-172234567890-16",
+        id: "Q-172234567890-11",
         text: {
           en: "Gravitation acts between which objects?",
           mr: "गुरुत्वाकर्षण कोणत्या वस्तूंमध्ये कार्य करते?"
@@ -451,7 +326,7 @@ export let allTestSets: TestSet[] = [
         }
       },
       {
-        id: "Q-172234567890-17",
+        id: "Q-172234567890-12",
         text: {
           en: "What causes the apple to fall directly downward?",
           mr: "सफरचंद सरळ खाली पडण्याचे कारण काय आहे?"
@@ -476,7 +351,7 @@ export let allTestSets: TestSet[] = [
         }
       },
       {
-        id: "Q-172234567890-18",
+        id: "Q-172234567890-13",
         text: {
           en: "According to Newton, gravitational force acts on...",
           mr: "न्यूटननुसार गुरुत्वाकर्षण बल कोणावर कार्य करते?"
@@ -501,7 +376,7 @@ export let allTestSets: TestSet[] = [
         }
       },
       {
-        id: "Q-172234567890-19",
+        id: "Q-172234567890-14",
         text: {
           en: "Which phenomenon made Newton think about gravity?",
           mr: "न्यूटनला गुरुत्वाकर्षणाचा विचार कोणत्या घटनेमुळे सुचला?"
@@ -526,7 +401,7 @@ export let allTestSets: TestSet[] = [
         }
       },
       {
-        id: "Q-172234567890-20",
+        id: "Q-172234567890-15",
         text: {
           en: "What is the effect of gravitational force on objects at different heights?",
           mr: "वेगवेगळ्या उंचीवरील वस्तूंवर गुरुत्व बलाचा काय परिणाम होतो?"
@@ -551,7 +426,57 @@ export let allTestSets: TestSet[] = [
         }
       },
       {
-        id: "Q-172234567890-21",
+        id: "Q-172234567890-16",
+        text: {
+          en: "Which force is necessary for an object to move in a circular path around the Earth?",
+          mr: "पृथ्वीभोवती चक्राकार फिरणाऱ्या वस्तूला कोणता बल आवश्यक असतो?"
+        },
+        options: {
+          en: [
+            "Gravitational Force",
+            "Centrifugal Force",
+            "Centripetal Force",
+            "Frictional Force"
+          ],
+          mr: [
+            "गुरुत्वाकर्षण बल",
+            "अपकेंद्रित बल",
+            "अभिकेंद्रित बल",
+            "घर्षण बल"
+          ]
+        },
+        correctAnswer: {
+          en: "Centripetal Force",
+          mr: "अभिकेंद्रित बल"
+        }
+      },
+      {
+        id: "Q-172234567890-17",
+        text: {
+          en: "While rotating a stone tied to a string, in which direction does the force act on the stone?",
+          mr: "एका दोरीच्या टोकाला दगड बांधून फिरवताना दगडाला कोणत्या दिशेने बल लागते?"
+        },
+        options: {
+          en: [
+            "Outward",
+            "Upward",
+            "Towards the center",
+            "Downward"
+          ],
+          mr: [
+            "बाहेरच्या दिशेने",
+            "वरच्या दिशेने",
+            "अभिकेंद्रित दिशेने",
+            "खालीच्या दिशेने"
+          ]
+        },
+        correctAnswer: {
+          en: "Towards the center",
+          mr: "अभिकेंद्रित दिशेने"
+        }
+      },
+      {
+        id: "Q-172234567890-18",
         text: {
           en: "Which book by Newton is based on the theory of gravitation?",
           mr: "न्यूटनचे कोणते ग्रंथ गुरुत्वाकर्षण सिद्धांतावर आधारित आहे?"
@@ -576,7 +501,7 @@ export let allTestSets: TestSet[] = [
         }
       },
       {
-        id: "Q-172234567890-22",
+        id: "Q-172234567890-19",
         text: {
           en: "In which type of motion does an object move along a fixed circular path?",
           mr: "कोणत्या प्रकारच्या गतीमध्ये वस्तू एका निश्चित वर्तुळाकार मार्गाने फिरते?"
@@ -601,7 +526,7 @@ export let allTestSets: TestSet[] = [
         }
       },
       {
-        id: "Q-172234567890-23",
+        id: "Q-172234567890-20",
         text: {
           en: "In which direction does centripetal force act?",
           mr: "अभिकेंद्रित बल कोणत्या दिशेने कार्य करते?"
@@ -626,7 +551,7 @@ export let allTestSets: TestSet[] = [
         }
       },
       {
-        id: "Q-172234567890-24",
+        id: "Q-172234567890-21",
         text: {
           en: "If an object is rotated with a string and the string is released, in which direction will it move?",
           mr: "एक वस्तू जर दोरीने फिरवली आणि दोरी सोडली तर ती वस्तू कोणत्या दिशेने जाईल?"
@@ -651,7 +576,7 @@ export let allTestSets: TestSet[] = [
         }
       },
       {
-        id: "Q-172234567890-25",
+        id: "Q-172234567890-22",
         text: {
           en: "Who among the following scientists wrote the book ‘Principia’?",
           mr: "‘प्रिन्सिपिया’ हे पुस्तक खालीलपैकी कोणत्या शास्त्रज्ञाने लिहिले?"
@@ -676,7 +601,7 @@ export let allTestSets: TestSet[] = [
         }
       },
       {
-        id: "Q-172234567890-26",
+        id: "Q-172234567890-23",
         text: {
           en: "If there were no centripetal force, along which path would the object move?",
           mr: "जर अभिकेंद्रित बल नसते तर वस्तू कोणत्या मार्गाने गेली असती?"
@@ -701,7 +626,7 @@ export let allTestSets: TestSet[] = [
         }
       },
       {
-        id: "Q-172234567890-27",
+        id: "Q-172234567890-24",
         text: {
           en: "Which of the following forces pulls an object towards the center?",
           mr: "खालीलपैकी कोणता बल वस्तूला केंद्राच्या दिशेने खेचतो?"
@@ -726,7 +651,7 @@ export let allTestSets: TestSet[] = [
         }
       },
       {
-        id: "Q-172234567890-28",
+        id: "Q-172234567890-25",
         text: {
           en: "What is the necessary force for circular motion?",
           mr: "चक्राकार गतीसाठी आवश्यक बल म्हणजे काय?"
@@ -751,7 +676,32 @@ export let allTestSets: TestSet[] = [
         }
       },
       {
-        id: "Q-172234567890-29",
+        id: "Q-172234567890-26",
+        text: {
+          en: "According to Kepler's laws, planets revolve around the Sun in which type of orbit?",
+          mr: "केप्लरच्या नियमांनुसार ग्रह कोणत्या प्रकारच्या कक्षेत सूर्याभोवती फिरतात?"
+        },
+        options: {
+          en: [
+            "Circular",
+            "Elliptical",
+            "Straight",
+            "Zigzag"
+          ],
+          mr: [
+            "वर्तुळाकार",
+            "लांबटवर्तुळाकार",
+            "सरळ",
+            "झिगझॅग"
+          ]
+        },
+        correctAnswer: {
+          en: "Elliptical",
+          mr: "लांबटवर्तुळाकार"
+        }
+      },
+      {
+        id: "Q-172234567890-27",
         text: {
           en: "What are the central points of an elliptical orbit called?",
           mr: "लांबटवर्तुळाकार कक्षेच्या केंद्रबिंदूंना काय म्हणतात?"
@@ -776,7 +726,7 @@ export let allTestSets: TestSet[] = [
         }
       },
       {
-        id: "Q-172234567890-30",
+        id: "Q-172234567890-28",
         text: {
           en: "Which Kepler’s law relates the speed of the planet to the area covered in orbit?",
           mr: "कोणत्या नियमानुसार ग्रहांच्या वेगाचा संबंध त्यांच्या कक्षेतील क्षेत्रफळाशी आहे?"
@@ -801,7 +751,7 @@ export let allTestSets: TestSet[] = [
         }
       },
       {
-        id: "Q-172234567890-31",
+        id: "Q-172234567890-29",
         text: {
           en: "What is the planet’s speed when it is closer to the Sun?",
           mr: "ग्रह जेव्हा सूर्याजवळ असतो तेव्हा त्याचा वेग कसा असतो?"
@@ -826,7 +776,7 @@ export let allTestSets: TestSet[] = [
         }
       },
       {
-        id: "Q-172234567890-32",
+        id: "Q-172234567890-30",
         text: {
           en: "In an ellipse, AB + BC = ?",
           mr: "लांबटवर्तुळामध्ये AB + BC = ?"
@@ -851,7 +801,7 @@ export let allTestSets: TestSet[] = [
         }
       },
       {
-        id: "Q-172234567890-33",
+        id: "Q-172234567890-31",
         text: {
           en: "What is Kepler’s First Law?",
           mr: "केप्लरचा पहिला नियम कोणता आहे?"
@@ -876,7 +826,7 @@ export let allTestSets: TestSet[] = [
         }
       },
       {
-        id: "Q-172234567890-34",
+        id: "Q-172234567890-32",
         text: {
           en: "According to the second law, what does a planet cover in equal time intervals?",
           mr: "दुसऱ्या नियमानुसार ग्रह एका समान कालावधीत काय करते?"
@@ -901,7 +851,7 @@ export let allTestSets: TestSet[] = [
         }
       },
       {
-        id: "Q-172234567890-35",
+        id: "Q-172234567890-33",
         text: {
           en: "Kepler’s third law is related to the ratio of which quantities?",
           mr: "केप्लरचा तिसरा नियम कोणत्या संज्ञेच्या गुणोत्तराशी संबंधित आहे?"
@@ -926,7 +876,7 @@ export let allTestSets: TestSet[] = [
         }
       },
       {
-        id: "Q-172234567890-36",
+        id: "Q-172234567890-34",
         text: {
           en: "What is the speed of a planet when it is far from the Sun?",
           mr: "ग्रह जेव्हा सूर्यापासून लांब असतो तेव्हा त्याचा वेग कसा असतो?"
@@ -951,7 +901,7 @@ export let allTestSets: TestSet[] = [
         }
       },
       {
-        id: "Q-172234567890-37",
+        id: "Q-172234567890-35",
         text: {
           en: "Which sum remains constant in an ellipse?",
           mr: "कोणत्या गोष्टीचा योग लांबटवर्तुळामध्ये नेहमी समान असतो?"
@@ -976,7 +926,7 @@ export let allTestSets: TestSet[] = [
         }
       },
       {
-        id: "Q-172234567890-38",
+        id: "Q-172234567890-36",
         text: {
           en: "Which principle is explained due to the area law?",
           mr: "क्षेत्रफळ नियमामुळे कोणता नियम स्पष्ट होतो?"
@@ -1001,7 +951,7 @@ export let allTestSets: TestSet[] = [
         }
       },
       {
-        id: "Q-172234567890-39",
+        id: "Q-172234567890-37",
         text: {
           en: "If a planet has a longer period, its orbit is...?",
           mr: "जर ग्रहाचा कालावधी जास्त असेल, तर त्याची कक्षा...?"
@@ -1026,7 +976,7 @@ export let allTestSets: TestSet[] = [
         }
       },
       {
-        id: "Q-172234567890-40",
+        id: "Q-172234567890-38",
         text: {
           en: "Which position between the Sun and planet causes greater speed?",
           mr: "सूर्य आणि ग्रहाच्या दरम्यान कोणती स्थिती अधिक वेग निर्माण करते?"
@@ -1051,7 +1001,7 @@ export let allTestSets: TestSet[] = [
         }
       },
       {
-        id: "Q-172234567890-41",
+        id: "Q-172234567890-39",
         text: {
           en: "Planetary orbits follow a specific shape. What is it?",
           mr: "ग्रहांची कक्षा विशिष्ट आकृतीची असते, ती कोणती?"
@@ -1076,7 +1026,7 @@ export let allTestSets: TestSet[] = [
         }
       },
       {
-        id: "Q-172234567890-42",
+        id: "Q-172234567890-40",
         text: {
           en: "Which of the following is NOT a Kepler’s law?",
           mr: "खालीलपैकी केप्लरचा नियम कोणता नाही?"
@@ -1101,7 +1051,7 @@ export let allTestSets: TestSet[] = [
         }
       },
       {
-        id: "Q-172234567890-43",
+        id: "Q-172234567890-41",
         text: {
           en: "According to Newton's law of gravitation, the gravitational force depends on...?",
           mr: "न्यूटनच्या सार्वत्रिक गुरुत्वाकर्षण नियमानुसार गुरुत्वाकर्षण बल कोणावर अवलंबून असतो?"
@@ -1123,6 +1073,56 @@ export let allTestSets: TestSet[] = [
         correctAnswer: {
           en: "Masses of objects and distance between them",
           mr: "वस्तूंच्या वस्तुमानावर आणि त्यांच्या दरम्यान अंतरावर"
+        }
+      },
+      {
+        id: "Q-172234567890-42",
+        text: {
+          en: "What is the formula for gravitational force?",
+          mr: "गुरुत्वाकर्षण बलाचे सूत्र काय आहे?"
+        },
+        options: {
+          en: [
+            "F = m × g",
+            "F = G × (m₁m₂)/d²",
+            "F = m × a",
+            "F = mv²/r"
+          ],
+          mr: [
+            "F = m × g",
+            "F = G × (m₁m₂)/d²",
+            "F = m × a",
+            "F = mv²/r"
+          ]
+        },
+        correctAnswer: {
+          en: "F = G × (m₁m₂)/d²",
+          mr: "F = G × (m₁m₂)/d²"
+        }
+      },
+      {
+        id: "Q-172234567890-43",
+        text: {
+          en: "What does 'G' represent?",
+          mr: "'G' म्हणजे काय?"
+        },
+        options: {
+          en: [
+            "Friction constant",
+            "Gravitational constant",
+            "Velocity constant",
+            "Gas constant"
+          ],
+          mr: [
+            "घर्षण स्थिरांक",
+            "गुरुत्वाकर्षण स्थिरांक",
+            "गती स्थिरांक",
+            "गॅस स्थिरांक"
+          ]
+        },
+        correctAnswer: {
+          en: "Gravitational constant",
+          mr: "गुरुत्वाकर्षण स्थिरांक"
         }
       }
     ]
@@ -1156,5 +1156,6 @@ export function deleteTestSet(testSetId: string) {
         allTestSets.splice(indexToDelete, 1);
     }
 }
+
 
 

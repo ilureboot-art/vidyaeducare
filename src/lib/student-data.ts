@@ -1,4 +1,6 @@
 
+'use client';
+
 export type StudentProfile = {
   id: string;
   name: string;
@@ -22,8 +24,7 @@ export type StudentProfile = {
   badges: ('Platinum' | 'Gold' | 'Silver' | 'Bronze')[];
 };
 
-// This object acts as our in-memory, shared "database" for student profiles.
-export const studentData: StudentProfile[] = [
+const defaultStudentData: StudentProfile[] = [
   {
     id: "STU-123456",
     name: "Rohan Gurav",
@@ -70,28 +71,76 @@ export const studentData: StudentProfile[] = [
   }
 ];
 
-// --- Simulation of Product Activation Codes ---
+const getStudentData = () => {
+  if (typeof window === 'undefined') return defaultStudentData;
+  const savedData = localStorage.getItem('studentData');
+  return savedData ? JSON.parse(savedData) : defaultStudentData;
+};
 
-// In a real app, these would be securely generated and stored in a database after a purchase.
-export let validActivationCodes = ["PROD-A1B2C", "PROD-X9Y8Z", "PROD-M4N5P"];
+const saveStudentData = (data: StudentProfile[]) => {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem('studentData', JSON.stringify(data));
+};
 
-// Function to "use" a code, removing it from the valid list.
+export let studentData: StudentProfile[] = getStudentData();
+
+if (typeof window !== 'undefined') {
+  studentData = getStudentData();
+}
+
+const defaultActivationCodes = ["PROD-A1B2C", "PROD-X9Y8Z", "PROD-M4N5P"];
+
+const getActivationCodes = () => {
+    if (typeof window === 'undefined') return defaultActivationCodes;
+    const savedCodes = localStorage.getItem('activationCodes');
+    return savedCodes ? JSON.parse(savedCodes) : defaultActivationCodes;
+};
+
+const saveActivationCodes = (codes: string[]) => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem('activationCodes', JSON.stringify(codes));
+};
+
+export let validActivationCodes = getActivationCodes();
+
+if (typeof window !== 'undefined') {
+  validActivationCodes = getActivationCodes();
+}
+
+
 export function useActivationCode(code: string) {
     const index = validActivationCodes.indexOf(code);
     if (index > -1) {
         validActivationCodes.splice(index, 1);
+        saveActivationCodes(validActivationCodes);
     }
 }
 
-// Function to add a new student profile.
 export function addStudent(student: StudentProfile) {
     studentData.push(student);
+    saveStudentData(studentData);
 }
 
-// Function to delete a student profile.
 export function deleteStudent(studentId: string) {
     const index = studentData.findIndex(s => s.id === studentId);
     if (index > -1) {
         studentData.splice(index, 1);
+        saveStudentData(studentData);
     }
+}
+
+export function updateStudent(updatedStudent: StudentProfile) {
+    const index = studentData.findIndex(s => s.id === updatedStudent.id);
+    if (index > -1) {
+        studentData[index] = updatedStudent;
+        saveStudentData(studentData);
+    }
+}
+
+export function resetStudentData() {
+    if (typeof window === 'undefined') return;
+    localStorage.removeItem('studentData');
+    localStorage.removeItem('activationCodes');
+    studentData = getStudentData();
+    validActivationCodes = getActivationCodes();
 }

@@ -11,21 +11,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { storeConfig, type TicketPackage, type ReferboltSubscription, type MockTestPackage } from "@/lib/store-config";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { validActivationCodes } from "@/lib/student-data";
+import { validActivationCodes, useActivationCode } from "@/lib/student-data";
 
 
 export default function StorePage() {
   const { toast } = useToast();
   const [isPurchasing, setIsPurchasing] = useState<number | string | null>(null);
-  const [balance, setBalance] = useState(walletData.balance);
+  const [balance, setBalance] = useState(0);
   const [referralCode1, setReferralCode1] = useState("");
   const [referralCode2, setReferralCode2] = useState("");
 
   const [currentPackages, setCurrentPackages] = useState<TicketPackage[]>([]);
   const [currentMockTestPackages, setCurrentMockTestPackages] = useState<MockTestPackage[]>([]);
   const [currentReferboltSub, setCurrentReferboltSub] = useState<ReferboltSubscription | null>(null);
-
-  // This effect keeps the local state in sync with the central data store
+  
   useEffect(() => {
     setBalance(walletData.balance);
     setCurrentPackages([...storeConfig.packages]);
@@ -36,7 +35,7 @@ export default function StorePage() {
       if (walletData.balance !== balance) {
         setBalance(walletData.balance);
       }
-    }, 500); // Check for updates periodically
+    }, 500); 
     return () => clearInterval(interval);
   }, [balance]);
 
@@ -52,14 +51,12 @@ export default function StorePage() {
     setIsPurchasing(index);
     const product = currentMockTestPackages[index];
     
-    // Calculate discount
-    const baseDiscount = 0.05; // 5% direct discount
+    const baseDiscount = 0.05; 
     const hasReferral = referralCode1.trim() !== "";
-    const referralDiscount = hasReferral ? 0.10 : 0; // 10% additional for referral
+    const referralDiscount = hasReferral ? 0.10 : 0; 
     const totalDiscount = baseDiscount + referralDiscount;
     const discountedBasePrice = product.price * (1 - totalDiscount);
     
-    // Calculate GST
     const gstAmount = discountedBasePrice * (product.gstRate / 100);
     const finalPrice = discountedBasePrice + gstAmount;
 
@@ -74,7 +71,6 @@ export default function StorePage() {
         return;
       }
       
-      walletData.balance -= finalPrice;
       addTransaction({
         id: Date.now(),
         type: 'withdrawal',
@@ -84,12 +80,11 @@ export default function StorePage() {
         status: 'Completed',
         user: "Alex Doe"
       });
+      walletData.balance -= finalPrice;
 
-      // Simulate IBA commission
       if (hasReferral) {
         const baseCommissionRate = 0.1765;
-        // In a real app, you would check if the IBA is a ReferBolt subscriber
-        const isIbaReferboltSubscriber = true; // Simulating for demo
+        const isIbaReferboltSubscriber = true; 
         const bonusCommission = isIbaReferboltSubscriber ? (storeConfig.referboltSettings.ibaBonusCommission / 100) : 0;
         const totalCommissionRate = baseCommissionRate + bonusCommission;
         const totalCommission = discountedBasePrice * totalCommissionRate;
@@ -97,11 +92,9 @@ export default function StorePage() {
         let commissionToastDescription = "";
 
         if (referralCode2.trim() !== "") {
-            // Split commission
             const commissionPerIba = totalCommission / 2;
             commissionToastDescription = `Commission of ₹${commissionPerIba.toFixed(2)} each for IBA codes ${referralCode1} and ${referralCode2} has been logged.`;
         } else {
-            // 100% commission
              commissionToastDescription = `A commission of ₹${totalCommission.toFixed(2)} for IBA code ${referralCode1} has been logged for this sale.`;
         }
         
@@ -120,11 +113,11 @@ export default function StorePage() {
       
       const activationCode = `PROD-${String(Date.now()).slice(-5)}`;
       validActivationCodes.push(activationCode);
+      useActivationCode(activationCode); // This will save the updated codes list
       
       let successDescription = `You've purchased the ${product.name}. Your Activation Code is: ${activationCode}. Use this code in 'My Students' to add a profile.`;
       
       if (storeConfig.referboltSettings.freeAccessWithMockTest) {
-        // In a real app, you'd set the user's referbolt status to true in the DB.
         successDescription += " As a bonus, you've been granted free access to the ReferBolt system!"
       }
 
@@ -150,7 +143,6 @@ export default function StorePage() {
               return;
           }
 
-          walletData.balance -= finalPrice;
           addTransaction({
               id: Date.now(),
               type: 'withdrawal',
@@ -160,6 +152,7 @@ export default function StorePage() {
               status: 'Completed',
               user: 'Alex Doe',
           });
+          walletData.balance -= finalPrice;
           setBalance(walletData.balance);
 
           toast({ title: "Purchase Successful!", description: `${pkg.tickets} tickets have been added to your account.` });
@@ -179,8 +172,7 @@ export default function StorePage() {
             setIsPurchasing(null);
             return;
         }
-
-        walletData.balance -= finalPrice;
+        
         addTransaction({
             id: Date.now(),
             type: 'withdrawal',
@@ -190,6 +182,7 @@ export default function StorePage() {
             status: 'Completed',
             user: 'Alex Doe',
         });
+        walletData.balance -= finalPrice;
         setBalance(walletData.balance);
         
         const bonusTickets = currentReferboltSub.ticketBonus;

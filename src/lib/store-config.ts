@@ -1,35 +1,34 @@
 
+'use client';
 
 export type TicketPackage = {
   tickets: number;
-  price: number; // Base price before GST
+  price: number;
   bestValue: boolean;
   games: number;
-  gstRate: number; // GST percentage
+  gstRate: number;
   hsnSacCode: string;
 };
 
 export type ReferboltSubscription = {
   name: string;
-  price: number; // Base price before GST
+  price: number;
   description: string;
   ticketBonus: number;
-  gstRate: number; // GST percentage
+  gstRate: number;
   hsnSacCode: string;
 };
 
 export type MockTestPackage = {
     name: string;
-    price: number; // Base price
+    price: number;
     months: number;
     bestValue: boolean;
-    gstRate: number; // GST percentage
+    gstRate: number;
     hsnSacCode: string;
 };
 
-// This object acts as our in-memory, shared "database".
-// The values can be updated at runtime by the admin panel.
-export let storeConfig = {
+const defaultStoreConfig = {
     packages: [
         { tickets: 1, price: 25, bestValue: false, games: 2, gstRate: 28, hsnSacCode: '998439' },
         { tickets: 5, price: 120, bestValue: false, games: 10, gstRate: 28, hsnSacCode: '998439' },
@@ -54,39 +53,67 @@ export let storeConfig = {
     
     gameSettings: {
         maxAttempts: 5,
-        welcomeBonus: 2, // This is in tickets
-        welcomeCoins: 50, // New welcome bonus in coins
-        rewards: [100, 75, 50, 25, 10], // Now represents coins
+        welcomeBonus: 2,
+        welcomeCoins: 50,
+        rewards: [100, 75, 50, 25, 10],
     },
     
     referboltSettings: {
         freeAccessWithMockTest: true,
-        ibaBonusCommission: 5, // Additional 5%
+        ibaBonusCommission: 5,
     }
 };
 
-// --- Setter functions to allow admin panel to modify the config ---
+const getStoreConfig = () => {
+    if (typeof window === 'undefined') return defaultStoreConfig;
+    const savedConfig = localStorage.getItem('storeConfig');
+    return savedConfig ? JSON.parse(savedConfig) : defaultStoreConfig;
+};
+
+const saveStoreConfig = (config: any) => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem('storeConfig', JSON.stringify(config));
+};
+
+export let storeConfig = getStoreConfig();
+
+if (typeof window !== 'undefined') {
+  storeConfig = getStoreConfig();
+}
+
 
 export function setPackages(newPackages: TicketPackage[]) {
     storeConfig.packages = newPackages;
+    saveStoreConfig(storeConfig);
 }
 
 export function setMockTestPackages(newPackages: MockTestPackage[]) {
     storeConfig.mockTestPackages = newPackages;
+    saveStoreConfig(storeConfig);
 }
 
 export function setReferboltSubscription(newSub: ReferboltSubscription) {
     storeConfig.referboltSubscription = newSub;
+    saveStoreConfig(storeConfig);
 }
 
 export function setReferralBonus(newBonus: number) {
     storeConfig.referralBonus = newBonus;
+    saveStoreConfig(storeConfig);
 }
 
 export function setGameSettings(newSettings: { maxAttempts: number, welcomeBonus: number, rewards: number[], welcomeCoins: number }) {
     storeConfig.gameSettings = newSettings;
+    saveStoreConfig(storeConfig);
 }
 
 export function setReferboltSettings(newSettings: { freeAccessWithMockTest: boolean, ibaBonusCommission: number }) {
     storeConfig.referboltSettings = newSettings;
+    saveStoreConfig(storeConfig);
+}
+
+export function resetStoreConfig() {
+    if (typeof window === 'undefined') return;
+    localStorage.removeItem('storeConfig');
+    storeConfig = getStoreConfig();
 }

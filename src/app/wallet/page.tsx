@@ -49,14 +49,13 @@ function FormattedDate({ dateString }: { dateString: string }) {
   const [formattedDate, setFormattedDate] = useState("");
 
   useEffect(() => {
-    // This effect runs only on the client, ensuring no hydration mismatch.
     if (dateString) {
       setFormattedDate(new Date(dateString).toLocaleDateString());
     }
   }, [dateString]);
 
   if (!formattedDate) {
-    return null; // Or a loading skeleton
+    return null; 
   }
 
   return <>{formattedDate}</>;
@@ -64,8 +63,8 @@ function FormattedDate({ dateString }: { dateString: string }) {
 
 export default function WalletPage() {
   const { toast } = useToast();
-  const [balance, setBalance] = useState(walletData.balance);
-  const [coins, setCoins] = useState(walletData.coins);
+  const [balance, setBalance] = useState(0);
+  const [coins, setCoins] = useState(0);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [addFundsOpen, setAddFundsOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
@@ -74,7 +73,17 @@ export default function WalletPage() {
     setBalance(walletData.balance);
     setCoins(walletData.coins);
     setTransactions([...walletData.transactions]);
-  }, []);
+
+    const interval = setInterval(() => {
+        if (walletData.balance !== balance || JSON.stringify(walletData.transactions) !== JSON.stringify(transactions)) {
+            setBalance(walletData.balance);
+            setCoins(walletData.coins);
+            setTransactions([...walletData.transactions]);
+        }
+    }, 500); 
+
+    return () => clearInterval(interval);
+  }, [balance, transactions]);
 
   const handleAddFunds = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -143,9 +152,6 @@ export default function WalletPage() {
         return;
     }
     
-    // Optimistically update the UI, but the real balance change happens on admin approval.
-    // walletData.balance -= amount; 
-    
     const newTransaction: Transaction = {
         id: Date.now(),
         type: 'withdrawal',
@@ -163,7 +169,6 @@ export default function WalletPage() {
         message: `Alex Doe requested to withdraw ₹${amount}.`,
         userId: 'admin'
     });
-    // setBalance(walletData.balance); 
     setTransactions([...walletData.transactions]);
 
     toast({

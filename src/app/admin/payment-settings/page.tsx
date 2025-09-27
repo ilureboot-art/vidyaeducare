@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Landmark } from "lucide-react";
-import { walletData } from "@/lib/user-data";
+import { walletData, setAdminPaymentMethods } from "@/lib/user-data";
 
 export default function PaymentSettingsPage() {
     const { toast } = useToast();
@@ -33,9 +33,8 @@ export default function PaymentSettingsPage() {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         
-        const updateConfig = () => {
-             // In a real app, this would be an API call. Here we update the shared object.
-            Object.assign(walletData.adminPaymentMethods, methods);
+        const updateConfig = (finalMethods: any) => {
+            setAdminPaymentMethods(finalMethods);
             toast({
                 title: "Settings Saved!",
                 description: "Payment method details have been successfully updated.",
@@ -43,17 +42,16 @@ export default function PaymentSettingsPage() {
         }
         
         if (qrFile) {
-            // Simulate file upload and getting a URL
             const reader = new FileReader();
             reader.onloadend = () => {
                 const dataUrl = reader.result as string;
-                walletData.adminPaymentMethods.qrCodeUrl = dataUrl;
-                setMethods(prev => ({...prev, qrCodeUrl: dataUrl}));
-                updateConfig();
+                const finalMethods = { ...methods, qrCodeUrl: dataUrl };
+                setMethods(finalMethods);
+                updateConfig(finalMethods);
             };
             reader.readAsDataURL(qrFile);
         } else {
-             updateConfig();
+             updateConfig(methods);
         }
 
     }

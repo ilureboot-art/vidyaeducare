@@ -6,7 +6,7 @@ export type StudentProfile = {
   avatarUrl: string;
   academic: {
       standard: string;
-      board: string;
+      board: "CBSE" | "ICSE" | "SSC";
       stream: string;
       language: string;
       academicYear: string;
@@ -23,7 +23,52 @@ export type StudentProfile = {
 };
 
 // This object acts as our in-memory, shared "database" for student profiles.
-export const studentData: StudentProfile[] = [];
+export const studentData: StudentProfile[] = [
+  {
+    id: "STU-123456",
+    name: "Rohan Gurav",
+    dob: "2008-05-10",
+    avatarUrl: `https://placehold.co/100x100.png?text=RG`,
+    academic: {
+        standard: "10th",
+        board: "SSC",
+        stream: "General",
+        language: 'English',
+        academicYear: '2024-2025',
+        subjects: ['Maths', 'Science', 'English', 'History', 'General Knowledge'],
+    },
+    stats: {
+        totalEarnings: 150,
+        testsTaken: 2,
+        avgScore: 85,
+        performance: [{ name: 'Gravitation', score: 88 }, { name: 'Elements', score: 82 }],
+        recentActivity: [],
+    },
+    badges: ['Gold'],
+  },
+  {
+    id: "STU-789012",
+    name: "Priya Sharma",
+    dob: "2007-09-22",
+    avatarUrl: `https://placehold.co/100x100.png?text=PS`,
+    academic: {
+        standard: "11th",
+        board: "CBSE",
+        stream: "Science",
+        language: 'English',
+        academicYear: '2024-2025',
+        subjects: ['Physics', 'Chemistry', 'Maths', 'English'],
+    },
+    stats: {
+        totalEarnings: 50,
+        testsTaken: 1,
+        avgScore: 78,
+        performance: [{ name: 'Kinematics', score: 78 }],
+        recentActivity: [],
+    },
+    badges: ['Silver'],
+  }
+];
 
 // --- Simulation of Product Activation Codes ---
 

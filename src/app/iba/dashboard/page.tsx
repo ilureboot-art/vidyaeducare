@@ -29,12 +29,23 @@ import { storeConfig } from "@/lib/store-config";
 
 const initialReferralData = {
   referralCode: "ALEX-IBA-5C", // This can be dynamically generated for the user
-  totalReferrals: 0,
-  totalCommission: 0,
-  dailySales: 0,
-  monthlySales: 0,
-  recentReferrals: [],
-  salesHistory: []
+  totalReferrals: 12,
+  totalCommission: 450.50,
+  dailySales: 2,
+  monthlySales: 85,
+  recentReferrals: [
+      { id: 1, name: 'Rohan Gurav', date: '2024-07-28', commission: 44.12 },
+      { id: 2, name: 'Priya Sharma', date: '2024-07-27', commission: 44.12 },
+  ],
+  salesHistory: [
+      { month: 'Jan', sales: 15 },
+      { month: 'Feb', sales: 22 },
+      { month: 'Mar', sales: 30 },
+      { month: 'Apr', sales: 25 },
+      { month: 'May', sales: 40 },
+      { month: 'Jun', sales: 55 },
+      { month: 'Jul', sales: 85 },
+  ]
 };
 
 const dailyTarget = 5;

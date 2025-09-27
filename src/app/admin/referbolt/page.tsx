@@ -10,9 +10,9 @@ import { Progress } from "@/components/ui/progress";
 
 // In a real app, this data would be fetched from a database
 const initialStats = {
-  totalCycles: 0,
-  totalCommissions: 0,
-  activeReferrers: 0,
+  totalCycles: 18,
+  totalCommissions: 2700,
+  activeReferrers: 12,
 };
 
 type Cycle = {
@@ -23,9 +23,17 @@ type Cycle = {
   subscriptionType: "Manual" | "Auto-Renewed";
 }
 
-const initialCycles: Cycle[] = [];
+const initialCycles: Cycle[] = [
+    { id: 'CYC001', referrer: 'Rohan Kumar', referrals: 3, status: 'Completed', subscriptionType: 'Auto-Renewed' },
+    { id: 'CYC002', referrer: 'Anika Sharma', referrals: 2, status: 'In Progress', subscriptionType: 'Manual' },
+    { id: 'CYC003', referrer: 'Vikram Reddy', referrals: 1, status: 'In Progress', subscriptionType: 'Auto-Renewed' },
+    { id: 'CYC004', referrer: 'Isha Jain', referrals: 3, status: 'Completed', subscriptionType: 'Manual' },
+];
 
-const initialReferralActivity: any[] = [];
+const initialReferralActivity: any[] = [
+    { id: 'REF001', referrer: 'Rohan Kumar', newUser: 'New User A', date: '2024-07-28', commission: '₹50', status: 'Paid' },
+    { id: 'REF002', referrer: 'Anika Sharma', newUser: 'New User B', date: '2024-07-27', commission: '₹50', status: 'Paid' },
+];
 
 export default function ReferBoltManagementPage() {
   const [stats, setStats] = useState(initialStats);
@@ -46,7 +54,7 @@ export default function ReferBoltManagementPage() {
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalCycles}</div>
             <p className="text-xs text-muted-foreground">
-              No data yet
+              +15% from last month
             </p>
           </CardContent>
         </Card>

@@ -56,9 +56,12 @@ type Admin = {
 
 const initialAdmins: Admin[] = [
   { id: "ADM001", name: "Super Admin", email: "super@example.com", phone: "919999988888", role: "Head Admin", status: "Active", joinDate: "2024-07-01" },
+  { id: "ADM002", name: "Anil Kumar", email: "anil.k@example.com", phone: "919876543210", role: "Sub-admin", status: "Active", joinDate: "2024-07-10" },
 ];
 
-const initialRequests: Admin[] = []
+const initialRequests: Admin[] = [
+  { id: "REQ001", name: "Sunita Patel", email: "sunita.p@example.com", phone: "918765432109", role: "Sub-admin", status: "Pending", joinDate: "2024-07-28" },
+]
 
 export default function AdminManagementPage() {
   const [admins, setAdmins] = useState<Admin[]>(initialAdmins);
@@ -78,7 +81,7 @@ export default function AdminManagementPage() {
   }
 
   const handleSendWelcome = (admin: Admin) => {
-    const message = `Hello ${admin.name}, welcome to the GuessMaster Admin team! We're excited to have you on board as a ${admin.role}.`;
+    const message = `Hello ${admin.name}, welcome to the Vidya EduCare Admin team! We're excited to have you on board as a ${admin.role}.`;
     openWhatsApp(admin.phone, message);
     toast({
         title: "WhatsApp Opened",
@@ -92,7 +95,7 @@ export default function AdminManagementPage() {
 
     setRequests(requests.filter(req => req.id !== requestId));
     
-    const updatedAdmin: Admin = { ...requestToProcess, status: newStatus };
+    const updatedAdmin: Admin = { ...requestToProcess, status: newStatus, id: `ADM${String(Date.now()).slice(-3)}` };
 
     if (newStatus === "Active") {
         const newAdmins = [...admins, updatedAdmin];
@@ -336,5 +339,3 @@ export default function AdminManagementPage() {
     </div>
   );
 }
-
-    

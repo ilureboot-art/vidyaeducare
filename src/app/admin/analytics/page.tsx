@@ -7,15 +7,28 @@ import { BarChart, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Line
 import { Users, Gamepad2, IndianRupee } from "lucide-react";
 
 // In a real app, this data would be fetched from a server
-const userActivityData: any[] = [];
+const userActivityData = [
+  { name: 'Jul 22', users: 120 },
+  { name: 'Jul 23', users: 150 },
+  { name: 'Jul 24', users: 175 },
+  { name: 'Jul 25', users: 160 },
+  { name: 'Jul 26', users: 190 },
+  { name: 'Jul 27', users: 210 },
+  { name: 'Jul 28', users: 230 },
+];
 
-const revenueData: any[] = [];
+const revenueData = [
+  { name: 'Week 1', revenue: 4000 },
+  { name: 'Week 2', revenue: 3000 },
+  { name: 'Week 3', revenue: 5000 },
+  { name: 'Week 4', revenue: 4500 },
+];
 
 export default function AnalyticsPage() {
   // In a real app, this data would be fetched and updated
-  const [activeUsers] = useState(0);
-  const [gamesPlayed] = useState(0);
-  const [todaysRevenue] = useState(0);
+  const [activeUsers] = useState(230);
+  const [gamesPlayed] = useState(1450);
+  const [todaysRevenue] = useState(5230);
 
   return (
     <div className="space-y-6">
@@ -27,7 +40,7 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold">{activeUsers.toLocaleString()}</p>
-            <p className="text-xs text-muted-foreground">No data yet</p>
+            <p className="text-xs text-muted-foreground">+9.5% from yesterday</p>
           </CardContent>
         </Card>
         <Card>
@@ -36,7 +49,7 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold">{gamesPlayed.toLocaleString()}</p>
-            <p className="text-xs text-muted-foreground">No data yet</p>
+            <p className="text-xs text-muted-foreground">+12% from yesterday</p>
           </CardContent>
         </Card>
         <Card>
@@ -45,7 +58,7 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold">₹{todaysRevenue.toLocaleString()}</p>
-            <p className="text-xs text-muted-foreground">No data yet</p>
+            <p className="text-xs text-muted-foreground">+5.2% from yesterday</p>
           </CardContent>
         </Card>
       </div>

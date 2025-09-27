@@ -10,7 +10,35 @@ export type ScheduledTest = {
 };
 
 // This acts as our shared, in-memory "database" for scheduled tests.
-export let scheduledTests: ScheduledTest[] = [];
+export let scheduledTests: ScheduledTest[] = [
+    {
+        id: "SCHED-1",
+        testSetId: "SET-172234567890",
+        testSetName: "Gravitation Mock Test",
+        dateTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days from now
+        board: "SSC",
+        standard: "10th",
+        subject: "Science"
+    },
+    {
+        id: "SCHED-2",
+        testSetId: "SET-172242000000",
+        testSetName: "Elements Mock Test",
+        dateTime: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // 1 day ago (for practice)
+        board: "SSC",
+        standard: "10th",
+        subject: "Science"
+    },
+    {
+        id: "SCHED-3",
+        testSetId: "SET-172234567890", // Using Gravitation test for another standard
+        testSetName: "Gravitation Mock Test",
+        dateTime: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days from now
+        board: "CBSE",
+        standard: "11th",
+        subject: "Physics"
+    }
+];
 
 // Function to add a new scheduled test
 export function addScheduledTest(test: ScheduledTest) {

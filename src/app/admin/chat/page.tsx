@@ -22,7 +22,31 @@ type Chat = {
     messages: Message[];
 };
 
-const initialChats: Chat[] = [];
+const initialChats: Chat[] = [
+    {
+        id: "CHAT001",
+        user: "Priya Sharma",
+        lastMessage: "I'm having trouble with my withdrawal.",
+        unread: true,
+        avatar: "PS",
+        messages: [
+            { from: 'user', text: "Hello, I requested a withdrawal yesterday and it's still pending." },
+            { from: 'user', text: "Can you please check on it?" },
+        ]
+    },
+    {
+        id: "CHAT002",
+        user: "Rohan Kumar",
+        lastMessage: "Thanks for the help!",
+        unread: false,
+        avatar: "RK",
+        messages: [
+            { from: 'user', text: "My referral bonus wasn't applied." },
+            { from: 'admin', text: "Let me check that for you. It seems there was a slight delay. I've credited it now." },
+            { from: 'user', text: "Great, I see it. Thanks for the help!" },
+        ]
+    },
+];
 
 export default function ChatManagementPage() {
     const [chats, setChats] = useState<Chat[]>(initialChats);

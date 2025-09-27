@@ -30,7 +30,12 @@ type User = {
 };
 
 // In a real app, this would be fetched from a database.
-let initialUsers: User[] = [];
+let initialUsers: User[] = [
+    { id: 'USR001', name: 'Alex Doe', email: 'alex.doe@example.com', joinDate: '2024-07-01', status: 'Active', wallet: 550.75 },
+    { id: 'USR002', name: 'Priya Sharma', email: 'priya.sharma@example.com', joinDate: '2024-07-15', status: 'Active', wallet: 150.00 },
+    { id: 'USR003', name: 'Rohan Kumar', email: 'rohan.k@example.com', joinDate: '2024-06-20', status: 'Banned', wallet: 0.00 },
+    { id: 'USR004', name: 'Anjali Mehta', email: 'anjali.m@example.com', joinDate: '2024-05-10', status: 'Inactive', wallet: 25.50 },
+];
 
 const getStatusBadgeVariant = (status: string) => {
     return status === "Active" ? "default" : status === "Banned" ? "destructive" : "secondary";

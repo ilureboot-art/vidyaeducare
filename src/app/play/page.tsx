@@ -105,7 +105,6 @@ export default function PlayPage() {
   const endTimeRef = useRef<number | null>(null);
   const [timeLeft, setTimeLeft] = useState(GAME_DURATION);
 
-
   const { toast } = useToast();
 
   const goBackToMenu = () => {
@@ -173,6 +172,7 @@ export default function PlayPage() {
   }, [resetGame]);
   
   useEffect(() => {
+    // This effect runs only on the client, after hydration.
     const startMode = searchParams.get('mode');
     if (startMode === 'demo' && gameState === 'idle') {
       startGame();

@@ -58,6 +58,20 @@ export function deleteAdmin(adminId: string) {
     saveAdminData(adminData);
 }
 
+export function updateAdmin(adminId: string, updatedDetails: Partial<Omit<Admin, 'id' | 'joinDate' | 'status'>>) {
+    const index = adminData.admins.findIndex((admin: Admin) => admin.id === adminId);
+    if (index !== -1) {
+        adminData.admins[index] = { ...adminData.admins[index], ...updatedDetails };
+        saveAdminData(adminData);
+    }
+}
+
+export function resetAdminPassword(adminId: string, newPassword: string) {
+    // In a real app, this would make an API call to a secure backend.
+    // For this prototype, we'll just log it and assume success.
+    console.log(`Password for admin ${adminId} has been reset to: ${newPassword}`);
+}
+
 export function processRequest(requestId: string, newStatus: 'Active' | 'Rejected') {
     const requestIndex = adminData.requests.findIndex((req: Admin) => req.id === requestId);
     if (requestIndex === -1) return;

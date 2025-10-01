@@ -13,7 +13,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { UserCog, UserPlus, MoreHorizontal, Trash2, MessageSquare } from "lucide-react";
+import { UserCog, UserPlus, MoreHorizontal, Trash2, MessageSquare, Edit } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -34,7 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { adminData, addAdmin, deleteAdmin, processRequest, type Admin, type AdminRole } from "@/lib/admin-data";
+import { adminData, addAdmin, deleteAdmin, processRequest, updateAdmin, resetAdminPassword, type Admin, type AdminRole } from "@/lib/admin-data";
 
 const WhatsAppIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-green-500">
@@ -46,6 +46,9 @@ export default function AdminManagementPage() {
   const [admins, setAdmins] = useState<Admin[]>(adminData.admins);
   const [requests, setRequests] = useState<Admin[]>(adminData.requests);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isResetPassOpen, setIsResetPassOpen] = useState(false);
+  const [selectedAdmin, setSelectedAdmin] = useState<Admin | null>(null);
   const { toast } = useToast();
   
   useEffect(() => {
@@ -68,6 +71,16 @@ export default function AdminManagementPage() {
         }
         window.open(url, '_blank');
     }
+  }
+  
+  const openEditDialog = (admin: Admin) => {
+    setSelectedAdmin(admin);
+    setIsEditDialogOpen(true);
+  }
+  
+  const openResetPassDialog = (admin: Admin) => {
+    setSelectedAdmin(admin);
+    setIsResetPassOpen(true);
   }
 
   const handleSendWelcome = (admin: Admin) => {
@@ -116,6 +129,50 @@ export default function AdminManagementPage() {
         description: `Admin account for ${name} has been created successfully.`
     });
     setIsCreateDialogOpen(false);
+  }
+  
+  const handleEditAdmin = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!selectedAdmin) return;
+    const form = e.currentTarget;
+    const name = (form.elements.namedItem('name-edit') as HTMLInputElement).value;
+    const email = (form.elements.namedItem('email-edit') as HTMLInputElement).value;
+    const phone = (form.elements.namedItem('phone-edit') as HTMLInputElement).value;
+    const role = (form.querySelector('[name=role-edit]') as HTMLInputElement)?.value as AdminRole | undefined;
+
+    if (!name || !email || !phone || !role) {
+        toast({ variant: 'destructive', title: 'Missing Information', description: 'Please fill out all fields.'});
+        return;
+    }
+    
+    updateAdmin(selectedAdmin.id, { name, email, phone, role });
+    refreshState();
+    
+    toast({ title: 'Admin Updated', description: `${name}'s details have been saved.`});
+    setIsEditDialogOpen(false);
+  }
+  
+  const handleResetPassword = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!selectedAdmin) return;
+    const form = e.currentTarget;
+    const newPassword = (form.elements.namedItem('new-password') as HTMLInputElement).value;
+    const confirmPassword = (form.elements.namedItem('confirm-password') as HTMLInputElement).value;
+    
+    if (newPassword !== confirmPassword) {
+        toast({ variant: 'destructive', title: 'Passwords do not match' });
+        return;
+    }
+    
+    if (newPassword.length < 6) {
+        toast({ variant: 'destructive', title: 'Password too short', description: 'Password must be at least 6 characters.' });
+        return;
+    }
+    
+    resetAdminPassword(selectedAdmin.id, newPassword);
+    
+    toast({ title: 'Password Reset', description: `Password for ${selectedAdmin.name} has been changed.` });
+    setIsResetPassOpen(false);
   }
 
   const handleDeleteAdmin = (adminId: string) => {
@@ -296,8 +353,11 @@ export default function AdminManagementPage() {
                             <MessageSquare className="mr-2 h-4 w-4"/>
                             Send Welcome Message
                         </DropdownMenuItem>
-                        <DropdownMenuItem>Edit Details</DropdownMenuItem>
-                        <DropdownMenuItem>Reset Password</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => openEditDialog(admin)} disabled={admin.role === "Head Admin"}>
+                            <Edit className="mr-2 h-4 w-4"/>
+                            Edit Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => openResetPassDialog(admin)}>Reset Password</DropdownMenuItem>
                          {admin.role !== "Head Admin" && (
                             <DropdownMenuItem className="text-red-600 focus:text-red-500 focus:bg-red-950/50" onClick={() => handleDeleteAdmin(admin.id)}>
                                 <Trash2 className="mr-2 h-4 w-4"/>
@@ -313,6 +373,71 @@ export default function AdminManagementPage() {
           </Table>
         </CardContent>
       </Card>
+      
+      {/* Edit Admin Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Edit Admin Details</DialogTitle>
+            </DialogHeader>
+            {selectedAdmin && (
+                <form onSubmit={handleEditAdmin} className="space-y-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="name-edit">Full Name</Label>
+                        <Input id="name-edit" name="name-edit" defaultValue={selectedAdmin.name} required />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="email-edit">Email Address</Label>
+                        <Input id="email-edit" name="email-edit" type="email" defaultValue={selectedAdmin.email} required />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="phone-edit">WhatsApp Number</Label>
+                        <Input id="phone-edit" name="phone-edit" type="tel" defaultValue={selectedAdmin.phone} required />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="role-edit">Role</Label>
+                        <Select name="role-edit" defaultValue={selectedAdmin.role} required>
+                            <SelectTrigger id="role-edit">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Head Admin">Head Admin</SelectItem>
+                                <SelectItem value="Sub-admin">Sub-admin</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <DialogFooter>
+                        <Button type="submit">Save Changes</Button>
+                    </DialogFooter>
+                </form>
+            )}
+        </DialogContent>
+      </Dialog>
+      
+      {/* Reset Password Dialog */}
+      <Dialog open={isResetPassOpen} onOpenChange={setIsResetPassOpen}>
+          <DialogContent>
+              <DialogHeader>
+                  <DialogTitle>Reset Password for {selectedAdmin?.name}</DialogTitle>
+                  <DialogDescription>
+                      Enter a new password. This change is immediate.
+                  </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleResetPassword} className="space-y-4">
+                  <div className="space-y-2">
+                      <Label htmlFor="new-password">New Password</Label>
+                      <Input id="new-password" name="new-password" type="password" required />
+                  </div>
+                  <div className="space-y-2">
+                      <Label htmlFor="confirm-password">Confirm New Password</Label>
+                      <Input id="confirm-password" name="confirm-password" type="password" required />
+                  </div>
+                   <DialogFooter>
+                        <Button type="submit">Reset Password</Button>
+                    </DialogFooter>
+              </form>
+          </DialogContent>
+      </Dialog>
     </div>
   );
 }

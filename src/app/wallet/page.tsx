@@ -54,11 +54,7 @@ function FormattedDate({ dateString }: { dateString: string }) {
     }
   }, [dateString]);
 
-  if (!formattedDate) {
-    return null; 
-  }
-
-  return <>{formattedDate}</>;
+  return <span>{formattedDate}</span>;
 }
 
 export default function WalletPage() {
@@ -348,3 +344,5 @@ export default function WalletPage() {
     </div>
   );
 }
+
+    

@@ -52,11 +52,7 @@ function FormattedDate({ dateString }: { dateString: string }) {
     }
   }, [dateString]);
 
-  if (!formattedDate) {
-    return null; // Or a loading skeleton
-  }
-
-  return <>{formattedDate}</>;
+  return <span>{formattedDate}</span>;
 }
 
 export default function TransactionsPage() {
@@ -169,3 +165,5 @@ export default function TransactionsPage() {
     </div>
   );
 }
+
+    

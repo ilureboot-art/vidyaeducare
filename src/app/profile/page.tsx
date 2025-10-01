@@ -35,11 +35,7 @@ function FormattedDate({ dateString }: { dateString: string }) {
     }
   }, [dateString]);
 
-  if (!formattedDate) {
-    return null; // Or a loading skeleton
-  }
-
-  return <>{formattedDate}</>;
+  return <span>{formattedDate}</span>; // Render a span to avoid mismatch. Content will populate on client.
 }
 
 
@@ -385,3 +381,5 @@ export default function ProfilePage() {
     </TooltipProvider>
   );
 }
+
+    

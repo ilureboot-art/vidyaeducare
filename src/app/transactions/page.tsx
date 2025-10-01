@@ -67,16 +67,20 @@ export default function TransactionsPage() {
   useEffect(() => {
     const sortedTransactions = [...walletData.transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     setTransactions(sortedTransactions);
-        
-    const interval = setInterval(() => {
+
+    const intervalId = setInterval(() => {
         const updatedSortedTransactions = [...walletData.transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        if (JSON.stringify(updatedSortedTransactions) !== JSON.stringify(transactions)) {
-            setTransactions(updatedSortedTransactions);
-        }
-    }, 500); 
-    
-    return () => clearInterval(interval);
-  }, [transactions]);
+        // Use a functional update to avoid dependency on `transactions` state
+        setTransactions(currentTransactions => {
+            if (JSON.stringify(updatedSortedTransactions) !== JSON.stringify(currentTransactions)) {
+                return updatedSortedTransactions;
+            }
+            return currentTransactions;
+        });
+    }, 500);
+
+    return () => clearInterval(intervalId);
+  }, []);
 
   const filteredTransactions = transactions.filter(tx => {
     const statusMatch = statusFilter === 'all' || tx.status.toLowerCase() === statusFilter;

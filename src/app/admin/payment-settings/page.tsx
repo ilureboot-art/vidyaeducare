@@ -14,8 +14,10 @@ export default function PaymentSettingsPage() {
     const { toast } = useToast();
     const [methods, setMethods] = useState(walletData.adminPaymentMethods);
     const [qrFile, setQrFile] = useState<File | null>(null);
+    const [isClient, setIsClient] = useState(false);
 
     useEffect(() => {
+        setIsClient(true);
         setMethods({...walletData.adminPaymentMethods});
     }, [])
 
@@ -54,6 +56,10 @@ export default function PaymentSettingsPage() {
              updateConfig(methods);
         }
 
+    }
+
+    if (!isClient) {
+        return null;
     }
 
   return (

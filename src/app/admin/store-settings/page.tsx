@@ -32,6 +32,7 @@ export default function AdminStoreSettingsPage() {
   const [boards, setLocalBoards] = useState<string[]>([]);
   const [standards, setLocalStandards] = useState<string[]>([]);
   const [subjects, setLocalSubjects] = useState<string[]>([]);
+  const [isClient, setIsClient] = useState(false);
 
   const loadData = () => {
     setLocalPackages(storeConfig.packages.map(p => ({...p})));
@@ -45,6 +46,7 @@ export default function AdminStoreSettingsPage() {
   }
 
   useEffect(() => {
+    setIsClient(true);
     loadData();
   }, []);
 
@@ -178,6 +180,10 @@ export default function AdminStoreSettingsPage() {
           </Button>
       </div>
   );
+
+  if (!isClient) {
+    return null;
+  }
 
   return (
     <div className="space-y-6">

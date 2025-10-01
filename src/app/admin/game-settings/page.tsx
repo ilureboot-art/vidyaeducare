@@ -12,10 +12,12 @@ import { storeConfig, setGameSettings } from "@/lib/store-config";
 export default function AdminGameSettingsPage() {
     const { toast } = useToast();
     const [settings, setSettings] = useState({ ...storeConfig.gameSettings });
+    const [isClient, setIsClient] = useState(false);
     
     // This effect ensures that if the settings are updated elsewhere,
     // this component reflects the changes.
     useEffect(() => {
+        setIsClient(true);
         setSettings({ ...storeConfig.gameSettings });
     }, []);
 
@@ -36,6 +38,10 @@ export default function AdminGameSettingsPage() {
             title: "Settings Saved!",
             description: "Game settings have been successfully updated.",
         });
+    }
+
+    if (!isClient) {
+        return null;
     }
 
   return (

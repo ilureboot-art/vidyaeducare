@@ -88,6 +88,7 @@ const Confetti = () => (
 export default function PlayPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [isClient, setIsClient] = useState(false);
   const [secretNumber, setSecretNumber] = useState(0);
   const [currentGuess, setCurrentGuess] = useState("");
   const [guessHistory, setGuessHistory] = useState<{ guess: number; hint: string }[]>([]);
@@ -172,12 +173,12 @@ export default function PlayPage() {
   }, [resetGame]);
   
   useEffect(() => {
-    // This effect runs only on the client, after hydration.
+    setIsClient(true);
     const startMode = searchParams.get('mode');
-    if (startMode === 'demo' && gameState === 'idle') {
+    if (startMode === 'demo') {
       startGame();
     }
-  }, [searchParams, startGame, gameState]);
+  }, [searchParams, startGame]);
   
   const handleTimerTick = useCallback(() => {
     if (endTimeRef.current) {
@@ -410,6 +411,10 @@ Join now: ${shareUrl}
   const winRateData = [
     { name: 'Win Rate', value: playerStats.winRate, fill: 'hsl(var(--primary))' },
   ];
+
+  if (!isClient) {
+    return null;
+  }
 
   return (
     <div className="w-full max-w-md mx-auto space-y-6">

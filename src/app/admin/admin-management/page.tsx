@@ -43,8 +43,8 @@ const WhatsAppIcon = () => (
 )
 
 export default function AdminManagementPage() {
-  const [admins, setAdmins] = useState<Admin[]>(adminData.admins);
-  const [requests, setRequests] = useState<Admin[]>(adminData.requests);
+  const [admins, setAdmins] = useState<Admin[]>([]);
+  const [requests, setRequests] = useState<Admin[]>([]);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isResetPassOpen, setIsResetPassOpen] = useState(false);
@@ -52,7 +52,7 @@ export default function AdminManagementPage() {
   const { toast } = useToast();
   
   useEffect(() => {
-    // This effect ensures the component state is in sync with the data module
+    // Load data on client side to avoid hydration mismatch
     setAdmins([...adminData.admins]);
     setRequests([...adminData.requests]);
   }, []);

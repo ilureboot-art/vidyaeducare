@@ -45,9 +45,11 @@ export default function UserManagementPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
     // Simulate fetching users
+    setIsClient(true);
     setUsers(initialUsers);
   }, []);
 
@@ -79,6 +81,10 @@ export default function UserManagementPage() {
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  if (!isClient) {
+    return null;
+  }
 
   return (
     <div className="space-y-6">

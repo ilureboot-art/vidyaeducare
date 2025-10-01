@@ -47,8 +47,10 @@ const initialClients: Client[] = [
 
 export default function StudentAccessPage() {
   const [clients, setClients] = useState<Client[]>([]);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
     const today = new Date();
     const thirtyDaysFromNow = new Date();
     thirtyDaysFromNow.setDate(today.getDate() + 30);
@@ -62,6 +64,10 @@ export default function StudentAccessPage() {
     });
     setClients(updatedClients);
   }, []);
+
+  if (!isClient) {
+    return null;
+  }
 
   return (
     <TooltipProvider>

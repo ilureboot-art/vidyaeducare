@@ -34,6 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { adminData, addAdmin, deleteAdmin, processRequest, type Admin, type AdminRole } from "@/lib/admin-data";
 
 const WhatsAppIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-green-500">
@@ -41,34 +42,23 @@ const WhatsAppIcon = () => (
     </svg>
 )
 
-type AdminRole = "Head Admin" | "Sub-admin";
-type AdminStatus = "Active" | "Pending" | "Rejected";
-
-type Admin = {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  role: AdminRole;
-  status: AdminStatus;
-  joinDate: string;
-};
-
-const initialAdmins: Admin[] = [
-  { id: "ADM001", name: "Super Admin", email: "super@example.com", phone: "919999988888", role: "Head Admin", status: "Active", joinDate: "2024-07-01" },
-  { id: "ADM002", name: "Anil Kumar", email: "anil.k@example.com", phone: "919876543210", role: "Sub-admin", status: "Active", joinDate: "2024-07-10" },
-];
-
-const initialRequests: Admin[] = [
-  { id: "REQ001", name: "Sunita Patel", email: "sunita.p@example.com", phone: "918765432109", role: "Sub-admin", status: "Pending", joinDate: "2024-07-28" },
-]
-
 export default function AdminManagementPage() {
-  const [admins, setAdmins] = useState<Admin[]>(initialAdmins);
-  const [requests, setRequests] = useState<Admin[]>(initialRequests);
+  const [admins, setAdmins] = useState<Admin[]>(adminData.admins);
+  const [requests, setRequests] = useState<Admin[]>(adminData.requests);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const { toast } = useToast();
   
+  useEffect(() => {
+    // This effect ensures the component state is in sync with the data module
+    setAdmins([...adminData.admins]);
+    setRequests([...adminData.requests]);
+  }, []);
+
+  const refreshState = () => {
+    setAdmins([...adminData.admins]);
+    setRequests([...adminData.requests]);
+  }
+
   const openWhatsApp = (phone: string, message?: string) => {
     const cleanedPhone = phone.replace(/\D/g, '');
     if (cleanedPhone) {
@@ -93,15 +83,8 @@ export default function AdminManagementPage() {
     const requestToProcess = requests.find(req => req.id === requestId);
     if (!requestToProcess) return;
 
-    setRequests(requests.filter(req => req.id !== requestId));
-    
-    const updatedAdmin: Admin = { ...requestToProcess, status: newStatus, id: `ADM${String(Date.now()).slice(-3)}` };
-
-    if (newStatus === "Active") {
-        const newAdmins = [...admins, updatedAdmin];
-        setAdmins(newAdmins);
-        // Note: In a real app, this would also be persisted to a database.
-    }
+    processRequest(requestId, newStatus);
+    refreshState();
 
     toast({
       title: `Request ${newStatus === 'Active' ? 'Approved' : 'Rejected'}`,
@@ -124,18 +107,10 @@ export default function AdminManagementPage() {
         return;
     }
 
-    const newAdmin: Admin = {
-        id: `ADM${String(Date.now()).slice(-3)}`,
-        name,
-        email,
-        phone,
-        role,
-        status: "Active",
-        joinDate: new Date().toISOString().split('T')[0],
-    };
+    const newAdminData = { name, email, phone, role };
+    addAdmin(newAdminData);
+    refreshState();
 
-    const newAdmins = [...admins, newAdmin];
-    setAdmins(newAdmins);
     toast({
         title: "Admin Created",
         description: `Admin account for ${name} has been created successfully.`
@@ -152,7 +127,9 @@ export default function AdminManagementPage() {
         return;
     }
 
-    setAdmins(admins.filter(admin => admin.id !== adminId));
+    deleteAdmin(adminId);
+    refreshState();
+
     toast({
         title: "Admin Deleted",
         description: `Admin account for ${adminToDelete.name} has been deleted.`,

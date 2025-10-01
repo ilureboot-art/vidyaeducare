@@ -21,17 +21,14 @@ export default function LoginPage() {
   const { toast } = useToast();
   const router = useRouter();
 
-  const quickLogin = () => {
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    // In a real app, you'd verify credentials here.
     toast({
         title: "Login Successful!",
         description: "Welcome back!",
     });
     router.push("/");
-  }
-
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    quickLogin();
   };
 
   return (
@@ -53,7 +50,7 @@ export default function LoginPage() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="phone">WhatsApp Number</Label>
-              <Input id="phone" type="tel" placeholder="+91 12345 67890" defaultValue="+91 12345 67890" />
+              <Input id="phone" type="tel" placeholder="+91 12345 67890" defaultValue="+91 12345 67890" required />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
@@ -61,15 +58,13 @@ export default function LoginPage() {
                 id="password" 
                 type="password" 
                 defaultValue="password"
+                required
               />
             </div>
           </CardContent>
           <CardFooter className="flex-col gap-4">
             <Button className="w-full" type="submit">
               Login
-            </Button>
-            <Button type="button" variant="secondary" className="w-full" onClick={quickLogin}>
-                Quick Login (for testing)
             </Button>
             <div className="text-center text-sm">
               <Link href="/forgot-password" passHref>

@@ -33,17 +33,14 @@ export default function AdminLoginPage() {
     });
   };
 
-  const quickLogin = () => {
-     toast({
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    // In a real app, you would verify credentials here.
+    toast({
         title: "Login Successful!",
         description: "Redirecting to admin dashboard...",
     });
     router.push("/admin/analytics");
-  }
-
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    quickLogin();
   };
 
   const handleSignup = (e: React.FormEvent) => {
@@ -90,17 +87,14 @@ export default function AdminLoginPage() {
                     <CardContent className="space-y-4">
                             <div className="space-y-2">
                                 <Label htmlFor="phone-login">WhatsApp Number</Label>
-                                <Input id="phone-login" type="tel" placeholder="+91 12345 67890" defaultValue="9999988888" />
+                                <Input id="phone-login" type="tel" placeholder="+91 12345 67890" defaultValue="9999988888" required />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="password-login">Password</Label>
-                                <Input id="password-login" type="password" defaultValue="password" />
+                                <Input id="password-login" type="password" defaultValue="password" required />
                             </div>
                             <Button type="submit" className="w-full">
                                 Login
-                            </Button>
-                            <Button type="button" variant="secondary" className="w-full" onClick={quickLogin}>
-                                Quick Login (for testing)
                             </Button>
                     </CardContent>
                 </form>

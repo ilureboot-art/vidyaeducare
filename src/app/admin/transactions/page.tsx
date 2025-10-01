@@ -39,24 +39,19 @@ const getTypeIcon = (type: string, amount: number) => {
 }
 
 export default function TransactionsPage() {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>(walletData.transactions);
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
-
+  
   useEffect(() => {
-    // Initial load
-    setTransactions([...walletData.transactions]);
-
-    // This is a simple polling mechanism to keep the UI in sync with our mock backend.
-    // In a real app, you'd use something like websockets or a state management library (e.g., react-query) with re-fetching.
     const interval = setInterval(() => {
-        if (JSON.stringify(walletData.transactions) !== JSON.stringify(transactions)) {
-            setTransactions([...walletData.transactions]);
-        }
+      if (JSON.stringify(walletData.transactions) !== JSON.stringify(transactions)) {
+        setTransactions([...walletData.transactions]);
+      }
     }, 1000);
-
     return () => clearInterval(interval);
   }, [transactions]);
+
 
   const handleTransactionStatus = (id: number, newStatus: "Completed" | "Rejected") => {
     const success = updateTransactionStatus(id, newStatus);

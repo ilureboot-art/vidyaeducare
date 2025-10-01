@@ -103,7 +103,7 @@ Start your journey to success now: ${url}
                     <Link href="/signup"><LogIn className="mr-2"/> Join for Free</Link>
                 </Button>
                 <Button asChild size="lg" variant="secondary">
-                    <Link href="/how-to-play"><BookOpen className="mr-2"/> Learn More</Link>
+                    <Link href="/login"><LogIn className="mr-2"/> Login</Link>
                 </Button>
             </div>
         </div>

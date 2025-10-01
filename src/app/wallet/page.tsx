@@ -66,20 +66,34 @@ export default function WalletPage() {
   const [withdrawOpen, setWithdrawOpen] = useState(false);
 
   useEffect(() => {
+    // Initial load from the imported data module
     setBalance(walletData.balance);
     setCoins(walletData.coins);
     setTransactions([...walletData.transactions]);
 
+    // Set up a poller to check for updates, useful if data can change in the background
     const interval = setInterval(() => {
-        if (walletData.balance !== balance || JSON.stringify(walletData.transactions) !== JSON.stringify(transactions)) {
-            setBalance(walletData.balance);
-            setCoins(walletData.coins);
-            setTransactions([...walletData.transactions]);
-        }
+        setBalance(currentBalance => {
+            if (walletData.balance !== currentBalance) {
+                return walletData.balance;
+            }
+            return currentBalance;
+        });
+        setTransactions(currentTransactions => {
+            if (JSON.stringify(walletData.transactions) !== JSON.stringify(currentTransactions)) {
+                return [...walletData.transactions];
+            }
+            return currentTransactions;
+        });
+        setCoins(currentCoins => {
+            if(walletData.coins !== currentCoins) {
+                return walletData.coins;
+            }
+            return currentCoins;
+        })
     }, 500); 
 
     return () => clearInterval(interval);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleAddFunds = (event: React.FormEvent<HTMLFormElement>) => {

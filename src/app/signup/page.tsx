@@ -27,8 +27,6 @@ export default function SignupPage() {
   const { toast } = useToast();
   
   const [referralCode, setReferralCode] = useState('');
-  const [isOtpSent, setIsOtpSent] = useState(false);
-  const [otp, setOtp] = useState("");
 
   useEffect(() => {
     const refCode = searchParams.get('ref');
@@ -37,73 +35,57 @@ export default function SignupPage() {
     }
   }, [searchParams]);
 
-  const handleSendOtp = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsOtpSent(true);
-    toast({
-      title: "OTP Sent",
-      description: `An OTP has been sent to your WhatsApp number.`,
-    });
-  };
-
   const handleSignup = (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, you would verify the OTP against your backend
-    if (otp) {
+    
+    addNotification({
+      type: "new_user",
+      message: `A new user just signed up!`,
+      userId: 'admin'
+    });
+
+    if (referralCode) {
+        const bonusAmount = storeConfig.referralBonus;
+        // In a real app, this logic would live on the backend.
+        // Here, we just add the transaction for the new user.
+         addTransaction({
+            id: Date.now(),
+            type: 'deposit',
+            description: 'Welcome Bonus (from referral)',
+            amount: bonusAmount,
+            date: new Date().toISOString(),
+            status: 'Completed',
+            user: "New User" // In a real app, this would be the new user's name
+        });
         addNotification({
-          type: "new_user",
-          message: `A new user just signed up!`,
-          userId: 'admin'
+          type: 'deposit_received',
+          message: `You received a ₹${bonusAmount} Welcome Bonus!`,
+          userId: 'user-alex-doe' // This should be the new user's ID
         });
 
-        if (referralCode) {
-            const bonusAmount = storeConfig.referralBonus;
-            // In a real app, this logic would live on the backend.
-            // Here, we just add the transaction for the new user.
-             addTransaction({
-                id: Date.now(),
-                type: 'deposit',
-                description: 'Welcome Bonus (from referral)',
-                amount: bonusAmount,
-                date: new Date().toISOString(),
-                status: 'Completed',
-                user: "New User" // In a real app, this would be the new user's name
-            });
-            addNotification({
-              type: 'deposit_received',
-              message: `You received a ₹${bonusAmount} Welcome Bonus!`,
-              userId: 'user-alex-doe' // This should be the new user's ID
-            });
-
-             // In a real app, you would look up the referrer and credit them.
-             // Here we simulate it for the main user for demo purposes.
-             addTransaction({
-                id: Date.now() + 1, // To avoid key collision
-                type: 'deposit',
-                description: `Referral Bonus for new user`,
-                amount: bonusAmount,
-                date: new Date().toISOString(),
-                status: 'Completed',
-                user: "Alex Doe" // This is the referrer
-            });
-             addNotification({
-              type: 'deposit_received',
-              message: `You received a ₹${bonusAmount} bonus for referring a new user.`,
-              userId: 'user-alex-doe' // This is the referrer's ID
-            });
-        }
-        toast({
-            title: "Account Created Successfully!",
-            description: "Welcome to GuessMaster! Redirecting you to login.",
+         // In a real app, you would look up the referrer and credit them.
+         // Here we simulate it for the main user for demo purposes.
+         addTransaction({
+            id: Date.now() + 1, // To avoid key collision
+            type: 'deposit',
+            description: `Referral Bonus for new user`,
+            amount: bonusAmount,
+            date: new Date().toISOString(),
+            status: 'Completed',
+            user: "Alex Doe" // This is the referrer
         });
-        router.push("/login");
-    } else {
-        toast({
-            variant: "destructive",
-            title: "Invalid OTP",
-            description: "The OTP you entered is incorrect. Please try again.",
+         addNotification({
+          type: 'deposit_received',
+          message: `You received a ₹${bonusAmount} bonus for referring a new user.`,
+          userId: 'user-alex-doe' // This is the referrer's ID
         });
     }
+
+    toast({
+        title: "Account Created Successfully!",
+        description: "Welcome to Vidya EduCare! Redirecting you to login.",
+    });
+    router.push("/login");
   };
 
   return (
@@ -115,68 +97,51 @@ export default function SignupPage() {
         <p className="text-muted-foreground">Create your account to start your journey.</p>
       </div>
       <Card className="w-full">
-        <form onSubmit={isOtpSent ? handleSignup : handleSendOtp}>
+        <form onSubmit={handleSignup}>
           <CardHeader>
             <CardTitle>Sign Up</CardTitle>
             <CardDescription>
-              {isOtpSent ? "Verify your WhatsApp number with the OTP we sent." : "Enter your information to create an account."}
+              Enter your information to create an account.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Full Name</Label>
-              <Input id="name" placeholder="Alex Doe" required disabled={isOtpSent} />
+              <Input id="name" placeholder="Alex Doe" required />
               <p className="text-xs text-muted-foreground">Your full name as it appears on your documents.</p>
             </div>
             <div className="space-y-2">
                 <Label htmlFor="email">Email Address</Label>
-                <Input id="email" type="email" placeholder="you@example.com" required disabled={isOtpSent} />
+                <Input id="email" type="email" placeholder="you@example.com" required />
                 <p className="text-xs text-muted-foreground">Used for account recovery.</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="phone">WhatsApp Number</Label>
-              <Input id="phone" type="tel" placeholder="+91 12345 67890" required disabled={isOtpSent} />
+              <Input id="phone" type="tel" placeholder="+91 12345 67890" required />
               <p className="text-xs text-muted-foreground">We'll use this for login and important notifications.</p>
             </div>
             <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
-                <Input id="password" type="password" required disabled={isOtpSent}/>
+                <Input id="password" type="password" required />
                 <p className="text-xs text-muted-foreground">Choose a strong password with at least 8 characters.</p>
             </div>
-            {!isOtpSent && (
-              <>
-                <Separator />
-                <div className="space-y-2">
-                  <Label htmlFor="referral">Referral Code (Optional)</Label>
-                  <Input 
-                    id="referral" 
-                    placeholder="Enter referral code"
-                    value={referralCode}
-                    onChange={(e) => setReferralCode(e.target.value)}
-                    readOnly={!!searchParams.get('ref')}
-                    className={!!searchParams.get('ref') ? 'bg-muted/50' : ''}
-                  />
-                  {referralCode && <p className="text-xs text-green-500">Referral code applied! You'll receive a welcome bonus.</p>}
-                </div>
-              </>
-            )}
-            {isOtpSent && (
-              <div className="space-y-2">
-                  <Label htmlFor="otp-signup">Enter WhatsApp OTP</Label>
-                  <Input 
-                      id="otp-signup" 
-                      type="text" 
-                      placeholder="Enter the 6-digit OTP"
-                      required 
-                      value={otp}
-                      onChange={(e) => setOtp(e.target.value)}
-                  />
-              </div>
-            )}
+            <Separator />
+            <div className="space-y-2">
+              <Label htmlFor="referral">Referral Code (Optional)</Label>
+              <Input 
+                id="referral" 
+                placeholder="Enter referral code"
+                value={referralCode}
+                onChange={(e) => setReferralCode(e.target.value)}
+                readOnly={!!searchParams.get('ref')}
+                className={!!searchParams.get('ref') ? 'bg-muted/50' : ''}
+              />
+              {referralCode && <p className="text-xs text-green-500">Referral code applied! You'll receive a welcome bonus.</p>}
+            </div>
           </CardContent>
           <CardContent>
             <Button className="w-full" type="submit">
-              {isOtpSent ? "Verify & Create Account" : "Send Verification OTP"}
+              Create Account
             </Button>
           </CardContent>
         </form>

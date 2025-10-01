@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,7 +14,8 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Gamepad2, Shield } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Gamepad2, Shield, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 
@@ -21,8 +23,27 @@ export default function LoginPage() {
   const { toast } = useToast();
   const router = useRouter();
 
+  const [phone, setPhone] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    const rememberedPhone = localStorage.getItem('rememberedUser');
+    if (rememberedPhone) {
+      setPhone(rememberedPhone);
+      setRememberMe(true);
+    }
+  }, []);
+
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (rememberMe) {
+      localStorage.setItem('rememberedUser', phone);
+    } else {
+      localStorage.removeItem('rememberedUser');
+    }
+
     // In a real app, you'd verify credentials here.
     toast({
         title: "Login Successful!",
@@ -50,26 +71,53 @@ export default function LoginPage() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="phone">WhatsApp Number</Label>
-              <Input id="phone" type="tel" placeholder="+91 12345 67890" required />
+              <Input 
+                id="phone" 
+                type="tel" 
+                placeholder="+91 12345 67890" 
+                required 
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+              />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 relative">
               <Label htmlFor="password">Password</Label>
               <Input 
                 id="password" 
-                type="password" 
+                type={showPassword ? "text" : "password"}
                 required
               />
+               <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="absolute right-1 top-6 h-7 w-7"
+                onClick={() => setShowPassword(prev => !prev)}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                <span className="sr-only">Toggle password visibility</span>
+              </Button>
+            </div>
+             <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="remember-me" 
+                  checked={rememberMe}
+                  onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                />
+                <Label htmlFor="remember-me" className="text-sm font-normal">
+                  Remember me
+                </Label>
+              </div>
+              <Link href="/forgot-password" passHref>
+                  <Button variant="link" className="px-1 text-sm h-auto py-0">Forgot Password?</Button>
+              </Link>
             </div>
           </CardContent>
           <CardFooter className="flex-col gap-4">
             <Button className="w-full" type="submit">
               Login
             </Button>
-            <div className="text-center text-sm">
-              <Link href="/forgot-password" passHref>
-                  <Button variant="link" className="px-1 text-muted-foreground">Forgot Password?</Button>
-              </Link>
-            </div>
           </CardFooter>
         </form>
       </Card>

@@ -83,7 +83,8 @@ export default function WalletPage() {
     }, 500); 
 
     return () => clearInterval(interval);
-  }, [balance, transactions]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleAddFunds = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();

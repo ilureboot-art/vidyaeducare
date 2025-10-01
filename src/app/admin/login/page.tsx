@@ -87,11 +87,11 @@ export default function AdminLoginPage() {
                     <CardContent className="space-y-4">
                             <div className="space-y-2">
                                 <Label htmlFor="phone-login">WhatsApp Number</Label>
-                                <Input id="phone-login" type="tel" placeholder="+91 12345 67890" defaultValue="9999988888" required />
+                                <Input id="phone-login" type="tel" placeholder="+91 12345 67890" required />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="password-login">Password</Label>
-                                <Input id="password-login" type="password" defaultValue="password" required />
+                                <Input id="password-login" type="password" required />
                             </div>
                             <Button type="submit" className="w-full">
                                 Login

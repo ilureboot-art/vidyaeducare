@@ -50,14 +50,13 @@ export default function LoginPage() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="phone">WhatsApp Number</Label>
-              <Input id="phone" type="tel" placeholder="+91 12345 67890" defaultValue="+91 12345 67890" required />
+              <Input id="phone" type="tel" placeholder="+91 12345 67890" required />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <Input 
                 id="password" 
                 type="password" 
-                defaultValue="password"
                 required
               />
             </div>

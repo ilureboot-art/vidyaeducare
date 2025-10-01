@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,16 +13,29 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Shield, ArrowLeft } from "lucide-react";
+import { Shield, ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function AdminLoginPage() {
   const [isOtpSent, setIsOtpSent] = useState(false);
   const [otp, setOtp] = useState("");
   const { toast } = useToast();
   const router = useRouter();
+
+  const [phone, setPhone] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    const rememberedAdmin = localStorage.getItem('rememberedAdmin');
+    if (rememberedAdmin) {
+      setPhone(rememberedAdmin);
+      setRememberMe(true);
+    }
+  }, []);
 
   const handleSendOtp = (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,6 +48,13 @@ export default function AdminLoginPage() {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (rememberMe) {
+      localStorage.setItem('rememberedAdmin', phone);
+    } else {
+      localStorage.removeItem('rememberedAdmin');
+    }
+
     // In a real app, you would verify credentials here.
     toast({
         title: "Login Successful!",
@@ -87,13 +107,43 @@ export default function AdminLoginPage() {
                     <CardContent className="space-y-4">
                             <div className="space-y-2">
                                 <Label htmlFor="phone-login">WhatsApp Number</Label>
-                                <Input id="phone-login" type="tel" placeholder="" required />
+                                <Input 
+                                  id="phone-login" 
+                                  type="tel" 
+                                  required 
+                                  value={phone}
+                                  onChange={(e) => setPhone(e.target.value)}
+                                />
                             </div>
-                            <div className="space-y-2">
+                            <div className="space-y-2 relative">
                                 <Label htmlFor="password-login">Password</Label>
-                                <Input id="password-login" type="password" required />
+                                <Input 
+                                  id="password-login" 
+                                  type={showPassword ? "text" : "password"} 
+                                  required 
+                                />
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="absolute right-1 top-6 h-7 w-7"
+                                  onClick={() => setShowPassword(prev => !prev)}
+                                >
+                                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                  <span className="sr-only">Toggle password visibility</span>
+                                </Button>
                             </div>
-                            <Button type="submit" className="w-full">
+                            <div className="flex items-center space-x-2">
+                              <Checkbox 
+                                id="remember-me-admin" 
+                                checked={rememberMe}
+                                onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                              />
+                              <Label htmlFor="remember-me-admin" className="text-sm font-normal">
+                                Remember me
+                              </Label>
+                            </div>
+                            <Button type="submit" className="w-full !mt-6">
                                 Login
                             </Button>
                     </CardContent>

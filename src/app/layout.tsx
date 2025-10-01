@@ -9,6 +9,7 @@ import { usePathname } from 'next/navigation';
 import { Navbar } from '@/components/Navbar';
 import { ChatWidget } from '@/components/ChatWidget';
 import { ThemeProvider } from "next-themes";
+import { useState, useEffect } from 'react';
 
 export default function RootLayout({
   children,
@@ -16,8 +17,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const pathname = usePathname();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    // In a real app, this would be a check against a token or session.
+    // For this prototype, we'll consider any non-auth/public page as "authenticated".
+    const publicPages = ['/', '/login', '/signup', '/forgot-password', '/admin/login', '/how-to-play'];
+    const isAdminPage = pathname.startsWith('/admin');
+    
+    setIsAuthenticated(!publicPages.includes(pathname) && !isAdminPage);
+
+  }, [pathname]);
+
   const isAdminPage = pathname.startsWith('/admin');
   const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup') || pathname.startsWith('/forgot-password') || pathname.startsWith('/admin/login');
+  const isPublicPage = ['/', '/how-to-play'].includes(pathname);
 
   const bodyClassName = `font-body antialiased ${isAdminPage ? '' : 'flex flex-col min-h-screen'}`;
   
@@ -36,9 +50,9 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
         >
-            {isAdminPage ? (
+            {isAdminPage && !isAuthPage ? (
               <>{children}</>
-            ) : isAuthPage ? (
+            ) : (isAuthPage || isPublicPage) ? (
               <main className="flex-1 flex flex-col w-full">{children}</main>
             ) : (
               <>
@@ -56,5 +70,3 @@ export default function RootLayout({
     </html>
   );
 }
-
-    

@@ -48,7 +48,6 @@ function FormattedDate({ dateString }: { dateString: string }) {
   const [formattedDate, setFormattedDate] = useState("");
 
   useEffect(() => {
-    // This effect runs only on the client, ensuring no hydration mismatch.
     if (dateString) {
       setFormattedDate(new Date(dateString).toLocaleDateString());
     }
@@ -72,6 +71,7 @@ export default function StudentAccessPage() {
       const expiryDate = new Date(client.validity);
       return {
         ...client,
+        status: expiryDate < today ? "Expired" : "Active",
         expiresSoon: client.status === "Active" && expiryDate <= thirtyDaysFromNow && expiryDate > today,
       };
     });

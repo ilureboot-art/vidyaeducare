@@ -24,7 +24,6 @@ function FormattedDate({ dateString }: { dateString: string }) {
   const [formattedDate, setFormattedDate] = useState("");
 
   useEffect(() => {
-    // This effect runs only on the client, ensuring no hydration mismatch.
     if (dateString) {
       setFormattedDate(new Date(dateString).toLocaleDateString());
     }
@@ -63,9 +62,8 @@ export default function TransactionsPage() {
   
   useEffect(() => {
     const interval = setInterval(() => {
-      const updatedSortedTransactions = [...walletData.transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      
       setTransactions(currentTransactions => {
+          const updatedSortedTransactions = [...walletData.transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
           if (JSON.stringify(updatedSortedTransactions) !== JSON.stringify(currentTransactions)) {
               return updatedSortedTransactions;
           }
@@ -204,3 +202,5 @@ export default function TransactionsPage() {
     </div>
   );
 }
+
+    

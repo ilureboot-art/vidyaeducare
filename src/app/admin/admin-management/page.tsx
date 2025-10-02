@@ -40,7 +40,6 @@ function FormattedDate({ dateString }: { dateString: string }) {
   const [formattedDate, setFormattedDate] = useState("");
 
   useEffect(() => {
-    // This effect runs only on the client, ensuring no hydration mismatch.
     if (dateString) {
       setFormattedDate(new Date(dateString).toLocaleDateString());
     }
@@ -59,6 +58,7 @@ const WhatsAppIcon = () => (
 export default function AdminManagementPage() {
   const [admins, setAdmins] = useState<Admin[]>([]);
   const [requests, setRequests] = useState<Admin[]>([]);
+  const [isClient, setIsClient] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isResetPassOpen, setIsResetPassOpen] = useState(false);
@@ -66,7 +66,7 @@ export default function AdminManagementPage() {
   const { toast } = useToast();
   
   useEffect(() => {
-    // Load data on client side to avoid hydration mismatch
+    setIsClient(true);
     setAdmins([...adminData.admins]);
     setRequests([...adminData.requests]);
   }, []);
@@ -205,6 +205,10 @@ export default function AdminManagementPage() {
         title: "Admin Deleted",
         description: `Admin account for ${adminToDelete.name} has been deleted.`,
     })
+  }
+
+  if (!isClient) {
+    return null;
   }
 
   return (

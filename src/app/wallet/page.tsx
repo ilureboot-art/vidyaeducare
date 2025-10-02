@@ -36,7 +36,6 @@ function FormattedDate({ dateString }: { dateString: string }) {
   const [formattedDate, setFormattedDate] = useState("");
 
   useEffect(() => {
-    // This effect runs only on the client, ensuring no hydration mismatch.
     if (dateString) {
       setFormattedDate(new Date(dateString).toLocaleDateString());
     }
@@ -66,14 +65,14 @@ export default function WalletPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [addFundsOpen, setAddFundsOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    // Initial load from the imported data module
+    setIsClient(true);
     setBalance(walletData.balance);
     setCoins(walletData.coins);
     setTransactions([...walletData.transactions]);
 
-    // Set up a poller to check for updates, useful if data can change in the background
     const interval = setInterval(() => {
         setBalance(currentBalance => {
             if (walletData.balance !== currentBalance) {
@@ -193,6 +192,10 @@ export default function WalletPage() {
   }
 
   const { adminPaymentMethods } = walletData;
+
+  if (!isClient) {
+      return null;
+  }
 
   return (
     <div className="w-full max-w-2xl mx-auto space-y-6">

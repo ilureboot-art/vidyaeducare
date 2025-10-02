@@ -49,7 +49,6 @@ export default function UserManagementPage() {
 
   useEffect(() => {
     setIsClient(true);
-    // Simulate fetching users
     setUsers(initialUsers);
   }, []);
 

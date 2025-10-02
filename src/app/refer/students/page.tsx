@@ -51,7 +51,7 @@ function FormattedDate({ dateString }: { dateString: string }) {
   }, []);
 
   if (!isClient) {
-    return null;
+    return <span></span>;
   }
   
   return <span>{new Date(dateString).toLocaleDateString()}</span>;
@@ -154,7 +154,5 @@ export default function StudentAccessPage() {
     </TooltipProvider>
   );
 }
-
-    
 
     

@@ -36,7 +36,6 @@ export default function AdminStoreSettingsPage() {
 
   useEffect(() => {
     setIsClient(true);
-    // Load data from config only after the component has mounted on the client
     setLocalPackages(storeConfig.packages.map(p => ({...p})));
     setLocalMockTestPackages(storeConfig.mockTestPackages.map(p => ({...p})));
     setLocalReferralBonus(storeConfig.referralBonus);

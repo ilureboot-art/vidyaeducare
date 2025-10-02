@@ -16,8 +16,6 @@ export default function AdminGameSettingsPage() {
     
     useEffect(() => {
         setIsClient(true);
-        // This effect ensures that if the settings are updated elsewhere,
-        // this component reflects the changes after initial hydration.
         setSettings({ ...storeConfig.gameSettings });
     }, []);
 

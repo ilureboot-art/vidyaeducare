@@ -32,6 +32,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Image from "next/image";
 import { CopyButton } from "@/components/CopyButton";
 
+function FormattedDate({ dateString }: { dateString: string }) {
+  const [formattedDate, setFormattedDate] = useState("");
+
+  useEffect(() => {
+    // This effect runs only on the client, ensuring no hydration mismatch.
+    if (dateString) {
+      setFormattedDate(new Date(dateString).toLocaleDateString());
+    }
+  }, [dateString]);
+
+  return <span>{formattedDate}</span>;
+}
+
+
 const getStatusBadgeVariant = (status: string) => {
     switch (status.toLowerCase()) {
         case 'completed':
@@ -43,18 +57,6 @@ const getStatusBadgeVariant = (status: string) => {
         default:
             return 'outline';
     }
-}
-
-function FormattedDate({ dateString }: { dateString: string }) {
-  const [formattedDate, setFormattedDate] = useState("");
-
-  useEffect(() => {
-    if (dateString) {
-      setFormattedDate(new Date(dateString).toLocaleDateString());
-    }
-  }, [dateString]);
-
-  return <span>{formattedDate}</span>;
 }
 
 export default function WalletPage() {

@@ -12,6 +12,20 @@ import { Bell, CheckCheck } from "lucide-react";
 import { getUserNotifications, markUserNotificationsAsRead, type AppNotification } from "@/lib/notifications";
 import { Badge } from "@/components/ui/badge";
 
+function FormattedDate({ dateString }: { dateString: string }) {
+  const [formattedDate, setFormattedDate] = useState("");
+
+  useEffect(() => {
+    // This effect runs only on the client, ensuring no hydration mismatch.
+    if (dateString) {
+      setFormattedDate(new Date(dateString).toLocaleString());
+    }
+  }, [dateString]);
+
+  return <span>{formattedDate}</span>;
+}
+
+
 export function UserNotifications() {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -67,7 +81,7 @@ export function UserNotifications() {
                         <div className="grid gap-1">
                             <p className="text-sm font-medium">{notif.message}</p>
                             <p className="text-sm text-muted-foreground">
-                                {new Date(notif.timestamp).toLocaleString()}
+                               <FormattedDate dateString={notif.timestamp} />
                             </p>
                         </div>
                     </div>
@@ -93,3 +107,5 @@ export function UserNotifications() {
     </Popover>
   );
 }
+
+    

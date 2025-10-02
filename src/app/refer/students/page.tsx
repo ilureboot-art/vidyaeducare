@@ -44,6 +44,19 @@ const initialClients: Client[] = [
     { id: 'CLI005', name: 'User C', type: 'Direct', product: '1 Year Subscription', purchaseDate: '2023-08-10', validity: '2024-08-09', status: 'Active' },
 ];
 
+function FormattedDate({ dateString }: { dateString: string }) {
+  const [formattedDate, setFormattedDate] = useState("");
+
+  useEffect(() => {
+    // This effect runs only on the client, ensuring no hydration mismatch.
+    if (dateString) {
+      setFormattedDate(new Date(dateString).toLocaleDateString());
+    }
+  }, [dateString]);
+
+  return <span>{formattedDate}</span>;
+}
+
 
 export default function StudentAccessPage() {
   const [clients, setClients] = useState<Client[]>([]);
@@ -103,7 +116,7 @@ export default function StudentAccessPage() {
                         {client.type}
                       </Badge>
                     </TableCell>
-                    <TableCell>{new Date(client.validity).toLocaleDateString()}</TableCell>
+                    <TableCell><FormattedDate dateString={client.validity} /></TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Badge variant={client.status === "Active" ? "default" : "destructive"} className={client.status === "Active" ? "bg-green-600" : "bg-red-600"}>
@@ -140,3 +153,5 @@ export default function StudentAccessPage() {
     </TooltipProvider>
   );
 }
+
+    

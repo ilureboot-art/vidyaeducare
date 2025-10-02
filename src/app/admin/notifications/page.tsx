@@ -8,6 +8,20 @@ import { Bell, UserPlus, ArrowDown, ArrowUp } from "lucide-react";
 import { getAdminNotifications, type AppNotification } from "@/lib/notifications";
 import { Badge } from "@/components/ui/badge";
 
+function FormattedDate({ dateString }: { dateString: string }) {
+  const [formattedDate, setFormattedDate] = useState("");
+
+  useEffect(() => {
+    // This effect runs only on the client, ensuring no hydration mismatch.
+    if (dateString) {
+      setFormattedDate(new Date(dateString).toLocaleString());
+    }
+  }, [dateString]);
+
+  return <span>{formattedDate}</span>;
+}
+
+
 const getIconForType = (type: string) => {
     switch(type) {
         case "new_user":
@@ -51,7 +65,7 @@ export default function AdminNotificationsPage() {
                                     <div className="flex-1">
                                         <p className="font-medium">{notif.message}</p>
                                         <p className="text-xs text-muted-foreground">
-                                            {new Date(notif.timestamp).toLocaleString()}
+                                            <FormattedDate dateString={notif.timestamp} />
                                         </p>
                                     </div>
                                     {notif.status && <Badge variant={notif.status === 'read' ? 'secondary' : 'default'}>{notif.status}</Badge>}
@@ -69,3 +83,5 @@ export default function AdminNotificationsPage() {
         </div>
     );
 }
+
+    

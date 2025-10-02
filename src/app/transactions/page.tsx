@@ -29,19 +29,6 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 
-const getStatusBadgeVariant = (status: string) => {
-    switch (status.toLowerCase()) {
-        case 'completed':
-            return 'default';
-        case 'pending':
-            return 'secondary';
-        case 'rejected':
-            return 'destructive';
-        default:
-            return 'outline';
-    }
-}
-
 function FormattedDate({ dateString }: { dateString: string }) {
   const [formattedDate, setFormattedDate] = useState("");
 
@@ -53,6 +40,20 @@ function FormattedDate({ dateString }: { dateString: string }) {
   }, [dateString]);
 
   return <span>{formattedDate}</span>;
+}
+
+
+const getStatusBadgeVariant = (status: string) => {
+    switch (status.toLowerCase()) {
+        case 'completed':
+            return 'default';
+        case 'pending':
+            return 'secondary';
+        case 'rejected':
+            return 'destructive';
+        default:
+            return 'outline';
+    }
 }
 
 export default function TransactionsPage() {

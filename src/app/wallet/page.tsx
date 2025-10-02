@@ -32,7 +32,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Image from "next/image";
 import { CopyButton } from "@/components/CopyButton";
 
-function FormattedDate({ dateString }: { dateString: string }) {
+function SafeFormattedDate({ dateString }: { dateString: string }) {
   const [formattedDate, setFormattedDate] = useState("");
 
   useEffect(() => {
@@ -333,7 +333,7 @@ export default function WalletPage() {
                                 </div>
                                 <div>
                                     <p className="font-medium">{tx.description}</p>
-                                    <p className="text-xs text-muted-foreground"><FormattedDate dateString={tx.date} /></p>
+                                    <p className="text-xs text-muted-foreground"><SafeFormattedDate dateString={tx.date} /></p>
                                 </div>
                             </div>
                             <div className="text-right">

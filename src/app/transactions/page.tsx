@@ -20,7 +20,7 @@ import { walletData, type Transaction, updateTransactionStatus } from "@/lib/use
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 
-function FormattedDate({ dateString }: { dateString: string }) {
+function SafeFormattedDate({ dateString }: { dateString: string }) {
   const [formattedDate, setFormattedDate] = useState("");
 
   useEffect(() => {
@@ -178,7 +178,7 @@ export default function TransactionsPage() {
                     {tx.id}
                     {tx.referenceId && <div className="text-ellipsis overflow-hidden">Ref: {tx.referenceId}</div>}
                   </TableCell>
-                  <TableCell><FormattedDate dateString={tx.date}/></TableCell>
+                  <TableCell><SafeFormattedDate dateString={tx.date}/></TableCell>
                   <TableCell>
                     <Badge variant={getStatusBadgeVariant(tx.status)}>
                       {tx.status}

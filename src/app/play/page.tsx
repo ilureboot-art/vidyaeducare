@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,6 +39,7 @@ import { cn } from "@/lib/utils";
 import { walletData, addTransaction } from "@/lib/user-data";
 import { storeConfig } from "@/lib/store-config";
 import { addNotification } from "@/lib/notifications";
+import React from "react";
 
 
 const GAMES_PER_TICKET = 2;
@@ -560,14 +561,10 @@ Join now: ${shareUrl}
 
 export default function PlayPage() {
     return (
-        <React.Suspense fallback={<div>Loading...</div>}>
+        <Suspense fallback={<div>Loading...</div>}>
             <PlayPageContent />
-        </React.Suspense>
+        </Suspense>
     );
 }
 
     
-
-    
-
-  

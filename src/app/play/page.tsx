@@ -94,7 +94,6 @@ export default function PlayPage() {
   const [guessHistory, setGuessHistory] = useState<{ guess: number; hint: string }[]>([]);
   const [attemptsLeft, setAttemptsLeft] = useState(storeConfig.gameSettings.maxAttempts);
   const [gameState, setGameState] = useState<GameState>("idle");
-  const [gameMode, setGameMode] = useState<GameMode>("real");
   const [feedback, setFeedback] = useState("Start a new game to play!");
   const [isChecking, setIsChecking] = useState(false);
   const [reward, setReward] = useState(0);
@@ -107,13 +106,7 @@ export default function PlayPage() {
   const [timeLeft, setTimeLeft] = useState(GAME_DURATION);
 
   const { toast } = useToast();
-
-  const goBackToMenu = () => {
-    setGameState('idle');
-    setFeedback("Start a new game to play!");
-    router.push('/play');
-  };
-
+  
   const stopTimer = useCallback(() => {
     if (timerRef.current) {
         clearInterval(timerRef.current);
@@ -172,13 +165,21 @@ export default function PlayPage() {
     resetGame();
   }, [resetGame]);
   
+  const goBackToMenu = () => {
+    setGameState('idle');
+    setFeedback("Start a new game to play!");
+    // We use router.replace to avoid adding a new entry to the history stack
+    router.replace('/play');
+  };
+
   useEffect(() => {
     setIsClient(true);
-    const startMode = searchParams.get('mode');
-    if (startMode === 'demo') {
+    // This effect runs only on the client, after hydration
+    // Now it's safe to check searchParams and start the game
+    if (searchParams.get('mode') === 'demo' && gameState === 'idle') {
       startGame();
     }
-  }, [searchParams, startGame]);
+  }, [searchParams, startGame, gameState]);
   
   const handleTimerTick = useCallback(() => {
     if (endTimeRef.current) {
@@ -413,7 +414,15 @@ Join now: ${shareUrl}
   ];
 
   if (!isClient) {
-    return null;
+    return (
+      <div className="w-full max-w-md mx-auto space-y-6">
+        <Card className="shadow-2xl shadow-primary/10">
+          <CardContent className="min-h-[300px] flex items-center justify-center">
+              <Loader2 className="animate-spin text-primary" size={32} />
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (
@@ -545,3 +554,5 @@ Join now: ${shareUrl}
     </div>
   );
 }
+
+    

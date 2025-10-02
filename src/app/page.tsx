@@ -103,6 +103,9 @@ Start your journey to success now: ${url}
                     <Link href="/signup"><LogIn className="mr-2"/> Join for Free</Link>
                 </Button>
                 <Button asChild size="lg" variant="secondary">
+                     <Link href="/how-to-play">Learn More</Link>
+                </Button>
+                <Button asChild size="lg" variant="outline">
                     <Link href="/login"><LogIn className="mr-2"/> Login</Link>
                 </Button>
             </div>

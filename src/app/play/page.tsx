@@ -85,7 +85,7 @@ const Confetti = () => (
     </div>
 );
 
-export default function PlayPage() {
+function PlayPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isClient, setIsClient] = useState(false);
@@ -174,12 +174,15 @@ export default function PlayPage() {
 
   useEffect(() => {
     setIsClient(true);
+  }, []);
+  
+  useEffect(() => {
     // This effect runs only on the client, after hydration
     // Now it's safe to check searchParams and start the game
-    if (searchParams.get('mode') === 'demo' && gameState === 'idle') {
+    if (isClient && searchParams.get('mode') === 'demo' && gameState === 'idle') {
       startGame();
     }
-  }, [searchParams, startGame, gameState]);
+  }, [isClient, searchParams, startGame, gameState]);
   
   const handleTimerTick = useCallback(() => {
     if (endTimeRef.current) {
@@ -555,6 +558,16 @@ Join now: ${shareUrl}
   );
 }
 
+export default function PlayPage() {
+    return (
+        <React.Suspense fallback={<div>Loading...</div>}>
+            <PlayPageContent />
+        </React.Suspense>
+    );
+}
+
     
 
     
+
+  

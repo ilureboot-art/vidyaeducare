@@ -14,23 +14,26 @@ import { getAdminNotifications, markAdminNotificationsAsRead, type AppNotificati
 import { Badge } from "@/components/ui/badge";
 
 function FormattedDate({ dateString }: { dateString: string }) {
-  const [formattedDate, setFormattedDate] = useState("");
-
+  const [isClient, setIsClient] = useState(false);
   useEffect(() => {
-    if (dateString) {
-      setFormattedDate(new Date(dateString).toLocaleString());
-    }
-  }, [dateString]);
+    setIsClient(true);
+  }, []);
 
-  return <span>{formattedDate}</span>;
+  if (!isClient) {
+    return null;
+  }
+
+  return <span>{new Date(dateString).toLocaleString()}</span>;
 }
 
 
 export function Notifications() {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
     const fetchNotifications = () => {
         const adminNotifications = getAdminNotifications();
         setNotifications(adminNotifications);
@@ -48,6 +51,14 @@ export function Notifications() {
         setNotifications(getAdminNotifications());
         setUnreadCount(0);
     }
+  }
+
+  if (!isClient) {
+    return (
+       <Button variant="outline" size="icon" className="relative">
+          <Bell className="h-5 w-5" />
+        </Button>
+    )
   }
 
   return (

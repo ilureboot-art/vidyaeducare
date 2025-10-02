@@ -9,15 +9,16 @@ import { getAdminNotifications, type AppNotification } from "@/lib/notifications
 import { Badge } from "@/components/ui/badge";
 
 function FormattedDate({ dateString }: { dateString: string }) {
-  const [formattedDate, setFormattedDate] = useState("");
-
+  const [isClient, setIsClient] = useState(false);
   useEffect(() => {
-    if (dateString) {
-      setFormattedDate(new Date(dateString).toLocaleString());
-    }
-  }, [dateString]);
+    setIsClient(true);
+  }, []);
 
-  return <span>{formattedDate}</span>;
+  if (!isClient) {
+    return null;
+  }
+  
+  return <span>{new Date(dateString).toLocaleString()}</span>;
 }
 
 
@@ -36,10 +37,16 @@ const getIconForType = (type: string) => {
 
 export default function AdminNotificationsPage() {
     const [notifications, setNotifications] = useState<AppNotification[]>([]);
+    const [isClient, setIsClient] = useState(false);
 
     useEffect(() => {
+        setIsClient(true);
         setNotifications(getAdminNotifications());
     }, []);
+
+    if (!isClient) {
+        return null;
+    }
 
     return (
         <div className="space-y-6">

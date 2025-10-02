@@ -20,16 +20,17 @@ import { walletData, type Transaction, updateTransactionStatus } from "@/lib/use
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 
-function SafeFormattedDate({ dateString }: { dateString: string }) {
-  const [formattedDate, setFormattedDate] = useState("");
-
+function FormattedDate({ dateString }: { dateString: string }) {
+  const [isClient, setIsClient] = useState(false);
   useEffect(() => {
-    if (dateString) {
-      setFormattedDate(new Date(dateString).toLocaleDateString());
-    }
-  }, [dateString]);
+    setIsClient(true);
+  }, []);
 
-  return <span>{formattedDate}</span>;
+  if (!isClient) {
+    return null;
+  }
+
+  return <span>{new Date(dateString).toLocaleDateString()}</span>;
 }
 
 
@@ -59,8 +60,12 @@ export default function TransactionsPage() {
   const { toast } = useToast();
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'rejected'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'deposit' | 'withdrawal'>('all');
+  const [isClient, setIsClient] = useState(false);
   
   useEffect(() => {
+    setIsClient(true);
+    setTransactions([...walletData.transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+
     const interval = setInterval(() => {
       setTransactions(currentTransactions => {
           const updatedSortedTransactions = [...walletData.transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -81,7 +86,7 @@ export default function TransactionsPage() {
           title: "Transaction Updated",
           description: `Transaction ${id} has been marked as ${newStatus}.`,
         });
-        setTransactions([...walletData.transactions]);
+        setTransactions([...walletData.transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
     } else {
          toast({ title: "Action not allowed", description: "This transaction has already been processed."});
     }
@@ -94,8 +99,11 @@ export default function TransactionsPage() {
       const typeMatch = typeFilter === 'all' || (typeFilter === 'deposit' && tx.amount >= 0) || (typeFilter === 'withdrawal' && tx.amount < 0);
       return searchTermMatch && statusMatch && typeMatch;
     }
-  ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  );
 
+  if (!isClient) {
+    return null;
+  }
 
   return (
     <div className="space-y-6">
@@ -178,7 +186,7 @@ export default function TransactionsPage() {
                     {tx.id}
                     {tx.referenceId && <div className="text-ellipsis overflow-hidden">Ref: {tx.referenceId}</div>}
                   </TableCell>
-                  <TableCell><SafeFormattedDate dateString={tx.date}/></TableCell>
+                  <TableCell><FormattedDate dateString={tx.date}/></TableCell>
                   <TableCell>
                     <Badge variant={getStatusBadgeVariant(tx.status)}>
                       {tx.status}

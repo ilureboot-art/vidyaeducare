@@ -45,15 +45,16 @@ const initialClients: Client[] = [
 ];
 
 function FormattedDate({ dateString }: { dateString: string }) {
-  const [formattedDate, setFormattedDate] = useState("");
-
+  const [isClient, setIsClient] = useState(false);
   useEffect(() => {
-    if (dateString) {
-      setFormattedDate(new Date(dateString).toLocaleDateString());
-    }
-  }, [dateString]);
+    setIsClient(true);
+  }, []);
 
-  return <span>{formattedDate}</span>;
+  if (!isClient) {
+    return null;
+  }
+  
+  return <span>{new Date(dateString).toLocaleDateString()}</span>;
 }
 
 
@@ -153,5 +154,7 @@ export default function StudentAccessPage() {
     </TooltipProvider>
   );
 }
+
+    
 
     

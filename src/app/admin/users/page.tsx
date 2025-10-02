@@ -48,8 +48,8 @@ export default function UserManagementPage() {
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    // Simulate fetching users
     setIsClient(true);
+    // Simulate fetching users
     setUsers(initialUsers);
   }, []);
 
@@ -142,7 +142,7 @@ export default function UserManagementPage() {
                       {user.status}
                     </Badge>
                   </TableCell>
-                  <TableCell>{user.joinDate}</TableCell>
+                  <TableCell>{new Date(user.joinDate).toLocaleDateString()}</TableCell>
                   <TableCell className="text-right font-medium">₹{user.wallet.toFixed(2)}</TableCell>
                   <TableCell className="text-center">
                     <DropdownMenu>
@@ -186,3 +186,5 @@ export default function UserManagementPage() {
     </div>
   );
 }
+
+    

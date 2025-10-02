@@ -14,10 +14,10 @@ export default function AdminGameSettingsPage() {
     const [settings, setSettings] = useState({ ...storeConfig.gameSettings });
     const [isClient, setIsClient] = useState(false);
     
-    // This effect ensures that if the settings are updated elsewhere,
-    // this component reflects the changes.
     useEffect(() => {
         setIsClient(true);
+        // This effect ensures that if the settings are updated elsewhere,
+        // this component reflects the changes after initial hydration.
         setSettings({ ...storeConfig.gameSettings });
     }, []);
 
@@ -88,3 +88,5 @@ export default function AdminGameSettingsPage() {
     </div>
   );
 }
+
+    

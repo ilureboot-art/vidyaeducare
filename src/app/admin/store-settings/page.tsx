@@ -34,7 +34,9 @@ export default function AdminStoreSettingsPage() {
   const [subjects, setLocalSubjects] = useState<string[]>([]);
   const [isClient, setIsClient] = useState(false);
 
-  const loadData = () => {
+  useEffect(() => {
+    setIsClient(true);
+    // Load data from config only after the component has mounted on the client
     setLocalPackages(storeConfig.packages.map(p => ({...p})));
     setLocalMockTestPackages(storeConfig.mockTestPackages.map(p => ({...p})));
     setLocalReferralBonus(storeConfig.referralBonus);
@@ -43,11 +45,6 @@ export default function AdminStoreSettingsPage() {
     setLocalBoards([...academicConfig.boards]);
     setLocalStandards([...academicConfig.standards]);
     setLocalSubjects([...academicConfig.subjects]);
-  }
-
-  useEffect(() => {
-    setIsClient(true);
-    loadData();
   }, []);
 
   const handlePackageChange = (index: number, field: keyof TicketPackage, value: string | number | boolean) => {
@@ -368,3 +365,5 @@ export default function AdminStoreSettingsPage() {
     </div>
   );
 }
+
+    

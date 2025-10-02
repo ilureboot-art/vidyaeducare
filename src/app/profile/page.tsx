@@ -26,16 +26,16 @@ import { getAllTestsForStudent, type ScheduledTest } from "@/lib/test-schedule";
 import { format } from "date-fns";
 
 function FormattedDate({ dateString }: { dateString: string }) {
-  const [formattedDate, setFormattedDate] = useState("");
-
+  const [isClient, setIsClient] = useState(false);
   useEffect(() => {
-    // This effect runs only on the client, ensuring no hydration mismatch.
-    if (dateString) {
-      setFormattedDate(new Date(dateString).toLocaleDateString());
-    }
-  }, [dateString]);
+    setIsClient(true);
+  }, []);
 
-  return <span>{formattedDate}</span>; // Render a span to avoid mismatch. Content will populate on client.
+  if (!isClient) {
+    return null;
+  }
+  
+  return <span>{new Date(dateString).toLocaleDateString()}</span>;
 }
 
 
@@ -50,8 +50,10 @@ export default function ProfilePage() {
     const [isTestDialogOpen, setIsTestDialogOpen] = useState(false);
     const [selectedStudentForTest, setSelectedStudentForTest] = useState<StudentProfile | null>(null);
     const [availableTests, setAvailableTests] = useState<ScheduledTest[]>([]);
+    const [isClient, setIsClient] = useState(false);
 
     useEffect(() => {
+        setIsClient(true);
         setStudents([...studentData]);
     }, []);
 
@@ -125,6 +127,10 @@ export default function ProfilePage() {
         const isLive = testDate <= now;
         router.push(`/mock-test?studentId=${selectedStudentForTest.id}&testId=${test.id}&isLive=${isLive}`);
     }
+
+  if (!isClient) {
+    return null;
+  }
 
   return (
     <TooltipProvider>

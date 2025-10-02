@@ -561,10 +561,12 @@ Join now: ${shareUrl}
 
 export default function PlayPage() {
     return (
-        <Suspense fallback={<div>Loading...</div>}>
+        <Suspense>
             <PlayPageContent />
         </Suspense>
     );
 }
+
+    
 
     

@@ -13,23 +13,26 @@ import { getUserNotifications, markUserNotificationsAsRead, type AppNotification
 import { Badge } from "@/components/ui/badge";
 
 function FormattedDate({ dateString }: { dateString: string }) {
-  const [formattedDate, setFormattedDate] = useState("");
-
+  const [isClient, setIsClient] = useState(false);
   useEffect(() => {
-    if (dateString) {
-      setFormattedDate(new Date(dateString).toLocaleString());
-    }
-  }, [dateString]);
+    setIsClient(true);
+  }, []);
 
-  return <span>{formattedDate}</span>;
+  if (!isClient) {
+    return null;
+  }
+  
+  return <span>{new Date(dateString).toLocaleString()}</span>;
 }
 
 
 export function UserNotifications() {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
     const fetchNotifications = () => {
         const userNotifications = getUserNotifications("user-alex-doe");
         setNotifications(userNotifications);
@@ -47,6 +50,14 @@ export function UserNotifications() {
         setNotifications(getUserNotifications("user-alex-doe"));
         setUnreadCount(0);
     }
+  }
+
+  if (!isClient) {
+    return (
+      <Button variant="ghost" size="icon" className="relative">
+        <Bell className="h-6 w-6" />
+      </Button>
+    )
   }
 
   return (

@@ -380,7 +380,7 @@ Join now: ${shareUrl}
         )}
         <div className="flex gap-4 pt-4">
             <Button onClick={() => startGame()}><RefreshCw className="mr-2 h-4 w-4"/> Play Again</Button>
-            <Button variant="outline" onClick={goBackToMenu}>Exit to Home</Button>
+            <Button asChild variant="outline"><a href="/">Exit to Home</a></Button>
         </div>
     </div>
   );

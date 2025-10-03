@@ -21,16 +21,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 
 function FormattedDate({ dateString }: { dateString: string }) {
-  const [isClient, setIsClient] = useState(false);
+  const [formattedDate, setFormattedDate] = useState('');
+
   useEffect(() => {
-    setIsClient(true);
-  }, []);
+    // This code now runs only on the client, after hydration
+    setFormattedDate(new Date(dateString).toLocaleDateString());
+  }, [dateString]); // Re-run if the date string changes
 
-  if (!isClient) {
-    return null;
+  // Render a placeholder or nothing on the server and during the initial client render
+  if (!formattedDate) {
+    return null; 
   }
-
-  return <span>{new Date(dateString).toLocaleDateString()}</span>;
+  
+  return <span>{formattedDate}</span>;
 }
 
 
@@ -210,5 +213,3 @@ export default function TransactionsPage() {
     </div>
   );
 }
-
-    

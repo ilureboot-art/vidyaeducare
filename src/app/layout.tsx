@@ -52,7 +52,7 @@ export default function RootLayout({
         >
             {isAdminPage && !isAuthPage ? (
               <>{children}</>
-            ) : (isAuthPage || isPublicPage) ? (
+            ) : (isAuthPage || pathname === '/' || pathname === '/how-to-play') ? (
               <main className="flex-1 flex flex-col w-full">{children}</main>
             ) : (
               <>

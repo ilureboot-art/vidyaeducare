@@ -37,16 +37,19 @@ import {
 import { adminData, addAdmin, deleteAdmin, processRequest, updateAdmin, resetAdminPassword, type Admin, type AdminRole } from "@/lib/admin-data";
 
 function FormattedDate({ dateString }: { dateString: string }) {
-  const [isClient, setIsClient] = useState(false);
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
+  const [formattedDate, setFormattedDate] = useState('');
 
-  if (!isClient) {
-    return <span></span>;
+  useEffect(() => {
+    // This code now runs only on the client, after hydration
+    setFormattedDate(new Date(dateString).toLocaleDateString());
+  }, [dateString]); // Re-run if the date string changes
+
+  // Render a placeholder or nothing on the server and during the initial client render
+  if (!formattedDate) {
+    return null; 
   }
   
-  return <span>{new Date(dateString).toLocaleDateString()}</span>;
+  return <span>{formattedDate}</span>;
 }
 
 

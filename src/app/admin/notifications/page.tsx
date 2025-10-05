@@ -7,18 +7,17 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Bell, UserPlus, ArrowDown, ArrowUp } from "lucide-react";
 import { getAdminNotifications, type AppNotification } from "@/lib/notifications";
 import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
 
 function FormattedDate({ dateString }: { dateString: string }) {
-  const [isClient, setIsClient] = useState(false);
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  if (!isClient) {
-    return null;
-  }
-  
-  return <span>{new Date(dateString).toLocaleString()}</span>;
+    if (!dateString) return null;
+    try {
+        // Format the date directly. This is safe for server and client.
+        return <span>{format(new Date(dateString), 'P p')}</span>;
+    } catch (error) {
+        console.error("Invalid date string provided to FormattedDate:", dateString, error);
+        return <span>Invalid Date</span>;
+    }
 }
 
 
@@ -89,5 +88,3 @@ export default function AdminNotificationsPage() {
         </div>
     );
 }
-
-    

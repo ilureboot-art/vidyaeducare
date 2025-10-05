@@ -35,21 +35,16 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { adminData, addAdmin, deleteAdmin, processRequest, updateAdmin, resetAdminPassword, type Admin, type AdminRole } from "@/lib/admin-data";
+import { format } from 'date-fns';
 
 function FormattedDate({ dateString }: { dateString: string }) {
-  const [formattedDate, setFormattedDate] = useState('');
-
-  useEffect(() => {
-    // This code now runs only on the client, after hydration
-    setFormattedDate(new Date(dateString).toLocaleDateString());
-  }, [dateString]); // Re-run if the date string changes
-
-  // Render a placeholder or nothing on the server and during the initial client render
-  if (!formattedDate) {
-    return null; 
-  }
-  
-  return <span>{formattedDate}</span>;
+    if (!dateString) return null;
+    try {
+        return <span>{format(new Date(dateString), 'P')}</span>;
+    } catch (error) {
+        console.error("Invalid date string provided to FormattedDate:", dateString, error);
+        return <span>Invalid Date</span>;
+    }
 }
 
 
@@ -463,5 +458,7 @@ export default function AdminManagementPage() {
     </div>
   );
 }
+
+    
 
     

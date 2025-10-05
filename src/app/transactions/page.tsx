@@ -19,23 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { walletData, type Transaction, updateTransactionStatus } from "@/lib/user-data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-
-function FormattedDate({ dateString }: { dateString: string }) {
-  const [formattedDate, setFormattedDate] = useState('');
-
-  useEffect(() => {
-    // This code now runs only on the client, after hydration
-    setFormattedDate(new Date(dateString).toLocaleDateString());
-  }, [dateString]); // Re-run if the date string changes
-
-  // Render a placeholder or nothing on the server and during the initial client render
-  if (!formattedDate) {
-    return null; 
-  }
-  
-  return <span>{formattedDate}</span>;
-}
-
+import { format } from "date-fns";
 
 const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -189,7 +173,7 @@ export default function TransactionsPage() {
                     {tx.id}
                     {tx.referenceId && <div className="text-ellipsis overflow-hidden">Ref: {tx.referenceId}</div>}
                   </TableCell>
-                  <TableCell><FormattedDate dateString={tx.date}/></TableCell>
+                  <TableCell>{format(new Date(tx.date), 'P')}</TableCell>
                   <TableCell>
                     <Badge variant={getStatusBadgeVariant(tx.status)}>
                       {tx.status}

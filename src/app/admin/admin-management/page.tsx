@@ -37,16 +37,6 @@ import {
 import { adminData, addAdmin, deleteAdmin, processRequest, updateAdmin, resetAdminPassword, type Admin, type AdminRole } from "@/lib/admin-data";
 import { format } from 'date-fns';
 
-function FormattedDate({ dateString }: { dateString: string }) {
-    if (!dateString) return null;
-    try {
-        return <span>{format(new Date(dateString), 'P')}</span>;
-    } catch (error) {
-        console.error("Invalid date string provided to FormattedDate:", dateString, error);
-        return <span>Invalid Date</span>;
-    }
-}
-
 
 const WhatsAppIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-green-500">
@@ -243,7 +233,7 @@ export default function AdminManagementPage() {
                          </Button>
                       </div>
                   </TableCell>
-                  <TableCell><FormattedDate dateString={req.joinDate} /></TableCell>
+                  <TableCell>{format(new Date(req.joinDate), 'P')}</TableCell>
                   <TableCell className="text-center">
                     <div className="flex gap-2 justify-center">
                         <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700" onClick={() => handleRequest(req.id, "Active")}>Approve</Button>
@@ -458,7 +448,5 @@ export default function AdminManagementPage() {
     </div>
   );
 }
-
-    
 
     

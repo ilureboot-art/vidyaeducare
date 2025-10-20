@@ -82,7 +82,7 @@ export const getAllTestSets = (): TestSet[] => {
     if (allTestSetsState === null) {
        return initializeTestSets();
     }
-    return allTestSetsState!;
+    return allTestSetsState;
 };
 
 const saveTestSets = (sets: TestSet[]) => {

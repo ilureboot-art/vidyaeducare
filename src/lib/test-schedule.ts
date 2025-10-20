@@ -74,7 +74,7 @@ const initializeScheduledTests = (): ScheduledTest[] => {
     return getDefaultScheduledTests();
 };
 
-const getScheduledTests = (): ScheduledTest[] => {
+export const getScheduledTestData = (): ScheduledTest[] => {
     if (typeof window === 'undefined') {
         return getDefaultScheduledTests();
     }
@@ -94,7 +94,7 @@ const saveScheduledTests = (tests: ScheduledTest[]) => {
 
 // Function to add a new scheduled test
 export function addScheduledTest(test: ScheduledTest) {
-    const currentTests = getScheduledTests();
+    const currentTests = getScheduledTestData();
     const testSets = getAllTestSets(); // This needs to be available client-side
     const testSet = testSets.find(ts => ts.id === test.testSetId);
     if (!testSet) return;
@@ -109,7 +109,7 @@ export function addScheduledTest(test: ScheduledTest) {
 
 // Function to get all tests (upcoming and past) for a specific student profile
 export function getAllTestsForStudent(board: string, standard: string): ScheduledTest[] {
-    const currentTests = getScheduledTests();
+    const currentTests = getScheduledTestData();
     return currentTests
         .filter(test => test.board === board && test.standard === standard)
         .sort((a,b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
@@ -117,12 +117,6 @@ export function getAllTestsForStudent(board: string, standard: string): Schedule
 
 // Function to get a specific scheduled test by ID
 export function getScheduledTestById(id: string): ScheduledTest | undefined {
-    const currentTests = getScheduledTests();
+    const currentTests = getScheduledTestData();
     return currentTests.find(test => test.id === id);
 }
-
-// Export a function that components can call to get the data
-export function getScheduledTestData() {
-    return getScheduledTests();
-}
-

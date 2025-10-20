@@ -9,18 +9,6 @@ import { getAdminNotifications, type AppNotification } from "@/lib/notifications
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 
-function FormattedDate({ dateString }: { dateString: string }) {
-    if (!dateString) return null;
-    try {
-        // Format the date directly. This is safe for server and client.
-        return <span>{format(new Date(dateString), 'P p')}</span>;
-    } catch (error) {
-        console.error("Invalid date string provided to FormattedDate:", dateString, error);
-        return <span>Invalid Date</span>;
-    }
-}
-
-
 const getIconForType = (type: string) => {
     switch(type) {
         case "new_user":
@@ -70,7 +58,7 @@ export default function AdminNotificationsPage() {
                                     <div className="flex-1">
                                         <p className="font-medium">{notif.message}</p>
                                         <p className="text-xs text-muted-foreground">
-                                            <FormattedDate dateString={notif.timestamp} />
+                                            {format(new Date(notif.timestamp), 'P p')}
                                         </p>
                                     </div>
                                     {notif.status && <Badge variant={notif.status === 'read' ? 'secondary' : 'default'}>{notif.status}</Badge>}

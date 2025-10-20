@@ -1813,16 +1813,21 @@ const defaultTestSets: TestSet[] = [
   }
 ];
 
-let allTestSetsState: TestSet[] = [];
-if (typeof window !== 'undefined') {
-    const saved = localStorage.getItem('allTestSets');
-    allTestSetsState = saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(defaultTestSets));
-} else {
-    allTestSetsState = JSON.parse(JSON.stringify(defaultTestSets));
+let allTestSetsState: TestSet[] = [ ...defaultTestSets ];
+
+const getTestSets = (): TestSet[] => {
+    if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem('allTestSets');
+        if (saved) {
+            try {
+                return JSON.parse(saved);
+            } catch (e) {
+                console.error("Failed to parse allTestSets from localStorage", e);
+            }
+        }
+    }
+    return allTestSetsState;
 }
-
-export { allTestSetsState as allTestSets };
-
 
 const saveTestSets = () => {
     if (typeof window !== 'undefined') {
@@ -1830,31 +1835,37 @@ const saveTestSets = () => {
     }
 }
 
+export const allTestSets = getTestSets();
+
 
 export function addTestSet(testSet: TestSet) {
-    const existingIndex = allTestSetsState.findIndex(ts => ts.id === testSet.id);
+    const sets = getTestSets();
+    const existingIndex = sets.findIndex(ts => ts.id === testSet.id);
 
     if (existingIndex > -1) {
         console.warn(`Test set with ID ${testSet.id} already exists. It will be overwritten.`);
-        allTestSetsState[existingIndex] = testSet;
+        sets[existingIndex] = testSet;
     } else {
-        allTestSetsState.push(testSet);
+        sets.push(testSet);
     }
+    allTestSetsState = sets;
     saveTestSets();
 }
 
 export function updateTestSet(updatedTestSet: TestSet) {
-    const index = allTestSetsState.findIndex(ts => ts.id === updatedTestSet.id);
+    let sets = getTestSets();
+    const index = sets.findIndex(ts => ts.id === updatedTestSet.id);
     if (index > -1) {
-        allTestSetsState[index] = updatedTestSet;
+        sets[index] = updatedTestSet;
     } else {
-        // If it doesn't exist, add it. This can happen if an ID changes, though unlikely.
-        addTestSet(updatedTestSet);
+        sets.push(updatedTestSet);
     }
+    allTestSetsState = sets;
     saveTestSets();
 }
 
 export function deleteTestSet(testSetId: string) {
-    allTestSetsState = allTestSetsState.filter(ts => ts.id !== testSetId);
+    let sets = getTestSets();
+    allTestSetsState = sets.filter(ts => ts.id !== testSetId);
     saveTestSets();
 }

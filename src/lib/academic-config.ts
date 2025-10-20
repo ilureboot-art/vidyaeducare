@@ -22,7 +22,7 @@ const defaultAcademicConfig: AcademicConfig = {
     ]
 };
 
-let academicConfig: AcademicConfig = JSON.parse(JSON.stringify(defaultAcademicConfig));
+let academicConfig: AcademicConfig = { ...defaultAcademicConfig };
 
 export const getAcademicConfig = (): AcademicConfig => {
     if (typeof window !== 'undefined') {
@@ -35,13 +35,14 @@ export const getAcademicConfig = (): AcademicConfig => {
             }
         }
     }
-    return JSON.parse(JSON.stringify(defaultAcademicConfig));
+    return academicConfig;
 };
 
 const saveAcademicConfig = (config: AcademicConfig) => {
     if (typeof window !== 'undefined') {
         localStorage.setItem('academicConfig', JSON.stringify(config));
     }
+    academicConfig = config;
 };
 
 // --- Setter functions to allow admin panel to modify the config ---
@@ -62,8 +63,4 @@ export function setSubjects(newSubjects: string[]) {
     const config = getAcademicConfig();
     config.subjects = newSubjects.filter(s => s.trim() !== '');
     saveAcademicConfig(config);
-}
-
-if (typeof window !== 'undefined') {
-    academicConfig = getAcademicConfig();
 }

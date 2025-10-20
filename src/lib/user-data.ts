@@ -61,7 +61,7 @@ const defaultWalletData: WalletData = {
   ],
 };
 
-let walletData: WalletData = JSON.parse(JSON.stringify(defaultWalletData));
+let walletData: WalletData = { ...defaultWalletData };
 
 export function getWalletData(): WalletData {
   if (typeof window !== 'undefined') {
@@ -74,7 +74,7 @@ export function getWalletData(): WalletData {
           }
       }
   }
-  return JSON.parse(JSON.stringify(defaultWalletData));
+  return walletData;
 };
 
 const saveWalletData = (data: WalletData) => {
@@ -130,7 +130,7 @@ export function setAdminPaymentMethods(methods: AdminPaymentMethods) {
 export function resetWalletData() {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('walletData');
-      walletData = getWalletData();
+      walletData = { ...defaultWalletData };
     }
 }
 
@@ -144,9 +144,4 @@ export function updateCoinBalance(newCoins: number) {
     let data = getWalletData();
     data.coins = newCoins;
     saveWalletData(data);
-}
-
-// Update the global variable if on client
-if (typeof window !== 'undefined') {
-  walletData = getWalletData();
 }

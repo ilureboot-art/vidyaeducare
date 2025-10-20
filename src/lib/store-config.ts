@@ -85,7 +85,7 @@ const defaultStoreConfig: StoreConfig = {
     }
 };
 
-let storeConfig: StoreConfig = JSON.parse(JSON.stringify(defaultStoreConfig));
+let storeConfig: StoreConfig = { ...defaultStoreConfig };
 
 
 export const getStoreConfig = (): StoreConfig => {
@@ -99,13 +99,14 @@ export const getStoreConfig = (): StoreConfig => {
             }
         }
     }
-    return JSON.parse(JSON.stringify(defaultStoreConfig));
+    return storeConfig;
 };
 
 const saveStoreConfig = (config: StoreConfig) => {
     if (typeof window !== 'undefined') {
         localStorage.setItem('storeConfig', JSON.stringify(config));
     }
+    storeConfig = config;
 };
 
 export function setPackages(newPackages: TicketPackage[]) {
@@ -148,8 +149,5 @@ export function resetStoreConfig() {
     if (typeof window !== 'undefined') {
         localStorage.removeItem('storeConfig');
     }
-}
-
-if (typeof window !== 'undefined') {
-    storeConfig = getStoreConfig();
+    storeConfig = { ...defaultStoreConfig };
 }

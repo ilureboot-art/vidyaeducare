@@ -30,7 +30,7 @@ const defaultAdminData: AdminData = {
     ]
 };
 
-let adminData: AdminData = JSON.parse(JSON.stringify(defaultAdminData));
+let adminData: AdminData = { ...defaultAdminData };
 
 
 export const getAdminData = (): AdminData => {
@@ -44,12 +44,13 @@ export const getAdminData = (): AdminData => {
             }
         }
     }
-    return JSON.parse(JSON.stringify(defaultAdminData));
+    return adminData;
 }
 
 const saveAdminData = (data: AdminData) => {
     if (typeof window !== 'undefined') {
         localStorage.setItem('adminData', JSON.stringify(data));
+        adminData = data;
     }
 }
 
@@ -104,8 +105,4 @@ export function processRequest(requestId: string, newStatus: 'Active' | 'Rejecte
     }
     
     saveAdminData(currentAdminData);
-}
-
-if (typeof window !== 'undefined') {
-    adminData = getAdminData();
 }

@@ -71,7 +71,7 @@ const defaultStudentData: StudentProfile[] = [
   }
 ];
 
-let studentDataState: StudentProfile[] = JSON.parse(JSON.stringify(defaultStudentData));
+let studentDataState: StudentProfile[] = [ ...defaultStudentData ];
 
 const getStudentData = (): StudentProfile[] => {
   if (typeof window !== 'undefined') {
@@ -84,7 +84,7 @@ const getStudentData = (): StudentProfile[] => {
           }
       }
   }
-  return JSON.parse(JSON.stringify(defaultStudentData));
+  return studentDataState;
 };
 
 const saveStudentData = (data: StudentProfile[]) => {
@@ -112,7 +112,7 @@ const getActivationCodes = (): string[] => {
             }
         }
     }
-    return [...defaultActivationCodes];
+    return validActivationCodesState;
 };
 
 const saveActivationCodes = (codes: string[]) => {
@@ -158,12 +158,7 @@ export function resetStudentData() {
     if (typeof window !== 'undefined') {
         localStorage.removeItem('studentData');
         localStorage.removeItem('activationCodes');
-        studentDataState = getStudentData();
-        validActivationCodesState = getActivationCodes();
     }
-}
-
-if (typeof window !== 'undefined') {
-  studentDataState = getStudentData();
-  validActivationCodesState = getActivationCodes();
+    studentDataState = [...defaultStudentData];
+    validActivationCodesState = [...defaultActivationCodes];
 }

@@ -33,7 +33,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { allTestSets, addTestSet, deleteTestSet, updateTestSet, type TestSet, type Question } from "@/lib/question-bank";
 import { academicConfig } from "@/lib/academic-config";
 import { parseQuestionsFromDocument, type QuestionParserOutput } from "@/ai/flows/document-parser-flow";
-import mammoth from "mammoth";
 
 
 const initialQuestionState: Omit<Question, 'id'> = {
@@ -117,28 +116,8 @@ export default function TestSetManagementPage() {
                     subject: jsonObj.subject || ''
                 };
             }
-        } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-            const arrayBuffer = await file.arrayBuffer();
-            const result = await mammoth.extractRawText({ arrayBuffer });
-            const documentText = result.value;
-            
-            parsedQuestionArray = await parseQuestionsFromDocument({ documentText });
-            
-            if (!existingTestSetId) {
-                const nameMatch = documentText.match(/\*\*Test Set Name:\*\*\s*(.*)/);
-                const boardMatch = documentText.match(/\*\*Board:\*\*\s*(.*)/);
-                const standardMatch = documentText.match(/\*\*Standard:\*\*\s*(.*)/);
-                const subjectMatch = documentText.match(/\*\*Subject:\*\*\s*(.*)/);
-                
-                inferredDetails = {
-                    name: nameMatch ? nameMatch[1].trim() : file.name.replace('.docx', ''),
-                    board: boardMatch ? boardMatch[1].trim() as any : 'SSC',
-                    standard: standardMatch ? standardMatch[1].trim() : '',
-                    subject: subjectMatch ? subjectMatch[1].trim() : '',
-                };
-            }
         } else {
-            throw new Error("Invalid File Type. Please upload a .json or .docx file.");
+            throw new Error("Invalid File Type. Please upload a .json file.");
         }
 
         if (!parsedQuestionArray || parsedQuestionArray.length === 0) {
@@ -405,24 +384,26 @@ export default function TestSetManagementPage() {
                         </DialogHeader>
                         <div className="space-y-6 py-4">
                            <div className="space-y-2">
-                               <Label className="font-semibold">Recommended DOCX Format:</Label>
+                               <Label className="font-semibold">JSON File Format:</Label>
                                <pre className="p-3 bg-muted text-xs rounded-md overflow-x-auto whitespace-pre-wrap">
-{`**Test Set Name:** SSC Science Mock Test
-**Board:** SSC
-**Standard:** 10th
-**Subject:** Science
-
-1. Question Text (English) / (Marathi)
-A. Option 1 (English) / (Marathi)
-B. Option 2 (English) / (Marathi)
-C. Option 3 (English) / (Marathi)
-D. Option 4 (English) / (Marathi)
-Answer: B. Option 2 (English) / (Marathi)`}
+{`{
+  "name": "Test Name",
+  "board": "SSC",
+  "standard": "10th",
+  "subject": "Science",
+  "questions": [
+    {
+      "text": {"en": "Q Text", "mr": "Q Text"},
+      "options": {"en": [], "mr": []},
+      "correctAnswer": {"en": "Ans", "mr": "Ans"}
+    }
+  ]
+}`}
                                </pre>
                            </div>
                              <div className="space-y-2">
-                                <Label htmlFor="file-upload" className="font-semibold">Upload Your File (.docx or .json)</Label>
-                                <Input id="file-upload" type="file" accept=".json, .docx, application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={handleBulkUpload} disabled={isUploading} className="file:text-primary file:font-semibold" />
+                                <Label htmlFor="file-upload" className="font-semibold">Upload Your File (.json)</Label>
+                                <Input id="file-upload" type="file" accept=".json" onChange={handleBulkUpload} disabled={isUploading} className="file:text-primary file:font-semibold" />
                                 <p className="text-xs text-muted-foreground">The test set will be saved immediately after upload.</p>
                             </div>
                         </div>
@@ -499,7 +480,7 @@ Answer: B. Option 2 (English) / (Marathi)`}
               <DialogHeader>
                   <DialogTitle>Append Questions to "{testSetToAppend?.name}"</DialogTitle>
                   <DialogDescription>
-                      Upload a DOCX or JSON file. The questions inside will be added to the end of this test set.
+                      Upload a JSON file. The questions inside will be added to the end of this test set.
                   </DialogDescription>
               </DialogHeader>
               <div className="py-4">
@@ -509,7 +490,7 @@ Answer: B. Option 2 (English) / (Marathi)`}
                       type="file" 
                       ref={appendFileInputRef}
                       onChange={handleAppendUpload}
-                      accept=".json, .docx, application/vnd.openxmlformats-officedocument.wordprocessingml.document" 
+                      accept=".json" 
                       disabled={isUploading} 
                       className="file:text-primary file:font-semibold" 
                   />
@@ -522,3 +503,4 @@ Answer: B. Option 2 (English) / (Marathi)`}
 
 
     
+

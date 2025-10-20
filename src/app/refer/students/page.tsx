@@ -21,6 +21,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { format } from "date-fns";
 
 type ClientStatus = "Active" | "Expired";
 
@@ -43,19 +44,6 @@ const initialClients: Client[] = [
     { id: 'CLI004', name: 'User B', type: 'Indirect', product: '6 Months Subscription', purchaseDate: '2024-01-15', validity: '2024-07-14', status: 'Expired' },
     { id: 'CLI005', name: 'User C', type: 'Direct', product: '1 Year Subscription', purchaseDate: '2023-08-10', validity: '2024-08-09', status: 'Active' },
 ];
-
-function FormattedDate({ dateString }: { dateString: string }) {
-  const [isClient, setIsClient] = useState(false);
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  if (!isClient) {
-    return <span></span>;
-  }
-  
-  return <span>{new Date(dateString).toLocaleDateString()}</span>;
-}
 
 
 export default function StudentAccessPage() {
@@ -117,7 +105,7 @@ export default function StudentAccessPage() {
                         {client.type}
                       </Badge>
                     </TableCell>
-                    <TableCell><FormattedDate dateString={client.validity} /></TableCell>
+                    <TableCell>{format(new Date(client.validity), 'P')}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Badge variant={client.status === "Active" ? "default" : "destructive"} className={client.status === "Active" ? "bg-green-600" : "bg-red-600"}>

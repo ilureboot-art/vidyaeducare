@@ -17,6 +17,8 @@ import { Button } from "@/components/ui/button";
 import { Search, Download, ArrowUpRight, ArrowDownLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getWalletData, type Transaction, updateTransactionStatus } from "@/lib/user-data";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
 
 const getStatusBadgeVariant = (status: string) => {
@@ -43,16 +45,20 @@ export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'rejected'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'deposit' | 'withdrawal'>('all');
+  const [isClient, setIsClient] = useState(false);
   
-  useEffect(() => {
-    const data = getWalletData();
-    setTransactions(data.transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-  }, []);
-
   const refreshTransactions = () => {
     const data = getWalletData();
     setTransactions(data.transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
   };
+
+  useEffect(() => {
+    setIsClient(true);
+    refreshTransactions();
+  }, []);
+
 
   const handleTransactionStatus = (id: number, newStatus: "Completed" | "Rejected") => {
     const success = updateTransactionStatus(id, newStatus);
@@ -68,11 +74,17 @@ export default function TransactionsPage() {
   };
 
   const filteredTransactions = transactions.filter(
-    (tx) =>
-      tx.user?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      String(tx.id).toLowerCase().includes(searchTerm.toLowerCase())
-  ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    (tx) => {
+      const searchTermMatch = tx.user?.toLowerCase().includes(searchTerm.toLowerCase()) || String(tx.id).toLowerCase().includes(searchTerm.toLowerCase());
+      const statusMatch = statusFilter === 'all' || tx.status.toLowerCase() === statusFilter;
+      const typeMatch = typeFilter === 'all' || (typeFilter === 'deposit' && tx.amount >= 0) || (typeFilter === 'withdrawal' && tx.amount < 0);
+      return searchTermMatch && statusMatch && typeMatch;
+    }
+  );
 
+  if (!isClient) {
+    return null;
+  }
 
   return (
     <div className="space-y-6">
@@ -83,8 +95,8 @@ export default function TransactionsPage() {
           <CardDescription>
             View and manage all financial transactions within the app.
           </CardDescription>
-          <div className="flex items-center justify-between pt-4">
-            <div className="relative w-full max-w-sm">
+          <div className="flex flex-col md:flex-row items-center justify-between pt-4 gap-4">
+            <div className="relative w-full md:max-w-sm">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input 
                   placeholder="Search by user or transaction ID..." 
@@ -93,6 +105,35 @@ export default function TransactionsPage() {
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
             </div>
+             <div className="grid grid-cols-2 gap-4 w-full md:w-auto">
+              <div className="space-y-2">
+                <Label htmlFor="type-filter" className="sr-only">Filter by Type</Label>
+                <Select value={typeFilter} onValueChange={(value) => setTypeFilter(value as any)}>
+                    <SelectTrigger id="type-filter">
+                        <SelectValue placeholder="Select type..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All Types</SelectItem>
+                        <SelectItem value="deposit">Deposits</SelectItem>
+                        <SelectItem value="withdrawal">Withdrawals</SelectItem>
+                    </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="status-filter" className="sr-only">Filter by Status</Label>
+                <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as any)}>
+                    <SelectTrigger id="status-filter">
+                        <SelectValue placeholder="Select status..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All Statuses</SelectItem>
+                        <SelectItem value="completed">Completed</SelectItem>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="rejected">Rejected</SelectItem>
+                    </SelectContent>
+                </Select>
+              </div>
+           </div>
             <Button variant="outline">
               <Download className="mr-2 h-4 w-4" />
               Export CSV

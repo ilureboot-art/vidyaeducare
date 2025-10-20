@@ -25,19 +25,6 @@ import {
 import { getAllTestsForStudent, type ScheduledTest } from "@/lib/test-schedule";
 import { format } from "date-fns";
 
-function FormattedDate({ dateString }: { dateString: string }) {
-  const [isClient, setIsClient] = useState(false);
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  if (!isClient) {
-    return null;
-  }
-  
-  return <span>{new Date(dateString).toLocaleDateString()}</span>;
-}
-
 
 export default function ProfilePage() {
     const [students, setStudents] = useState<StudentProfile[]>([]);
@@ -167,7 +154,7 @@ export default function ProfilePage() {
                         <Calendar className="w-5 h-5 text-muted-foreground"/>
                         <div>
                             <p className="text-xs text-muted-foreground">Member Since</p>
-                            <p className="font-medium"><FormattedDate dateString={parentProfile.joinDate} /></p>
+                            <p className="font-medium">{format(new Date(parentProfile.joinDate), 'P')}</p>
                         </div>
                     </div>
                 </div>
@@ -280,7 +267,7 @@ export default function ProfilePage() {
                  <div className="space-y-4">
                      <h3 className="font-semibold flex items-center gap-2 text-muted-foreground"><GraduationCap size={16}/> Academic Details</h3>
                      <div className="space-y-2 text-sm pl-2 border-l-2">
-                        <p><strong>D.O.B:</strong> <FormattedDate dateString={student.dob} /></p>
+                        <p><strong>D.O.B:</strong> {format(new Date(student.dob), 'P')}</p>
                         <p><strong>Standard:</strong> {student.academic.standard}</p>
                         <p><strong>Board:</strong> {student.academic.board}</p>
                         <p><strong>Stream:</strong> {student.academic.stream}</p>
@@ -387,5 +374,3 @@ export default function ProfilePage() {
     </TooltipProvider>
   );
 }
-
-    

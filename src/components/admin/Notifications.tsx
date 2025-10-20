@@ -12,6 +12,7 @@ import {
 import { Bell, UserPlus } from "lucide-react";
 import { getAdminNotifications, markAdminNotificationsAsRead, type AppNotification } from "@/lib/notifications";
 import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
 
 function FormattedDate({ dateString }: { dateString: string }) {
   const [isClient, setIsClient] = useState(false);
@@ -23,7 +24,7 @@ function FormattedDate({ dateString }: { dateString: string }) {
     return null;
   }
 
-  return <span>{new Date(dateString).toLocaleString()}</span>;
+  return <span>{format(new Date(dateString), 'P p')}</span>;
 }
 
 

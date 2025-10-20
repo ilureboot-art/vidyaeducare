@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { Zap, Share2, IndianRupee, Users, CheckCircle, Repeat } from "lucide-react";
+import { Zap, Share2, IndianRupee, Users, CheckCircle, Repeat, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -16,13 +16,13 @@ import { getStoreConfig } from "@/lib/store-config";
 
 // Data for ReferBolt would come from a backend for the logged-in user
 const initialReferboltData = {
-  isSubscribed: false, // Set to false to show the splash page initially
+  isSubscribed: false, 
   autoRenew: false,
   totalCommissions: 0,
   totalReferrals: 0,
   cycleProgress: 0,
   cycleGoal: 3,
-  referralHistory: []
+  referralHistory: [] as any[]
 };
 
 const benefits = [
@@ -37,6 +37,19 @@ export default function ReferBoltPage() {
   const { toast } = useToast();
   const [data, setData] = useState(initialReferboltData);
   const [autoRenew, setAutoRenew] = useState(data.autoRenew);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Correctly fetch data on the client side after component mounts.
+    // This prevents any server-side execution during the build.
+    const walletData = getWalletData(); 
+    setData({
+        ...initialReferboltData,
+        // In a real app, this data would be specific to ReferBolt
+        isSubscribed: walletData.referralCode.includes("IBA"), // Mock logic
+    });
+    setIsLoading(false);
+  }, []);
 
   const handleShare = async () => {
     const referralCode = getWalletData().referralCode;
@@ -75,6 +88,14 @@ Subscribe and start your earning cycle now: ${shareUrl}
         fallbackCopy();
     }
   };
+  
+  if (isLoading) {
+      return (
+          <div className="w-full max-w-2xl mx-auto flex items-center justify-center h-64">
+              <Loader2 className="animate-spin text-primary" size={32}/>
+          </div>
+      )
+  }
 
   if (!data.isSubscribed) {
     return (

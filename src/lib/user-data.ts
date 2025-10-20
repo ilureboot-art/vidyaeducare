@@ -61,27 +61,27 @@ const defaultWalletData: WalletData = {
   ],
 };
 
-let walletData: WalletData = getWalletData();
+let walletData: WalletData = JSON.parse(JSON.stringify(defaultWalletData));
 
 export function getWalletData(): WalletData {
-  if (typeof window === 'undefined') {
-    return JSON.parse(JSON.stringify(defaultWalletData)); // Deep copy for server-side
-  }
-  const savedData = localStorage.getItem('walletData');
-  if (savedData) {
-    try {
-      return JSON.parse(savedData);
-    } catch (e) {
-      console.error("Failed to parse walletData from localStorage", e);
-      return JSON.parse(JSON.stringify(defaultWalletData));
-    }
+  if (typeof window !== 'undefined') {
+      const savedData = localStorage.getItem('walletData');
+      if (savedData) {
+          try {
+              return JSON.parse(savedData);
+          } catch (e) {
+              console.error("Failed to parse walletData from localStorage", e);
+          }
+      }
   }
   return JSON.parse(JSON.stringify(defaultWalletData));
 };
 
 const saveWalletData = (data: WalletData) => {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem('walletData', JSON.stringify(data));
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('walletData', JSON.stringify(data));
+    walletData = data;
+  }
 };
 
 // Function to add a transaction to our shared state
@@ -96,7 +96,6 @@ export function addTransaction(transaction: Transaction) {
     }
   }
   saveWalletData(data);
-  walletData = data;
 }
 
 // Function to update transaction status
@@ -119,7 +118,6 @@ export function updateTransactionStatus(id: number, newStatus: 'Completed' | 'Re
     
     data.transactions[txIndex].status = newStatus;
     saveWalletData(data);
-    walletData = data;
     return true;
 }
 
@@ -127,27 +125,25 @@ export function setAdminPaymentMethods(methods: AdminPaymentMethods) {
   let data = getWalletData();
   data.adminPaymentMethods = methods;
   saveWalletData(data);
-  walletData = data;
 }
 
 export function resetWalletData() {
-    if (typeof window === 'undefined') return;
-    localStorage.removeItem('walletData');
-    walletData = getWalletData();
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('walletData');
+      walletData = getWalletData();
+    }
 }
 
 export function updateWalletBalance(newBalance: number) {
     let data = getWalletData();
     data.balance = newBalance;
     saveWalletData(data);
-    walletData = data;
 }
 
 export function updateCoinBalance(newCoins: number) {
     let data = getWalletData();
     data.coins = newCoins;
     saveWalletData(data);
-    walletData = data;
 }
 
 // Update the global variable if on client

@@ -30,41 +30,53 @@ const defaultAdminData: AdminData = {
     ]
 };
 
+let adminData: AdminData = JSON.parse(JSON.stringify(defaultAdminData));
+
+
 export const getAdminData = (): AdminData => {
-    if (typeof window === 'undefined') return JSON.parse(JSON.stringify(defaultAdminData)); // Return a deep copy for server-side
-    const savedData = localStorage.getItem('adminData');
-    return savedData ? JSON.parse(savedData) : JSON.parse(JSON.stringify(defaultAdminData));
+    if (typeof window !== 'undefined') {
+        const savedData = localStorage.getItem('adminData');
+        if (savedData) {
+            try {
+                return JSON.parse(savedData);
+            } catch (e) {
+                console.error("Failed to parse adminData from localStorage", e);
+            }
+        }
+    }
+    return JSON.parse(JSON.stringify(defaultAdminData));
 }
 
 const saveAdminData = (data: AdminData) => {
-    if (typeof window === 'undefined') return;
-    localStorage.setItem('adminData', JSON.stringify(data));
+    if (typeof window !== 'undefined') {
+        localStorage.setItem('adminData', JSON.stringify(data));
+    }
 }
 
 export function addAdmin(newAdmin: Omit<Admin, 'id' | 'joinDate' | 'status'>) {
-    const adminData = getAdminData();
+    const currentAdminData = getAdminData();
     const admin: Admin = {
         ...newAdmin,
         id: `ADM${String(Date.now()).slice(-4)}`,
         joinDate: new Date().toISOString().split('T')[0],
         status: 'Active',
     };
-    adminData.admins.push(admin);
-    saveAdminData(adminData);
+    currentAdminData.admins.push(admin);
+    saveAdminData(currentAdminData);
 }
 
 export function deleteAdmin(adminId: string) {
-    let adminData = getAdminData();
-    adminData.admins = adminData.admins.filter((admin: Admin) => admin.id !== adminId);
-    saveAdminData(adminData);
+    let currentAdminData = getAdminData();
+    currentAdminData.admins = currentAdminData.admins.filter((admin: Admin) => admin.id !== adminId);
+    saveAdminData(currentAdminData);
 }
 
 export function updateAdmin(adminId: string, updatedDetails: Partial<Omit<Admin, 'id' | 'joinDate' | 'status'>>) {
-    let adminData = getAdminData();
-    const index = adminData.admins.findIndex((admin: Admin) => admin.id === adminId);
+    let currentAdminData = getAdminData();
+    const index = currentAdminData.admins.findIndex((admin: Admin) => admin.id === adminId);
     if (index !== -1) {
-        adminData.admins[index] = { ...adminData.admins[index], ...updatedDetails };
-        saveAdminData(adminData);
+        currentAdminData.admins[index] = { ...currentAdminData.admins[index], ...updatedDetails };
+        saveAdminData(currentAdminData);
     }
 }
 
@@ -75,12 +87,12 @@ export function resetAdminPassword(adminId: string, newPassword: string) {
 }
 
 export function processRequest(requestId: string, newStatus: 'Active' | 'Rejected') {
-    let adminData = getAdminData();
-    const requestIndex = adminData.requests.findIndex((req: Admin) => req.id === requestId);
+    let currentAdminData = getAdminData();
+    const requestIndex = currentAdminData.requests.findIndex((req: Admin) => req.id === requestId);
     if (requestIndex === -1) return;
 
-    const requestToProcess = adminData.requests[requestIndex];
-    adminData.requests.splice(requestIndex, 1);
+    const requestToProcess = currentAdminData.requests[requestIndex];
+    currentAdminData.requests.splice(requestIndex, 1);
 
     if (newStatus === 'Active') {
         const newAdmin: Admin = {
@@ -88,8 +100,12 @@ export function processRequest(requestId: string, newStatus: 'Active' | 'Rejecte
             id: `ADM${String(Date.now()).slice(-4)}`,
             status: 'Active',
         };
-        adminData.admins.push(newAdmin);
+        currentAdminData.admins.push(newAdmin);
     }
     
-    saveAdminData(adminData);
+    saveAdminData(currentAdminData);
+}
+
+if (typeof window !== 'undefined') {
+    adminData = getAdminData();
 }

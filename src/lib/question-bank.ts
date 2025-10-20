@@ -1,4 +1,5 @@
 
+'use client';
 
 export type Question = {
   id: string;
@@ -16,8 +17,7 @@ export type TestSet = {
   questions: Question[];
 };
 
-
-export let allTestSets: TestSet[] = [
+const defaultTestSets: TestSet[] = [
   {
     id: "SET-172234567890",
     name: "Gravitation Mock Test",
@@ -1813,35 +1813,48 @@ export let allTestSets: TestSet[] = [
   }
 ];
 
-export function addTestSet(testSet: TestSet) {
-    const existingIndex = allTestSets.findIndex(ts => ts.id === testSet.id);
+let allTestSetsState: TestSet[] = [];
+if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('allTestSets');
+    allTestSetsState = saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(defaultTestSets));
+} else {
+    allTestSetsState = JSON.parse(JSON.stringify(defaultTestSets));
+}
 
-    if (existingIndex > -1) {
-        console.warn(`Test set with ID ${testSet.id} already exists. It will be overwritten.`);
-        allTestSets[existingIndex] = testSet;
-    } else {
-        allTestSets.push(testSet);
+export { allTestSetsState as allTestSets };
+
+
+const saveTestSets = () => {
+    if (typeof window !== 'undefined') {
+        localStorage.setItem('allTestSets', JSON.stringify(allTestSetsState));
     }
 }
 
+
+export function addTestSet(testSet: TestSet) {
+    const existingIndex = allTestSetsState.findIndex(ts => ts.id === testSet.id);
+
+    if (existingIndex > -1) {
+        console.warn(`Test set with ID ${testSet.id} already exists. It will be overwritten.`);
+        allTestSetsState[existingIndex] = testSet;
+    } else {
+        allTestSetsState.push(testSet);
+    }
+    saveTestSets();
+}
+
 export function updateTestSet(updatedTestSet: TestSet) {
-    const index = allTestSets.findIndex(ts => ts.id === updatedTestSet.id);
+    const index = allTestSetsState.findIndex(ts => ts.id === updatedTestSet.id);
     if (index > -1) {
-        allTestSets[index] = updatedTestSet;
+        allTestSetsState[index] = updatedTestSet;
     } else {
         // If it doesn't exist, add it. This can happen if an ID changes, though unlikely.
         addTestSet(updatedTestSet);
     }
+    saveTestSets();
 }
 
 export function deleteTestSet(testSetId: string) {
-    const indexToDelete = allTestSets.findIndex(ts => ts.id === testSetId);
-    if (indexToDelete > -1) {
-        allTestSets.splice(indexToDelete, 1);
-    }
+    allTestSetsState = allTestSetsState.filter(ts => ts.id !== testSetId);
+    saveTestSets();
 }
-
-
-
-
-

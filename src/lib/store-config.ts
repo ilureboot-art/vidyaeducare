@@ -85,15 +85,27 @@ const defaultStoreConfig: StoreConfig = {
     }
 };
 
+let storeConfig: StoreConfig = JSON.parse(JSON.stringify(defaultStoreConfig));
+
+
 export const getStoreConfig = (): StoreConfig => {
-    if (typeof window === 'undefined') return JSON.parse(JSON.stringify(defaultStoreConfig)); // Return a deep copy for server-side
-    const savedConfig = localStorage.getItem('storeConfig');
-    return savedConfig ? JSON.parse(savedConfig) : JSON.parse(JSON.stringify(defaultStoreConfig));
+    if (typeof window !== 'undefined') {
+        const savedConfig = localStorage.getItem('storeConfig');
+        if (savedConfig) {
+            try {
+                return JSON.parse(savedConfig);
+            } catch (e) {
+                console.error("Failed to parse storeConfig from localStorage", e);
+            }
+        }
+    }
+    return JSON.parse(JSON.stringify(defaultStoreConfig));
 };
 
 const saveStoreConfig = (config: StoreConfig) => {
-    if (typeof window === 'undefined') return;
-    localStorage.setItem('storeConfig', JSON.stringify(config));
+    if (typeof window !== 'undefined') {
+        localStorage.setItem('storeConfig', JSON.stringify(config));
+    }
 };
 
 export function setPackages(newPackages: TicketPackage[]) {
@@ -133,6 +145,11 @@ export function setReferboltSettings(newSettings: ReferboltSettings) {
 }
 
 export function resetStoreConfig() {
-    if (typeof window === 'undefined') return;
-    localStorage.removeItem('storeConfig');
+    if (typeof window !== 'undefined') {
+        localStorage.removeItem('storeConfig');
+    }
+}
+
+if (typeof window !== 'undefined') {
+    storeConfig = getStoreConfig();
 }

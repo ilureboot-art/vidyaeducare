@@ -36,8 +36,8 @@ import {
   Coins,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { walletData, addTransaction } from "@/lib/user-data";
-import { storeConfig } from "@/lib/store-config";
+import { getWalletData, addTransaction } from "@/lib/user-data";
+import { getStoreConfig } from "@/lib/store-config";
 import { addNotification } from "@/lib/notifications";
 import React from "react";
 
@@ -93,7 +93,7 @@ function PlayPageContent() {
   const [secretNumber, setSecretNumber] = useState(0);
   const [currentGuess, setCurrentGuess] = useState("");
   const [guessHistory, setGuessHistory] = useState<{ guess: number; hint: string }[]>([]);
-  const [attemptsLeft, setAttemptsLeft] = useState(storeConfig.gameSettings.maxAttempts);
+  const [attemptsLeft, setAttemptsLeft] = useState(0);
   const [gameState, setGameState] = useState<GameState>("idle");
   const [feedback, setFeedback] = useState("Start a new game to play!");
   const [isChecking, setIsChecking] = useState(false);
@@ -101,6 +101,10 @@ function PlayPageContent() {
   const [shake, setShake] = useState(false);
   
   const [playerStats, setPlayerStats] = useState(initialPlayerStats);
+
+  const [gameSettings, setGameSettings] = useState<any>(null);
+  const [referralBonus, setReferralBonus] = useState(0);
+  const [referralCode, setReferralCode] = useState('');
   
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const endTimeRef = useRef<number | null>(null);
@@ -137,7 +141,8 @@ function PlayPageContent() {
     });
 
     if (endState === 'won' && earnedReward > 0) {
-        walletData.coins += earnedReward;
+        let wallet = getWalletData();
+        wallet.coins += earnedReward;
         addNotification({
             type: "deposit_received",
             message: `You won ${earnedReward} coins in GuessMaster!`,
@@ -152,15 +157,16 @@ function PlayPageContent() {
   }, [playerStats, stopTimer, toast]);
 
   const resetGame = useCallback(() => {
+    if (!gameSettings) return;
     setSecretNumber(Math.floor(Math.random() * 100) + 1);
-    setAttemptsLeft(storeConfig.gameSettings.maxAttempts);
+    setAttemptsLeft(gameSettings.maxAttempts);
     setCurrentGuess("");
     setGuessHistory([]);
     setReward(0);
     setFeedback("Guess a number between 1 and 100.");
     setGameState("playing");
     endTimeRef.current = Date.now() + GAME_DURATION * 1000;
-  }, []);
+  }, [gameSettings]);
   
   const startGame = useCallback(() => {
     resetGame();
@@ -169,21 +175,23 @@ function PlayPageContent() {
   const goBackToMenu = () => {
     setGameState('idle');
     setFeedback("Start a new game to play!");
-    // We use router.replace to avoid adding a new entry to the history stack
     router.replace('/play');
   };
 
   useEffect(() => {
     setIsClient(true);
+    const config = getStoreConfig();
+    const wallet = getWalletData();
+    setGameSettings(config.gameSettings);
+    setReferralBonus(config.referralBonus);
+    setReferralCode(wallet.referralCode);
   }, []);
   
   useEffect(() => {
-    // This effect runs only on the client, after hydration
-    // Now it's safe to check searchParams and start the game
-    if (isClient && searchParams.get('mode') === 'demo' && gameState === 'idle') {
+    if (isClient && searchParams.get('mode') === 'demo' && gameState === 'idle' && gameSettings) {
       startGame();
     }
-  }, [isClient, searchParams, startGame, gameState]);
+  }, [isClient, searchParams, startGame, gameState, gameSettings]);
   
   const handleTimerTick = useCallback(() => {
     if (endTimeRef.current) {
@@ -214,6 +222,8 @@ function PlayPageContent() {
   }
 
   const handleGuessSubmit = async () => {
+    if (!gameSettings) return;
+
     const guessNum = parseInt(currentGuess);
 
     if (isNaN(guessNum) || guessNum < 1 || guessNum > 100) {
@@ -230,8 +240,8 @@ function PlayPageContent() {
     setAttemptsLeft(newAttemptsLeft);
 
     if (guessNum === secretNumber) {
-      const attemptsUsed = storeConfig.gameSettings.maxAttempts - newAttemptsLeft;
-      const earnedReward = storeConfig.gameSettings.rewards[attemptsUsed - 1] || 0;
+      const attemptsUsed = gameSettings.maxAttempts - newAttemptsLeft;
+      const earnedReward = gameSettings.rewards[attemptsUsed - 1] || 0;
       setReward(earnedReward);
       setGuessHistory([...guessHistory, { guess: guessNum, hint: 'Correct!' }]);
       endGame("won", `Congratulations! You guessed the number in ${attemptsUsed} ${attemptsUsed > 1 ? 'attempts' : 'attempt'}.`, earnedReward);
@@ -253,13 +263,14 @@ function PlayPageContent() {
   };
 
   const handleShare = async () => {
-    const referralCode = walletData.referralCode;
+    if (!gameSettings) return;
+
     const shareUrl = `${window.location.origin}/signup?ref=${referralCode}`;
-    const rewardsList = storeConfig.gameSettings.rewards.map((r, i) => `${i+1}${i === 0 ? 'st' : i === 1 ? 'nd' : i === 2 ? 'rd' : 'th'} Attempt: ${r} coins`).join('\n');
+    const rewardsList = gameSettings.rewards.map((r: number, i: number) => `${i+1}${i === 0 ? 'st' : i === 1 ? 'nd' : i === 2 ? 'rd' : 'th'} Attempt: ${r} coins`).join('\n');
     const message = `🎮 Join me on GuessMaster on the Vidya EduCare platform! 🎮
 
 🚀 Use my referral code: ${referralCode}
-💰 Get a ₹${storeConfig.referralBonus} instant cash bonus on signup!
+💰 Get a ₹${referralBonus} instant cash bonus on signup!
 
 🎯 Play a fun skill-based number guessing game and win coins.
 💰 **Prize structure for correct guesses:**
@@ -300,7 +311,7 @@ Join now: ${shareUrl}
     <div className="text-center space-y-6">
         <div className="flex flex-col items-center text-center">
             <h1 className="text-4xl font-bold text-primary">GuessMaster</h1>
-            <p className="text-muted-foreground mt-2">Guess the secret number between 1 and 100 in {storeConfig.gameSettings.maxAttempts} tries!</p>
+            <p className="text-muted-foreground mt-2">Guess the secret number between 1 and 100 in {gameSettings?.maxAttempts} tries!</p>
         </div>
         <div>
             <Button size="lg" onClick={startGame} className="w-full md:w-auto"><Star className="mr-2 h-5 w-5"/> Play Game</Button>
@@ -315,56 +326,59 @@ Join now: ${shareUrl}
   const minutesLeft = Math.floor(timeLeft / 60);
   const secondsLeft = timeLeft % 60;
 
-  const renderPlayingState = () => (
-    <div className="space-y-4">
-        <div className="flex justify-between items-center">
-            <h2 className="text-lg font-semibold">GuessMaster</h2>
-             <Badge variant="secondary" className="flex items-center gap-2">
-                <Clock className="w-4 h-4" />
-                {String(minutesLeft).padStart(2, '0')}:{String(secondsLeft).padStart(2, '0')}
-            </Badge>
-            <Badge variant="secondary">Attempt {storeConfig.gameSettings.maxAttempts - attemptsLeft + 1} of {storeConfig.gameSettings.maxAttempts}</Badge>
+  const renderPlayingState = () => {
+    if (!gameSettings) return null;
+    return (
+        <div className="space-y-4">
+            <div className="flex justify-between items-center">
+                <h2 className="text-lg font-semibold">GuessMaster</h2>
+                 <Badge variant="secondary" className="flex items-center gap-2">
+                    <Clock className="w-4 h-4" />
+                    {String(minutesLeft).padStart(2, '0')}:{String(secondsLeft).padStart(2, '0')}
+                </Badge>
+                <Badge variant="secondary">Attempt {gameSettings.maxAttempts - attemptsLeft + 1} of {gameSettings.maxAttempts}</Badge>
+            </div>
+            <div className="p-4 bg-muted/50 rounded-lg text-center font-medium flex items-center justify-center gap-2 min-h-[64px]">
+                <Lightbulb className="w-5 h-5 text-yellow-500 shrink-0"/>
+                <span>{feedback}</span>
+            </div>
+            <form onSubmit={(e) => { e.preventDefault(); handleGuessSubmit(); }} className="flex gap-2">
+                <Input
+                  type="number"
+                  placeholder="Enter your guess..."
+                  value={currentGuess}
+                  onChange={(e) => setCurrentGuess(e.target.value)}
+                  disabled={isChecking}
+                  min={1}
+                  max={100}
+                  className="text-lg text-center h-12"
+                />
+                <Button type="submit" disabled={isChecking} className="w-28 h-12">
+                  {isChecking ? <Loader2 className="animate-spin" /> : "Guess"}
+                </Button>
+            </form>
+            {guessHistory.length > 0 && (
+              <div className="space-y-2 pt-4">
+                <h3 className="font-semibold text-sm">Previous Guesses:</h3>
+                <ul className="space-y-1 text-sm text-muted-foreground">
+                    {guessHistory.map((item, index) => (
+                        <li key={index} className="flex justify-between items-center bg-background p-2 rounded-md">
+                            <span>Guess #{index + 1}: <span className="font-bold text-foreground">{item.guess}</span></span>
+                            <Badge variant={item.hint === 'Correct!' ? 'default' : 'outline'} className="text-right">{item.hint}</Badge>
+                        </li>
+                    ))}
+                </ul>
+              </div>
+            )}
+             <div className="pt-4">
+                <Button variant="outline" className="w-full" onClick={goBackToMenu}>
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back to Menu
+                </Button>
+            </div>
         </div>
-        <div className="p-4 bg-muted/50 rounded-lg text-center font-medium flex items-center justify-center gap-2 min-h-[64px]">
-            <Lightbulb className="w-5 h-5 text-yellow-500 shrink-0"/>
-            <span>{feedback}</span>
-        </div>
-        <form onSubmit={(e) => { e.preventDefault(); handleGuessSubmit(); }} className="flex gap-2">
-            <Input
-              type="number"
-              placeholder="Enter your guess..."
-              value={currentGuess}
-              onChange={(e) => setCurrentGuess(e.target.value)}
-              disabled={isChecking}
-              min={1}
-              max={100}
-              className="text-lg text-center h-12"
-            />
-            <Button type="submit" disabled={isChecking} className="w-28 h-12">
-              {isChecking ? <Loader2 className="animate-spin" /> : "Guess"}
-            </Button>
-        </form>
-        {guessHistory.length > 0 && (
-          <div className="space-y-2 pt-4">
-            <h3 className="font-semibold text-sm">Previous Guesses:</h3>
-            <ul className="space-y-1 text-sm text-muted-foreground">
-                {guessHistory.map((item, index) => (
-                    <li key={index} className="flex justify-between items-center bg-background p-2 rounded-md">
-                        <span>Guess #{index + 1}: <span className="font-bold text-foreground">{item.guess}</span></span>
-                        <Badge variant={item.hint === 'Correct!' ? 'default' : 'outline'} className="text-right">{item.hint}</Badge>
-                    </li>
-                ))}
-            </ul>
-          </div>
-        )}
-         <div className="pt-4">
-            <Button variant="outline" className="w-full" onClick={goBackToMenu}>
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Menu
-            </Button>
-        </div>
-    </div>
-  );
+      );
+  }
 
   const renderEndState = () => (
     <div className="text-center space-y-4 flex flex-col items-center relative">
@@ -399,25 +413,28 @@ Join now: ${shareUrl}
     }
   };
 
-  const renderRewardTiers = () => (
-    <div className="w-full space-y-2">
-        <h3 className="text-xs font-semibold uppercase text-muted-foreground flex items-center gap-2"><CircleHelp className="w-4 h-4"/>Reward Tiers</h3>
-        <ul className="grid grid-cols-3 md:grid-cols-5 gap-2 text-center">
-            {storeConfig.gameSettings.rewards.map((r, i) => (
-                <li key={i} className="p-2 bg-muted/50 rounded-md">
-                    <p className="text-xs text-muted-foreground">Attempt {i + 1}</p>
-                    <p className="font-bold text-primary flex items-center justify-center gap-1">{r} <Coins size={12}/></p>
-                </li>
-            ))}
-        </ul>
-    </div>
-  );
+  const renderRewardTiers = () => {
+    if (!gameSettings) return null;
+    return (
+        <div className="w-full space-y-2">
+            <h3 className="text-xs font-semibold uppercase text-muted-foreground flex items-center gap-2"><CircleHelp className="w-4 h-4"/>Reward Tiers</h3>
+            <ul className="grid grid-cols-3 md:grid-cols-5 gap-2 text-center">
+                {gameSettings.rewards.map((r: number, i: number) => (
+                    <li key={i} className="p-2 bg-muted/50 rounded-md">
+                        <p className="text-xs text-muted-foreground">Attempt {i + 1}</p>
+                        <p className="font-bold text-primary flex items-center justify-center gap-1">{r} <Coins size={12}/></p>
+                    </li>
+                ))}
+            </ul>
+        </div>
+    );
+  }
   
   const winRateData = [
     { name: 'Win Rate', value: playerStats.winRate, fill: 'hsl(var(--primary))' },
   ];
 
-  if (!isClient) {
+  if (!isClient || !gameSettings) {
     return (
       <div className="w-full max-w-md mx-auto space-y-6">
         <Card className="shadow-2xl shadow-primary/10">
@@ -566,7 +583,3 @@ export default function PlayPage() {
         </Suspense>
     );
 }
-
-    
-
-    

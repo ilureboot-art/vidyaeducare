@@ -12,16 +12,18 @@ import { useState, useEffect } from "react";
 export default function ReferAndEarnPage() {
     const { toast } = useToast();
     const [referralBonus, setReferralBonus] = useState(0);
+    const [referralCode, setReferralCode] = useState('');
     const [isClient, setIsClient] = useState(false);
 
     useEffect(() => {
         setIsClient(true);
         const config = getStoreConfig();
+        const data = getWalletData();
         setReferralBonus(config.referralBonus);
+        setReferralCode(data.referralCode);
     }, []);
 
     const handleShare = async () => {
-        const referralCode = getWalletData().referralCode;
         const url = `${window.location.origin}/signup?ref=${referralCode}`;
         const bonusAmount = referralBonus;
         

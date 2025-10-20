@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Search, Download, ArrowUpRight, ArrowDownLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { walletData, type Transaction, updateTransactionStatus } from "@/lib/user-data";
+import { format } from "date-fns";
 
 const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -44,13 +45,8 @@ export default function TransactionsPage() {
   const { toast } = useToast();
   
   useEffect(() => {
-    const interval = setInterval(() => {
-      if (JSON.stringify(walletData.transactions) !== JSON.stringify(transactions)) {
-        setTransactions([...walletData.transactions]);
-      }
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [transactions]);
+    setTransactions([...walletData.transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+  }, []);
 
 
   const handleTransactionStatus = (id: number, newStatus: "Completed" | "Rejected") => {
@@ -60,7 +56,7 @@ export default function TransactionsPage() {
           title: "Transaction Updated",
           description: `Transaction ${id} has been marked as ${newStatus}.`,
         });
-        setTransactions([...walletData.transactions]);
+        setTransactions([...walletData.transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
     } else {
          toast({ title: "Action not allowed", description: "This transaction has already been processed."});
     }
@@ -125,7 +121,7 @@ export default function TransactionsPage() {
                     {tx.id}
                     {tx.referenceId && <div className="text-ellipsis overflow-hidden">Ref: {tx.referenceId}</div>}
                   </TableCell>
-                  <TableCell>{new Date(tx.date).toLocaleDateString()}</TableCell>
+                  <TableCell>{format(new Date(tx.date), 'P')}</TableCell>
                   <TableCell>
                     <Badge variant={getStatusBadgeVariant(tx.status)}>
                       {tx.status}

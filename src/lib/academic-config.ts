@@ -38,14 +38,16 @@ const initializeAcademicConfig = (): AcademicConfig => {
                 console.error("Failed to parse academicConfig from localStorage", e);
             }
         }
+        academicConfigState = { ...defaultAcademicConfig };
+        localStorage.setItem('academicConfig', JSON.stringify(academicConfigState));
+        return academicConfigState;
     }
-    academicConfigState = JSON.parse(JSON.stringify(defaultAcademicConfig));
-    return academicConfigState;
+    return { ...defaultAcademicConfig };
 };
 
 export const getAcademicConfig = (): AcademicConfig => {
     if (typeof window === 'undefined') {
-        return JSON.parse(JSON.stringify(defaultAcademicConfig));
+        return { ...defaultAcademicConfig };
     }
     if (!academicConfigState) {
         return initializeAcademicConfig();

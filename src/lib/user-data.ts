@@ -75,14 +75,16 @@ const initializeWalletData = (): WalletData => {
                 console.error("Failed to parse walletData from localStorage", e);
             }
         }
+        walletDataState = { ...defaultWalletData };
+        localStorage.setItem('walletData', JSON.stringify(walletDataState));
+        return walletDataState;
     }
-    walletDataState = JSON.parse(JSON.stringify(defaultWalletData));
-    return walletDataState;
+    return { ...defaultWalletData };
 };
 
 export function getWalletData(): WalletData {
     if (typeof window === 'undefined') {
-        return JSON.parse(JSON.stringify(defaultWalletData));
+        return { ...defaultWalletData };
     }
     if (!walletDataState) {
         return initializeWalletData();

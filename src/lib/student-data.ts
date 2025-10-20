@@ -88,14 +88,16 @@ const initializeStudentData = (): StudentProfile[] => {
                 console.error("Failed to parse studentData from localStorage", e);
             }
         }
+        studentDataState = [ ...defaultStudentData ];
+        localStorage.setItem('studentData', JSON.stringify(studentDataState));
+        return studentDataState;
     }
-    studentDataState = JSON.parse(JSON.stringify(defaultStudentData));
-    return studentDataState;
+    return [ ...defaultStudentData ];
 };
 
-const getStudentData = (): StudentProfile[] => {
+export const getAllStudentData = (): StudentProfile[] => {
     if (typeof window === 'undefined') {
-        return JSON.parse(JSON.stringify(defaultStudentData));
+        return [ ...defaultStudentData ];
     }
     if (!studentDataState) {
         return initializeStudentData();
@@ -115,9 +117,11 @@ const initializeActivationCodes = (): string[] => {
                  console.error("Failed to parse activationCodes from localStorage", e);
             }
         }
+        validActivationCodesState = [...defaultActivationCodes];
+        localStorage.setItem('activationCodes', JSON.stringify(validActivationCodesState));
+        return validActivationCodesState;
     }
-    validActivationCodesState = [...defaultActivationCodes];
-    return validActivationCodesState;
+    return [...defaultActivationCodes];
 };
 
 export const getActivationCodes = (): string[] => {
@@ -144,9 +148,6 @@ const saveActivationCodes = (codes: string[]) => {
     }
 };
 
-export function getAllStudentData() {
-    return getStudentData();
-}
 
 export function useActivationCode(code: string) {
     let codes = getActivationCodes();
@@ -158,19 +159,19 @@ export function useActivationCode(code: string) {
 }
 
 export function addStudent(student: StudentProfile) {
-    const data = getStudentData();
+    const data = getAllStudentData();
     data.push(student);
     saveStudentData(data);
 }
 
 export function deleteStudent(studentId: string) {
-    let data = getStudentData();
+    let data = getAllStudentData();
     const updatedData = data.filter(s => s.id !== studentId);
     saveStudentData(updatedData);
 }
 
 export function updateStudent(updatedStudent: StudentProfile) {
-    let data = getStudentData();
+    let data = getAllStudentData();
     const index = data.findIndex(s => s.id === updatedStudent.id);
     if (index > -1) {
         data[index] = updatedStudent;

@@ -67,9 +67,11 @@ const initializeScheduledTests = (): ScheduledTest[] => {
                 console.error("Failed to parse scheduledTests from localStorage", e);
             }
         }
+        scheduledTestsState = getDefaultScheduledTests();
+        localStorage.setItem('scheduledTests', JSON.stringify(scheduledTestsState));
+        return scheduledTestsState;
     }
-    scheduledTestsState = getDefaultScheduledTests();
-    return scheduledTestsState;
+    return getDefaultScheduledTests();
 };
 
 const getScheduledTests = (): ScheduledTest[] => {
@@ -89,9 +91,8 @@ const saveScheduledTests = (tests: ScheduledTest[]) => {
     }
 }
 
-export function getAllScheduledTests(): ScheduledTest[] {
-    return getScheduledTests();
-}
+// Export a single variable for direct use in components
+export const scheduledTests = getScheduledTests();
 
 // Function to add a new scheduled test
 export function addScheduledTest(test: ScheduledTest) {

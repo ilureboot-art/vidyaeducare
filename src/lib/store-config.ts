@@ -101,14 +101,16 @@ const initializeStoreConfig = (): StoreConfig => {
                 console.error("Failed to parse storeConfig from localStorage", e);
             }
         }
+        storeConfigState = { ...defaultStoreConfig };
+        localStorage.setItem('storeConfig', JSON.stringify(storeConfigState));
+        return storeConfigState;
     }
-    storeConfigState = JSON.parse(JSON.stringify(defaultStoreConfig));
-    return storeConfigState;
+    return { ...defaultStoreConfig };
 };
 
 export const getStoreConfig = (): StoreConfig => {
     if (typeof window === 'undefined') {
-        return JSON.parse(JSON.stringify(defaultStoreConfig));
+        return { ...defaultStoreConfig };
     }
     if (!storeConfigState) {
         return initializeStoreConfig();

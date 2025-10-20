@@ -61,7 +61,7 @@ const getTestSets = (): TestSet[] => {
     if (typeof window === 'undefined') {
         return JSON.parse(JSON.stringify(defaultTestSets));
     }
-    if (!allTestSetsState) {
+    if (allTestSetsState === null) {
         const saved = localStorage.getItem('allTestSets');
         if (saved) {
             try {
@@ -77,14 +77,16 @@ const getTestSets = (): TestSet[] => {
     return allTestSetsState!;
 };
 
-const saveTestSets = () => {
-    if (typeof window !== 'undefined' && allTestSetsState) {
-        localStorage.setItem('allTestSets', JSON.stringify(allTestSetsState));
+const saveTestSets = (sets: TestSet[]) => {
+    if (typeof window !== 'undefined') {
+        localStorage.setItem('allTestSets', JSON.stringify(sets));
+        allTestSetsState = sets;
     }
 }
 
-export const allTestSets: TestSet[] = (typeof window !== 'undefined') ? getTestSets() : defaultTestSets;
-
+export function getAllTestSets(): TestSet[] {
+    return getTestSets();
+}
 
 export function addTestSet(testSet: TestSet) {
     const sets = getTestSets();
@@ -96,10 +98,7 @@ export function addTestSet(testSet: TestSet) {
     } else {
         sets.push(testSet);
     }
-    allTestSetsState = sets;
-    saveTestSets();
-    // Update the exported variable
-    Object.assign(allTestSets, allTestSetsState);
+    saveTestSets(sets);
 }
 
 export function updateTestSet(updatedTestSet: TestSet) {
@@ -110,16 +109,11 @@ export function updateTestSet(updatedTestSet: TestSet) {
     } else {
         sets.push(updatedTestSet);
     }
-    allTestSetsState = sets;
-    saveTestSets();
-    Object.assign(allTestSets, allTestSetsState);
+    saveTestSets(sets);
 }
 
 export function deleteTestSet(testSetId: string) {
     let sets = getTestSets();
-    allTestSetsState = sets.filter(ts => ts.id !== testSetId);
-    saveTestSets();
-    // Clear and repopulate the exported array
-    allTestSets.length = 0;
-    Array.prototype.push.apply(allTestSets, allTestSetsState);
+    const updatedSets = sets.filter(ts => ts.id !== testSetId);
+    saveTestSets(updatedSets);
 }

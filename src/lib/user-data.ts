@@ -67,7 +67,7 @@ export function getWalletData(): WalletData {
   if (typeof window === 'undefined') {
     return JSON.parse(JSON.stringify(defaultWalletData));
   }
-  if (!walletDataState) {
+  if (walletDataState === null) {
     const savedData = localStorage.getItem('walletData');
     if (savedData) {
       try {

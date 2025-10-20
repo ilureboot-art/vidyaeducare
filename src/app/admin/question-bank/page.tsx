@@ -2,7 +2,7 @@
 
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -30,8 +30,8 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { allTestSets, addTestSet, deleteTestSet, updateTestSet, type TestSet, type Question } from "@/lib/question-bank";
-import { academicConfig } from "@/lib/academic-config";
+import { getAllTestSets, addTestSet, deleteTestSet, updateTestSet, type TestSet, type Question } from "@/lib/question-bank";
+import { getAcademicConfig } from "@/lib/academic-config";
 import { parseQuestionsFromDocument, type QuestionParserOutput } from "@/ai/flows/document-parser-flow";
 
 
@@ -51,8 +51,10 @@ const initialTestSetState: TestSet = {
 };
 
 export default function TestSetManagementPage() {
-  const [testSets, setTestSets] = useState<TestSet[]>([...allTestSets]);
+  const [testSets, setTestSets] = useState<TestSet[]>([]);
+  const [academicConfig, setAcademicConfig] = useState<any>(null);
   const { toast } = useToast();
+  const [isClient, setIsClient] = useState(false);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [isManualCreateOpen, setIsManualCreateOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -62,6 +64,16 @@ export default function TestSetManagementPage() {
 
   const [step, setStep] = useState(1);
   const [editingTestSet, setEditingTestSet] = useState<TestSet | null>(null);
+  
+  useEffect(() => {
+    setIsClient(true);
+    setTestSets(getAllTestSets());
+    setAcademicConfig(getAcademicConfig());
+  }, []);
+
+  const refreshTestSets = () => {
+    setTestSets(getAllTestSets());
+  }
 
   const resetManualForm = () => {
       setStep(1);
@@ -93,7 +105,7 @@ export default function TestSetManagementPage() {
 
   const handleDelete = (testSetId: string) => {
     deleteTestSet(testSetId);
-    setTestSets([...allTestSets]);
+    refreshTestSets();
     toast({ title: "Test Set Deleted", description: "The test set has been removed from the bank."});
   }
   
@@ -127,7 +139,8 @@ export default function TestSetManagementPage() {
         const questionsWithIds = parsedQuestionArray.map((q, i) => ({ ...q, id: `Q-${Date.now()}-${i}`}));
         
         if (existingTestSetId) {
-            const existingSet = allTestSets.find(ts => ts.id === existingTestSetId);
+            const allSets = getAllTestSets();
+            const existingSet = allSets.find(ts => ts.id === existingTestSetId);
             if (!existingSet) throw new Error("Could not find the test set to append to.");
             
             const existingQuestionTexts = new Set(existingSet.questions.map(q => q.text.en.trim()));
@@ -153,7 +166,7 @@ export default function TestSetManagementPage() {
             });
         }
         
-        setTestSets([...allTestSets]);
+        refreshTestSets();
 
     } catch (error) {
         console.error("File processing error:", error);
@@ -260,12 +273,20 @@ export default function TestSetManagementPage() {
         addTestSet(newSetWithFinalId);
     }
     
-    setTestSets([...allTestSets]);
+    refreshTestSets();
     toast({ title: isEditing ? 'Test Set Updated!' : 'Test Set Created!', description: `"${finalTestSetData.name}" has been saved.` });
     
     setIsManualCreateOpen(false);
     resetManualForm();
 };
+
+  if (!isClient || !academicConfig) {
+    return (
+      <div className="flex justify-center items-center h-96">
+        <Loader2 className="animate-spin text-primary" size={32} />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -303,15 +324,15 @@ export default function TestSetManagementPage() {
                                 <div className="grid grid-cols-3 gap-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="manual-board">Board</Label>
-                                        <Select value={editingTestSet.board} onValueChange={(val) => handleSetDetailChange('board', val as 'SSC' | 'CBSE' | 'ICSE')}><SelectTrigger id="manual-board"><SelectValue placeholder="Select..."/></SelectTrigger><SelectContent>{academicConfig.boards.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent></Select>
+                                        <Select value={editingTestSet.board} onValueChange={(val) => handleSetDetailChange('board', val as 'SSC' | 'CBSE' | 'ICSE')}><SelectTrigger id="manual-board"><SelectValue placeholder="Select..."/></SelectTrigger><SelectContent>{academicConfig.boards.map((b: string) => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent></Select>
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="manual-standard">Standard</Label>
-                                        <Select value={editingTestSet.standard} onValueChange={(val) => handleSetDetailChange('standard', val)}><SelectTrigger id="manual-standard"><SelectValue placeholder="Select..."/></SelectTrigger><SelectContent>{academicConfig.standards.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>
+                                        <Select value={editingTestSet.standard} onValueChange={(val) => handleSetDetailChange('standard', val)}><SelectTrigger id="manual-standard"><SelectValue placeholder="Select..."/></SelectTrigger><SelectContent>{academicConfig.standards.map((s: string) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="manual-subject">Subject</Label>
-                                        <Select value={editingTestSet.subject} onValueChange={(val) => handleSetDetailChange('subject', val)}><SelectTrigger id="manual-subject"><SelectValue placeholder="Select..."/></SelectTrigger><SelectContent>{academicConfig.subjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>
+                                        <Select value={editingTestSet.subject} onValueChange={(val) => handleSetDetailChange('subject', val)}><SelectTrigger id="manual-subject"><SelectValue placeholder="Select..."/></SelectTrigger><SelectContent>{academicConfig.subjects.map((s: string) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>
                                     </div>
                                 </div>
                                 <DialogFooter>
@@ -500,7 +521,3 @@ export default function TestSetManagementPage() {
     </div>
   );
 }
-
-
-    
-

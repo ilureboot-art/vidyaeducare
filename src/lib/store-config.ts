@@ -45,7 +45,6 @@ export type StoreConfig = {
     mockTestPackages: MockTestPackage[];
     referboltSubscription: ReferboltSubscription;
     referralBonus: number;
-
     gameSettings: GameSettings;
     referboltSettings: ReferboltSettings;
 };
@@ -92,7 +91,7 @@ export const getStoreConfig = (): StoreConfig => {
     if (typeof window === 'undefined') {
         return JSON.parse(JSON.stringify(defaultStoreConfig));
     }
-    if (!storeConfigState) {
+    if (storeConfigState === null) {
         const savedConfig = localStorage.getItem('storeConfig');
         if (savedConfig) {
             try {
@@ -156,7 +155,3 @@ export function setReferboltSettings(newSettings: ReferboltSettings) {
     config.referboltSettings = newSettings;
     saveStoreConfig(config);
 }
-
-// Make the storeConfig available for read-only purposes if needed,
-// but all writes should go through the setter functions.
-export const storeConfig = (typeof window !== 'undefined') ? getStoreConfig() : defaultStoreConfig;

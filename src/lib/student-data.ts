@@ -80,7 +80,7 @@ const getStudentData = (): StudentProfile[] => {
     if (typeof window === 'undefined') {
         return JSON.parse(JSON.stringify(defaultStudentData));
     }
-    if (!studentDataState) {
+    if (studentDataState === null) {
         const savedData = localStorage.getItem('studentData');
         if (savedData) {
             try {
@@ -100,7 +100,7 @@ export const getActivationCodes = (): string[] => {
     if (typeof window === 'undefined') {
         return JSON.parse(JSON.stringify(defaultActivationCodes));
     }
-    if (!validActivationCodesState) {
+    if (validActivationCodesState === null) {
         const savedCodes = localStorage.getItem('activationCodes');
         if (savedCodes) {
             try {
@@ -130,9 +130,9 @@ const saveActivationCodes = (codes: string[]) => {
     }
 };
 
-export const studentData = (typeof window !== 'undefined') ? getStudentData() : defaultStudentData;
-export const validActivationCodes = (typeof window !== 'undefined') ? getActivationCodes() : defaultActivationCodes;
-
+export function getAllStudentData() {
+    return getStudentData();
+}
 
 export function useActivationCode(code: string) {
     let codes = getActivationCodes();
@@ -151,8 +151,8 @@ export function addStudent(student: StudentProfile) {
 
 export function deleteStudent(studentId: string) {
     let data = getStudentData();
-    studentDataState = data.filter(s => s.id !== studentId);
-    saveStudentData(studentDataState);
+    const updatedData = data.filter(s => s.id !== studentId);
+    saveStudentData(updatedData);
 }
 
 export function updateStudent(updatedStudent: StudentProfile) {

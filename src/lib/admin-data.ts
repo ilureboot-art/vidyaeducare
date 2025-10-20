@@ -37,7 +37,7 @@ export const getAdminData = (): AdminData => {
     if (typeof window === 'undefined') {
         return JSON.parse(JSON.stringify(defaultAdminData));
     }
-    if (!adminDataState) {
+    if (adminDataState === null) {
         const savedData = localStorage.getItem('adminData');
         if (savedData) {
             try {

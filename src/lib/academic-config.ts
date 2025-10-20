@@ -28,7 +28,7 @@ export const getAcademicConfig = (): AcademicConfig => {
     if (typeof window === 'undefined') {
         return JSON.parse(JSON.stringify(defaultAcademicConfig));
     }
-    if (!academicConfigState) {
+    if (academicConfigState === null) {
         const savedConfig = localStorage.getItem('academicConfig');
         if (savedConfig) {
             try {
@@ -73,5 +73,3 @@ export function setSubjects(newSubjects: string[]) {
     config.subjects = newSubjects.filter(s => s.trim() !== '');
     saveAcademicConfig(config);
 }
-
-export const academicConfig: AcademicConfig = (typeof window !== 'undefined') ? getAcademicConfig() : defaultAcademicConfig;

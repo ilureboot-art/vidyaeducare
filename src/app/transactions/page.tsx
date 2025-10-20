@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -73,14 +74,14 @@ export default function TransactionsPage() {
     }
   };
 
-  const filteredTransactions = transactions.filter(
+  const filteredTransactions = isClient ? transactions.filter(
     (tx) => {
       const searchTermMatch = tx.user?.toLowerCase().includes(searchTerm.toLowerCase()) || String(tx.id).toLowerCase().includes(searchTerm.toLowerCase());
       const statusMatch = statusFilter === 'all' || tx.status.toLowerCase() === statusFilter;
       const typeMatch = typeFilter === 'all' || (typeFilter === 'deposit' && tx.amount >= 0) || (typeFilter === 'withdrawal' && tx.amount < 0);
       return searchTermMatch && statusMatch && typeMatch;
     }
-  );
+  ) : [];
 
   if (!isClient) {
     return (
@@ -153,7 +154,6 @@ export default function TransactionsPage() {
                 <TableHead>Date</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
-                <TableHead className="text-center">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -177,14 +177,6 @@ export default function TransactionsPage() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right font-medium">₹{Math.abs(tx.amount).toFixed(2)}</TableCell>
-                  <TableCell className="text-center">
-                    {tx.status === "Pending" && (
-                        <div className="flex gap-2 justify-center">
-                            <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700" onClick={() => handleTransactionStatus(tx.id, "Completed")}>Approve</Button>
-                            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" onClick={() => handleTransactionStatus(tx.id, "Rejected")}>Reject</Button>
-                        </div>
-                    )}
-                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -194,5 +186,3 @@ export default function TransactionsPage() {
     </div>
   );
 }
-
-    

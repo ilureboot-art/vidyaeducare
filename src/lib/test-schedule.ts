@@ -47,7 +47,7 @@ const getScheduledTests = (): ScheduledTest[] => {
     if (typeof window === 'undefined') {
         return JSON.parse(JSON.stringify(defaultScheduledTests));
     }
-    if (!scheduledTestsState) {
+    if (scheduledTestsState === null) {
         const savedData = localStorage.getItem('scheduledTests');
         if (savedData) {
             try {
@@ -63,13 +63,16 @@ const getScheduledTests = (): ScheduledTest[] => {
     return scheduledTestsState!;
 };
 
-const saveScheduledTests = () => {
-     if (typeof window !== 'undefined' && scheduledTestsState) {
-        localStorage.setItem('scheduledTests', JSON.stringify(scheduledTestsState));
+const saveScheduledTests = (tests: ScheduledTest[]) => {
+     if (typeof window !== 'undefined') {
+        localStorage.setItem('scheduledTests', JSON.stringify(tests));
+        scheduledTestsState = tests;
     }
 }
 
-export let scheduledTests: ScheduledTest[] = (typeof window !== 'undefined') ? getScheduledTests() : defaultScheduledTests;
+export function getAllScheduledTests(): ScheduledTest[] {
+    return getScheduledTests();
+}
 
 // Function to add a new scheduled test
 export function addScheduledTest(test: ScheduledTest) {
@@ -78,9 +81,7 @@ export function addScheduledTest(test: ScheduledTest) {
     const alreadyExists = currentTests.some(st => st.dateTime === test.dateTime && st.testSetId === test.testSetId);
     if (!alreadyExists) {
         currentTests.push(test);
-        scheduledTestsState = currentTests;
-        saveScheduledTests();
-        scheduledTests = currentTests;
+        saveScheduledTests(currentTests);
     }
 }
 

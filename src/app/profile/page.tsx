@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -6,9 +7,9 @@ import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { User, Mail, Calendar, Phone, Edit, GraduationCap, Building, Languages, BookCopy, FileClock, Cake, Medal, BarChart2, Trash2, PlusCircle, TrendingUp, BookOpen, Activity, Info, CalendarCheck } from "lucide-react";
+import { User, Mail, Calendar, Phone, Edit, GraduationCap, Building, Languages, BookCopy, FileClock, Cake, Medal, BarChart2, Trash2, PlusCircle, TrendingUp, BookOpen, Activity, Info, CalendarCheck, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { studentData, type StudentProfile, addStudent, deleteStudent, validActivationCodes, useActivationCode } from "@/lib/student-data";
+import { getAllStudentData, type StudentProfile, addStudent, deleteStudent, getActivationCodes, useActivationCode } from "@/lib/student-data";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,6 +29,7 @@ import { format } from "date-fns";
 
 export default function ProfilePage() {
     const [students, setStudents] = useState<StudentProfile[]>([]);
+    const [validCodes, setValidCodes] = useState<string[]>([]);
     const { toast } = useToast();
     const router = useRouter();
     const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
@@ -41,8 +43,13 @@ export default function ProfilePage() {
 
     useEffect(() => {
         setIsClient(true);
-        setStudents([...studentData]);
+        setStudents(getAllStudentData());
+        setValidCodes(getActivationCodes());
     }, []);
+    
+    const refreshStudents = () => {
+        setStudents(getAllStudentData());
+    };
 
     const parentProfile = {
         name: "Alex Doe",
@@ -52,7 +59,7 @@ export default function ProfilePage() {
     };
 
     const handleVerifyCode = () => {
-        if (validActivationCodes.includes(activationCode)) {
+        if (validCodes.includes(activationCode)) {
             setIsCodeVerified(true);
             toast({ title: "Code Verified!", description: "You can now add the student's details." });
         } else {
@@ -70,7 +77,7 @@ export default function ProfilePage() {
             avatarUrl: `https://placehold.co/100x100.png?text=${(formData.get('name') as string).charAt(0)}`,
             academic: {
                 standard: formData.get('standard') as string,
-                board: formData.get('board') as string,
+                board: formData.get('board') as "CBSE" | "ICSE" | "SSC",
                 stream: formData.get('stream') as string,
                 language: 'English',
                 academicYear: '2024-2025',
@@ -88,7 +95,8 @@ export default function ProfilePage() {
         
         addStudent(newStudent);
         useActivationCode(activationCode);
-        setStudents([...studentData]);
+        refreshStudents();
+        setValidCodes(getActivationCodes());
         toast({ title: "Student Added!", description: `${newStudent.name}'s profile has been created.`});
         setIsAddStudentOpen(false);
         setActivationCode("");
@@ -97,7 +105,7 @@ export default function ProfilePage() {
     
     const handleDeleteStudent = (studentId: string) => {
         deleteStudent(studentId);
-        setStudents([...studentData]);
+        refreshStudents();
         toast({ title: "Student Removed", description: "The student profile has been deleted." });
     }
     
@@ -116,7 +124,11 @@ export default function ProfilePage() {
     }
 
   if (!isClient) {
-    return null;
+    return (
+        <div className="w-full max-w-5xl mx-auto flex items-center justify-center h-96">
+            <Loader2 className="animate-spin text-primary" size={32} />
+        </div>
+    );
   }
 
   return (

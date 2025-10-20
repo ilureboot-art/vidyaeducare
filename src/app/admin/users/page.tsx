@@ -31,7 +31,7 @@ type User = {
 };
 
 // In a real app, this would be fetched from a database.
-let initialUsers: User[] = [
+const initialUsers: User[] = [
     { id: 'USR001', name: 'Alex Doe', email: 'alex.doe@example.com', joinDate: '2024-07-01', status: 'Active', wallet: 550.75 },
     { id: 'USR002', name: 'Priya Sharma', email: 'priya.sharma@example.com', joinDate: '2024-07-15', status: 'Active', wallet: 150.00 },
     { id: 'USR003', name: 'Rohan Kumar', email: 'rohan.k@example.com', joinDate: '2024-06-20', status: 'Banned', wallet: 0.00 },
@@ -58,7 +58,7 @@ export default function UserManagementPage() {
         user.id === userId ? { ...user, status: newStatus } : user
       );
     setUsers(updatedUsers);
-    initialUsers = updatedUsers; // Update the "database"
+    // In a real app, you would also update your backend data source.
     toast({
       title: `User ${newStatus}`,
       description: `User ${userId} has been ${newStatus.toLowerCase()}.`,
@@ -69,7 +69,7 @@ export default function UserManagementPage() {
     const userToDelete = users.find(user => user.id === userId);
     const updatedUsers = users.filter(user => user.id !== userId);
     setUsers(updatedUsers);
-    initialUsers = updatedUsers; // Update the "database"
+    // In a real app, you would also update your backend data source.
     toast({
         title: "User Deleted",
         description: `User account for ${userToDelete?.name} has been deleted.`
@@ -186,5 +186,3 @@ export default function UserManagementPage() {
     </div>
   );
 }
-
-    

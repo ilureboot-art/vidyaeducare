@@ -18,6 +18,7 @@ import { Search, UserPlus, MoreHorizontal, Trash2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
+import { format } from 'date-fns';
 
 type UserStatus = "Active" | "Banned" | "Inactive";
 type User = {
@@ -141,7 +142,7 @@ export default function UserManagementPage() {
                       {user.status}
                     </Badge>
                   </TableCell>
-                  <TableCell>{new Date(user.joinDate).toLocaleDateString()}</TableCell>
+                  <TableCell>{format(new Date(user.joinDate), 'P')}</TableCell>
                   <TableCell className="text-right font-medium">₹{user.wallet.toFixed(2)}</TableCell>
                   <TableCell className="text-center">
                     <DropdownMenu>

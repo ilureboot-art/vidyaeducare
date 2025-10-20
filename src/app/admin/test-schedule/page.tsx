@@ -12,8 +12,8 @@ import { format } from "date-fns";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { allTestSets } from '@/lib/question-bank';
-import { scheduledTests, addScheduledTest, type ScheduledTest } from '@/lib/test-schedule';
+import { getAllTestSets, type TestSet } from '@/lib/question-bank';
+import { getScheduledTestData, addScheduledTest, type ScheduledTest } from '@/lib/test-schedule';
 import {
   Table,
   TableBody,
@@ -35,9 +35,11 @@ export default function TestSchedulePage() {
     const [time, setTime] = useState('10:00'); // Default time
     const [selectedTestSetId, setSelectedTestSetId] = useState('');
     const [isClient, setIsClient] = useState(false);
+    const [allSets, setAllSets] = useState<TestSet[]>([]);
 
      const refreshSchedules = () => {
          const now = new Date();
+         const scheduledTests = getScheduledTestData();
         const updatedSchedules = [...scheduledTests]
             .sort((a,b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime())
             .map(test => {
@@ -66,6 +68,7 @@ export default function TestSchedulePage() {
         setIsClient(true);
         setDate(new Date());
         refreshSchedules();
+        setAllSets(getAllTestSets());
     }, []);
 
     const handleScheduleTest = () => {
@@ -78,7 +81,7 @@ export default function TestSchedulePage() {
             return;
         }
         
-        const testSet = allTestSets.find(ts => ts.id === selectedTestSetId);
+        const testSet = allSets.find(ts => ts.id === selectedTestSetId);
         if (!testSet) {
              toast({ variant: 'destructive', title: "Error", description: "Selected test set could not be found." });
              return;
@@ -140,7 +143,7 @@ export default function TestSchedulePage() {
                             <Select value={selectedTestSetId} onValueChange={setSelectedTestSetId}>
                                 <SelectTrigger id="test-set"><SelectValue placeholder="Select a test set..." /></SelectTrigger>
                                 <SelectContent>
-                                    {allTestSets.length > 0 ? allTestSets.map(ts => (
+                                    {allSets.length > 0 ? allSets.map(ts => (
                                         <SelectItem key={ts.id} value={ts.id}>{ts.name} ({ts.board}/{ts.standard})</SelectItem>
                                     )) : (
                                         <SelectItem value="disabled" disabled>No test sets available. Upload one first.</SelectItem>
@@ -218,5 +221,3 @@ export default function TestSchedulePage() {
         </div>
     );
 }
-
-    

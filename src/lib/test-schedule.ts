@@ -91,8 +91,6 @@ const saveScheduledTests = (tests: ScheduledTest[]) => {
     }
 }
 
-// Export a single variable for direct use in components
-export const scheduledTests = getScheduledTests();
 
 // Function to add a new scheduled test
 export function addScheduledTest(test: ScheduledTest) {
@@ -122,3 +120,9 @@ export function getScheduledTestById(id: string): ScheduledTest | undefined {
     const currentTests = getScheduledTests();
     return currentTests.find(test => test.id === id);
 }
+
+// Export a function that components can call to get the data
+export function getScheduledTestData() {
+    return getScheduledTests();
+}
+

@@ -31,7 +31,7 @@ type ScheduledTestWithStatus = ScheduledTest & { status: TestStatus };
 export default function TestSchedulePage() {
     const { toast } = useToast();
     const [allSchedules, setAllSchedules] = useState<ScheduledTestWithStatus[]>([]);
-    const [date, setDate] = useState<Date | undefined>(new Date());
+    const [date, setDate] = useState<Date | undefined>(undefined);
     const [time, setTime] = useState('10:00'); // Default time
     const [selectedTestSetId, setSelectedTestSetId] = useState('');
     const [isClient, setIsClient] = useState(false);
@@ -64,6 +64,7 @@ export default function TestSchedulePage() {
 
     useEffect(() => {
         setIsClient(true);
+        setDate(new Date());
         refreshSchedules();
     }, []);
 
@@ -213,5 +214,7 @@ export default function TestSchedulePage() {
         </div>
     );
 }
+
+    
 
     

@@ -73,14 +73,14 @@ export default function TransactionsPage() {
     }
   };
 
-  const filteredTransactions = transactions.filter(
+  const filteredTransactions = isClient ? transactions.filter(
     (tx) => {
       const searchTermMatch = tx.user?.toLowerCase().includes(searchTerm.toLowerCase()) || String(tx.id).toLowerCase().includes(searchTerm.toLowerCase());
       const statusMatch = statusFilter === 'all' || tx.status.toLowerCase() === statusFilter;
       const typeMatch = typeFilter === 'all' || (typeFilter === 'deposit' && tx.amount >= 0) || (typeFilter === 'withdrawal' && tx.amount < 0);
       return searchTermMatch && statusMatch && typeMatch;
     }
-  );
+  ) : [];
 
   if (!isClient) {
     return (
@@ -195,5 +195,3 @@ export default function TransactionsPage() {
     </div>
   );
 }
-
-    

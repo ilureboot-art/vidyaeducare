@@ -87,25 +87,24 @@ const defaultStoreConfig: StoreConfig = {
 
 let storeConfigState: StoreConfig | null = null;
 
-function initializeStoreConfig(): StoreConfig {
-  if (typeof window !== 'undefined') {
-    const savedConfig = localStorage.getItem('storeConfig');
-    if (savedConfig) {
-      try {
-        return JSON.parse(savedConfig);
-      } catch (e) {
-        console.error("Failed to parse storeConfig from localStorage", e);
-      }
-    }
-  }
-  return { ...defaultStoreConfig };
-}
-
 export const getStoreConfig = (): StoreConfig => {
-    if (!storeConfigState) {
-        storeConfigState = initializeStoreConfig();
+    if (typeof window === 'undefined') {
+        return JSON.parse(JSON.stringify(defaultStoreConfig));
     }
-    return storeConfigState;
+    if (!storeConfigState) {
+        const savedConfig = localStorage.getItem('storeConfig');
+        if (savedConfig) {
+            try {
+                storeConfigState = JSON.parse(savedConfig);
+            } catch (e) {
+                console.error("Failed to parse storeConfig from localStorage", e);
+                storeConfigState = JSON.parse(JSON.stringify(defaultStoreConfig));
+            }
+        } else {
+            storeConfigState = JSON.parse(JSON.stringify(defaultStoreConfig));
+        }
+    }
+    return storeConfigState!;
 };
 
 const saveStoreConfig = (config: StoreConfig) => {

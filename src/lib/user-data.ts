@@ -61,34 +61,32 @@ const defaultWalletData: WalletData = {
   ],
 };
 
-let walletData: WalletData | null = null;
+let walletDataState: WalletData | null = null;
 
-function initializeWalletData(): WalletData {
-  if (typeof window !== 'undefined') {
+export function getWalletData(): WalletData {
+  if (typeof window === 'undefined') {
+    return JSON.parse(JSON.stringify(defaultWalletData));
+  }
+  if (!walletDataState) {
     const savedData = localStorage.getItem('walletData');
     if (savedData) {
       try {
-        return JSON.parse(savedData);
+        walletDataState = JSON.parse(savedData);
       } catch (e) {
         console.error("Failed to parse walletData from localStorage", e);
-        return { ...defaultWalletData };
+        walletDataState = JSON.parse(JSON.stringify(defaultWalletData));
       }
+    } else {
+        walletDataState = JSON.parse(JSON.stringify(defaultWalletData));
     }
   }
-  return { ...defaultWalletData };
-}
-
-export function getWalletData(): WalletData {
-  if (!walletData) {
-    walletData = initializeWalletData();
-  }
-  return walletData;
+  return walletDataState!;
 };
 
 const saveWalletData = (data: WalletData) => {
   if (typeof window !== 'undefined') {
     localStorage.setItem('walletData', JSON.stringify(data));
-    walletData = data;
+    walletDataState = data;
   }
 };
 
@@ -139,7 +137,7 @@ export function resetWalletData() {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('walletData');
     }
-    walletData = null; // Will re-initialize on next get
+    walletDataState = null; // Will re-initialize on next get
 }
 
 export function updateWalletBalance(newBalance: number) {

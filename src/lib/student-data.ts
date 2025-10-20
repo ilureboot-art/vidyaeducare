@@ -76,47 +76,44 @@ let validActivationCodesState: string[] | null = null;
 
 const defaultActivationCodes = ["PROD-A1B2C", "PROD-X9Y8Z", "PROD-M4N5P"];
 
-
-function initializeStudentData(): StudentProfile[] {
-  if (typeof window !== 'undefined') {
-    const savedData = localStorage.getItem('studentData');
-    if (savedData) {
-      try {
-        return JSON.parse(savedData);
-      } catch (e) {
-        console.error("Failed to parse studentData from localStorage", e);
-      }
+const getStudentData = (): StudentProfile[] => {
+    if (typeof window === 'undefined') {
+        return JSON.parse(JSON.stringify(defaultStudentData));
     }
-  }
-  return [...defaultStudentData];
-}
+    if (!studentDataState) {
+        const savedData = localStorage.getItem('studentData');
+        if (savedData) {
+            try {
+                studentDataState = JSON.parse(savedData);
+            } catch (e) {
+                console.error("Failed to parse studentData from localStorage", e);
+                studentDataState = JSON.parse(JSON.stringify(defaultStudentData));
+            }
+        } else {
+            studentDataState = JSON.parse(JSON.stringify(defaultStudentData));
+        }
+    }
+    return studentDataState!;
+};
 
-function initializeActivationCodes(): string[] {
-    if (typeof window !== 'undefined') {
+export const getActivationCodes = (): string[] => {
+    if (typeof window === 'undefined') {
+        return JSON.parse(JSON.stringify(defaultActivationCodes));
+    }
+    if (!validActivationCodesState) {
         const savedCodes = localStorage.getItem('activationCodes');
         if (savedCodes) {
             try {
-                return JSON.parse(savedCodes);
+                validActivationCodesState = JSON.parse(savedCodes);
             } catch(e) {
                  console.error("Failed to parse activationCodes from localStorage", e);
+                 validActivationCodesState = JSON.parse(JSON.stringify(defaultActivationCodes));
             }
+        } else {
+            validActivationCodesState = JSON.parse(JSON.stringify(defaultActivationCodes));
         }
     }
-    return [...defaultActivationCodes];
-}
-
-const getStudentData = (): StudentProfile[] => {
-  if (!studentDataState) {
-    studentDataState = initializeStudentData();
-  }
-  return studentDataState;
-};
-
-const getActivationCodes = (): string[] => {
-    if (!validActivationCodesState) {
-        validActivationCodesState = initializeActivationCodes();
-    }
-    return validActivationCodesState;
+    return validActivationCodesState!;
 }
 
 const saveStudentData = (data: StudentProfile[]) => {

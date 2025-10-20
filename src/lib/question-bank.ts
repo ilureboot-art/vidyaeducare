@@ -1131,26 +1131,25 @@ const defaultTestSets: TestSet[] = [
 
 let allTestSetsState: TestSet[] | null = null;
 
-function initializeTestSets(): TestSet[] {
-    if (typeof window !== 'undefined') {
+const getTestSets = (): TestSet[] => {
+    if (typeof window === 'undefined') {
+        return JSON.parse(JSON.stringify(defaultTestSets));
+    }
+    if (!allTestSetsState) {
         const saved = localStorage.getItem('allTestSets');
         if (saved) {
             try {
-                return JSON.parse(saved);
+                allTestSetsState = JSON.parse(saved);
             } catch (e) {
                 console.error("Failed to parse allTestSets from localStorage", e);
+                allTestSetsState = JSON.parse(JSON.stringify(defaultTestSets));
             }
+        } else {
+            allTestSetsState = JSON.parse(JSON.stringify(defaultTestSets));
         }
     }
-    return [...defaultTestSets];
-}
-
-const getTestSets = (): TestSet[] => {
-    if (!allTestSetsState) {
-        allTestSetsState = initializeTestSets();
-    }
-    return allTestSetsState;
-}
+    return allTestSetsState!;
+};
 
 const saveTestSets = () => {
     if (typeof window !== 'undefined' && allTestSetsState) {

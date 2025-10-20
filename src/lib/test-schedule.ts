@@ -1,4 +1,6 @@
 
+'use client';
+
 export type ScheduledTest = {
     id: string;
     testSetId: string;
@@ -9,8 +11,7 @@ export type ScheduledTest = {
     subject: string;
 };
 
-// This acts as our shared, in-memory "database" for scheduled tests.
-export let scheduledTests: ScheduledTest[] = [
+const defaultScheduledTests: ScheduledTest[] = [
     {
         id: "SCHED-1",
         testSetId: "SET-172234567890",
@@ -40,23 +41,42 @@ export let scheduledTests: ScheduledTest[] = [
     }
 ];
 
+let scheduledTestsState: ScheduledTest[] | null = null;
+
+const getScheduledTests = (): ScheduledTest[] => {
+    if (typeof window === 'undefined') {
+        return JSON.parse(JSON.stringify(defaultScheduledTests));
+    }
+    if (!scheduledTestsState) {
+        scheduledTestsState = JSON.parse(JSON.stringify(defaultScheduledTests));
+    }
+    return scheduledTestsState!;
+};
+
+export let scheduledTests: ScheduledTest[] = getScheduledTests();
+
 // Function to add a new scheduled test
 export function addScheduledTest(test: ScheduledTest) {
+    const currentTests = getScheduledTests();
     // Prevent scheduling the same test set at the exact same time
-    const alreadyExists = scheduledTests.some(st => st.dateTime === test.dateTime && st.testSetId === test.testSetId);
+    const alreadyExists = currentTests.some(st => st.dateTime === test.dateTime && st.testSetId === test.testSetId);
     if (!alreadyExists) {
-        scheduledTests.push(test);
+        currentTests.push(test);
+        scheduledTestsState = currentTests;
+        scheduledTests = currentTests;
     }
 }
 
 // Function to get all tests (upcoming and past) for a specific student profile
 export function getAllTestsForStudent(board: string, standard: string): ScheduledTest[] {
-    return scheduledTests
+    const currentTests = getScheduledTests();
+    return currentTests
         .filter(test => test.board === board && test.standard === standard)
         .sort((a,b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
 }
 
 // Function to get a specific scheduled test by ID
 export function getScheduledTestById(id: string): ScheduledTest | undefined {
-    return scheduledTests.find(test => test.id === id);
+    const currentTests = getScheduledTests();
+    return currentTests.find(test => test.id === id);
 }

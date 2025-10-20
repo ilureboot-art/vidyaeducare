@@ -24,25 +24,24 @@ const defaultAcademicConfig: AcademicConfig = {
 
 let academicConfigState: AcademicConfig | null = null;
 
-function initializeAcademicConfig(): AcademicConfig {
-    if (typeof window !== 'undefined') {
+export const getAcademicConfig = (): AcademicConfig => {
+    if (typeof window === 'undefined') {
+        return JSON.parse(JSON.stringify(defaultAcademicConfig));
+    }
+    if (!academicConfigState) {
         const savedConfig = localStorage.getItem('academicConfig');
         if (savedConfig) {
             try {
-                return JSON.parse(savedConfig);
+                academicConfigState = JSON.parse(savedConfig);
             } catch (e) {
                 console.error("Failed to parse academicConfig from localStorage", e);
+                academicConfigState = JSON.parse(JSON.stringify(defaultAcademicConfig));
             }
+        } else {
+            academicConfigState = JSON.parse(JSON.stringify(defaultAcademicConfig));
         }
     }
-    return { ...defaultAcademicConfig };
-}
-
-export const getAcademicConfig = (): AcademicConfig => {
-    if (!academicConfigState) {
-        academicConfigState = initializeAcademicConfig();
-    }
-    return academicConfigState;
+    return academicConfigState!;
 };
 
 const saveAcademicConfig = (config: AcademicConfig) => {
@@ -51,8 +50,6 @@ const saveAcademicConfig = (config: AcademicConfig) => {
         academicConfigState = config;
     }
 };
-
-// --- Setter functions to allow admin panel to modify the config ---
 
 export function setBoards(newBoards: string[]) {
     const config = getAcademicConfig();

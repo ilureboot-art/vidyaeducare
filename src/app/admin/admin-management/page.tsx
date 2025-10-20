@@ -13,7 +13,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { UserCog, UserPlus, MoreHorizontal, Trash2, MessageSquare, Edit } from "lucide-react";
+import { UserCog, UserPlus, MoreHorizontal, Trash2, MessageSquare, Edit, Loader2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -197,7 +197,11 @@ export default function AdminManagementPage() {
   }
 
   if (!isClient) {
-    return null;
+    return (
+      <div className="flex justify-center items-center h-96">
+        <Loader2 className="animate-spin text-primary" size={32} />
+      </div>
+    );
   }
 
   return (

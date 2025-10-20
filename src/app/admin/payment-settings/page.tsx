@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Landmark } from "lucide-react";
+import { Landmark, Loader2 } from "lucide-react";
 import { getWalletData, setAdminPaymentMethods, type AdminPaymentMethods } from "@/lib/user-data";
 
 export default function PaymentSettingsPage() {
@@ -62,7 +62,11 @@ export default function PaymentSettingsPage() {
     }
 
     if (!isClient || !methods) {
-        return null;
+        return (
+          <div className="flex justify-center items-center h-96">
+            <Loader2 className="animate-spin text-primary" size={32} />
+          </div>
+        );
     }
 
   return (

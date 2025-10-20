@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { getStoreConfig, setGameSettings, type GameSettings } from "@/lib/store-config";
+import { Loader2 } from "lucide-react";
 
 export default function AdminGameSettingsPage() {
     const { toast } = useToast();
@@ -43,7 +44,11 @@ export default function AdminGameSettingsPage() {
     }
 
     if (!isClient || !settings) {
-        return null; // or a loading skeleton
+        return (
+          <div className="flex justify-center items-center h-96">
+            <Loader2 className="animate-spin text-primary" size={32} />
+          </div>
+        );
     }
 
   return (

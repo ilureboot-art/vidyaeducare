@@ -4,7 +4,7 @@
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Share2, IndianRupee, Gift } from "lucide-react";
+import { Share2, IndianRupee, Gift, Loader2 } from "lucide-react";
 import { getStoreConfig } from "@/lib/store-config";
 import { getWalletData } from "@/lib/user-data";
 import { useState, useEffect } from "react";
@@ -57,7 +57,11 @@ Click here to join: ${url}`;
     };
     
     if (!isClient) {
-        return null;
+        return (
+          <div className="flex justify-center items-center h-96">
+            <Loader2 className="animate-spin text-primary" size={32} />
+          </div>
+        );
     }
 
     return (

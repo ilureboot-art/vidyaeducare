@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar as CalendarIcon, FilePlus } from "lucide-react";
+import { Calendar as CalendarIcon, FilePlus, Loader2 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
@@ -113,7 +113,11 @@ export default function TestSchedulePage() {
     };
     
     if (!isClient) {
-        return null;
+        return (
+          <div className="flex justify-center items-center h-96">
+            <Loader2 className="animate-spin text-primary" size={32} />
+          </div>
+        );
     }
 
     return (
@@ -214,7 +218,5 @@ export default function TestSchedulePage() {
         </div>
     );
 }
-
-    
 
     

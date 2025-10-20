@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Bell, UserPlus, ArrowDown, ArrowUp } from "lucide-react";
+import { Bell, UserPlus, ArrowDown, ArrowUp, Loader2 } from "lucide-react";
 import { getAdminNotifications, type AppNotification } from "@/lib/notifications";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -32,7 +32,11 @@ export default function AdminNotificationsPage() {
     }, []);
 
     if (!isClient) {
-        return null;
+        return (
+          <div className="flex justify-center items-center h-96">
+            <Loader2 className="animate-spin text-primary" size={32} />
+          </div>
+        );
     }
 
     return (
@@ -76,3 +80,5 @@ export default function AdminNotificationsPage() {
         </div>
     );
 }
+
+    

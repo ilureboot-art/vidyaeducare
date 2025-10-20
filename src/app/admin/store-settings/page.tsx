@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
-import { PlusCircle, Trash2, Zap, BookOpen, GraduationCap, Percent } from "lucide-react";
+import { PlusCircle, Trash2, Zap, BookOpen, GraduationCap, Percent, Loader2 } from "lucide-react";
 import type { TicketPackage, ReferboltSubscription, MockTestPackage, ReferboltSettings, GameSettings, StoreConfig } from "@/lib/store-config";
 import {
   getStoreConfig,
@@ -195,7 +195,11 @@ export default function AdminStoreSettingsPage() {
   };
 
   if (!isClient || !storeConfig || !academicConfig) {
-    return null;
+    return (
+      <div className="flex justify-center items-center h-96">
+        <Loader2 className="animate-spin text-primary" size={32} />
+      </div>
+    );
   }
 
   return (

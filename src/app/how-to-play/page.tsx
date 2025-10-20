@@ -3,7 +3,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { List, CheckCircle, Award, Ticket, Share2, Zap, Coins, UserCheck, TrendingUp, BrainCircuit } from "lucide-react";
+import { List, CheckCircle, Award, Ticket, Share2, Zap, Coins, UserCheck, TrendingUp, BrainCircuit, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { getStoreConfig, type GameSettings } from "@/lib/store-config";
@@ -21,7 +21,11 @@ export default function HowToPlayPage() {
   }, []);
 
   if (!isClient || !gameSettings) {
-    return null; // or a loading spinner
+    return (
+      <div className="flex justify-center items-center h-96">
+        <Loader2 className="animate-spin text-primary" size={32} />
+      </div>
+    );
   }
 
   return (

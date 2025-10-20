@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Share2, Copy, Users, IndianRupee, Goal, Percent, ShieldCheck, ChevronRight, BarChart3, TrendingUp, HelpCircle, Zap } from "lucide-react";
+import { Share2, Copy, Users, IndianRupee, Goal, Percent, ShieldCheck, ChevronRight, BarChart3, TrendingUp, HelpCircle, Zap, Loader2 } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -127,7 +127,11 @@ Don't miss out on the best way to prepare for your exams and earn rewards!
   const monthlyProgress = referralData.monthlySales > 0 ? (referralData.monthlySales / monthlyTarget) * 100 : 0;
   
   if (!isClient) {
-    return null;
+    return (
+      <div className="flex justify-center items-center h-96">
+        <Loader2 className="animate-spin text-primary" size={32} />
+      </div>
+    );
   }
 
   return (

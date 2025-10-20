@@ -96,7 +96,7 @@ Subscribe and start your earning cycle now: ${shareUrl}
   
   if (!isClient || isLoading) {
       return (
-          <div className="w-full max-w-2xl mx-auto flex items-center justify-center h-64">
+          <div className="w-full max-w-2xl mx-auto flex items-center justify-center h-96">
               <Loader2 className="animate-spin text-primary" size={32}/>
           </div>
       )
@@ -233,3 +233,5 @@ Subscribe and start your earning cycle now: ${shareUrl}
     </div>
   );
 }
+
+    

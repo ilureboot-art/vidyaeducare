@@ -14,7 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Download, ArrowUpRight, ArrowDownLeft } from "lucide-react";
+import { Search, Download, ArrowUpRight, ArrowDownLeft, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getWalletData, type Transaction, updateTransactionStatus } from "@/lib/user-data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -83,12 +83,15 @@ export default function TransactionsPage() {
   );
 
   if (!isClient) {
-    return null;
+    return (
+      <div className="flex justify-center items-center h-96">
+        <Loader2 className="animate-spin text-primary" size={32} />
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Transactions</h1>
+    <div className="w-full max-w-4xl mx-auto space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>Transaction History</CardTitle>

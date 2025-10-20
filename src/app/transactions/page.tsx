@@ -52,17 +52,6 @@ export default function TransactionsPage() {
   useEffect(() => {
     setIsClient(true);
     setTransactions([...walletData.transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-
-    const interval = setInterval(() => {
-      setTransactions(currentTransactions => {
-          const updatedSortedTransactions = [...walletData.transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-          if (JSON.stringify(updatedSortedTransactions) !== JSON.stringify(currentTransactions)) {
-              return updatedSortedTransactions;
-          }
-          return currentTransactions;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
   }, []);
 
 

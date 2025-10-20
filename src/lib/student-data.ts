@@ -130,8 +130,8 @@ const saveActivationCodes = (codes: string[]) => {
     }
 };
 
-export const studentData = getStudentData();
-export const validActivationCodes = getActivationCodes();
+export const studentData = (typeof window !== 'undefined') ? getStudentData() : defaultStudentData;
+export const validActivationCodes = (typeof window !== 'undefined') ? getActivationCodes() : defaultActivationCodes;
 
 
 export function useActivationCode(code: string) {

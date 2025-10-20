@@ -48,12 +48,28 @@ const getScheduledTests = (): ScheduledTest[] => {
         return JSON.parse(JSON.stringify(defaultScheduledTests));
     }
     if (!scheduledTestsState) {
-        scheduledTestsState = JSON.parse(JSON.stringify(defaultScheduledTests));
+        const savedData = localStorage.getItem('scheduledTests');
+        if (savedData) {
+            try {
+                scheduledTestsState = JSON.parse(savedData);
+            } catch (e) {
+                console.error("Failed to parse scheduledTests from localStorage", e);
+                scheduledTestsState = JSON.parse(JSON.stringify(defaultScheduledTests));
+            }
+        } else {
+            scheduledTestsState = JSON.parse(JSON.stringify(defaultScheduledTests));
+        }
     }
     return scheduledTestsState!;
 };
 
-export let scheduledTests: ScheduledTest[] = getScheduledTests();
+const saveScheduledTests = () => {
+     if (typeof window !== 'undefined' && scheduledTestsState) {
+        localStorage.setItem('scheduledTests', JSON.stringify(scheduledTestsState));
+    }
+}
+
+export let scheduledTests: ScheduledTest[] = (typeof window !== 'undefined') ? getScheduledTests() : defaultScheduledTests;
 
 // Function to add a new scheduled test
 export function addScheduledTest(test: ScheduledTest) {
@@ -63,6 +79,7 @@ export function addScheduledTest(test: ScheduledTest) {
     if (!alreadyExists) {
         currentTests.push(test);
         scheduledTestsState = currentTests;
+        saveScheduledTests();
         scheduledTests = currentTests;
     }
 }

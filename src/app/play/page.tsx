@@ -37,7 +37,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getWalletData, addTransaction } from "@/lib/user-data";
-import { getStoreConfig } from "@/lib/store-config";
+import { getStoreConfig, type GameSettings } from "@/lib/store-config";
 import { addNotification } from "@/lib/notifications";
 import React from "react";
 
@@ -102,7 +102,7 @@ function PlayPageContent() {
   
   const [playerStats, setPlayerStats] = useState(initialPlayerStats);
 
-  const [gameSettings, setGameSettings] = useState<any>(null);
+  const [gameSettings, setGameSettings] = useState<GameSettings | null>(null);
   const [referralBonus, setReferralBonus] = useState(0);
   const [referralCode, setReferralCode] = useState('');
   

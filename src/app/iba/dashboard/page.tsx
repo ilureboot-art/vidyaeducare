@@ -128,7 +128,7 @@ Don't miss out on the best way to prepare for your exams and earn rewards!
   
   if (!isClient) {
     return (
-      <div className="flex justify-center items-center h-96">
+      <div className="w-full max-w-4xl mx-auto flex items-center justify-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />
       </div>
     );
@@ -304,5 +304,3 @@ Don't miss out on the best way to prepare for your exams and earn rewards!
     </div>
   );
 }
-
-    

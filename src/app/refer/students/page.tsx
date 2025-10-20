@@ -58,10 +58,11 @@ export default function StudentAccessPage() {
 
     const updatedClients = initialClients.map(client => {
       const expiryDate = new Date(client.validity);
+      const isActive = expiryDate >= today;
       return {
         ...client,
-        status: expiryDate < today ? "Expired" : "Active",
-        expiresSoon: client.status === "Active" && expiryDate <= thirtyDaysFromNow && expiryDate > today,
+        status: isActive ? "Active" : "Expired",
+        expiresSoon: isActive && expiryDate <= thirtyDaysFromNow,
       };
     });
     setClients(updatedClients);

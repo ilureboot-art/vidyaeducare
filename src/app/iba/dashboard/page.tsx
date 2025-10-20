@@ -63,8 +63,10 @@ export default function IBADashboardPage() {
   const { toast } = useToast();
   const [referralData, setReferralData] = useState(initialReferralData);
   const [ibaReferralCode, setIbaReferralCode] = useState("");
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
     const data = getWalletData();
     setIbaReferralCode(data.referralCode); // Using the general referral code for demo
   }, []);
@@ -123,6 +125,10 @@ Don't miss out on the best way to prepare for your exams and earn rewards!
   
   const dailyProgress = referralData.dailySales > 0 ? (referralData.dailySales / dailyTarget) * 100 : 0;
   const monthlyProgress = referralData.monthlySales > 0 ? (referralData.monthlySales / monthlyTarget) * 100 : 0;
+  
+  if (!isClient) {
+    return null;
+  }
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-6">
@@ -294,3 +300,5 @@ Don't miss out on the best way to prepare for your exams and earn rewards!
     </div>
   );
 }
+
+    

@@ -6,19 +6,21 @@ import { Badge } from "@/components/ui/badge";
 import { List, CheckCircle, Award, Ticket, Share2, Zap, Coins, UserCheck, TrendingUp, BrainCircuit } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { getStoreConfig, GameSettings } from "@/lib/store-config";
+import { getStoreConfig, type GameSettings } from "@/lib/store-config";
 import { Separator } from "@/components/ui/separator";
 import { useState, useEffect } from "react";
 
 export default function HowToPlayPage() {
   const [gameSettings, setGameSettings] = useState<GameSettings | null>(null);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
     const config = getStoreConfig();
     setGameSettings(config.gameSettings);
   }, []);
 
-  if (!gameSettings) {
+  if (!isClient || !gameSettings) {
     return null; // or a loading spinner
   }
 
@@ -145,3 +147,5 @@ export default function HowToPlayPage() {
     </div>
   );
 }
+
+    

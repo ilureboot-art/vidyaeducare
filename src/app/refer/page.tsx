@@ -5,15 +5,17 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Share2, IndianRupee, Gift } from "lucide-react";
-import { getStoreConfig, StoreConfig } from "@/lib/store-config";
+import { getStoreConfig } from "@/lib/store-config";
 import { getWalletData } from "@/lib/user-data";
 import { useState, useEffect } from "react";
 
 export default function ReferAndEarnPage() {
     const { toast } = useToast();
     const [referralBonus, setReferralBonus] = useState(0);
+    const [isClient, setIsClient] = useState(false);
 
     useEffect(() => {
+        setIsClient(true);
         const config = getStoreConfig();
         setReferralBonus(config.referralBonus);
     }, []);
@@ -51,6 +53,10 @@ Click here to join: ${url}`;
             fallbackCopy();
         }
     };
+    
+    if (!isClient) {
+        return null;
+    }
 
     return (
         <div className="w-full max-w-2xl mx-auto">
@@ -101,3 +107,5 @@ Click here to join: ${url}`;
         </div>
     );
 }
+
+    

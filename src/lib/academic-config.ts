@@ -32,7 +32,12 @@ export const getAcademicConfig = (): AcademicConfig => {
         const savedConfig = localStorage.getItem('academicConfig');
         if (savedConfig) {
             try {
-                academicConfigState = JSON.parse(savedConfig);
+                 const parsedConfig = JSON.parse(savedConfig);
+                 if (parsedConfig && parsedConfig.boards) {
+                    academicConfigState = parsedConfig;
+                 } else {
+                    academicConfigState = JSON.parse(JSON.stringify(defaultAcademicConfig));
+                 }
             } catch (e) {
                 console.error("Failed to parse academicConfig from localStorage", e);
                 academicConfigState = JSON.parse(JSON.stringify(defaultAcademicConfig));
@@ -68,3 +73,5 @@ export function setSubjects(newSubjects: string[]) {
     config.subjects = newSubjects.filter(s => s.trim() !== '');
     saveAcademicConfig(config);
 }
+
+export const academicConfig: AcademicConfig = (typeof window !== 'undefined') ? getAcademicConfig() : defaultAcademicConfig;

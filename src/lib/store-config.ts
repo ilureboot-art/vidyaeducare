@@ -45,6 +45,7 @@ export type StoreConfig = {
     mockTestPackages: MockTestPackage[];
     referboltSubscription: ReferboltSubscription;
     referralBonus: number;
+
     gameSettings: GameSettings;
     referboltSettings: ReferboltSettings;
 };
@@ -95,7 +96,13 @@ export const getStoreConfig = (): StoreConfig => {
         const savedConfig = localStorage.getItem('storeConfig');
         if (savedConfig) {
             try {
-                storeConfigState = JSON.parse(savedConfig);
+                const parsedConfig = JSON.parse(savedConfig);
+                // Basic validation to ensure it's not malformed
+                if (parsedConfig && parsedConfig.packages && parsedConfig.gameSettings) {
+                    storeConfigState = parsedConfig;
+                } else {
+                    storeConfigState = JSON.parse(JSON.stringify(defaultStoreConfig));
+                }
             } catch (e) {
                 console.error("Failed to parse storeConfig from localStorage", e);
                 storeConfigState = JSON.parse(JSON.stringify(defaultStoreConfig));
@@ -150,9 +157,6 @@ export function setReferboltSettings(newSettings: ReferboltSettings) {
     saveStoreConfig(config);
 }
 
-export function resetStoreConfig() {
-    if (typeof window !== 'undefined') {
-        localStorage.removeItem('storeConfig');
-    }
-    storeConfigState = null;
-}
+// Make the storeConfig available for read-only purposes if needed,
+// but all writes should go through the setter functions.
+export const storeConfig = (typeof window !== 'undefined') ? getStoreConfig() : defaultStoreConfig;

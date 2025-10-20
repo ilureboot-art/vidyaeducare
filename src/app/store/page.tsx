@@ -6,50 +6,42 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { ShoppingCart, Sparkles, Loader2, BookOpen, Ticket, Zap } from "lucide-react";
-import { walletData, addTransaction } from "@/lib/user-data";
+import { getWalletData, addTransaction, type WalletData } from "@/lib/user-data";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { storeConfig, type TicketPackage, type ReferboltSubscription, type MockTestPackage } from "@/lib/store-config";
+import { getStoreConfig, type TicketPackage, type ReferboltSubscription, type MockTestPackage, type StoreConfig } from "@/lib/store-config";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { validActivationCodes, useActivationCode } from "@/lib/student-data";
+import { getActivationCodes, useActivationCode } from "@/lib/student-data";
 
 
 export default function StorePage() {
   const { toast } = useToast();
   const [isPurchasing, setIsPurchasing] = useState<number | string | null>(null);
-  const [balance, setBalance] = useState(0);
+  const [walletData, setWalletData] = useState<WalletData | null>(null);
+  const [storeConfig, setStoreConfig] = useState<StoreConfig | null>(null);
+
   const [referralCode1, setReferralCode1] = useState("");
   const [referralCode2, setReferralCode2] = useState("");
+  const [isClient, setIsClient] = useState(false);
 
-  const [currentPackages, setCurrentPackages] = useState<TicketPackage[]>([]);
-  const [currentMockTestPackages, setCurrentMockTestPackages] = useState<MockTestPackage[]>([]);
-  const [currentReferboltSub, setCurrentReferboltSub] = useState<ReferboltSubscription | null>(null);
   
   useEffect(() => {
-    setBalance(walletData.balance);
-    setCurrentPackages([...storeConfig.packages]);
-    setCurrentMockTestPackages([...storeConfig.mockTestPackages]);
-    setCurrentReferboltSub({...storeConfig.referboltSubscription});
+    setIsClient(true);
+    setWalletData(getWalletData());
+    setStoreConfig(getStoreConfig());
+  }, []);
 
-    const interval = setInterval(() => {
-      if (walletData.balance !== balance) {
-        setBalance(walletData.balance);
-      }
-    }, 500); 
-    return () => clearInterval(interval);
-  }, [balance]);
-
-  if (!currentReferboltSub) {
-      return (
-          <div className="w-full max-w-4xl mx-auto flex justify-center items-center h-64">
-              <Loader2 className="animate-spin text-primary" size={32}/>
-          </div>
-      )
+  if (!isClient || !walletData || !storeConfig) {
+    return (
+        <div className="w-full max-w-4xl mx-auto flex justify-center items-center h-64">
+            <Loader2 className="animate-spin text-primary" size={32}/>
+        </div>
+    )
   }
 
   const handleSubscriptionPurchase = (index: number) => {
     setIsPurchasing(index);
-    const product = currentMockTestPackages[index];
+    const product = storeConfig.mockTestPackages[index];
     
     const baseDiscount = 0.05; 
     const hasReferral = referralCode1.trim() !== "";
@@ -76,11 +68,11 @@ export default function StorePage() {
         type: 'withdrawal',
         description: `${product.name} Purchase`,
         amount: -finalPrice,
-        date: new Date().toISOString().split('T')[0],
+        date: new Date().toISOString(),
         status: 'Completed',
         user: "Alex Doe"
       });
-      walletData.balance -= finalPrice;
+      
 
       if (hasReferral) {
         const baseCommissionRate = 0.1765;
@@ -109,11 +101,10 @@ export default function StorePage() {
         });
       }
       
-      setBalance(walletData.balance);
-      
+      const newActivationCodes = getActivationCodes();
       const activationCode = `PROD-${String(Date.now()).slice(-5)}`;
-      validActivationCodes.push(activationCode);
-      useActivationCode(activationCode); // This will save the updated codes list
+      newActivationCodes.push(activationCode);
+      useActivationCode(activationCode);
       
       let successDescription = `You've purchased the ${product.name}. Your Activation Code is: ${activationCode}. Use this code in 'My Students' to add a profile.`;
       
@@ -127,6 +118,7 @@ export default function StorePage() {
         duration: 10000,
       });
 
+      setWalletData(getWalletData());
       setIsPurchasing(null);
     }, 1500);
   };
@@ -152,18 +144,17 @@ export default function StorePage() {
               status: 'Completed',
               user: 'Alex Doe',
           });
-          walletData.balance -= finalPrice;
-          setBalance(walletData.balance);
 
           toast({ title: "Purchase Successful!", description: `${pkg.tickets} tickets have been added to your account.` });
+          setWalletData(getWalletData());
           setIsPurchasing(null);
       }, 1500);
   };
   
   const handleReferboltPurchase = () => {
     setIsPurchasing('referbolt');
-    const cost = currentReferboltSub.price;
-    const gstAmount = cost * (currentReferboltSub.gstRate / 100);
+    const cost = storeConfig.referboltSubscription.price;
+    const gstAmount = cost * (storeConfig.referboltSubscription.gstRate / 100);
     const finalPrice = cost + gstAmount;
 
     setTimeout(() => {
@@ -182,15 +173,14 @@ export default function StorePage() {
             status: 'Completed',
             user: 'Alex Doe',
         });
-        walletData.balance -= finalPrice;
-        setBalance(walletData.balance);
         
-        const bonusTickets = currentReferboltSub.ticketBonus;
+        const bonusTickets = storeConfig.referboltSubscription.ticketBonus;
         toast({ 
             title: "Purchase Successful!", 
             description: `You are now subscribed to ReferBolt! A bonus of ${bonusTickets} tickets has been added to your account.`,
             duration: 7000
         });
+        setWalletData(getWalletData());
         setIsPurchasing(null);
     }, 1500);
   };
@@ -204,13 +194,14 @@ export default function StorePage() {
             Product Store
           </CardTitle>
           <CardDescription>
-            Your balance: <span className="font-bold">₹{balance.toFixed(2)}</span>
+            Your balance: <span className="font-bold">₹{walletData.balance.toFixed(2)}</span>
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="tests" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="tests">Mock Tests</TabsTrigger>
+              <TabsTrigger value="tickets">Game Tickets</TabsTrigger>
               <TabsTrigger value="referbolt">ReferBolt</TabsTrigger>
             </TabsList>
             <TabsContent value="tests" className="space-y-6 pt-6">
@@ -235,7 +226,7 @@ export default function StorePage() {
                     </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
-                {currentMockTestPackages.map((product, index) => {
+                {storeConfig.mockTestPackages.map((product, index) => {
                     const baseDiscount = 0.05;
                     const referralDiscount = referralCode1.trim() !== "" ? 0.10 : 0;
                     const totalDiscount = baseDiscount + referralDiscount;
@@ -287,7 +278,7 @@ export default function StorePage() {
             <TabsContent value="tickets" className="space-y-6 pt-6">
                 <p className="text-center text-muted-foreground">Purchase tickets to play the GuessMaster skill game.</p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {currentPackages.map((pkg, index) => {
+                    {storeConfig.packages.map((pkg, index) => {
                         const gstAmount = pkg.price * (pkg.gstRate / 100);
                         const finalPrice = pkg.price + gstAmount;
                         return (
@@ -320,11 +311,11 @@ export default function StorePage() {
             <TabsContent value="referbolt" className="pt-6">
                 <Card className="flex flex-col text-center items-center max-w-md mx-auto">
                     <CardHeader>
-                        <CardTitle className="text-2xl flex items-center gap-2"><Zap className="text-primary"/> {currentReferboltSub.name} Subscription</CardTitle>
-                         <CardDescription>{`Activate to earn commissions and get a bonus of ${currentReferboltSub.ticketBonus} tickets.`}</CardDescription>
+                        <CardTitle className="text-2xl flex items-center gap-2"><Zap className="text-primary"/> {storeConfig.referboltSubscription.name} Subscription</CardTitle>
+                         <CardDescription>{storeConfig.referboltSubscription.description}</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        <p className="text-4xl font-bold">₹{currentReferboltSub.price + (currentReferboltSub.price * (currentReferboltSub.gstRate / 100))}</p>
+                        <p className="text-4xl font-bold">₹{storeConfig.referboltSubscription.price + (storeConfig.referboltSubscription.price * (storeConfig.referboltSubscription.gstRate / 100))}</p>
                          <p className="text-xs text-muted-foreground">(Incl. GST)</p>
                         <Button size="lg" className="w-full" onClick={handleReferboltPurchase} disabled={isPurchasing !== null}>
                             {isPurchasing === 'referbolt' ? <Loader2 className="animate-spin"/> : "Subscribe Now"}

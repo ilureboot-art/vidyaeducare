@@ -7,30 +7,34 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
-import { storeConfig, setGameSettings } from "@/lib/store-config";
+import { getStoreConfig, setGameSettings, type GameSettings } from "@/lib/store-config";
 
 export default function AdminGameSettingsPage() {
     const { toast } = useToast();
-    const [settings, setSettings] = useState({ ...storeConfig.gameSettings });
+    const [settings, setSettings] = useState<GameSettings | null>(null);
     const [isClient, setIsClient] = useState(false);
     
     useEffect(() => {
         setIsClient(true);
-        setSettings({ ...storeConfig.gameSettings });
+        const config = getStoreConfig();
+        setSettings(config.gameSettings);
     }, []);
 
     const handleRewardChange = (index: number, value: string) => {
+        if (!settings) return;
         const newRewards = [...settings.rewards];
         newRewards[index] = Number(value);
-        setSettings(prev => ({...prev, rewards: newRewards}));
+        setSettings(prev => prev ? ({...prev, rewards: newRewards}) : null);
     }
     
-    const handleSettingChange = (field: keyof typeof settings, value: string) => {
-        setSettings(prev => ({ ...prev, [field]: Number(value) }));
+    const handleSettingChange = (field: keyof GameSettings, value: string) => {
+        if (!settings) return;
+        setSettings(prev => prev ? ({ ...prev, [field]: Number(value) }) : null);
     }
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        if (!settings) return;
         setGameSettings(settings);
         toast({
             title: "Settings Saved!",
@@ -38,8 +42,8 @@ export default function AdminGameSettingsPage() {
         });
     }
 
-    if (!isClient) {
-        return null;
+    if (!isClient || !settings) {
+        return null; // or a loading skeleton
     }
 
   return (
@@ -86,5 +90,3 @@ export default function AdminGameSettingsPage() {
     </div>
   );
 }
-
-    

@@ -7,9 +7,10 @@ import { BookOpen, Trophy, Users, LogIn, CheckCircle, GraduationCap, Gamepad2, I
 import Link from "next/link";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
-import { storeConfig } from "@/lib/store-config";
+import { getStoreConfig, StoreConfig } from "@/lib/store-config";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { walletData } from "@/lib/user-data";
+import { getWalletData } from "@/lib/user-data";
+import { useState, useEffect } from "react";
 
 const features = [
   {
@@ -53,13 +54,19 @@ const testimonials = [
 
 export default function HomePage() {
   const { toast } = useToast();
+  const [storeConfig, setStoreConfig] = useState<StoreConfig | null>(null);
+
+  useEffect(() => {
+    setStoreConfig(getStoreConfig());
+  }, []);
 
   const handleShare = async () => {
-    const referralCode = walletData.referralCode;
+    const referralCode = getWalletData().referralCode;
+    const bonus = storeConfig ? storeConfig.referralBonus : 0;
     const url = `${window.location.origin}/signup?ref=${referralCode}`;
     const message = `🎓 Check out Vidya EduCare! It's an amazing platform for mock tests, skill-based games, and earning rewards. 
     
-Use my code ✨ ${referralCode} ✨ to get a ₹${storeConfig.referralBonus} bonus when you join!
+Use my code ✨ ${referralCode} ✨ to get a ₹${bonus} bonus when you join!
 
 Here's what you get:
 - 📚 Access to a huge library of mock tests.

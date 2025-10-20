@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Gamepad2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { storeConfig } from "@/lib/store-config";
+import { getStoreConfig } from "@/lib/store-config";
 import { addTransaction } from "@/lib/user-data";
 import { addNotification } from "@/lib/notifications";
 
@@ -27,12 +27,15 @@ export default function SignupPage() {
   const { toast } = useToast();
   
   const [referralCode, setReferralCode] = useState('');
+  const [referralBonus, setReferralBonus] = useState(0);
 
   useEffect(() => {
     const refCode = searchParams.get('ref');
     if (refCode) {
       setReferralCode(refCode);
     }
+    const config = getStoreConfig();
+    setReferralBonus(config.referralBonus);
   }, [searchParams]);
 
   const handleSignup = (e: React.FormEvent) => {
@@ -45,7 +48,7 @@ export default function SignupPage() {
     });
 
     if (referralCode) {
-        const bonusAmount = storeConfig.referralBonus;
+        const bonusAmount = referralBonus;
         // In a real app, this logic would live on the backend.
         // Here, we just add the transaction for the new user.
          addTransaction({

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -11,8 +11,8 @@ import { Zap, Share2, IndianRupee, Users, CheckCircle, Repeat } from "lucide-rea
 import Link from "next/link";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { walletData, addTransaction } from "@/lib/user-data";
-import { storeConfig } from "@/lib/store-config";
+import { getWalletData } from "@/lib/user-data";
+import { getStoreConfig } from "@/lib/store-config";
 
 // Data for ReferBolt would come from a backend for the logged-in user
 const initialReferboltData = {
@@ -38,9 +38,8 @@ export default function ReferBoltPage() {
   const [data, setData] = useState(initialReferboltData);
   const [autoRenew, setAutoRenew] = useState(data.autoRenew);
 
-
   const handleShare = async () => {
-    const referralCode = walletData.referralCode;
+    const referralCode = getWalletData().referralCode;
     const shareUrl = `${window.location.origin}/signup?ref=${referralCode}`;
     const benefitsText = benefits.map(b => `✅ ${b.text}`).join("\n");
 

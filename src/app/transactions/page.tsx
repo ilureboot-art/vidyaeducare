@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Download, ArrowUpRight, ArrowDownLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { walletData, type Transaction, updateTransactionStatus } from "@/lib/user-data";
+import { getWalletData, type Transaction, updateTransactionStatus } from "@/lib/user-data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
@@ -49,9 +49,14 @@ export default function TransactionsPage() {
   const [typeFilter, setTypeFilter] = useState<'all' | 'deposit' | 'withdrawal'>('all');
   const [isClient, setIsClient] = useState(false);
   
+  const refreshTransactions = () => {
+    const data = getWalletData();
+    setTransactions(data.transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+  };
+
   useEffect(() => {
     setIsClient(true);
-    setTransactions([...walletData.transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+    refreshTransactions();
   }, []);
 
 
@@ -62,7 +67,7 @@ export default function TransactionsPage() {
           title: "Transaction Updated",
           description: `Transaction ${id} has been marked as ${newStatus}.`,
         });
-        setTransactions([...walletData.transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+        refreshTransactions();
     } else {
          toast({ title: "Action not allowed", description: "This transaction has already been processed."});
     }

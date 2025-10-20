@@ -1,5 +1,13 @@
 
-export let academicConfig = {
+'use client';
+
+export type AcademicConfig = {
+    boards: string[];
+    standards: string[];
+    subjects: string[];
+};
+
+const defaultAcademicConfig: AcademicConfig = {
     boards: ["CBSE", "ICSE", "SSC"],
     standards: [
         "1st", "2nd", "3rd", "4th", "5th", "6th",
@@ -14,16 +22,33 @@ export let academicConfig = {
     ]
 };
 
+export const getAcademicConfig = (): AcademicConfig => {
+    if (typeof window === 'undefined') return JSON.parse(JSON.stringify(defaultAcademicConfig)); // Return a deep copy
+    const savedConfig = localStorage.getItem('academicConfig');
+    return savedConfig ? JSON.parse(savedConfig) : JSON.parse(JSON.stringify(defaultAcademicConfig));
+};
+
+const saveAcademicConfig = (config: AcademicConfig) => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem('academicConfig', JSON.stringify(config));
+};
+
 // --- Setter functions to allow admin panel to modify the config ---
 
 export function setBoards(newBoards: string[]) {
-    academicConfig.boards = newBoards.filter(b => b.trim() !== '');
+    const config = getAcademicConfig();
+    config.boards = newBoards.filter(b => b.trim() !== '');
+    saveAcademicConfig(config);
 }
 
 export function setStandards(newStandards: string[]) {
-    academicConfig.standards = newStandards.filter(s => s.trim() !== '');
+    const config = getAcademicConfig();
+    config.standards = newStandards.filter(s => s.trim() !== '');
+    saveAcademicConfig(config);
 }
 
 export function setSubjects(newSubjects: string[]) {
-    academicConfig.subjects = newSubjects.filter(s => s.trim() !== '');
+    const config = getAcademicConfig();
+    config.subjects = newSubjects.filter(s => s.trim() !== '');
+    saveAcademicConfig(config);
 }

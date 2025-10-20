@@ -9,145 +9,157 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PlusCircle, Trash2, Zap, BookOpen, GraduationCap, Percent } from "lucide-react";
-import type { TicketPackage, ReferboltSubscription, MockTestPackage } from "@/lib/store-config";
+import type { TicketPackage, ReferboltSubscription, MockTestPackage, ReferboltSettings, GameSettings, StoreConfig } from "@/lib/store-config";
 import {
-  storeConfig,
+  getStoreConfig,
   setPackages,
   setReferralBonus,
   setReferboltSubscription,
   setMockTestPackages,
-  setReferboltSettings
+  setReferboltSettings,
+  setGameSettings
 } from "@/lib/store-config";
-import { academicConfig, setBoards, setStandards, setSubjects } from "@/lib/academic-config";
+import { getAcademicConfig, setBoards, setStandards, setSubjects, type AcademicConfig } from "@/lib/academic-config";
 import { Switch } from "@/components/ui/switch";
 
 export default function AdminStoreSettingsPage() {
   const { toast } = useToast();
-  const [packages, setLocalPackages] = useState<TicketPackage[]>([]);
-  const [mockTestPackages, setLocalMockTestPackages] = useState<MockTestPackage[]>([]);
-  const [referralBonus, setLocalReferralBonus] = useState(0);
-  const [referboltSub, setLocalReferboltSub] = useState<ReferboltSubscription>({ name: '', price: 0, description: '', ticketBonus: 0, gstRate: 0, hsnSacCode: '' });
-  const [referboltSettings, setLocalReferboltSettings] = useState({ freeAccessWithMockTest: true, ibaBonusCommission: 5 });
-  
-  const [boards, setLocalBoards] = useState<string[]>([]);
-  const [standards, setLocalStandards] = useState<string[]>([]);
-  const [subjects, setLocalSubjects] = useState<string[]>([]);
+  const [storeConfig, setStoreConfig] = useState<StoreConfig | null>(null);
+  const [academicConfig, setAcademicConfig] = useState<AcademicConfig | null>(null);
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
-    setLocalPackages(storeConfig.packages.map(p => ({...p})));
-    setLocalMockTestPackages(storeConfig.mockTestPackages.map(p => ({...p})));
-    setLocalReferralBonus(storeConfig.referralBonus);
-    setLocalReferboltSub({...storeConfig.referboltSubscription});
-    setLocalReferboltSettings({...storeConfig.referboltSettings});
-    setLocalBoards([...academicConfig.boards]);
-    setLocalStandards([...academicConfig.standards]);
-    setLocalSubjects([...academicConfig.subjects]);
+    setStoreConfig(getStoreConfig());
+    setAcademicConfig(getAcademicConfig());
   }, []);
 
   const handlePackageChange = (index: number, field: keyof TicketPackage, value: string | number | boolean) => {
-    setLocalPackages(currentPackages => {
-        const newPackages = [...currentPackages];
-        const pkg = { ...newPackages[index] };
+    if (!storeConfig) return;
+    const newPackages = [...storeConfig.packages];
+    const pkg = { ...newPackages[index] };
 
-        if (field === 'price' || field === 'tickets' || field === 'games' || field === 'gstRate') {
-            value = Number(value) || 0;
-        }
-        
-        (pkg as any)[field] = value;
+    if (field === 'price' || field === 'tickets' || field === 'games' || field === 'gstRate') {
+        value = Number(value) || 0;
+    }
+    
+    (pkg as any)[field] = value;
 
-        if (field === 'bestValue' && value === true) {
-            newPackages.forEach((p, i) => {
-                if (i !== index) {
-                    p.bestValue = false;
-                }
-            });
-        }
+    if (field === 'bestValue' && value === true) {
+        newPackages.forEach((p, i) => {
+            if (i !== index) {
+                p.bestValue = false;
+            }
+        });
+    }
 
-        newPackages[index] = pkg;
-        return newPackages;
-    });
+    newPackages[index] = pkg;
+    setStoreConfig(prev => prev ? ({ ...prev, packages: newPackages }) : null);
   };
   
   const handleMockTestPackageChange = (index: number, field: keyof MockTestPackage, value: string | number | boolean) => {
-    setLocalMockTestPackages(currentPackages => {
-        const newPackages = [...currentPackages];
-        const pkg = { ...newPackages[index] };
+    if (!storeConfig) return;
+    const newPackages = [...storeConfig.mockTestPackages];
+    const pkg = { ...newPackages[index] };
 
-        if (field === 'price' || field === 'months' || field === 'gstRate') {
-            value = Number(value) || 0;
-        }
-        
-        (pkg as any)[field] = value;
+    if (field === 'price' || field === 'months' || field === 'gstRate') {
+        value = Number(value) || 0;
+    }
+    
+    (pkg as any)[field] = value;
 
-        if (field === 'bestValue' && value === true) {
-            newPackages.forEach((p, i) => {
-                if (i !== index) {
-                    p.bestValue = false;
-                }
-            });
-        }
+    if (field === 'bestValue' && value === true) {
+        newPackages.forEach((p, i) => {
+            if (i !== index) {
+                p.bestValue = false;
+            }
+        });
+    }
 
-        newPackages[index] = pkg;
-        return newPackages;
-    });
+    newPackages[index] = pkg;
+    setStoreConfig(prev => prev ? ({...prev, mockTestPackages: newPackages}) : null);
   };
   
   const handleReferboltChange = (field: keyof ReferboltSubscription, value: string | number) => {
-    setLocalReferboltSub(prev => {
-        const newSub = { ...prev };
+    if (!storeConfig) return;
+    setStoreConfig(prev => {
+        if (!prev) return null;
+        const newSub = { ...prev.referboltSubscription };
         if (field === 'price' || field === 'ticketBonus' || field === 'gstRate') {
             value = Number(value) || 0;
         }
         (newSub as any)[field] = value;
-        return newSub;
+        return { ...prev, referboltSubscription: newSub };
     });
   };
 
+  const handleReferboltSettingsChange = (field: keyof ReferboltSettings, value: boolean | number) => {
+      if (!storeConfig) return;
+      setStoreConfig(prev => prev ? ({ ...prev, referboltSettings: { ...prev.referboltSettings, [field]: value } }) : null);
+  };
+
   const addPackage = () => {
-    setLocalPackages(prev => [...prev, { tickets: 0, price: 0, bestValue: false, games: 0, gstRate: 28, hsnSacCode: '998439' }]);
+    if (!storeConfig) return;
+    const newPackages = [...storeConfig.packages, { tickets: 0, price: 0, bestValue: false, games: 0, gstRate: 28, hsnSacCode: '998439' }];
+    setStoreConfig(prev => prev ? ({...prev, packages: newPackages}) : null);
   };
 
   const removePackage = (index: number) => {
-    setLocalPackages(prev => prev.filter((_, i) => i !== index));
+    if (!storeConfig) return;
+    const newPackages = storeConfig.packages.filter((_, i) => i !== index);
+    setStoreConfig(prev => prev ? ({ ...prev, packages: newPackages }) : null);
   };
   
   const addMockTestPackage = () => {
-    setLocalMockTestPackages(prev => [...prev, { name: 'New Subscription', price: 0, months: 1, bestValue: false, gstRate: 18, hsnSacCode: '999294' }]);
+    if (!storeConfig) return;
+    const newPackages = [...storeConfig.mockTestPackages, { name: 'New Subscription', price: 0, months: 1, bestValue: false, gstRate: 18, hsnSacCode: '999294' }];
+    setStoreConfig(prev => prev ? ({ ...prev, mockTestPackages: newPackages }) : null);
   };
   
   const removeMockTestPackage = (index: number) => {
-      setLocalMockTestPackages(prev => prev.filter((_,i) => i !== index));
+    if (!storeConfig) return;
+    const newPackages = storeConfig.mockTestPackages.filter((_, i) => i !== index);
+    setStoreConfig(prev => prev ? ({ ...prev, mockTestPackages: newPackages }) : null);
   };
 
-  const handleDynamicListChange = (setter: React.Dispatch<React.SetStateAction<string[]>>, index: number, value: string) => {
+  const handleDynamicListChange = (setter: React.Dispatch<React.SetStateAction<AcademicConfig | null>>, listName: keyof AcademicConfig, index: number, value: string) => {
       setter(prev => {
-          const newList = [...prev];
+          if (!prev) return null;
+          const newList = [...prev[listName]];
           newList[index] = value;
-          return newList;
+          return { ...prev, [listName]: newList };
       });
   };
 
-  const addToList = (setter: React.Dispatch<React.SetStateAction<string[]>>) => {
-      setter(prev => [...prev, '']);
+  const addToList = (setter: React.Dispatch<React.SetStateAction<AcademicConfig | null>>, listName: keyof AcademicConfig) => {
+      setter(prev => {
+          if (!prev) return null;
+          const newList = [...prev[listName], ''];
+          return { ...prev, [listName]: newList };
+      });
   };
   
-  const removeFromList = (setter: React.Dispatch<React.SetStateAction<string[]>>, index: number) => {
-      setter(prev => prev.filter((_, i) => i !== index));
+  const removeFromList = (setter: React.Dispatch<React.SetStateAction<AcademicConfig | null>>, listName: keyof AcademicConfig, index: number) => {
+      setter(prev => {
+          if (!prev) return null;
+          const newList = prev[listName].filter((_, i) => i !== index);
+          return { ...prev, [listName]: newList };
+      });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!storeConfig || !academicConfig) return;
     
-    setPackages(packages);
-    setMockTestPackages(mockTestPackages);
-    setReferralBonus(referralBonus);
-    setReferboltSubscription(referboltSub);
-    setReferboltSettings(referboltSettings);
-    setBoards(boards);
-    setStandards(standards);
-    setSubjects(subjects);
+    setPackages(storeConfig.packages);
+    setMockTestPackages(storeConfig.mockTestPackages);
+    setReferralBonus(storeConfig.referralBonus);
+    setReferboltSubscription(storeConfig.referboltSubscription);
+    setReferboltSettings(storeConfig.referboltSettings);
+    setBoards(academicConfig.boards);
+    setStandards(academicConfig.standards);
+    setSubjects(academicConfig.subjects);
+    setGameSettings(storeConfig.gameSettings);
 
     toast({
       title: "Settings Saved!",
@@ -157,27 +169,30 @@ export default function AdminStoreSettingsPage() {
 
   const renderDynamicList = (
       title: string, 
-      list: string[], 
-      setter: React.Dispatch<React.SetStateAction<string[]>>
-  ) => (
-      <div className="space-y-4">
-          <Label className="text-lg font-semibold">{title}</Label>
-          {list.map((item, index) => (
-              <div key={index} className="flex items-center gap-2">
-                  <Input value={item} onChange={(e) => handleDynamicListChange(setter, index, e.target.value)} />
-                  <Button type="button" variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" onClick={() => removeFromList(setter, index)}>
-                      <Trash2 className="h-4 w-4" />
-                  </Button>
-              </div>
-          ))}
-          <Button type="button" variant="outline" className="w-full" onClick={() => addToList(setter)}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add {title.slice(0, -1)}
-          </Button>
-      </div>
-  );
+      listName: keyof AcademicConfig
+  ) => {
+      if (!academicConfig) return null;
+      const list = academicConfig[listName];
+      return (
+          <div className="space-y-4">
+              <Label className="text-lg font-semibold">{title}</Label>
+              {list.map((item, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                      <Input value={item} onChange={(e) => handleDynamicListChange(setAcademicConfig, listName, index, e.target.value)} />
+                      <Button type="button" variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" onClick={() => removeFromList(setAcademicConfig, listName, index)}>
+                          <Trash2 className="h-4 w-4" />
+                      </Button>
+                  </div>
+              ))}
+              <Button type="button" variant="outline" className="w-full" onClick={() => addToList(setAcademicConfig, listName)}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Add {title.slice(0, -1)}
+              </Button>
+          </div>
+      );
+  };
 
-  if (!isClient) {
+  if (!isClient || !storeConfig || !academicConfig) {
     return null;
   }
 
@@ -191,7 +206,7 @@ export default function AdminStoreSettingsPage() {
             <CardDescription>Configure ticket packages and their GST rates. These are for the GuessMaster game.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {packages.map((pkg, index) => (
+            {storeConfig.packages.map((pkg, index) => (
               <div key={index} className="p-4 border rounded-lg space-y-4 relative">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div className="space-y-2">
@@ -238,7 +253,7 @@ export default function AdminStoreSettingsPage() {
             <CardDescription>Configure mock test subscription packages.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {mockTestPackages.map((pkg, index) => (
+            {storeConfig.mockTestPackages.map((pkg, index) => (
                 <div key={index} className="p-4 border rounded-lg space-y-4 relative">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                          <div className="space-y-2">
@@ -288,26 +303,26 @@ export default function AdminStoreSettingsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="referboltCost">Base Price (₹)</Label>
-                <Input id="referboltCost" type="number" value={referboltSub.price} onChange={(e) => handleReferboltChange('price', e.target.value)} />
+                <Input id="referboltCost" type="number" value={storeConfig.referboltSubscription.price} onChange={(e) => handleReferboltChange('price', e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="referboltTickets">Ticket Bonus (on subscribe)</Label>
-                <Input id="referboltTickets" type="number" value={referboltSub.ticketBonus} onChange={(e) => handleReferboltChange('ticketBonus', e.target.value)} />
+                <Input id="referboltTickets" type="number" value={storeConfig.referboltSubscription.ticketBonus} onChange={(e) => handleReferboltChange('ticketBonus', e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="referbolt-gst">GST Rate (%)</Label>
-                <Input id="referbolt-gst" type="number" value={referboltSub.gstRate} onChange={(e) => handleReferboltChange('gstRate', e.target.value)} />
+                <Input id="referbolt-gst" type="number" value={storeConfig.referboltSubscription.gstRate} onChange={(e) => handleReferboltChange('gstRate', e.target.value)} />
               </div>
                <div className="space-y-2">
                 <Label htmlFor="referbolt-hsn">HSN/SAC Code</Label>
-                <Input id="referbolt-hsn" type="text" value={referboltSub.hsnSacCode} onChange={(e) => handleReferboltChange('hsnSacCode', e.target.value)} />
+                <Input id="referbolt-hsn" type="text" value={storeConfig.referboltSubscription.hsnSacCode} onChange={(e) => handleReferboltChange('hsnSacCode', e.target.value)} />
               </div>
                <div className="md:col-span-2 space-y-4">
                  <div className="flex items-center space-x-2 p-4 border rounded-lg">
                     <Switch
                         id="free-access"
-                        checked={referboltSettings.freeAccessWithMockTest}
-                        onCheckedChange={(checked) => setLocalReferboltSettings(s => ({...s, freeAccessWithMockTest: checked}))}
+                        checked={storeConfig.referboltSettings.freeAccessWithMockTest}
+                        onCheckedChange={(checked) => handleReferboltSettingsChange('freeAccessWithMockTest', checked)}
                     />
                     <Label htmlFor="free-access">Grant free ReferBolt access with any mock test purchase</Label>
                 </div>
@@ -316,8 +331,8 @@ export default function AdminStoreSettingsPage() {
                     <Input 
                         id="iba-bonus" 
                         type="number" 
-                        value={referboltSettings.ibaBonusCommission} 
-                        onChange={(e) => setLocalReferboltSettings(s => ({...s, ibaBonusCommission: Number(e.target.value) || 0}))} 
+                        value={storeConfig.referboltSettings.ibaBonusCommission} 
+                        onChange={(e) => handleReferboltSettingsChange('ibaBonusCommission', Number(e.target.value) || 0)} 
                     />
                     <p className="text-xs text-muted-foreground">
                         Additional commission (%) for IBAs who are also ReferBolt subscribers.
@@ -337,7 +352,7 @@ export default function AdminStoreSettingsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="referralBonus">Referral &amp; Welcome Bonus (₹)</Label>
-                <Input id="referralBonus" type="number" value={referralBonus} onChange={(e) => setLocalReferralBonus(Number(e.target.value))} />
+                <Input id="referralBonus" type="number" value={storeConfig.referralBonus} onChange={(e) => setStoreConfig(prev => prev ? ({...prev, referralBonus: Number(e.target.value)}) : null)} />
                 <p className="text-xs text-muted-foreground">This amount is given to both the referrer and the new user.</p>
               </div>
             </div>
@@ -350,9 +365,9 @@ export default function AdminStoreSettingsPage() {
                 <CardDescription>Manage the options available for education boards, standards, and subjects across the app.</CardDescription>
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {renderDynamicList("Boards", boards, setLocalBoards)}
-                {renderDynamicList("Standards", standards, setLocalStandards)}
-                {renderDynamicList("Subjects", subjects, setLocalSubjects)}
+                {renderDynamicList("Boards", "boards")}
+                {renderDynamicList("Standards", "standards")}
+                {renderDynamicList("Subjects", "subjects")}
             </CardContent>
         </Card>
 
@@ -364,5 +379,3 @@ export default function AdminStoreSettingsPage() {
     </div>
   );
 }
-
-    

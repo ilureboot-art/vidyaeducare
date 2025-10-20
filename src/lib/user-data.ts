@@ -13,7 +13,28 @@ export type Transaction = {
   user?: string;
 };
 
-const defaultWalletData = {
+export type AdminPaymentMethods = {
+    accountHolderName: string;
+    accountNumber: string;
+    ifscCode: string;
+    bankName: string;
+    upiId: string;
+    gpayNumber: string;
+    gpayUpiId: string;
+    phonepeNumber: string;
+    phonepeUpiId: string;
+    qrCodeUrl: string;
+};
+
+export type WalletData = {
+  balance: number;
+  coins: number;
+  referralCode: string;
+  adminPaymentMethods: AdminPaymentMethods;
+  transactions: Transaction[];
+};
+
+const defaultWalletData: WalletData = {
   balance: 550.75,
   coins: 1250,
   referralCode: "ALEX-D7F6E5C",
@@ -40,40 +61,44 @@ const defaultWalletData = {
   ],
 };
 
-const getWalletData = () => {
-  if (typeof window === 'undefined') return defaultWalletData;
+export const getWalletData = (): WalletData => {
+  if (typeof window === 'undefined') {
+    return JSON.parse(JSON.stringify(defaultWalletData)); // Deep copy for server-side
+  }
   const savedData = localStorage.getItem('walletData');
   if (savedData) {
     try {
       return JSON.parse(savedData);
     } catch (e) {
       console.error("Failed to parse walletData from localStorage", e);
-      return defaultWalletData;
+      return JSON.parse(JSON.stringify(defaultWalletData));
     }
   }
-  return defaultWalletData;
+  return JSON.parse(JSON.stringify(defaultWalletData));
 };
 
-const saveWalletData = (data: any) => {
+const saveWalletData = (data: WalletData) => {
   if (typeof window === 'undefined') return;
   localStorage.setItem('walletData', JSON.stringify(data));
 };
 
-export let walletData = getWalletData();
-
-// Ensure data is loaded on client-side initialization
-if (typeof window !== 'undefined') {
-  walletData = getWalletData();
-}
-
 // Function to add a transaction to our shared state
 export function addTransaction(transaction: Transaction) {
+  let walletData = getWalletData();
   walletData.transactions.unshift(transaction);
+  if (transaction.status === 'Completed') {
+    if (transaction.type === 'deposit') {
+      walletData.balance += transaction.amount;
+    } else if (transaction.type === 'withdrawal') {
+      walletData.balance += transaction.amount; // amount is negative
+    }
+  }
   saveWalletData(walletData);
 }
 
 // Function to update transaction status
-export function updateTransactionStatus(id: number, newStatus: 'Completed' | 'Rejected') {
+export function updateTransactionStatus(id: number, newStatus: 'Completed' | 'Rejected'): boolean {
+    let walletData = getWalletData();
     const txIndex = walletData.transactions.findIndex((tx: Transaction) => tx.id === id);
     if (txIndex === -1) return false;
 
@@ -94,7 +119,8 @@ export function updateTransactionStatus(id: number, newStatus: 'Completed' | 'Re
     return true;
 }
 
-export function setAdminPaymentMethods(methods: any) {
+export function setAdminPaymentMethods(methods: AdminPaymentMethods) {
+  let walletData = getWalletData();
   walletData.adminPaymentMethods = methods;
   saveWalletData(walletData);
 }
@@ -102,5 +128,16 @@ export function setAdminPaymentMethods(methods: any) {
 export function resetWalletData() {
     if (typeof window === 'undefined') return;
     localStorage.removeItem('walletData');
-    walletData = getWalletData();
+}
+
+export function updateWalletBalance(newBalance: number) {
+    let walletData = getWalletData();
+    walletData.balance = newBalance;
+    saveWalletData(walletData);
+}
+
+export function updateCoinBalance(newCoins: number) {
+    let walletData = getWalletData();
+    walletData.coins = newCoins;
+    saveWalletData(walletData);
 }

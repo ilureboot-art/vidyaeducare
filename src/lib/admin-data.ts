@@ -14,7 +14,12 @@ export type Admin = {
   joinDate: string;
 };
 
-const defaultAdminData = {
+type AdminData = {
+    admins: Admin[];
+    requests: Admin[];
+}
+
+const defaultAdminData: AdminData = {
     admins: [
         { id: "ADM001", name: "Super Admin", email: "super@example.com", phone: "919999988888", role: "Head Admin" as AdminRole, status: "Active" as AdminStatus, joinDate: "2024-07-01" },
         { id: "ADM002", name: "Anil Kumar", email: "anil.k@example.com", phone: "919876543210", role: "Sub-admin" as AdminRole, status: "Active" as AdminStatus, joinDate: "2024-07-10" },
@@ -25,24 +30,19 @@ const defaultAdminData = {
     ]
 };
 
-const getAdminData = () => {
-    if (typeof window === 'undefined') return defaultAdminData;
+export const getAdminData = (): AdminData => {
+    if (typeof window === 'undefined') return JSON.parse(JSON.stringify(defaultAdminData)); // Return a deep copy for server-side
     const savedData = localStorage.getItem('adminData');
-    return savedData ? JSON.parse(savedData) : defaultAdminData;
+    return savedData ? JSON.parse(savedData) : JSON.parse(JSON.stringify(defaultAdminData));
 }
 
-const saveAdminData = (data: any) => {
+const saveAdminData = (data: AdminData) => {
     if (typeof window === 'undefined') return;
     localStorage.setItem('adminData', JSON.stringify(data));
 }
 
-export let adminData = getAdminData();
-
-if (typeof window !== 'undefined') {
-  adminData = getAdminData();
-}
-
 export function addAdmin(newAdmin: Omit<Admin, 'id' | 'joinDate' | 'status'>) {
+    const adminData = getAdminData();
     const admin: Admin = {
         ...newAdmin,
         id: `ADM${String(Date.now()).slice(-4)}`,
@@ -54,11 +54,13 @@ export function addAdmin(newAdmin: Omit<Admin, 'id' | 'joinDate' | 'status'>) {
 }
 
 export function deleteAdmin(adminId: string) {
+    let adminData = getAdminData();
     adminData.admins = adminData.admins.filter((admin: Admin) => admin.id !== adminId);
     saveAdminData(adminData);
 }
 
 export function updateAdmin(adminId: string, updatedDetails: Partial<Omit<Admin, 'id' | 'joinDate' | 'status'>>) {
+    let adminData = getAdminData();
     const index = adminData.admins.findIndex((admin: Admin) => admin.id === adminId);
     if (index !== -1) {
         adminData.admins[index] = { ...adminData.admins[index], ...updatedDetails };
@@ -73,6 +75,7 @@ export function resetAdminPassword(adminId: string, newPassword: string) {
 }
 
 export function processRequest(requestId: string, newStatus: 'Active' | 'Rejected') {
+    let adminData = getAdminData();
     const requestIndex = adminData.requests.findIndex((req: Admin) => req.id === requestId);
     if (requestIndex === -1) return;
 

@@ -6,10 +6,22 @@ import { Badge } from "@/components/ui/badge";
 import { List, CheckCircle, Award, Ticket, Share2, Zap, Coins, UserCheck, TrendingUp, BrainCircuit } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { storeConfig } from "@/lib/store-config";
+import { getStoreConfig, GameSettings } from "@/lib/store-config";
 import { Separator } from "@/components/ui/separator";
+import { useState, useEffect } from "react";
 
 export default function HowToPlayPage() {
+  const [gameSettings, setGameSettings] = useState<GameSettings | null>(null);
+
+  useEffect(() => {
+    const config = getStoreConfig();
+    setGameSettings(config.gameSettings);
+  }, []);
+
+  if (!gameSettings) {
+    return null; // or a loading spinner
+  }
+
   return (
     <div className="w-full max-w-3xl mx-auto">
       <Card className="shadow-lg">
@@ -79,7 +91,7 @@ export default function HowToPlayPage() {
               GuessMaster is a simple number guessing game. The goal is to guess a secret number between <Badge>1</Badge> and <Badge>100</Badge>. You have a limited number of attempts to guess the correct number.
             </p>
              <ul className="list-disc list-inside space-y-2 pl-4">
-              <li>You have <Badge variant="secondary">{storeConfig.gameSettings.maxAttempts}</Badge> attempts per game.</li>
+              <li>You have <Badge variant="secondary">{gameSettings.maxAttempts}</Badge> attempts per game.</li>
               <li>Enter your guess in the input box and click "Guess".</li>
               <li>After each guess, you'll get a hint: <Badge variant="outline">higher</Badge> or <Badge variant="outline">lower</Badge>.</li>
               <li>Use the hints to narrow down the possible numbers.</li>
@@ -104,10 +116,10 @@ export default function HowToPlayPage() {
               Winning & Rewards
             </h2>
             <span>
-              You win the game by guessing the secret number within your {storeConfig.gameSettings.maxAttempts} attempts. The faster you guess, the more coins you win!
+              You win the game by guessing the secret number within your {gameSettings.maxAttempts} attempts. The faster you guess, the more coins you win!
             </span>
             <ul className="list-disc list-inside space-y-2 pl-4">
-              {storeConfig.gameSettings.rewards.map((reward, index) => (
+              {gameSettings.rewards.map((reward, index) => (
                 <li key={index}><span className="font-bold">{index + 1}{index === 0 ? 'st' : index === 1 ? 'nd' : index === 2 ? 'rd' : 'th'} Attempt:</span> <span className="font-semibold text-primary flex items-center gap-1">{reward} <Coins size={16} /></span></li>
               ))}
             </ul>

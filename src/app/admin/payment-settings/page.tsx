@@ -8,22 +8,24 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Landmark } from "lucide-react";
-import { walletData, setAdminPaymentMethods } from "@/lib/user-data";
+import { getWalletData, setAdminPaymentMethods, type AdminPaymentMethods } from "@/lib/user-data";
 
 export default function PaymentSettingsPage() {
     const { toast } = useToast();
-    const [methods, setMethods] = useState(walletData.adminPaymentMethods);
+    const [methods, setMethods] = useState<AdminPaymentMethods | null>(null);
     const [qrFile, setQrFile] = useState<File | null>(null);
     const [isClient, setIsClient] = useState(false);
 
     useEffect(() => {
         setIsClient(true);
-        setMethods({...walletData.adminPaymentMethods});
+        const data = getWalletData();
+        setMethods(data.adminPaymentMethods);
     }, [])
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
-        setMethods(prev => ({ ...prev, [name]: value }));
+        if (!methods) return;
+        setMethods(prev => prev ? ({ ...prev, [name]: value }) : null);
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -34,8 +36,9 @@ export default function PaymentSettingsPage() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        if (!methods) return;
         
-        const updateConfig = (finalMethods: any) => {
+        const updateConfig = (finalMethods: AdminPaymentMethods) => {
             setAdminPaymentMethods(finalMethods);
             toast({
                 title: "Settings Saved!",
@@ -58,7 +61,7 @@ export default function PaymentSettingsPage() {
 
     }
 
-    if (!isClient) {
+    if (!isClient || !methods) {
         return null;
     }
 
@@ -134,5 +137,3 @@ export default function PaymentSettingsPage() {
     </div>
   );
 }
-
-    

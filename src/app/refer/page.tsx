@@ -5,16 +5,23 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Share2, IndianRupee, Gift } from "lucide-react";
-import { storeConfig } from "@/lib/store-config";
-import { walletData } from "@/lib/user-data";
+import { getStoreConfig, StoreConfig } from "@/lib/store-config";
+import { getWalletData } from "@/lib/user-data";
+import { useState, useEffect } from "react";
 
 export default function ReferAndEarnPage() {
     const { toast } = useToast();
+    const [referralBonus, setReferralBonus] = useState(0);
+
+    useEffect(() => {
+        const config = getStoreConfig();
+        setReferralBonus(config.referralBonus);
+    }, []);
 
     const handleShare = async () => {
-        const referralCode = walletData.referralCode;
+        const referralCode = getWalletData().referralCode;
         const url = `${window.location.origin}/signup?ref=${referralCode}`;
-        const bonusAmount = storeConfig.referralBonus;
+        const bonusAmount = referralBonus;
         
         const message = `🎉 Join me on Vidya EduCare! Sign up with my code and we both get a ₹${bonusAmount} welcome bonus!
 
@@ -70,7 +77,7 @@ Click here to join: ${url}`;
                                 <CardTitle className="flex items-center justify-center gap-2 text-primary"><IndianRupee /> You Get</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <p className="text-3xl font-bold">₹{storeConfig.referralBonus}</p>
+                                <p className="text-3xl font-bold">₹{referralBonus}</p>
                                 <p className="text-xs text-muted-foreground">For each successful referral.</p>
                             </CardContent>
                         </Card>
@@ -79,7 +86,7 @@ Click here to join: ${url}`;
                                 <CardTitle className="flex items-center justify-center gap-2 text-primary"><Gift/> They Get</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <p className="text-3xl font-bold">₹{storeConfig.referralBonus}</p>
+                                <p className="text-3xl font-bold">₹{referralBonus}</p>
                                 <p className="text-xs text-muted-foreground">As an instant welcome bonus.</p>
                             </CardContent>
                         </Card>

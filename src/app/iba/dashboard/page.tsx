@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -23,8 +23,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { walletData } from "@/lib/user-data";
-import { storeConfig } from "@/lib/store-config";
+import { getWalletData } from "@/lib/user-data";
+import { getStoreConfig } from "@/lib/store-config";
 
 
 const initialReferralData = {
@@ -62,7 +62,12 @@ const bonusTiers = [
 export default function IBADashboardPage() {
   const { toast } = useToast();
   const [referralData, setReferralData] = useState(initialReferralData);
-  const ibaReferralCode = "ALEX-IBA-5C"; // This is specific to the IBA program
+  const [ibaReferralCode, setIbaReferralCode] = useState("");
+
+  useEffect(() => {
+    const data = getWalletData();
+    setIbaReferralCode(data.referralCode); // Using the general referral code for demo
+  }, []);
 
   const handleCopyToClipboard = () => {
     navigator.clipboard.writeText(ibaReferralCode);

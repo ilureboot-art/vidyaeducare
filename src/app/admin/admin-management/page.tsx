@@ -34,7 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { adminData, addAdmin, deleteAdmin, processRequest, updateAdmin, resetAdminPassword, type Admin, type AdminRole } from "@/lib/admin-data";
+import { getAdminData, addAdmin, deleteAdmin, processRequest, updateAdmin, resetAdminPassword, type Admin, type AdminRole } from "@/lib/admin-data";
 import { format } from 'date-fns';
 
 
@@ -54,16 +54,16 @@ export default function AdminManagementPage() {
   const [selectedAdmin, setSelectedAdmin] = useState<Admin | null>(null);
   const { toast } = useToast();
   
+  const refreshState = () => {
+    const adminData = getAdminData();
+    setAdmins(adminData.admins);
+    setRequests(adminData.requests);
+  }
+
   useEffect(() => {
     setIsClient(true);
-    setAdmins([...adminData.admins]);
-    setRequests([...adminData.requests]);
+    refreshState();
   }, []);
-
-  const refreshState = () => {
-    setAdmins([...adminData.admins]);
-    setRequests([...adminData.requests]);
-  }
 
   const openWhatsApp = (phone: string, message?: string) => {
     const cleanedPhone = phone.replace(/\D/g, '');
@@ -448,5 +448,3 @@ export default function AdminManagementPage() {
     </div>
   );
 }
-
-    

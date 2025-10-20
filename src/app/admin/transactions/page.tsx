@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Download, ArrowUpRight, ArrowDownLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { walletData, type Transaction, updateTransactionStatus } from "@/lib/user-data";
+import { getWalletData, type Transaction, updateTransactionStatus } from "@/lib/user-data";
 import { format } from "date-fns";
 
 const getStatusBadgeVariant = (status: string) => {
@@ -40,14 +40,19 @@ const getTypeIcon = (type: string, amount: number) => {
 }
 
 export default function TransactionsPage() {
-  const [transactions, setTransactions] = useState<Transaction[]>(walletData.transactions);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
   
   useEffect(() => {
-    setTransactions([...walletData.transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+    const data = getWalletData();
+    setTransactions(data.transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
   }, []);
 
+  const refreshTransactions = () => {
+    const data = getWalletData();
+    setTransactions(data.transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+  };
 
   const handleTransactionStatus = (id: number, newStatus: "Completed" | "Rejected") => {
     const success = updateTransactionStatus(id, newStatus);
@@ -56,7 +61,7 @@ export default function TransactionsPage() {
           title: "Transaction Updated",
           description: `Transaction ${id} has been marked as ${newStatus}.`,
         });
-        setTransactions([...walletData.transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+        refreshTransactions();
     } else {
          toast({ title: "Action not allowed", description: "This transaction has already been processed."});
     }

@@ -63,14 +63,16 @@ const defaultWalletData: WalletData = {
 
 let walletDataState: WalletData | null = null;
 
-const initializeWalletData = (): WalletData => {
+function initializeWalletData(): WalletData {
     if (typeof window !== 'undefined') {
         const savedData = localStorage.getItem('walletData');
         if (savedData) {
             try {
                 const parsedData = JSON.parse(savedData);
-                walletDataState = parsedData;
-                return parsedData;
+                if (parsedData) {
+                    walletDataState = parsedData;
+                    return parsedData;
+                }
             } catch (e) {
                 console.error("Failed to parse walletData from localStorage", e);
             }
@@ -84,22 +86,21 @@ const initializeWalletData = (): WalletData => {
 
 export function getWalletData(): WalletData {
     if (typeof window === 'undefined') {
-        return { ...defaultWalletData };
+        return defaultWalletData;
     }
     if (!walletDataState) {
         return initializeWalletData();
     }
-    return walletDataState!;
+    return walletDataState;
 };
 
-const saveWalletData = (data: WalletData) => {
+function saveWalletData(data: WalletData) {
   if (typeof window !== 'undefined') {
     localStorage.setItem('walletData', JSON.stringify(data));
     walletDataState = data;
   }
 };
 
-// Function to add a transaction to our shared state
 export function addTransaction(transaction: Transaction) {
   let data = getWalletData();
   data.transactions.unshift(transaction);
@@ -107,20 +108,18 @@ export function addTransaction(transaction: Transaction) {
     if (transaction.type === 'deposit') {
       data.balance += transaction.amount;
     } else if (transaction.type === 'withdrawal') {
-      data.balance += transaction.amount; // amount is negative
+      data.balance += transaction.amount; 
     }
   }
   saveWalletData(data);
 }
 
-// Function to update transaction status
 export function updateTransactionStatus(id: number, newStatus: 'Completed' | 'Rejected'): boolean {
     let data = getWalletData();
     const txIndex = data.transactions.findIndex((tx: Transaction) => tx.id === id);
     if (txIndex === -1) return false;
 
     const tx = data.transactions[txIndex];
-
     if (tx.status !== 'Pending') return false;
 
     if (tx.type === 'deposit' && newStatus === 'Completed') {
@@ -146,7 +145,7 @@ export function resetWalletData() {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('walletData');
     }
-    walletDataState = null; // Will re-initialize on next get
+    walletDataState = null; 
 }
 
 export function updateWalletBalance(newBalance: number) {

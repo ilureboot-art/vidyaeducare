@@ -50,16 +50,15 @@ export default function TransactionsPage() {
   const [typeFilter, setTypeFilter] = useState<'all' | 'deposit' | 'withdrawal'>('all');
   const [isClient, setIsClient] = useState(false);
   
-  const refreshTransactions = () => {
-    const data = getWalletData();
-    setTransactions(data.transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-  };
-
   useEffect(() => {
     setIsClient(true);
     refreshTransactions();
   }, []);
 
+  const refreshTransactions = () => {
+    const data = getWalletData();
+    setTransactions(data.transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+  };
 
   const handleTransactionStatus = (id: number, newStatus: "Completed" | "Rejected") => {
     const success = updateTransactionStatus(id, newStatus);

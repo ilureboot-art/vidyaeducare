@@ -113,7 +113,7 @@ export default function AdminStoreSettingsPage() {
   const addMockTestPackage = () => {
     if (!storeConfig) return;
     const newPackages = [...storeConfig.mockTestPackages, { name: 'New Subscription', price: 0, months: 1, bestValue: false, gstRate: 18, hsnSacCode: '999294' }];
-    setStoreConfig(prev => prev ? ({ ...prev, mockTestPackages: newPackages }) : null);
+    setStoreConfig(prev => prev ? ({...prev, mockTestPackages: newPackages}) : null);
   };
   
   const removeMockTestPackage = (index: number) => {
@@ -381,3 +381,5 @@ export default function AdminStoreSettingsPage() {
     </div>
   );
 }
+
+    

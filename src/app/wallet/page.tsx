@@ -25,7 +25,7 @@ import { Label } from "@/components/ui/label"
 import { PlusCircle, MinusCircle, Info, History, ArrowUpRight, ArrowDownLeft, Coins } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
-import { walletData, addTransaction, type Transaction } from "@/lib/user-data";
+import { walletData, addTransaction, type Transaction, getWalletData } from "@/lib/user-data";
 import { Badge } from "@/components/ui/badge";
 import { addNotification } from "@/lib/notifications";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -57,9 +57,10 @@ export default function WalletPage() {
 
   useEffect(() => {
     setIsClient(true);
-    setBalance(walletData.balance);
-    setCoins(walletData.coins);
-    setTransactions([...walletData.transactions]);
+    const data = getWalletData();
+    setBalance(data.balance);
+    setCoins(data.coins);
+    setTransactions([...data.transactions]);
   }, []);
 
   const handleAddFunds = (event: React.FormEvent<HTMLFormElement>) => {
@@ -156,7 +157,7 @@ export default function WalletPage() {
     form.reset();
   }
 
-  const { adminPaymentMethods } = walletData;
+  const { adminPaymentMethods } = getWalletData();
 
   if (!isClient) {
       return null;
@@ -328,3 +329,5 @@ export default function WalletPage() {
     </div>
   );
 }
+
+    

@@ -63,22 +63,23 @@ const defaultWalletData: WalletData = {
 
 let walletDataState: WalletData | null = null;
 
-export function getWalletData(): WalletData {
-  if (typeof window === 'undefined') {
-    return JSON.parse(JSON.stringify(defaultWalletData));
-  }
-  if (walletDataState === null) {
-    const savedData = localStorage.getItem('walletData');
-    if (savedData) {
-      try {
-        walletDataState = JSON.parse(savedData);
-      } catch (e) {
-        console.error("Failed to parse walletData from localStorage", e);
-        walletDataState = JSON.parse(JSON.stringify(defaultWalletData));
-      }
-    } else {
-        walletDataState = JSON.parse(JSON.stringify(defaultWalletData));
+const initializeWalletData = (): WalletData => {
+    if (typeof window !== 'undefined') {
+        const savedData = localStorage.getItem('walletData');
+        if (savedData) {
+            try {
+                return JSON.parse(savedData);
+            } catch (e) {
+                console.error("Failed to parse walletData from localStorage", e);
+            }
+        }
     }
+    return JSON.parse(JSON.stringify(defaultWalletData));
+};
+
+export function getWalletData(): WalletData {
+  if (walletDataState === null) {
+    walletDataState = initializeWalletData();
   }
   return walletDataState!;
 };

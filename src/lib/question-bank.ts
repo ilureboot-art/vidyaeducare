@@ -57,22 +57,23 @@ const defaultTestSets: TestSet[] = [
 
 let allTestSetsState: TestSet[] | null = null;
 
-const getTestSets = (): TestSet[] => {
-    if (typeof window === 'undefined') {
-        return JSON.parse(JSON.stringify(defaultTestSets));
-    }
-    if (allTestSetsState === null) {
+const initializeTestSets = (): TestSet[] => {
+    if (typeof window !== 'undefined') {
         const saved = localStorage.getItem('allTestSets');
         if (saved) {
             try {
-                allTestSetsState = JSON.parse(saved);
+                return JSON.parse(saved);
             } catch (e) {
                 console.error("Failed to parse allTestSets from localStorage", e);
-                allTestSetsState = JSON.parse(JSON.stringify(defaultTestSets));
             }
-        } else {
-            allTestSetsState = JSON.parse(JSON.stringify(defaultTestSets));
         }
+    }
+    return JSON.parse(JSON.stringify(defaultTestSets));
+};
+
+const getTestSets = (): TestSet[] => {
+    if (allTestSetsState === null) {
+       allTestSetsState = initializeTestSets();
     }
     return allTestSetsState!;
 };

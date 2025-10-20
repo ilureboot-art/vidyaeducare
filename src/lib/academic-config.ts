@@ -24,27 +24,26 @@ const defaultAcademicConfig: AcademicConfig = {
 
 let academicConfigState: AcademicConfig | null = null;
 
-export const getAcademicConfig = (): AcademicConfig => {
-    if (typeof window === 'undefined') {
-        return JSON.parse(JSON.stringify(defaultAcademicConfig));
-    }
-    if (academicConfigState === null) {
+const initializeAcademicConfig = (): AcademicConfig => {
+    if (typeof window !== 'undefined') {
         const savedConfig = localStorage.getItem('academicConfig');
         if (savedConfig) {
             try {
                  const parsedConfig = JSON.parse(savedConfig);
                  if (parsedConfig && parsedConfig.boards) {
-                    academicConfigState = parsedConfig;
-                 } else {
-                    academicConfigState = JSON.parse(JSON.stringify(defaultAcademicConfig));
+                    return parsedConfig;
                  }
             } catch (e) {
                 console.error("Failed to parse academicConfig from localStorage", e);
-                academicConfigState = JSON.parse(JSON.stringify(defaultAcademicConfig));
             }
-        } else {
-            academicConfigState = JSON.parse(JSON.stringify(defaultAcademicConfig));
         }
+    }
+    return JSON.parse(JSON.stringify(defaultAcademicConfig));
+};
+
+export const getAcademicConfig = (): AcademicConfig => {
+    if (academicConfigState === null) {
+        academicConfigState = initializeAcademicConfig();
     }
     return academicConfigState!;
 };

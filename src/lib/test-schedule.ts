@@ -11,7 +11,7 @@ export type ScheduledTest = {
     subject: string;
 };
 
-const defaultScheduledTests: ScheduledTest[] = [
+const getDefaultScheduledTests = (): ScheduledTest[] => [
     {
         id: "SCHED-1",
         testSetId: "SET-172234567890",
@@ -43,22 +43,23 @@ const defaultScheduledTests: ScheduledTest[] = [
 
 let scheduledTestsState: ScheduledTest[] | null = null;
 
-const getScheduledTests = (): ScheduledTest[] => {
-    if (typeof window === 'undefined') {
-        return JSON.parse(JSON.stringify(defaultScheduledTests));
-    }
-    if (scheduledTestsState === null) {
+const initializeScheduledTests = (): ScheduledTest[] => {
+    if (typeof window !== 'undefined') {
         const savedData = localStorage.getItem('scheduledTests');
         if (savedData) {
             try {
-                scheduledTestsState = JSON.parse(savedData);
+                return JSON.parse(savedData);
             } catch (e) {
                 console.error("Failed to parse scheduledTests from localStorage", e);
-                scheduledTestsState = JSON.parse(JSON.stringify(defaultScheduledTests));
             }
-        } else {
-            scheduledTestsState = JSON.parse(JSON.stringify(defaultScheduledTests));
         }
+    }
+    return getDefaultScheduledTests();
+};
+
+const getScheduledTests = (): ScheduledTest[] => {
+    if (scheduledTestsState === null) {
+        scheduledTestsState = initializeScheduledTests();
     }
     return scheduledTestsState!;
 };

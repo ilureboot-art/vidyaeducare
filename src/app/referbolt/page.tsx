@@ -38,18 +38,22 @@ export default function ReferBoltPage() {
   const [data, setData] = useState(initialReferboltData);
   const [autoRenew, setAutoRenew] = useState(data.autoRenew);
   const [isLoading, setIsLoading] = useState(true);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    // Correctly fetch data on the client side after component mounts.
-    // This prevents any server-side execution during the build.
-    const walletData = getWalletData(); 
-    setData({
-        ...initialReferboltData,
-        // In a real app, this data would be specific to ReferBolt
-        isSubscribed: walletData.referralCode.includes("IBA"), // Mock logic
-    });
-    setIsLoading(false);
+    setIsClient(true);
   }, []);
+
+  useEffect(() => {
+    if (isClient) {
+      const walletData = getWalletData(); 
+      setData({
+          ...initialReferboltData,
+          isSubscribed: walletData.referralCode.includes("IBA"), // Mock logic
+      });
+      setIsLoading(false);
+    }
+  }, [isClient]);
 
   const handleShare = async () => {
     const referralCode = getWalletData().referralCode;
@@ -89,7 +93,7 @@ Subscribe and start your earning cycle now: ${shareUrl}
     }
   };
   
-  if (isLoading) {
+  if (!isClient || isLoading) {
       return (
           <div className="w-full max-w-2xl mx-auto flex items-center justify-center h-64">
               <Loader2 className="animate-spin text-primary" size={32}/>

@@ -47,11 +47,9 @@ const initialClients: Client[] = [
 
 
 export default function StudentAccessPage() {
-  const [clients, setClients] = useState<Client[]>([]);
-  const [isClient, setIsClient] = useState(false);
+  const [clients, setClients] = useState<Client[] | null>(null);
 
   useEffect(() => {
-    setIsClient(true);
     const today = new Date();
     const thirtyDaysFromNow = new Date();
     thirtyDaysFromNow.setDate(today.getDate() + 30);
@@ -68,7 +66,7 @@ export default function StudentAccessPage() {
     setClients(updatedClients);
   }, []);
 
-  if (!isClient) {
+  if (!clients) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />
@@ -147,5 +145,3 @@ export default function StudentAccessPage() {
     </TooltipProvider>
   );
 }
-
-    

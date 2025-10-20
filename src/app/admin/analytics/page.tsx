@@ -1,10 +1,10 @@
 
 "use client"
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BarChart, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Line, Bar, ResponsiveContainer } from "recharts";
-import { Users, Gamepad2, IndianRupee } from "lucide-react";
+import { Users, Gamepad2, IndianRupee, Loader2 } from "lucide-react";
 
 // In a real app, this data would be fetched from a server
 const userActivityData = [
@@ -25,10 +25,26 @@ const revenueData = [
 ];
 
 export default function AnalyticsPage() {
-  // In a real app, this data would be fetched and updated
-  const [activeUsers] = useState(230);
-  const [gamesPlayed] = useState(1450);
-  const [todaysRevenue] = useState(5230);
+  const [activeUsers, setActiveUsers] = useState(0);
+  const [gamesPlayed, setGamesPlayed] = useState(0);
+  const [todaysRevenue, setTodaysRevenue] = useState(0);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+    // In a real app, this data would be fetched and updated
+    setActiveUsers(230);
+    setGamesPlayed(1450);
+    setTodaysRevenue(5230);
+  }, []);
+
+  if (!isClient) {
+    return (
+      <div className="flex justify-center items-center h-96">
+        <Loader2 className="animate-spin text-primary" size={32} />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

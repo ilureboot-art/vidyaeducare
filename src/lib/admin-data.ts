@@ -55,7 +55,7 @@ export const getAdminData = (): AdminData => {
     if (typeof window === 'undefined') {
         return { ...defaultAdminData };
     }
-    if (!adminDataState) {
+    if (adminDataState === null) {
         return initializeAdminData();
     }
     return adminDataState;

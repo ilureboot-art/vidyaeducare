@@ -22,16 +22,14 @@ export default function StorePage() {
 
   const [referralCode1, setReferralCode1] = useState("");
   const [referralCode2, setReferralCode2] = useState("");
-  const [isClient, setIsClient] = useState(false);
 
   
   useEffect(() => {
-    setIsClient(true);
     setWalletData(getWalletData());
     setStoreConfig(getStoreConfig());
   }, []);
 
-  if (!isClient || !walletData || !storeConfig) {
+  if (!walletData || !storeConfig) {
     return (
         <div className="w-full max-w-4xl mx-auto flex justify-center items-center h-64">
             <Loader2 className="animate-spin text-primary" size={32}/>
@@ -40,6 +38,7 @@ export default function StorePage() {
   }
 
   const handleSubscriptionPurchase = (index: number) => {
+    if (!storeConfig || !walletData) return;
     setIsPurchasing(index);
     const product = storeConfig.mockTestPackages[index];
     
@@ -124,6 +123,7 @@ export default function StorePage() {
   };
   
   const handleTicketPurchase = (pkg: TicketPackage) => {
+      if (!walletData || !storeConfig) return;
       setIsPurchasing(pkg.price);
       const gstAmount = pkg.price * (pkg.gstRate / 100);
       const finalPrice = pkg.price + gstAmount;
@@ -152,6 +152,7 @@ export default function StorePage() {
   };
   
   const handleReferboltPurchase = () => {
+    if (!walletData || !storeConfig) return;
     setIsPurchasing('referbolt');
     const cost = storeConfig.referboltSubscription.price;
     const gstAmount = cost * (storeConfig.referboltSubscription.gstRate / 100);

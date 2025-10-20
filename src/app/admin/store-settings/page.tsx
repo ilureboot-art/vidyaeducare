@@ -26,10 +26,8 @@ export default function AdminStoreSettingsPage() {
   const { toast } = useToast();
   const [storeConfig, setStoreConfig] = useState<StoreConfig | null>(null);
   const [academicConfig, setAcademicConfig] = useState<AcademicConfig | null>(null);
-  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    setIsClient(true);
     setStoreConfig(getStoreConfig());
     setAcademicConfig(getAcademicConfig());
   }, []);
@@ -194,7 +192,7 @@ export default function AdminStoreSettingsPage() {
       );
   };
 
-  if (!isClient || !storeConfig || !academicConfig) {
+  if (!storeConfig || !academicConfig) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />
@@ -385,5 +383,3 @@ export default function AdminStoreSettingsPage() {
     </div>
   );
 }
-
-    

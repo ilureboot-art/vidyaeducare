@@ -14,10 +14,8 @@ export default function PaymentSettingsPage() {
     const { toast } = useToast();
     const [methods, setMethods] = useState<AdminPaymentMethods | null>(null);
     const [qrFile, setQrFile] = useState<File | null>(null);
-    const [isClient, setIsClient] = useState(false);
 
     useEffect(() => {
-        setIsClient(true);
         const data = getWalletData();
         setMethods(data.adminPaymentMethods);
     }, [])
@@ -61,7 +59,7 @@ export default function PaymentSettingsPage() {
 
     }
 
-    if (!isClient || !methods) {
+    if (!methods) {
         return (
           <div className="flex justify-center items-center h-96">
             <Loader2 className="animate-spin text-primary" size={32} />
@@ -141,5 +139,3 @@ export default function PaymentSettingsPage() {
     </div>
   );
 }
-
-    

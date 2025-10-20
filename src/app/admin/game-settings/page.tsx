@@ -13,10 +13,8 @@ import { Loader2 } from "lucide-react";
 export default function AdminGameSettingsPage() {
     const { toast } = useToast();
     const [settings, setSettings] = useState<GameSettings | null>(null);
-    const [isClient, setIsClient] = useState(false);
     
     useEffect(() => {
-        setIsClient(true);
         const config = getStoreConfig();
         setSettings(config.gameSettings);
     }, []);
@@ -43,7 +41,7 @@ export default function AdminGameSettingsPage() {
         });
     }
 
-    if (!isClient || !settings) {
+    if (!settings) {
         return (
           <div className="flex justify-center items-center h-96">
             <Loader2 className="animate-spin text-primary" size={32} />
@@ -95,5 +93,3 @@ export default function AdminGameSettingsPage() {
     </div>
   );
 }
-
-    

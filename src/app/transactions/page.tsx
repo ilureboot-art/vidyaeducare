@@ -43,15 +43,13 @@ const getTypeIcon = (type: string, amount: number) => {
 }
 
 export default function TransactionsPage() {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[] | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'rejected'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'deposit' | 'withdrawal'>('all');
-  const [isClient, setIsClient] = useState(false);
   
   useEffect(() => {
-    setIsClient(true);
     refreshTransactions();
   }, []);
 
@@ -73,7 +71,7 @@ export default function TransactionsPage() {
     }
   };
 
-  const filteredTransactions = isClient ? transactions.filter(
+  const filteredTransactions = transactions ? transactions.filter(
     (tx) => {
       const searchTermMatch = tx.user?.toLowerCase().includes(searchTerm.toLowerCase()) || String(tx.id).toLowerCase().includes(searchTerm.toLowerCase());
       const statusMatch = statusFilter === 'all' || tx.status.toLowerCase() === statusFilter;
@@ -82,7 +80,7 @@ export default function TransactionsPage() {
     }
   ) : [];
 
-  if (!isClient) {
+  if (!transactions) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />

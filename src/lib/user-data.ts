@@ -88,7 +88,7 @@ export function getWalletData(): WalletData {
     if (typeof window === 'undefined') {
         return defaultWalletData;
     }
-    if (!walletDataState) {
+    if (walletDataState === null) {
         return initializeWalletData();
     }
     return walletDataState;

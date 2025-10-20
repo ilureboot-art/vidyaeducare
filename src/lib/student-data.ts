@@ -99,7 +99,7 @@ export const getAllStudentData = (): StudentProfile[] => {
     if (typeof window === 'undefined') {
         return [ ...defaultStudentData ];
     }
-    if (!studentDataState) {
+    if (studentDataState === null) {
         return initializeStudentData();
     }
     return studentDataState!;
@@ -128,7 +128,7 @@ export const getActivationCodes = (): string[] => {
     if (typeof window === 'undefined') {
         return [...defaultActivationCodes];
     }
-    if (!validActivationCodesState) {
+    if (validActivationCodesState === null) {
         return initializeActivationCodes();
     }
     return validActivationCodesState!;

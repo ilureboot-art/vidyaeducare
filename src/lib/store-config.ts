@@ -112,7 +112,7 @@ export const getStoreConfig = (): StoreConfig => {
     if (typeof window === 'undefined') {
         return { ...defaultStoreConfig };
     }
-    if (!storeConfigState) {
+    if (storeConfigState === null) {
         return initializeStoreConfig();
     }
     return storeConfigState;

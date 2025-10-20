@@ -43,17 +43,17 @@ const getStatusBadgeVariant = (status: string) => {
 }
 
 export default function UserManagementPage() {
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<User[] | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
-  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    setIsClient(true);
+    // Simulate fetching data
     setUsers(initialUsers);
   }, []);
 
   const handleStatusChange = (userId: string, newStatus: UserStatus) => {
+    if (!users) return;
     const updatedUsers = users.map((user) =>
         user.id === userId ? { ...user, status: newStatus } : user
       );
@@ -66,6 +66,7 @@ export default function UserManagementPage() {
   };
 
   const handleDeleteUser = (userId: string) => {
+    if (!users) return;
     const userToDelete = users.find(user => user.id === userId);
     const updatedUsers = users.filter(user => user.id !== userId);
     setUsers(updatedUsers);
@@ -76,13 +77,13 @@ export default function UserManagementPage() {
     });
   }
 
-  const filteredUsers = users.filter(
+  const filteredUsers = users ? users.filter(
     (user) =>
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  ) : [];
 
-  if (!isClient) {
+  if (!users) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />
@@ -190,5 +191,3 @@ export default function UserManagementPage() {
     </div>
   );
 }
-
-    

@@ -13,10 +13,8 @@ export default function ReferAndEarnPage() {
     const { toast } = useToast();
     const [referralBonus, setReferralBonus] = useState(0);
     const [referralCode, setReferralCode] = useState('');
-    const [isClient, setIsClient] = useState(false);
 
     useEffect(() => {
-        setIsClient(true);
         const config = getStoreConfig();
         const data = getWalletData();
         setReferralBonus(config.referralBonus);
@@ -56,7 +54,7 @@ Click here to join: ${url}`;
         }
     };
     
-    if (!isClient) {
+    if (!referralCode) {
         return (
           <div className="w-full max-w-2xl mx-auto flex items-center justify-center h-96">
             <Loader2 className="animate-spin text-primary" size={32} />
@@ -113,5 +111,3 @@ Click here to join: ${url}`;
         </div>
     );
 }
-
-    

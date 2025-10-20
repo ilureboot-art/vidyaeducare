@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -47,7 +48,6 @@ export default function TransactionsPage() {
   const { toast } = useToast();
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'rejected'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'deposit' | 'withdrawal'>('all');
-  const [isClient, setIsClient] = useState(false);
   
   const refreshTransactions = () => {
     const data = getWalletData();
@@ -55,7 +55,6 @@ export default function TransactionsPage() {
   };
 
   useEffect(() => {
-    setIsClient(true);
     refreshTransactions();
   }, []);
 
@@ -73,16 +72,16 @@ export default function TransactionsPage() {
     }
   };
 
-  const filteredTransactions = isClient ? transactions.filter(
+  const filteredTransactions = transactions.filter(
     (tx) => {
       const searchTermMatch = tx.user?.toLowerCase().includes(searchTerm.toLowerCase()) || String(tx.id).toLowerCase().includes(searchTerm.toLowerCase());
       const statusMatch = statusFilter === 'all' || tx.status.toLowerCase() === statusFilter;
       const typeMatch = typeFilter === 'all' || (typeFilter === 'deposit' && tx.amount >= 0) || (typeFilter === 'withdrawal' && tx.amount < 0);
       return searchTermMatch && statusMatch && typeMatch;
     }
-  ) : [];
+  );
 
-  if (!isClient) {
+  if (transactions.length === 0) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />

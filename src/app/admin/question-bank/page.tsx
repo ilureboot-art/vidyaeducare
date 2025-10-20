@@ -31,7 +31,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { getAllTestSets, addTestSet, deleteTestSet, updateTestSet, type TestSet, type Question } from "@/lib/question-bank";
-import { getAcademicConfig } from "@/lib/academic-config";
+import { getAcademicConfig, type AcademicConfig } from "@/lib/academic-config";
 import { parseQuestionsFromDocument, type QuestionParserOutput } from "@/ai/flows/document-parser-flow";
 
 
@@ -52,9 +52,8 @@ const initialTestSetState: TestSet = {
 
 export default function TestSetManagementPage() {
   const [testSets, setTestSets] = useState<TestSet[]>([]);
-  const [academicConfig, setAcademicConfig] = useState<any>(null);
+  const [academicConfig, setAcademicConfig] = useState<AcademicConfig | null>(null);
   const { toast } = useToast();
-  const [isClient, setIsClient] = useState(false);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [isManualCreateOpen, setIsManualCreateOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -66,7 +65,6 @@ export default function TestSetManagementPage() {
   const [editingTestSet, setEditingTestSet] = useState<TestSet | null>(null);
   
   useEffect(() => {
-    setIsClient(true);
     setTestSets(getAllTestSets());
     setAcademicConfig(getAcademicConfig());
   }, []);
@@ -280,7 +278,7 @@ export default function TestSetManagementPage() {
     resetManualForm();
 };
 
-  if (!isClient || !academicConfig) {
+  if (!academicConfig) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />

@@ -72,12 +72,12 @@ const initializeScheduledTests = (): ScheduledTest[] => {
         localStorage.setItem('scheduledTests', JSON.stringify(scheduledTestsState));
         return scheduledTestsState;
     }
-    return [];
+    return getDefaultScheduledTests();
 };
 
 export const getScheduledTestData = (): ScheduledTest[] => {
     if (typeof window === 'undefined') {
-        return [];
+        return getDefaultScheduledTests();
     }
     if (scheduledTestsState === null) {
         return initializeScheduledTests();

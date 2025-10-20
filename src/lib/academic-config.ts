@@ -49,7 +49,7 @@ export const getAcademicConfig = (): AcademicConfig => {
     if (typeof window === 'undefined') {
         return { ...defaultAcademicConfig };
     }
-    if (!academicConfigState) {
+    if (academicConfigState === null) {
         return initializeAcademicConfig();
     }
     return academicConfigState;

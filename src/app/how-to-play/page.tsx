@@ -12,15 +12,13 @@ import { useState, useEffect } from "react";
 
 export default function HowToPlayPage() {
   const [gameSettings, setGameSettings] = useState<GameSettings | null>(null);
-  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    setIsClient(true);
     const config = getStoreConfig();
     setGameSettings(config.gameSettings);
   }, []);
 
-  if (!isClient || !gameSettings) {
+  if (!gameSettings) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />
@@ -151,5 +149,3 @@ export default function HowToPlayPage() {
     </div>
   );
 }
-
-    

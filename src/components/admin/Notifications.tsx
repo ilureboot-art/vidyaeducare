@@ -29,12 +29,10 @@ function FormattedDate({ dateString }: { dateString: string }) {
 
 
 export function Notifications() {
-  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[] | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    setIsClient(true);
     const fetchNotifications = () => {
         const adminNotifications = getAdminNotifications();
         setNotifications(adminNotifications);
@@ -52,14 +50,6 @@ export function Notifications() {
         setNotifications(getAdminNotifications());
         setUnreadCount(0);
     }
-  }
-
-  if (!isClient) {
-    return (
-       <Button variant="outline" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
-        </Button>
-    )
   }
 
   return (
@@ -86,7 +76,7 @@ export function Notifications() {
             </Link>
           </div>
           <div className="grid gap-2 max-h-80 overflow-y-auto">
-            {notifications.length > 0 ? (
+            {notifications && notifications.length > 0 ? (
                 notifications.slice(0, 5).map(notif => (
                     <div key={notif.id} className="grid grid-cols-[25px_1fr] items-start pb-4 last:mb-0 last:pb-0">
                         <span className="flex h-2 w-2 translate-y-1 rounded-full bg-sky-500" />
@@ -107,5 +97,3 @@ export function Notifications() {
     </Popover>
   );
 }
-
-    

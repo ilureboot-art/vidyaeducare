@@ -28,12 +28,10 @@ function FormattedDate({ dateString }: { dateString: string }) {
 
 
 export function UserNotifications() {
-  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[] | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    setIsClient(true);
     const fetchNotifications = () => {
         const userNotifications = getUserNotifications("user-alex-doe");
         setNotifications(userNotifications);
@@ -51,14 +49,6 @@ export function UserNotifications() {
         setNotifications(getUserNotifications("user-alex-doe"));
         setUnreadCount(0);
     }
-  }
-
-  if (!isClient) {
-    return (
-      <Button variant="ghost" size="icon" className="relative">
-        <Bell className="h-6 w-6" />
-      </Button>
-    )
   }
 
   return (
@@ -85,7 +75,7 @@ export function UserNotifications() {
             </p>
           </div>
           <div className="grid gap-2">
-            {notifications.length > 0 ? (
+            {notifications && notifications.length > 0 ? (
                 notifications.slice(0, 5).map(notif => (
                     <div key={notif.id} className="grid grid-cols-[25px_1fr] items-start pb-4 last:mb-0 last:pb-0">
                         <span className="flex h-2 w-2 translate-y-1 rounded-full bg-sky-500" />
@@ -102,7 +92,7 @@ export function UserNotifications() {
             )}
           </div>
         </div>
-         {notifications.length > 0 && (
+         {notifications && notifications.length > 0 && (
             <div className="flex justify-end mt-2">
                 <Button variant="link" size="sm" onClick={() => {
                     markUserNotificationsAsRead("user-alex-doe");
@@ -118,5 +108,3 @@ export function UserNotifications() {
     </Popover>
   );
 }
-
-    

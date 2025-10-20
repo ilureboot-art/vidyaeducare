@@ -34,7 +34,6 @@ export default function TestSchedulePage() {
     const [date, setDate] = useState<Date | undefined>(undefined);
     const [time, setTime] = useState('10:00'); // Default time
     const [selectedTestSetId, setSelectedTestSetId] = useState('');
-    const [isClient, setIsClient] = useState(false);
     const [allSets, setAllSets] = useState<TestSet[]>([]);
 
      const refreshSchedules = () => {
@@ -65,7 +64,6 @@ export default function TestSchedulePage() {
     }
 
     useEffect(() => {
-        setIsClient(true);
         setDate(new Date());
         refreshSchedules();
         setAllSets(getAllTestSets());
@@ -115,7 +113,7 @@ export default function TestSchedulePage() {
         setTime('10:00');
     };
     
-    if (!isClient) {
+    if (!date) {
         return (
           <div className="flex justify-center items-center h-96">
             <Loader2 className="animate-spin text-primary" size={32} />

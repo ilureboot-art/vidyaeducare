@@ -31,20 +31,7 @@ import { addNotification } from "@/lib/notifications";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Image from "next/image";
 import { CopyButton } from "@/components/CopyButton";
-
-function FormattedDate({ dateString }: { dateString: string }) {
-  const [isClient, setIsClient] = useState(false);
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  if (!isClient) {
-    return null;
-  }
-  
-  return <span>{new Date(dateString).toLocaleDateString()}</span>;
-}
-
+import { format } from "date-fns";
 
 const getStatusBadgeVariant = (status: string) => {
     switch (status.toLowerCase()) {
@@ -73,29 +60,6 @@ export default function WalletPage() {
     setBalance(walletData.balance);
     setCoins(walletData.coins);
     setTransactions([...walletData.transactions]);
-
-    const interval = setInterval(() => {
-        setBalance(currentBalance => {
-            if (walletData.balance !== currentBalance) {
-                return walletData.balance;
-            }
-            return currentBalance;
-        });
-        setTransactions(currentTransactions => {
-            if (JSON.stringify(walletData.transactions) !== JSON.stringify(currentTransactions)) {
-                return [...walletData.transactions];
-            }
-            return currentTransactions;
-        });
-        setCoins(currentCoins => {
-            if(walletData.coins !== currentCoins) {
-                return walletData.coins;
-            }
-            return currentCoins;
-        })
-    }, 500); 
-
-    return () => clearInterval(interval);
   }, []);
 
   const handleAddFunds = (event: React.FormEvent<HTMLFormElement>) => {
@@ -334,7 +298,7 @@ export default function WalletPage() {
                                 </div>
                                 <div>
                                     <p className="font-medium">{tx.description}</p>
-                                    <p className="text-xs text-muted-foreground"><FormattedDate dateString={tx.date} /></p>
+                                    <p className="text-xs text-muted-foreground">{format(new Date(tx.date), 'P')}</p>
                                 </div>
                             </div>
                             <div className="text-right">
@@ -364,5 +328,3 @@ export default function WalletPage() {
     </div>
   );
 }
-
-    

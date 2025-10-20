@@ -36,32 +36,7 @@ export default function TestSchedulePage() {
     const [selectedTestSetId, setSelectedTestSetId] = useState('');
     const [isClient, setIsClient] = useState(false);
 
-    useEffect(() => {
-        setIsClient(true);
-        
-        const now = new Date();
-        const updatedSchedules = [...scheduledTests]
-            .sort((a,b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime())
-            .map(test => {
-                const testDate = new Date(test.dateTime);
-                let status: TestStatus = 'Upcoming';
-                if (testDate < now) {
-                    status = 'Completed';
-                }
-                if (format(testDate, 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd')) {
-                     if (testDate <= now) {
-                        status = 'Live';
-                     } else {
-                        status = 'Upcoming';
-                     }
-                }
-                return { ...test, status };
-            });
-
-        setAllSchedules(updatedSchedules);
-    }, []);
-
-    const refreshSchedules = () => {
+     const refreshSchedules = () => {
          const now = new Date();
         const updatedSchedules = [...scheduledTests]
             .sort((a,b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime())
@@ -71,7 +46,10 @@ export default function TestSchedulePage() {
                 if (testDate < now) {
                     status = 'Completed';
                 }
-                if (format(testDate, 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd')) {
+                
+                const isToday = format(testDate, 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd');
+
+                if (isToday) {
                      if (testDate <= now) {
                         status = 'Live';
                      } else {
@@ -83,6 +61,11 @@ export default function TestSchedulePage() {
 
         setAllSchedules(updatedSchedules);
     }
+
+    useEffect(() => {
+        setIsClient(true);
+        refreshSchedules();
+    }, []);
 
     const handleScheduleTest = () => {
         if (!date || !selectedTestSetId || !time) {

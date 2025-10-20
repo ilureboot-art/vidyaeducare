@@ -579,12 +579,12 @@ Join now: ${shareUrl}
 export default function PlayPage() {
     return (
         <Suspense fallback={<div className="w-full max-w-md mx-auto space-y-6">
-        <Card className="shadow-2xl shadow-primary/10">
-          <CardContent className="min-h-[300px] flex items-center justify-center">
-              <Loader2 className="animate-spin text-primary" size={32} />
-          </CardContent>
-        </Card>
-      </div>}>
+            <Card className="shadow-2xl shadow-primary/10">
+              <CardContent className="min-h-[300px] flex items-center justify-center">
+                  <Loader2 className="animate-spin text-primary" size={32} />
+              </CardContent>
+            </Card>
+          </div>}>
             <PlayPageContent />
         </Suspense>
     );

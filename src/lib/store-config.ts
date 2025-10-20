@@ -85,28 +85,34 @@ const defaultStoreConfig: StoreConfig = {
     }
 };
 
-let storeConfig: StoreConfig = { ...defaultStoreConfig };
+let storeConfigState: StoreConfig | null = null;
 
+function initializeStoreConfig(): StoreConfig {
+  if (typeof window !== 'undefined') {
+    const savedConfig = localStorage.getItem('storeConfig');
+    if (savedConfig) {
+      try {
+        return JSON.parse(savedConfig);
+      } catch (e) {
+        console.error("Failed to parse storeConfig from localStorage", e);
+      }
+    }
+  }
+  return { ...defaultStoreConfig };
+}
 
 export const getStoreConfig = (): StoreConfig => {
-    if (typeof window !== 'undefined') {
-        const savedConfig = localStorage.getItem('storeConfig');
-        if (savedConfig) {
-            try {
-                return JSON.parse(savedConfig);
-            } catch (e) {
-                console.error("Failed to parse storeConfig from localStorage", e);
-            }
-        }
+    if (!storeConfigState) {
+        storeConfigState = initializeStoreConfig();
     }
-    return storeConfig;
+    return storeConfigState;
 };
 
 const saveStoreConfig = (config: StoreConfig) => {
     if (typeof window !== 'undefined') {
         localStorage.setItem('storeConfig', JSON.stringify(config));
+        storeConfigState = config;
     }
-    storeConfig = config;
 };
 
 export function setPackages(newPackages: TicketPackage[]) {
@@ -149,5 +155,5 @@ export function resetStoreConfig() {
     if (typeof window !== 'undefined') {
         localStorage.removeItem('storeConfig');
     }
-    storeConfig = { ...defaultStoreConfig };
+    storeConfigState = null;
 }

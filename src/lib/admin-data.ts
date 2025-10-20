@@ -30,10 +30,10 @@ const defaultAdminData: AdminData = {
     ]
 };
 
-let adminData: AdminData = { ...defaultAdminData };
+let adminDataState: AdminData | null = null;
 
 
-export const getAdminData = (): AdminData => {
+function initializeAdminData(): AdminData {
     if (typeof window !== 'undefined') {
         const savedData = localStorage.getItem('adminData');
         if (savedData) {
@@ -44,13 +44,20 @@ export const getAdminData = (): AdminData => {
             }
         }
     }
-    return adminData;
+    return { ...defaultAdminData };
+}
+
+export const getAdminData = (): AdminData => {
+    if (!adminDataState) {
+        adminDataState = initializeAdminData();
+    }
+    return adminDataState;
 }
 
 const saveAdminData = (data: AdminData) => {
     if (typeof window !== 'undefined') {
         localStorage.setItem('adminData', JSON.stringify(data));
-        adminData = data;
+        adminDataState = data;
     }
 }
 

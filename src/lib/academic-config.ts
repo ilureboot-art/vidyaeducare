@@ -22,9 +22,9 @@ const defaultAcademicConfig: AcademicConfig = {
     ]
 };
 
-let academicConfig: AcademicConfig = { ...defaultAcademicConfig };
+let academicConfigState: AcademicConfig | null = null;
 
-export const getAcademicConfig = (): AcademicConfig => {
+function initializeAcademicConfig(): AcademicConfig {
     if (typeof window !== 'undefined') {
         const savedConfig = localStorage.getItem('academicConfig');
         if (savedConfig) {
@@ -35,14 +35,21 @@ export const getAcademicConfig = (): AcademicConfig => {
             }
         }
     }
-    return academicConfig;
+    return { ...defaultAcademicConfig };
+}
+
+export const getAcademicConfig = (): AcademicConfig => {
+    if (!academicConfigState) {
+        academicConfigState = initializeAcademicConfig();
+    }
+    return academicConfigState;
 };
 
 const saveAcademicConfig = (config: AcademicConfig) => {
     if (typeof window !== 'undefined') {
         localStorage.setItem('academicConfig', JSON.stringify(config));
+        academicConfigState = config;
     }
-    academicConfig = config;
 };
 
 // --- Setter functions to allow admin panel to modify the config ---

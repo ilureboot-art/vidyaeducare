@@ -61,18 +61,26 @@ const defaultWalletData: WalletData = {
   ],
 };
 
-let walletData: WalletData = { ...defaultWalletData };
+let walletData: WalletData | null = null;
+
+function initializeWalletData(): WalletData {
+  if (typeof window !== 'undefined') {
+    const savedData = localStorage.getItem('walletData');
+    if (savedData) {
+      try {
+        return JSON.parse(savedData);
+      } catch (e) {
+        console.error("Failed to parse walletData from localStorage", e);
+        return { ...defaultWalletData };
+      }
+    }
+  }
+  return { ...defaultWalletData };
+}
 
 export function getWalletData(): WalletData {
-  if (typeof window !== 'undefined') {
-      const savedData = localStorage.getItem('walletData');
-      if (savedData) {
-          try {
-              return JSON.parse(savedData);
-          } catch (e) {
-              console.error("Failed to parse walletData from localStorage", e);
-          }
-      }
+  if (!walletData) {
+    walletData = initializeWalletData();
   }
   return walletData;
 };
@@ -130,8 +138,8 @@ export function setAdminPaymentMethods(methods: AdminPaymentMethods) {
 export function resetWalletData() {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('walletData');
-      walletData = { ...defaultWalletData };
     }
+    walletData = null; // Will re-initialize on next get
 }
 
 export function updateWalletBalance(newBalance: number) {

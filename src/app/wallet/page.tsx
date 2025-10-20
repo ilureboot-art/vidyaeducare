@@ -22,10 +22,10 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { PlusCircle, MinusCircle, Info, History, ArrowUpRight, ArrowDownLeft, Coins } from "lucide-react";
+import { PlusCircle, MinusCircle, Info, History, ArrowUpRight, ArrowDownLeft, Coins, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
-import { walletData, addTransaction, type Transaction, getWalletData } from "@/lib/user-data";
+import { addTransaction, type Transaction, getWalletData, type WalletData } from "@/lib/user-data";
 import { Badge } from "@/components/ui/badge";
 import { addNotification } from "@/lib/notifications";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -48,23 +48,24 @@ const getStatusBadgeVariant = (status: string) => {
 
 export default function WalletPage() {
   const { toast } = useToast();
-  const [balance, setBalance] = useState(0);
-  const [coins, setCoins] = useState(0);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [walletState, setWalletState] = useState<WalletData | null>(null);
   const [addFundsOpen, setAddFundsOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [isClient, setIsClient] = useState(false);
 
+  const refreshData = () => {
+    setWalletState(getWalletData());
+  };
+
   useEffect(() => {
     setIsClient(true);
-    const data = getWalletData();
-    setBalance(data.balance);
-    setCoins(data.coins);
-    setTransactions([...data.transactions]);
+    refreshData();
   }, []);
 
   const handleAddFunds = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!walletState) return;
+
     const form = event.currentTarget;
     const amount = parseFloat((form.elements.namedItem('amount-add') as HTMLInputElement).value);
     const txnId = (form.elements.namedItem('txnId') as HTMLInputElement).value;
@@ -91,7 +92,7 @@ export default function WalletPage() {
         message: `Alex Doe requested to deposit ₹${amount} (Ref: ${txnId}).`,
         userId: 'admin',
     });
-    setTransactions([...walletData.transactions]);
+    refreshData();
 
     toast({
       title: "Request Submitted",
@@ -103,6 +104,8 @@ export default function WalletPage() {
   
   const handleWithdraw = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!walletState) return;
+
     const form = event.currentTarget;
     const amount = parseFloat((form.elements.namedItem('amount-withdraw') as HTMLInputElement).value);
     const upiId = (form.elements.namedItem('upiId') as HTMLInputElement).value;
@@ -112,7 +115,7 @@ export default function WalletPage() {
         return;
     }
 
-    if (amount > walletData.balance) {
+    if (amount > walletState.balance) {
         toast({
             variant: "destructive",
             title: "Insufficient Balance",
@@ -147,7 +150,7 @@ export default function WalletPage() {
         message: `Alex Doe requested to withdraw ₹${amount}.`,
         userId: 'admin'
     });
-    setTransactions([...walletData.transactions]);
+    refreshData();
 
     toast({
       title: "Request Submitted",
@@ -157,11 +160,15 @@ export default function WalletPage() {
     form.reset();
   }
 
-  const { adminPaymentMethods } = getWalletData();
-
-  if (!isClient) {
-      return null;
+  if (!isClient || !walletState) {
+    return (
+      <div className="w-full max-w-2xl mx-auto space-y-6 flex justify-center items-center h-96">
+        <Loader2 className="animate-spin text-primary" size={32} />
+      </div>
+    );
   }
+
+  const { adminPaymentMethods, balance, coins, transactions } = walletState;
 
   return (
     <div className="w-full max-w-2xl mx-auto space-y-6">
@@ -289,7 +296,7 @@ export default function WalletPage() {
             <h3 className="font-semibold text-lg text-center">Recent Activity</h3>
             {transactions.length > 0 ? (
                 <div className="space-y-2">
-                    {transactions.slice(0, 3).map((tx) => (
+                    {[...transactions].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 3).map((tx) => (
                          <div key={tx.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                             <div className="flex items-center gap-3">
                                 <div className={`p-2 rounded-full ${tx.amount >= 0 ? 'bg-green-100 dark:bg-green-900' : 'bg-red-100 dark:bg-red-900'}`}>
@@ -329,5 +336,3 @@ export default function WalletPage() {
     </div>
   );
 }
-
-    

@@ -56,6 +56,7 @@ export default function ReferBoltPage() {
   }, [isClient]);
 
   const handleShare = async () => {
+    if (!isClient) return;
     const referralCode = getWalletData().referralCode;
     const shareUrl = `${window.location.origin}/signup?ref=${referralCode}`;
     const benefitsText = benefits.map(b => `✅ ${b.text}`).join("\n");
@@ -232,5 +233,3 @@ Subscribe and start your earning cycle now: ${shareUrl}
     </div>
   );
 }
-
-    

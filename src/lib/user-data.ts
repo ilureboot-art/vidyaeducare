@@ -61,7 +61,9 @@ const defaultWalletData: WalletData = {
   ],
 };
 
-export const getWalletData = (): WalletData => {
+let walletData: WalletData = getWalletData();
+
+export function getWalletData(): WalletData {
   if (typeof window === 'undefined') {
     return JSON.parse(JSON.stringify(defaultWalletData)); // Deep copy for server-side
   }
@@ -84,60 +86,71 @@ const saveWalletData = (data: WalletData) => {
 
 // Function to add a transaction to our shared state
 export function addTransaction(transaction: Transaction) {
-  let walletData = getWalletData();
-  walletData.transactions.unshift(transaction);
+  let data = getWalletData();
+  data.transactions.unshift(transaction);
   if (transaction.status === 'Completed') {
     if (transaction.type === 'deposit') {
-      walletData.balance += transaction.amount;
+      data.balance += transaction.amount;
     } else if (transaction.type === 'withdrawal') {
-      walletData.balance += transaction.amount; // amount is negative
+      data.balance += transaction.amount; // amount is negative
     }
   }
-  saveWalletData(walletData);
+  saveWalletData(data);
+  walletData = data;
 }
 
 // Function to update transaction status
 export function updateTransactionStatus(id: number, newStatus: 'Completed' | 'Rejected'): boolean {
-    let walletData = getWalletData();
-    const txIndex = walletData.transactions.findIndex((tx: Transaction) => tx.id === id);
+    let data = getWalletData();
+    const txIndex = data.transactions.findIndex((tx: Transaction) => tx.id === id);
     if (txIndex === -1) return false;
 
-    const tx = walletData.transactions[txIndex];
+    const tx = data.transactions[txIndex];
 
     if (tx.status !== 'Pending') return false;
 
     if (tx.type === 'deposit' && newStatus === 'Completed') {
-      walletData.balance += tx.amount;
+      data.balance += tx.amount;
     }
     
     if (tx.type === 'withdrawal' && newStatus === 'Rejected') {
-        walletData.balance += Math.abs(tx.amount);
+        data.balance += Math.abs(tx.amount);
     }
     
-    walletData.transactions[txIndex].status = newStatus;
-    saveWalletData(walletData);
+    data.transactions[txIndex].status = newStatus;
+    saveWalletData(data);
+    walletData = data;
     return true;
 }
 
 export function setAdminPaymentMethods(methods: AdminPaymentMethods) {
-  let walletData = getWalletData();
-  walletData.adminPaymentMethods = methods;
-  saveWalletData(walletData);
+  let data = getWalletData();
+  data.adminPaymentMethods = methods;
+  saveWalletData(data);
+  walletData = data;
 }
 
 export function resetWalletData() {
     if (typeof window === 'undefined') return;
     localStorage.removeItem('walletData');
+    walletData = getWalletData();
 }
 
 export function updateWalletBalance(newBalance: number) {
-    let walletData = getWalletData();
-    walletData.balance = newBalance;
-    saveWalletData(walletData);
+    let data = getWalletData();
+    data.balance = newBalance;
+    saveWalletData(data);
+    walletData = data;
 }
 
 export function updateCoinBalance(newCoins: number) {
-    let walletData = getWalletData();
-    walletData.coins = newCoins;
-    saveWalletData(walletData);
+    let data = getWalletData();
+    data.coins = newCoins;
+    saveWalletData(data);
+    walletData = data;
+}
+
+// Update the global variable if on client
+if (typeof window !== 'undefined') {
+  walletData = getWalletData();
 }

@@ -77,42 +77,44 @@ let validActivationCodesState: string[] | null = null;
 const defaultActivationCodes = ["PROD-A1B2C", "PROD-X9Y8Z", "PROD-M4N5P"];
 
 const initializeStudentData = (): StudentProfile[] => {
-    if (typeof window !== 'undefined') {
-        const savedData = localStorage.getItem('studentData');
-        if (savedData) {
-            try {
-                return JSON.parse(savedData);
-            } catch (e) {
-                console.error("Failed to parse studentData from localStorage", e);
-            }
+    if (typeof window === 'undefined') {
+        return JSON.parse(JSON.stringify(defaultStudentData));
+    }
+    const savedData = localStorage.getItem('studentData');
+    if (savedData) {
+        try {
+            return JSON.parse(savedData);
+        } catch (e) {
+            console.error("Failed to parse studentData from localStorage", e);
         }
     }
     return JSON.parse(JSON.stringify(defaultStudentData));
 };
 
 const getStudentData = (): StudentProfile[] => {
-    if (studentDataState === null) {
+    if (!studentDataState) {
         studentDataState = initializeStudentData();
     }
     return studentDataState!;
 };
 
 const initializeActivationCodes = (): string[] => {
-    if (typeof window !== 'undefined') {
-        const savedCodes = localStorage.getItem('activationCodes');
-        if (savedCodes) {
-            try {
-                return JSON.parse(savedCodes);
-            } catch(e) {
-                 console.error("Failed to parse activationCodes from localStorage", e);
-            }
+    if (typeof window === 'undefined') {
+        return [...defaultActivationCodes];
+    }
+    const savedCodes = localStorage.getItem('activationCodes');
+    if (savedCodes) {
+        try {
+            return JSON.parse(savedCodes);
+        } catch(e) {
+             console.error("Failed to parse activationCodes from localStorage", e);
         }
     }
-    return JSON.parse(JSON.stringify(defaultActivationCodes));
+    return [...defaultActivationCodes];
 };
 
 export const getActivationCodes = (): string[] => {
-    if (validActivationCodesState === null) {
+    if (!validActivationCodesState) {
         validActivationCodesState = initializeActivationCodes();
     }
     return validActivationCodesState!;

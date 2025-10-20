@@ -58,20 +58,21 @@ const defaultTestSets: TestSet[] = [
 let allTestSetsState: TestSet[] | null = null;
 
 const initializeTestSets = (): TestSet[] => {
-    if (typeof window !== 'undefined') {
-        const saved = localStorage.getItem('allTestSets');
-        if (saved) {
-            try {
-                return JSON.parse(saved);
-            } catch (e) {
-                console.error("Failed to parse allTestSets from localStorage", e);
-            }
+    if (typeof window === 'undefined') {
+        return JSON.parse(JSON.stringify(defaultTestSets));
+    }
+    const saved = localStorage.getItem('allTestSets');
+    if (saved) {
+        try {
+            return JSON.parse(saved);
+        } catch (e) {
+            console.error("Failed to parse allTestSets from localStorage", e);
         }
     }
     return JSON.parse(JSON.stringify(defaultTestSets));
 };
 
-const getTestSets = (): TestSet[] => {
+export const getAllTestSets = (): TestSet[] => {
     if (allTestSetsState === null) {
        allTestSetsState = initializeTestSets();
     }
@@ -85,12 +86,8 @@ const saveTestSets = (sets: TestSet[]) => {
     }
 }
 
-export function getAllTestSets(): TestSet[] {
-    return getTestSets();
-}
-
 export function addTestSet(testSet: TestSet) {
-    const sets = getTestSets();
+    const sets = getAllTestSets();
     const existingIndex = sets.findIndex(ts => ts.id === testSet.id);
 
     if (existingIndex > -1) {
@@ -103,7 +100,7 @@ export function addTestSet(testSet: TestSet) {
 }
 
 export function updateTestSet(updatedTestSet: TestSet) {
-    let sets = getTestSets();
+    let sets = getAllTestSets();
     const index = sets.findIndex(ts => ts.id === updatedTestSet.id);
     if (index > -1) {
         sets[index] = updatedTestSet;
@@ -114,7 +111,7 @@ export function updateTestSet(updatedTestSet: TestSet) {
 }
 
 export function deleteTestSet(testSetId: string) {
-    let sets = getTestSets();
+    let sets = getAllTestSets();
     const updatedSets = sets.filter(ts => ts.id !== testSetId);
     saveTestSets(updatedSets);
 }

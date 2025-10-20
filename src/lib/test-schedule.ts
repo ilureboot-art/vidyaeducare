@@ -44,14 +44,15 @@ const getDefaultScheduledTests = (): ScheduledTest[] => [
 let scheduledTestsState: ScheduledTest[] | null = null;
 
 const initializeScheduledTests = (): ScheduledTest[] => {
-    if (typeof window !== 'undefined') {
-        const savedData = localStorage.getItem('scheduledTests');
-        if (savedData) {
-            try {
-                return JSON.parse(savedData);
-            } catch (e) {
-                console.error("Failed to parse scheduledTests from localStorage", e);
-            }
+    if (typeof window === 'undefined') {
+        return getDefaultScheduledTests();
+    }
+    const savedData = localStorage.getItem('scheduledTests');
+    if (savedData) {
+        try {
+            return JSON.parse(savedData);
+        } catch (e) {
+            console.error("Failed to parse scheduledTests from localStorage", e);
         }
     }
     return getDefaultScheduledTests();

@@ -41,14 +41,11 @@ import { getStoreConfig, type GameSettings } from "@/lib/store-config";
 import { addNotification } from "@/lib/notifications";
 import React from "react";
 
-
-const GAMES_PER_TICKET = 2;
 const GAME_DURATION = 60; // 60 seconds
 
-type GameState = "idle" | "playing" | "won" | "lost";
+type GameState = "loading" | "idle" | "playing" | "won" | "lost";
 type GameMode = "real" | "demo";
 
-// In a real app, this would be fetched and persisted
 const initialPlayerStats = {
     winRate: 0,
     totalEarnings: 0,
@@ -89,13 +86,13 @@ const Confetti = () => (
 function PlayPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [isClient, setIsClient] = useState(false);
+  
   const [secretNumber, setSecretNumber] = useState(0);
   const [currentGuess, setCurrentGuess] = useState("");
   const [guessHistory, setGuessHistory] = useState<{ guess: number; hint: string }[]>([]);
   const [attemptsLeft, setAttemptsLeft] = useState(0);
-  const [gameState, setGameState] = useState<GameState>("idle");
-  const [feedback, setFeedback] = useState("Start a new game to play!");
+  const [gameState, setGameState] = useState<GameState>("loading");
+  const [feedback, setFeedback] = useState("Loading game...");
   const [isChecking, setIsChecking] = useState(false);
   const [reward, setReward] = useState(0);
   const [shake, setShake] = useState(false);
@@ -124,7 +121,6 @@ function PlayPageContent() {
     setGameState(endState);
     setFeedback(message);
 
-    // No real money involved, but we can track stats
     const newGamesPlayed = playerStats.gamesPlayed + 1;
     const newWins = playerStats.wins + (endState === 'won' ? 1 : 0);
     const newTotalEarnings = playerStats.totalEarnings + earnedReward;
@@ -179,20 +175,20 @@ function PlayPageContent() {
   };
 
   useEffect(() => {
-    setIsClient(true);
     const config = getStoreConfig();
     const wallet = getWalletData();
     setGameSettings(config.gameSettings);
     setReferralBonus(config.referralBonus);
     setReferralCode(wallet.referralCode);
-  }, []);
-  
+    setGameState(searchParams.get('mode') === 'demo' ? "playing" : "idle");
+  }, [searchParams]);
+
   useEffect(() => {
-    if (isClient && searchParams.get('mode') === 'demo' && gameState === 'idle' && gameSettings) {
-      startGame();
-    }
-  }, [isClient, searchParams, startGame, gameState, gameSettings]);
-  
+      if (gameState === 'playing' && !secretNumber) {
+          resetGame();
+      }
+  }, [gameState, secretNumber, resetGame]);
+
   const handleTimerTick = useCallback(() => {
     if (endTimeRef.current) {
         const now = Date.now();
@@ -327,7 +323,7 @@ Join now: ${shareUrl}
   const secondsLeft = timeLeft % 60;
 
   const renderPlayingState = () => {
-    if (!gameSettings) return null;
+    if (!gameSettings) return renderLoadingState();
     return (
         <div className="space-y-4">
             <div className="flex justify-between items-center">
@@ -398,9 +394,17 @@ Join now: ${shareUrl}
         </div>
     </div>
   );
+  
+  const renderLoadingState = () => (
+      <div className="w-full h-full flex items-center justify-center">
+          <Loader2 className="animate-spin text-primary" size={32} />
+      </div>
+  )
 
   const renderCardContent = () => {
     switch (gameState) {
+      case 'loading':
+        return renderLoadingState();
       case 'idle':
         return renderIdleState();
       case 'playing':
@@ -434,12 +438,12 @@ Join now: ${shareUrl}
     { name: 'Win Rate', value: playerStats.winRate, fill: 'hsl(var(--primary))' },
   ];
 
-  if (!isClient || !gameSettings) {
+  if (gameState === 'loading') {
     return (
       <div className="w-full max-w-md mx-auto space-y-6">
         <Card className="shadow-2xl shadow-primary/10">
           <CardContent className="min-h-[300px] flex items-center justify-center">
-              <Loader2 className="animate-spin text-primary" size={32} />
+              {renderLoadingState()}
           </CardContent>
         </Card>
       </div>
@@ -589,5 +593,3 @@ export default function PlayPage() {
         </Suspense>
     );
 }
-
-    

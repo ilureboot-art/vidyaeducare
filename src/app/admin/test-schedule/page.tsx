@@ -24,16 +24,65 @@ import {
 } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
 
+type TestStatus = 'Live' | 'Upcoming' | 'Completed';
+
+type ScheduledTestWithStatus = ScheduledTest & { status: TestStatus };
+
 export default function TestSchedulePage() {
     const { toast } = useToast();
-    const [allSchedules, setAllSchedules] = useState<ScheduledTest[]>([]);
+    const [allSchedules, setAllSchedules] = useState<ScheduledTestWithStatus[]>([]);
     const [date, setDate] = useState<Date | undefined>(new Date());
     const [time, setTime] = useState('10:00'); // Default time
     const [selectedTestSetId, setSelectedTestSetId] = useState('');
+    const [isClient, setIsClient] = useState(false);
 
     useEffect(() => {
-        setAllSchedules([...scheduledTests]);
+        setIsClient(true);
+        
+        const now = new Date();
+        const updatedSchedules = [...scheduledTests]
+            .sort((a,b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime())
+            .map(test => {
+                const testDate = new Date(test.dateTime);
+                let status: TestStatus = 'Upcoming';
+                if (testDate < now) {
+                    status = 'Completed';
+                }
+                if (format(testDate, 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd')) {
+                     if (testDate <= now) {
+                        status = 'Live';
+                     } else {
+                        status = 'Upcoming';
+                     }
+                }
+                return { ...test, status };
+            });
+
+        setAllSchedules(updatedSchedules);
     }, []);
+
+    const refreshSchedules = () => {
+         const now = new Date();
+        const updatedSchedules = [...scheduledTests]
+            .sort((a,b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime())
+            .map(test => {
+                const testDate = new Date(test.dateTime);
+                let status: TestStatus = 'Upcoming';
+                if (testDate < now) {
+                    status = 'Completed';
+                }
+                if (format(testDate, 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd')) {
+                     if (testDate <= now) {
+                        status = 'Live';
+                     } else {
+                        status = 'Upcoming';
+                     }
+                }
+                return { ...test, status };
+            });
+
+        setAllSchedules(updatedSchedules);
+    }
 
     const handleScheduleTest = () => {
         if (!date || !selectedTestSetId || !time) {
@@ -66,7 +115,7 @@ export default function TestSchedulePage() {
         };
 
         addScheduledTest(newTest);
-        setAllSchedules([...scheduledTests]);
+        refreshSchedules();
 
         toast({
             title: "Test Scheduled!",
@@ -79,7 +128,9 @@ export default function TestSchedulePage() {
         setTime('10:00');
     };
     
-    const sortedSchedules = [...allSchedules].sort((a,b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
+    if (!isClient) {
+        return null;
+    }
 
     return (
         <div className="space-y-6">
@@ -156,39 +207,18 @@ export default function TestSchedulePage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {sortedSchedules.length > 0 ? sortedSchedules.map(test => {
-                                const testDate = new Date(test.dateTime);
-                                const now = new Date();
-
-                                let status: 'Live' | 'Upcoming' | 'Completed' = 'Upcoming';
-                                if (testDate < now) {
-                                    // Could add more logic here for duration to be "Live"
-                                    status = 'Completed';
-                                }
-                                
-                                // A simple check for "Live" could be if it's on the same day.
-                                // A more complex check would involve test duration.
-                                if (format(testDate, 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd') && testDate > now) {
-                                    status = 'Upcoming';
-                                } else if (format(testDate, 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd') && testDate <= now) {
-                                    // This is a rough "Live" status
-                                    status = 'Live'
-                                }
-
-
-                                return (
-                                    <TableRow key={test.id}>
-                                        <TableCell>{format(new Date(test.dateTime), "PPP p")}</TableCell>
-                                        <TableCell className="font-medium">{test.testSetName}</TableCell>
-                                        <TableCell className="text-sm text-muted-foreground">{`${test.board} / ${test.standard} / ${test.subject}`}</TableCell>
-                                        <TableCell>
-                                            <Badge variant={status === 'Live' ? 'default' : status === 'Completed' ? 'secondary' : 'outline'}>
-                                                {status}
-                                            </Badge>
-                                        </TableCell>
-                                    </TableRow>
-                                )
-                            }) : (
+                            {allSchedules.length > 0 ? allSchedules.map(test => (
+                                <TableRow key={test.id}>
+                                    <TableCell>{format(new Date(test.dateTime), "PPP p")}</TableCell>
+                                    <TableCell className="font-medium">{test.testSetName}</TableCell>
+                                    <TableCell className="text-sm text-muted-foreground">{`${test.board} / ${test.standard} / ${test.subject}`}</TableCell>
+                                    <TableCell>
+                                        <Badge variant={test.status === 'Live' ? 'default' : test.status === 'Completed' ? 'secondary' : 'outline'}>
+                                            {test.status}
+                                        </Badge>
+                                    </TableCell>
+                                </TableRow>
+                            )) : (
                                 <TableRow>
                                     <TableCell colSpan={4} className="text-center h-24 text-muted-foreground">No tests scheduled yet.</TableCell>
                                 </TableRow>

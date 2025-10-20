@@ -1,6 +1,8 @@
 
 'use client';
 
+import { getAllTestSets } from './question-bank';
+
 export type ScheduledTest = {
     id: string;
     testSetId: string;
@@ -11,56 +13,71 @@ export type ScheduledTest = {
     subject: string;
 };
 
-const getDefaultScheduledTests = (): ScheduledTest[] => [
-    {
-        id: "SCHED-1",
-        testSetId: "SET-172234567890",
-        testSetName: "Gravitation Mock Test",
-        dateTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days from now
-        board: "SSC",
-        standard: "10th",
-        subject: "Science"
-    },
-    {
-        id: "SCHED-2",
-        testSetId: "SET-172242000000",
-        testSetName: "Elements Mock Test",
-        dateTime: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // 1 day ago (for practice)
-        board: "SSC",
-        standard: "10th",
-        subject: "Science"
-    },
-    {
-        id: "SCHED-3",
-        testSetId: "SET-172234567890", // Using Gravitation test for another standard
-        testSetName: "Gravitation Mock Test",
-        dateTime: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days from now
-        board: "CBSE",
-        standard: "11th",
-        subject: "Physics"
-    }
-];
+const getDefaultScheduledTests = (): ScheduledTest[] => {
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(now.getDate() + 1);
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    const fiveDaysFromNow = new Date(now);
+    fiveDaysFromNow.setDate(now.getDate() + 5);
+
+    return [
+        {
+            id: "SCHED-1",
+            testSetId: "SET-172234567890",
+            testSetName: "Gravitation Mock Test",
+            dateTime: tomorrow.toISOString(),
+            board: "SSC",
+            standard: "10th",
+            subject: "Science"
+        },
+        {
+            id: "SCHED-2",
+            testSetId: "SET-172242000000",
+            testSetName: "Elements Mock Test",
+            dateTime: yesterday.toISOString(),
+            board: "SSC",
+            standard: "10th",
+            subject: "Science"
+        },
+        {
+            id: "SCHED-3",
+            testSetId: "SET-172234567890", // Using Gravitation test for another standard
+            testSetName: "Gravitation Mock Test",
+            dateTime: fiveDaysFromNow.toISOString(),
+            board: "CBSE",
+            standard: "11th",
+            subject: "Physics"
+        }
+    ];
+};
 
 let scheduledTestsState: ScheduledTest[] | null = null;
 
 const initializeScheduledTests = (): ScheduledTest[] => {
-    if (typeof window === 'undefined') {
-        return getDefaultScheduledTests();
-    }
-    const savedData = localStorage.getItem('scheduledTests');
-    if (savedData) {
-        try {
-            return JSON.parse(savedData);
-        } catch (e) {
-            console.error("Failed to parse scheduledTests from localStorage", e);
+    if (typeof window !== 'undefined') {
+        const savedData = localStorage.getItem('scheduledTests');
+        if (savedData) {
+            try {
+                const parsedData = JSON.parse(savedData);
+                scheduledTestsState = parsedData;
+                return parsedData;
+            } catch (e) {
+                console.error("Failed to parse scheduledTests from localStorage", e);
+            }
         }
     }
-    return getDefaultScheduledTests();
+    scheduledTestsState = getDefaultScheduledTests();
+    return scheduledTestsState;
 };
 
 const getScheduledTests = (): ScheduledTest[] => {
+    if (typeof window === 'undefined') {
+        return getDefaultScheduledTests();
+    }
     if (scheduledTestsState === null) {
-        scheduledTestsState = initializeScheduledTests();
+        return initializeScheduledTests();
     }
     return scheduledTestsState!;
 };
@@ -79,6 +96,10 @@ export function getAllScheduledTests(): ScheduledTest[] {
 // Function to add a new scheduled test
 export function addScheduledTest(test: ScheduledTest) {
     const currentTests = getScheduledTests();
+    const testSets = getAllTestSets(); // This needs to be available client-side
+    const testSet = testSets.find(ts => ts.id === test.testSetId);
+    if (!testSet) return;
+
     // Prevent scheduling the same test set at the exact same time
     const alreadyExists = currentTests.some(st => st.dateTime === test.dateTime && st.testSetId === test.testSetId);
     if (!alreadyExists) {

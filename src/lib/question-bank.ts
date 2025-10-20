@@ -50,7 +50,6 @@ const defaultTestSets: TestSet[] = [
           mr: "कारण त्या खूप क्षीण असतात"
         }
       },
-      // ... more questions from context
     ]
   }
 ];
@@ -58,23 +57,28 @@ const defaultTestSets: TestSet[] = [
 let allTestSetsState: TestSet[] | null = null;
 
 const initializeTestSets = (): TestSet[] => {
-    if (typeof window === 'undefined') {
-        return JSON.parse(JSON.stringify(defaultTestSets));
-    }
-    const saved = localStorage.getItem('allTestSets');
-    if (saved) {
-        try {
-            return JSON.parse(saved);
-        } catch (e) {
-            console.error("Failed to parse allTestSets from localStorage", e);
+    if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem('allTestSets');
+        if (saved) {
+            try {
+                const parsedData = JSON.parse(saved);
+                allTestSetsState = parsedData;
+                return parsedData;
+            } catch (e) {
+                console.error("Failed to parse allTestSets from localStorage", e);
+            }
         }
     }
-    return JSON.parse(JSON.stringify(defaultTestSets));
+    allTestSetsState = JSON.parse(JSON.stringify(defaultTestSets));
+    return allTestSetsState;
 };
 
 export const getAllTestSets = (): TestSet[] => {
+    if (typeof window === 'undefined') {
+        return JSON.parse(JSON.stringify(defaultTestSets));
+    }
     if (allTestSetsState === null) {
-       allTestSetsState = initializeTestSets();
+       return initializeTestSets();
     }
     return allTestSetsState!;
 };

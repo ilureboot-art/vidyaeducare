@@ -159,7 +159,9 @@ export default function AdminStoreSettingsPage() {
     setBoards(academicConfig.boards);
     setStandards(academicConfig.standards);
     setSubjects(academicConfig.subjects);
-    setGameSettings(storeConfig.gameSettings);
+    if(storeConfig.gameSettings){
+        setGameSettings(storeConfig.gameSettings);
+    }
 
     toast({
       title: "Settings Saved!",

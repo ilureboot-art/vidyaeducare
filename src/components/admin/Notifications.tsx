@@ -100,6 +100,23 @@ export function Notifications() {
             )}
           </div>
         </div>
+         {notifications.length > 0 && (
+            <div className="flex justify-end mt-2">
+                <Button variant="link" size="sm" onClick={() => {
+                    markAdminNotificationsAsRead();
+                     const userNotifications = getAdminNotifications();
+                     const formattedNotifications = userNotifications.map(n => ({
+                      ...n,
+                      formattedTimestamp: format(new Date(n.timestamp), 'P p')
+                    }));
+                    setNotifications(formattedNotifications);
+                    setUnreadCount(0);
+                }}>
+                    <CheckCheck className="mr-2 h-4 w-4" />
+                    Mark all as read
+                </Button>
+            </div>
+         )}
       </PopoverContent>
     </Popover>
   );

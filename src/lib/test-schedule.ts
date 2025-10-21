@@ -15,30 +15,26 @@ export type ScheduledTest = {
 
 let scheduledTestsState: ScheduledTest[] | null = null;
 
-const getDefaultScheduledTests = (): ScheduledTest[] => {
-    // IMPORTANT: Use static ISO strings to prevent `new Date()` from running on the server.
-    // Dynamic date logic will be handled on the client side.
-    return [
-        {
-            id: "SCHED-1",
-            testSetId: "SET-172234567890",
-            testSetName: "Gravitation Mock Test",
-            dateTime: "2025-08-01T10:00:00.000Z", // Future date
-            board: "SSC",
-            standard: "10th",
-            subject: "Science"
-        },
-        {
-            id: "SCHED-2",
-            testSetId: "SET-172242000000",
-            testSetName: "Elements Mock Test",
-            dateTime: "2024-07-01T10:00:00.000Z", // Past date
-            board: "SSC",
-            standard: "10th",
-            subject: "Science"
-        },
-    ];
-};
+const defaultScheduledTests: ScheduledTest[] = [
+    {
+        id: "SCHED-1",
+        testSetId: "SET-172234567890",
+        testSetName: "Gravitation Mock Test",
+        dateTime: "2025-08-01T10:00:00.000Z", // Static future date
+        board: "SSC",
+        standard: "10th",
+        subject: "Science"
+    },
+    {
+        id: "SCHED-2",
+        testSetId: "SET-172242000000",
+        testSetName: "Elements Mock Test",
+        dateTime: "2024-07-01T10:00:00.000Z", // Static past date
+        board: "SSC",
+        standard: "10th",
+        subject: "Science"
+    },
+];
 
 const initializeScheduledTests = (): ScheduledTest[] => {
     if (scheduledTestsState) {
@@ -56,12 +52,12 @@ const initializeScheduledTests = (): ScheduledTest[] => {
             console.error("Failed to parse scheduledTests from localStorage", e);
         }
         
-        scheduledTestsState = getDefaultScheduledTests();
+        scheduledTestsState = JSON.parse(JSON.stringify(defaultScheduledTests));
         localStorage.setItem('scheduledTests', JSON.stringify(scheduledTestsState));
         return scheduledTestsState;
     }
 
-    return getDefaultScheduledTests();
+    return JSON.parse(JSON.stringify(defaultScheduledTests));
 };
 
 export const getScheduledTestData = (): ScheduledTest[] => {

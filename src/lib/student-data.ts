@@ -77,7 +77,7 @@ let validActivationCodesState: string[] | null = null;
 const defaultActivationCodes = ["PROD-A1B2C", "PROD-X9Y8Z", "PROD-M4N5P"];
 
 const initializeStudentData = (): StudentProfile[] => {
-    if (studentDataState !== null) {
+    if (studentDataState) {
         return studentDataState;
     }
 
@@ -85,9 +85,8 @@ const initializeStudentData = (): StudentProfile[] => {
         try {
             const savedData = localStorage.getItem('studentData');
             if (savedData) {
-                const parsedData = JSON.parse(savedData);
-                studentDataState = parsedData;
-                return studentDataState;
+                studentDataState = JSON.parse(savedData);
+                return studentDataState!;
             }
         } catch (e) {
             console.error("Failed to parse studentData from localStorage", e);
@@ -106,7 +105,7 @@ export const getAllStudentData = (): StudentProfile[] => {
 };
 
 const initializeActivationCodes = (): string[] => {
-    if (validActivationCodesState !== null) {
+    if (validActivationCodesState) {
         return validActivationCodesState;
     }
 
@@ -114,9 +113,8 @@ const initializeActivationCodes = (): string[] => {
         try {
             const savedCodes = localStorage.getItem('activationCodes');
             if (savedCodes) {
-                const parsedCodes = JSON.parse(savedCodes);
-                validActivationCodesState = parsedCodes;
-                return validActivationCodesState;
+                validActivationCodesState = JSON.parse(savedCodes);
+                return validActivationCodesState!;
             }
         } catch(e) {
              console.error("Failed to parse activationCodes from localStorage", e);

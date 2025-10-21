@@ -14,7 +14,7 @@ let notificationsState: AppNotification[] | null = null;
 const defaultNotifications: AppNotification[] = [];
 
 const initializeNotifications = (): AppNotification[] => {
-    if (notificationsState !== null) {
+    if (notificationsState) {
         return notificationsState;
     }
     

@@ -25,7 +25,7 @@ const defaultAcademicConfig: AcademicConfig = {
 let academicConfigState: AcademicConfig | null = null;
 
 const initializeAcademicConfig = (): AcademicConfig => {
-    if (academicConfigState !== null) {
+    if (academicConfigState) {
         return academicConfigState;
     }
 

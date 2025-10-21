@@ -88,7 +88,7 @@ const defaultStoreConfig: StoreConfig = {
 let storeConfigState: StoreConfig | null = null;
 
 const initializeStoreConfig = (): StoreConfig => {
-    if (storeConfigState !== null) {
+    if (storeConfigState) {
         return storeConfigState;
     }
     

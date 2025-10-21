@@ -15,11 +15,7 @@ export type ScheduledTest = {
 
 let scheduledTestsState: ScheduledTest[] | null = null;
 
-// CRITICAL FIX: This function MUST NOT use new Date(). It now returns static ISO strings.
-// Dynamic date logic (like calculating if a test is "today" or "upcoming")
-// is now handled on the client-side within the components that use this data.
 const getDefaultScheduledTests = (): ScheduledTest[] => {
-    // These are now static ISO strings to prevent server-side execution of new Date().
     const futureDate = "2025-08-01T10:00:00.000Z";
     const pastDate = "2024-07-01T10:00:00.000Z";
     
@@ -46,7 +42,7 @@ const getDefaultScheduledTests = (): ScheduledTest[] => {
 };
 
 const initializeScheduledTests = (): ScheduledTest[] => {
-    if (scheduledTestsState !== null) {
+    if (scheduledTestsState) {
         return scheduledTestsState;
     }
 
@@ -54,9 +50,8 @@ const initializeScheduledTests = (): ScheduledTest[] => {
         try {
             const savedData = localStorage.getItem('scheduledTests');
             if (savedData) {
-                const parsedData = JSON.parse(savedData);
-                scheduledTestsState = parsedData;
-                return scheduledTestsState;
+                scheduledTestsState = JSON.parse(savedData);
+                return scheduledTestsState!;
             }
         } catch (e) {
             console.error("Failed to parse scheduledTests from localStorage", e);
@@ -67,7 +62,6 @@ const initializeScheduledTests = (): ScheduledTest[] => {
         return scheduledTestsState;
     }
 
-    // For server-side rendering, return a safe default.
     return getDefaultScheduledTests();
 };
 
@@ -101,7 +95,6 @@ export function addScheduledTest(test: ScheduledTest) {
 // Function to get all tests (upcoming and past) for a specific student profile
 export function getAllTestsForStudent(board: string, standard: string): ScheduledTest[] {
     const currentTests = getScheduledTestData();
-    // Sorting is now done on the client to avoid new Date() on the server
     return currentTests.filter(test => test.board === board && test.standard === standard);
 }
 

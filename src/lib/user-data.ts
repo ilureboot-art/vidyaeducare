@@ -64,7 +64,7 @@ const defaultWalletData: WalletData = {
 let walletDataState: WalletData | null = null;
 
 function initializeWalletData(): WalletData {
-    if (walletDataState !== null) {
+    if (walletDataState) {
         return walletDataState;
     }
     

@@ -77,12 +77,6 @@ export default function UserManagementPage() {
     });
   }
 
-  const filteredUsers = users ? users.filter(
-    (user) =>
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase())
-  ) : [];
-
   if (!users) {
     return (
       <div className="flex justify-center items-center h-96">
@@ -90,6 +84,12 @@ export default function UserManagementPage() {
       </div>
     );
   }
+
+  const filteredUsers = users.filter(
+    (user) =>
+      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="space-y-6">

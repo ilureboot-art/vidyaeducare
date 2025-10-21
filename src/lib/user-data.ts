@@ -60,3 +60,5 @@ export const defaultWalletData: WalletData = {
     { id: 1007, type: 'withdrawal' as 'withdrawal', description: 'Withdrawal Request', amount: -500, date: "2024-07-23T12:00:00.000Z", status: 'Rejected' as 'Rejected', user: 'Alex Doe', paymentMethod: 'user@upi' },
   ],
 };
+
+    

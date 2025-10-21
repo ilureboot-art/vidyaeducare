@@ -3,14 +3,14 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { BookOpen, Trophy, Users, LogIn, CheckCircle, GraduationCap, Gamepad2, IndianRupee, Star, Share2, Zap, BrainCircuit, Quote } from "lucide-react";
+import { BookOpen, Trophy, Users, LogIn, CheckCircle, GraduationCap, Gamepad2, IndianRupee, Star, Share2, Zap, BrainCircuit, Quote, Loader2 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
-import { getStoreConfig, StoreConfig } from "@/lib/store-config";
+import { StoreConfig } from "@/lib/store-config";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { getWalletData } from "@/lib/user-data";
 import { useState, useEffect } from "react";
+import { useAppData } from "@/hooks/use-hydrate-data";
 
 const features = [
   {
@@ -53,20 +53,26 @@ const testimonials = [
 
 
 export default function HomePage() {
+  const { storeConfig, walletData } = useAppData();
   const { toast } = useToast();
-  const [storeConfig, setStoreConfig] = useState<StoreConfig | null>(null);
+  
+  const [bonus, setBonus] = useState(0);
+  const [refCode, setRefCode] = useState('');
 
   useEffect(() => {
-    setStoreConfig(getStoreConfig());
-  }, []);
+    if (storeConfig) {
+      setBonus(storeConfig.referralBonus);
+    }
+    if (walletData) {
+      setRefCode(walletData.referralCode);
+    }
+  }, [storeConfig, walletData]);
 
   const handleShare = async () => {
-    const referralCode = getWalletData().referralCode;
-    const bonus = storeConfig ? storeConfig.referralBonus : 0;
-    const url = `${window.location.origin}/signup?ref=${referralCode}`;
+    const url = `${window.location.origin}/signup?ref=${refCode}`;
     const message = `🎓 Check out Vidya EduCare! It's an amazing platform for mock tests, skill-based games, and earning rewards. 
     
-Use my code ✨ ${referralCode} ✨ to get a ₹${bonus} bonus when you join!
+Use my code ✨ ${refCode} ✨ to get a ₹${bonus} bonus when you join!
 
 Here's what you get:
 - 📚 Access to a huge library of mock tests.
@@ -96,6 +102,14 @@ Start your journey to success now: ${url}
         fallbackCopy();
     }
   };
+
+  if (!storeConfig || !walletData) {
+      return (
+        <div className="w-full max-w-6xl mx-auto flex items-center justify-center h-screen">
+          <Loader2 className="animate-spin text-primary" size={48} />
+        </div>
+      )
+  }
 
   return (
     <div className="w-full max-w-6xl mx-auto space-y-24">
@@ -259,3 +273,5 @@ Start your journey to success now: ${url}
     </div>
   );
 }
+
+    

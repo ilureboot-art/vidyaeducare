@@ -17,11 +17,11 @@ import { Label } from "@/components/ui/label";
 import { Gamepad2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { getStoreConfig } from "@/lib/store-config";
-import { addTransaction } from "@/lib/user-data";
-import { addNotification } from "@/lib/notifications";
+import { useAppData, useDataUpdaters } from "@/hooks/use-hydrate-data";
 
 export default function SignupPage() {
+  const { storeConfig } = useAppData();
+  const { setWalletData, setNotifications } = useDataUpdaters();
   const searchParams = useSearchParams();
   const router = useRouter();
   const { toast } = useToast();
@@ -34,54 +34,69 @@ export default function SignupPage() {
     if (refCode) {
       setReferralCode(refCode);
     }
-    const config = getStoreConfig();
-    setReferralBonus(config.referralBonus);
-  }, [searchParams]);
+    if (storeConfig) {
+      setReferralBonus(storeConfig.referralBonus);
+    }
+  }, [searchParams, storeConfig]);
 
   const handleSignup = (e: React.FormEvent) => {
     e.preventDefault();
     
-    addNotification({
+    setNotifications(prev => [...prev, {
+      id: Date.now(),
       type: "new_user",
       message: `A new user just signed up!`,
-      userId: 'admin'
-    });
+      userId: 'admin',
+      status: 'unread',
+      timestamp: new Date().toISOString(),
+    }]);
 
     if (referralCode) {
         const bonusAmount = referralBonus;
         // In a real app, this logic would live on the backend.
-        // Here, we just add the transaction for the new user.
-         addTransaction({
-            id: Date.now(),
-            type: 'deposit',
-            description: 'Welcome Bonus (from referral)',
-            amount: bonusAmount,
-            date: new Date().toISOString(),
-            status: 'Completed',
-            user: "New User" // In a real app, this would be the new user's name
-        });
-        addNotification({
-          type: 'deposit_received',
-          message: `You received a ₹${bonusAmount} Welcome Bonus!`,
-          userId: 'user-alex-doe' // This should be the new user's ID
-        });
-
-         // In a real app, you would look up the referrer and credit them.
-         // Here we simulate it for the main user for demo purposes.
-         addTransaction({
-            id: Date.now() + 1, // To avoid key collision
-            type: 'deposit',
-            description: `Referral Bonus for new user`,
-            amount: bonusAmount,
-            date: new Date().toISOString(),
-            status: 'Completed',
-            user: "Alex Doe" // This is the referrer
-        });
-         addNotification({
-          type: 'deposit_received',
-          message: `You received a ₹${bonusAmount} bonus for referring a new user.`,
-          userId: 'user-alex-doe' // This is the referrer's ID
-        });
+        setWalletData(prev => ({
+            ...prev,
+            transactions: [
+                ...prev.transactions,
+                {
+                    id: Date.now(),
+                    type: 'deposit',
+                    description: 'Welcome Bonus (from referral)',
+                    amount: bonusAmount,
+                    date: new Date().toISOString(),
+                    status: 'Completed',
+                    user: "New User" // In a real app, this would be the new user's name
+                },
+                {
+                    id: Date.now() + 1, // To avoid key collision
+                    type: 'deposit',
+                    description: `Referral Bonus for new user`,
+                    amount: bonusAmount,
+                    date: new Date().toISOString(),
+                    status: 'Completed',
+                    user: "Alex Doe" // This is the referrer
+                }
+            ]
+        }));
+        
+        setNotifications(prev => [...prev,
+            {
+              id: Date.now() + 2,
+              type: 'deposit_received',
+              message: `You received a ₹${bonusAmount} Welcome Bonus!`,
+              userId: 'user-alex-doe', // This should be the new user's ID
+              status: 'unread',
+              timestamp: new Date().toISOString(),
+            },
+            {
+              id: Date.now() + 3,
+              type: 'deposit_received',
+              message: `You received a ₹${bonusAmount} bonus for referring a new user.`,
+              userId: 'user-alex-doe', // This is the referrer's ID
+              status: 'unread',
+              timestamp: new Date().toISOString(),
+            }
+        ]);
     }
 
     toast({
@@ -158,3 +173,5 @@ export default function SignupPage() {
     </div>
   );
 }
+
+    

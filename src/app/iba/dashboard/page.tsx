@@ -23,7 +23,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { getWalletData } from "@/lib/user-data";
+import { useAppData } from "@/hooks/use-hydrate-data";
 
 const initialReferralData = {
   referralCode: "ALEX-IBA-5C", // This can be dynamically generated for the user
@@ -58,15 +58,17 @@ const bonusTiers = [
 ];
 
 export default function IBADashboardPage() {
+  const { walletData } = useAppData();
   const { toast } = useToast();
   const [referralData, setReferralData] = useState<typeof initialReferralData | null>(null);
   const [ibaReferralCode, setIbaReferralCode] = useState<string | null>(null);
 
   useEffect(() => {
-    const data = getWalletData();
-    setIbaReferralCode(data.referralCode); // Using the general referral code for demo
-    setReferralData(initialReferralData);
-  }, []);
+    if (walletData) {
+        setIbaReferralCode(walletData.referralCode); // Using the general referral code for demo
+        setReferralData(initialReferralData);
+    }
+  }, [walletData]);
 
   const handleCopyToClipboard = () => {
     if (!ibaReferralCode) return;
@@ -303,3 +305,5 @@ Don't miss out on the best way to prepare for your exams and earn rewards!
     </div>
   );
 }
+
+    

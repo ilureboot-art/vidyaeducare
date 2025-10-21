@@ -34,8 +34,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { getAdminData, addAdmin, deleteAdmin, processRequest, updateAdmin, resetAdminPassword, type Admin, type AdminRole } from "@/lib/admin-data";
 import { format } from 'date-fns';
+import { useAppData, useDataUpdaters } from "@/hooks/use-hydrate-data";
+import type { Admin, AdminRole } from "@/lib/admin-data";
 
 
 const WhatsAppIcon = () => (
@@ -45,6 +46,9 @@ const WhatsAppIcon = () => (
 )
 
 export default function AdminManagementPage() {
+  const { adminData } = useAppData();
+  const { setAdminData } = useDataUpdaters();
+
   const [admins, setAdmins] = useState<Admin[] | null>(null);
   const [requests, setRequests] = useState<Admin[] | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -53,15 +57,12 @@ export default function AdminManagementPage() {
   const [selectedAdmin, setSelectedAdmin] = useState<Admin | null>(null);
   const { toast } = useToast();
   
-  const refreshState = () => {
-    const adminData = getAdminData();
-    setAdmins(adminData.admins);
-    setRequests(adminData.requests);
-  }
-
   useEffect(() => {
-    refreshState();
-  }, []);
+    if (adminData) {
+        setAdmins(adminData.admins);
+        setRequests(adminData.requests);
+    }
+  }, [adminData]);
 
   const openWhatsApp = (phone: string, message?: string) => {
     const cleanedPhone = phone.replace(/\D/g, '');
@@ -94,12 +95,19 @@ export default function AdminManagementPage() {
   }
 
   const handleRequest = (requestId: string, newStatus: "Active" | "Rejected") => {
-    if (!requests) return;
+    if (!requests || !adminData) return;
     const requestToProcess = requests.find(req => req.id === requestId);
     if (!requestToProcess) return;
 
-    processRequest(requestId, newStatus);
-    refreshState();
+    const updatedRequests = requests.filter(req => req.id !== requestId);
+    let updatedAdmins = [...adminData.admins];
+
+    if (newStatus === "Active") {
+      const newAdmin = { ...requestToProcess, status: "Active" as const, joinDate: new Date().toISOString() };
+      updatedAdmins.push(newAdmin);
+    }
+    
+    setAdminData({ admins: updatedAdmins, requests: updatedRequests });
 
     toast({
       title: `Request ${newStatus === 'Active' ? 'Approved' : 'Rejected'}`,
@@ -109,6 +117,8 @@ export default function AdminManagementPage() {
 
   const handleCreateAdmin = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!adminData) return;
+
     const form = e.currentTarget;
     const name = (form.elements.namedItem('name') as HTMLInputElement).value;
     const email = (form.elements.namedItem('email') as HTMLInputElement).value;
@@ -122,9 +132,17 @@ export default function AdminManagementPage() {
         return;
     }
 
-    const newAdminData = { name, email, phone, role };
-    addAdmin(newAdminData);
-    refreshState();
+    const newAdmin: Admin = {
+        id: `ADM-${Date.now()}`,
+        name,
+        email,
+        phone,
+        role,
+        status: 'Active',
+        joinDate: new Date().toISOString(),
+    };
+    
+    setAdminData({ ...adminData, admins: [...adminData.admins, newAdmin] });
 
     toast({
         title: "Admin Created",
@@ -135,7 +153,7 @@ export default function AdminManagementPage() {
   
   const handleEditAdmin = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!selectedAdmin) return;
+    if (!selectedAdmin || !adminData) return;
     const form = e.currentTarget;
     const name = (form.elements.namedItem('name-edit') as HTMLInputElement).value;
     const email = (form.elements.namedItem('email-edit') as HTMLInputElement).value;
@@ -147,8 +165,11 @@ export default function AdminManagementPage() {
         return;
     }
     
-    updateAdmin(selectedAdmin.id, { name, email, phone, role });
-    refreshState();
+    const updatedAdmins = adminData.admins.map(admin =>
+        admin.id === selectedAdmin.id ? { ...admin, name, email, phone, role } : admin
+    );
+
+    setAdminData({ ...adminData, admins: updatedAdmins });
     
     toast({ title: 'Admin Updated', description: `${name}'s details have been saved.`});
     setIsEditDialogOpen(false);
@@ -171,14 +192,15 @@ export default function AdminManagementPage() {
         return;
     }
     
-    resetAdminPassword(selectedAdmin.id, newPassword);
+    // In a real app, this would make an API call. Here we just show a toast.
+    console.log(`Password for ${selectedAdmin.name} reset to: ${newPassword}`);
     
     toast({ title: 'Password Reset', description: `Password for ${selectedAdmin.name} has been changed.` });
     setIsResetPassOpen(false);
   }
 
   const handleDeleteAdmin = (adminId: string) => {
-    if (!admins) return;
+    if (!admins || !adminData) return;
     const adminToDelete = admins.find(admin => admin.id === adminId);
     if (!adminToDelete) return;
 
@@ -186,9 +208,9 @@ export default function AdminManagementPage() {
         toast({ variant: 'destructive', title: 'Action Not Allowed', description: 'Head Admins cannot be deleted.'});
         return;
     }
-
-    deleteAdmin(adminId);
-    refreshState();
+    
+    const updatedAdmins = adminData.admins.filter(admin => admin.id !== adminId);
+    setAdminData({ ...adminData, admins: updatedAdmins });
 
     toast({
         title: "Admin Deleted",

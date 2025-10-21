@@ -5,9 +5,10 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Bell, UserPlus, ArrowDown, ArrowUp, Loader2 } from "lucide-react";
-import { getAdminNotifications, type AppNotification } from "@/lib/notifications";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { useAppData } from "@/hooks/use-hydrate-data";
+import type { AppNotification } from "@/lib/notifications";
 
 const getIconForType = (type: string) => {
     switch(type) {
@@ -23,11 +24,17 @@ const getIconForType = (type: string) => {
 }
 
 export default function AdminNotificationsPage() {
+    const { notifications: allNotifications } = useAppData();
     const [notifications, setNotifications] = useState<AppNotification[] | null>(null);
 
     useEffect(() => {
-        setNotifications(getAdminNotifications());
-    }, []);
+        if (allNotifications) {
+            const adminNotifications = allNotifications
+                .filter(n => n.userId === 'admin')
+                .sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+            setNotifications(adminNotifications);
+        }
+    }, [allNotifications]);
 
     if (!notifications) {
         return (

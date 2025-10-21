@@ -5,21 +5,24 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Share2, IndianRupee, Gift, Loader2 } from "lucide-react";
-import { getStoreConfig } from "@/lib/store-config";
-import { getWalletData } from "@/lib/user-data";
 import { useState, useEffect } from "react";
+import { useAppData } from "@/hooks/use-hydrate-data";
 
 export default function ReferAndEarnPage() {
+    const { storeConfig, walletData } = useAppData();
     const { toast } = useToast();
+    
     const [referralBonus, setReferralBonus] = useState(0);
     const [referralCode, setReferralCode] = useState('');
 
     useEffect(() => {
-        const config = getStoreConfig();
-        const data = getWalletData();
-        setReferralBonus(config.referralBonus);
-        setReferralCode(data.referralCode);
-    }, []);
+        if (storeConfig) {
+            setReferralBonus(storeConfig.referralBonus);
+        }
+        if (walletData) {
+            setReferralCode(walletData.referralCode);
+        }
+    }, [storeConfig, walletData]);
 
     const handleShare = async () => {
         const url = `${window.location.origin}/signup?ref=${referralCode}`;
@@ -111,3 +114,5 @@ Click here to join: ${url}`;
         </div>
     );
 }
+
+    

@@ -10,38 +10,43 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Bell, CheckCheck } from "lucide-react";
-import { getAdminNotifications, markAdminNotificationsAsRead, type AppNotification } from "@/lib/notifications";
+import { useAppData, useDataUpdaters } from "@/hooks/use-hydrate-data";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import type { AppNotification } from "@/lib/notifications";
 
 export function Notifications() {
-  const [notifications, setNotifications] = useState<AppNotification[] | null>(null);
+  const { notifications: allNotifications } = useAppData();
+  const { setNotifications } = useDataUpdaters();
+  const [adminNotifications, setAdminNotifications] = useState<AppNotification[] | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    const fetchNotifications = () => {
-        const adminNotifications = getAdminNotifications();
-        setNotifications(adminNotifications);
-        setUnreadCount(adminNotifications.filter(n => n.status === 'unread').length);
-    };
-    
-    fetchNotifications();
-    const interval = setInterval(fetchNotifications, 5000); // Poll for new notifications
-    return () => clearInterval(interval);
-  }, []);
+    if (allNotifications) {
+        const currentAdminNotifications = allNotifications
+            .filter(n => n.userId === 'admin')
+            .sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+            
+        setAdminNotifications(currentAdminNotifications);
+        setUnreadCount(currentAdminNotifications.filter(n => n.status === 'unread').length);
+    }
+  }, [allNotifications]);
+  
+  const markAllAsRead = () => {
+    setNotifications(prev => prev.map(n => 
+        n.userId === 'admin' ? { ...n, status: 'read' as const } : n
+    ));
+  };
 
   const handleOpenChange = (open: boolean) => {
     if (open && unreadCount > 0) {
         setTimeout(() => {
-          markAdminNotificationsAsRead();
-          const adminNotifications = getAdminNotifications();
-          setNotifications(adminNotifications);
-          setUnreadCount(0);
+            markAllAsRead();
         }, 500);
     }
   }
   
-  if (!notifications) {
+  if (!adminNotifications) {
       return (
           <Button variant="outline" size="icon" className="relative">
               <Bell className="h-5 w-5" />
@@ -73,8 +78,8 @@ export function Notifications() {
             </Link>
           </div>
           <div className="grid gap-2 max-h-80 overflow-y-auto">
-            {notifications.length > 0 ? (
-                notifications.slice(0, 5).map(notif => (
+            {adminNotifications.length > 0 ? (
+                adminNotifications.slice(0, 5).map(notif => (
                     <div key={notif.id} className="grid grid-cols-[25px_1fr] items-start pb-4 last:mb-0 last:pb-0">
                         {notif.status === 'unread' && <span className="flex h-2 w-2 translate-y-1 rounded-full bg-sky-500" />}
                         <div className={`grid gap-1 ${notif.status === 'read' ? 'col-span-2' : ''}`}>
@@ -90,14 +95,9 @@ export function Notifications() {
             )}
           </div>
         </div>
-         {notifications.length > 0 && (
+         {adminNotifications.length > 0 && (
             <div className="flex justify-end mt-2">
-                <Button variant="link" size="sm" onClick={() => {
-                    markAdminNotificationsAsRead();
-                    const userNotifications = getAdminNotifications();
-                    setNotifications(userNotifications);
-                    setUnreadCount(0);
-                }}>
+                <Button variant="link" size="sm" onClick={markAllAsRead}>
                     <CheckCheck className="mr-2 h-4 w-4" />
                     Mark all as read
                 </Button>

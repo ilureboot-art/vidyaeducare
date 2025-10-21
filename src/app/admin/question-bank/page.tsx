@@ -29,9 +29,10 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { getAllTestSets, addTestSet, deleteTestSet, updateTestSet, type TestSet, type Question } from "@/lib/question-bank";
-import { getAcademicConfig, type AcademicConfig } from "@/lib/academic-config";
+import { type TestSet, type Question } from "@/lib/question-bank";
+import type { AcademicConfig } from "@/lib/academic-config";
 import { parseQuestionsFromDocument, type QuestionParserOutput } from "@/ai/flows/document-parser-flow";
+import { useAppData, useDataUpdaters } from "@/hooks/use-hydrate-data";
 
 
 const initialQuestionState: Omit<Question, 'id'> = {
@@ -50,9 +51,13 @@ const initialTestSetState: TestSet = {
 };
 
 export default function TestSetManagementPage() {
-  const [testSets, setTestSets] = useState<TestSet[] | null>(null);
-  const [academicConfig, setAcademicConfig] = useState<AcademicConfig | null>(null);
+  const { testSets: allTestSets, academicConfig: initialAcademicConfig } = useAppData();
+  const { setTestSets } = useDataUpdaters();
   const { toast } = useToast();
+
+  const [testSets, setLocalTestSets] = useState<TestSet[] | null>(null);
+  const [academicConfig, setAcademicConfig] = useState<AcademicConfig | null>(null);
+
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [isManualCreateOpen, setIsManualCreateOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -64,13 +69,9 @@ export default function TestSetManagementPage() {
   const [editingTestSet, setEditingTestSet] = useState<TestSet | null>(null);
   
   useEffect(() => {
-    setTestSets(getAllTestSets());
-    setAcademicConfig(getAcademicConfig());
-  }, []);
-
-  const refreshTestSets = () => {
-    setTestSets(getAllTestSets());
-  }
+    setLocalTestSets(allTestSets);
+    setAcademicConfig(initialAcademicConfig);
+  }, [allTestSets, initialAcademicConfig]);
 
   const resetManualForm = () => {
       setStep(1);
@@ -101,8 +102,9 @@ export default function TestSetManagementPage() {
 
 
   const handleDelete = (testSetId: string) => {
-    deleteTestSet(testSetId);
-    refreshTestSets();
+    if (!testSets) return;
+    const updatedTestSets = testSets.filter(ts => ts.id !== testSetId);
+    setTestSets(updatedTestSets);
     toast({ title: "Test Set Deleted", description: "The test set has been removed from the bank."});
   }
   
@@ -136,16 +138,18 @@ export default function TestSetManagementPage() {
         const questionsWithIds = parsedQuestionArray.map((q, i) => ({ ...q, id: `Q-${Date.now()}-${i}`}));
         
         if (existingTestSetId) {
-            const allSets = getAllTestSets();
-            const existingSet = allSets.find(ts => ts.id === existingTestSetId);
+            if (!testSets) throw new Error("Test sets not loaded.");
+            const existingSet = testSets.find(ts => ts.id === existingTestSetId);
             if (!existingSet) throw new Error("Could not find the test set to append to.");
             
             const existingQuestionTexts = new Set(existingSet.questions.map(q => q.text.en.trim()));
             const uniqueNewQuestions = questionsWithIds.filter(q => !existingQuestionTexts.has(q.text.en.trim()));
             const skippedCount = questionsWithIds.length - uniqueNewQuestions.length;
 
-            existingSet.questions.push(...uniqueNewQuestions);
-            updateTestSet(existingSet);
+            const updatedSet = { ...existingSet, questions: [...existingSet.questions, ...uniqueNewQuestions] };
+            const updatedTestSets = testSets.map(ts => ts.id === existingTestSetId ? updatedSet : ts);
+            setTestSets(updatedTestSets);
+
             toast({
               title: "Questions Appended!",
               description: `${uniqueNewQuestions.length} new questions added to "${existingSet.name}". ${skippedCount} duplicates were skipped.`
@@ -156,15 +160,13 @@ export default function TestSetManagementPage() {
                 id: `SET-${Date.now()}`,
                 questions: questionsWithIds
             };
-            addTestSet(newTestSet);
+            setTestSets([...(testSets || []), newTestSet]);
             toast({
               title: "Test Set Saved!",
               description: `"${newTestSet.name}" with ${newTestSet.questions.length} questions has been added.`
             });
         }
         
-        refreshTestSets();
-
     } catch (error) {
         console.error("File processing error:", error);
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
@@ -245,7 +247,7 @@ export default function TestSetManagementPage() {
 
   
  const handleManualSubmit = () => {
-    if (!editingTestSet) return;
+    if (!editingTestSet || !testSets) return;
 
     const finalQuestions = editingTestSet.questions
         .filter(q => q.text.en?.trim() !== '' || q.text.mr?.trim() !== '')
@@ -264,13 +266,13 @@ export default function TestSetManagementPage() {
     const isEditing = !finalTestSetData.id.startsWith("NEW-");
 
     if (isEditing) {
-        updateTestSet(finalTestSetData);
+        const updatedTestSets = testSets.map(ts => ts.id === finalTestSetData.id ? finalTestSetData : ts);
+        setTestSets(updatedTestSets);
     } else {
         const newSetWithFinalId = {...finalTestSetData, id: `SET-${Date.now()}`};
-        addTestSet(newSetWithFinalId);
+        setTestSets([...testSets, newSetWithFinalId]);
     }
     
-    refreshTestSets();
     toast({ title: isEditing ? 'Test Set Updated!' : 'Test Set Created!', description: `"${finalTestSetData.name}" has been saved.` });
     
     setIsManualCreateOpen(false);
@@ -518,3 +520,5 @@ export default function TestSetManagementPage() {
     </div>
   );
 }
+
+    

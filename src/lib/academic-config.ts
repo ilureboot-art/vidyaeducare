@@ -21,3 +21,5 @@ export const defaultAcademicConfig: AcademicConfig = {
         "History"
     ]
 };
+
+    

@@ -11,7 +11,7 @@ import { Zap, Share2, IndianRupee, Users, CheckCircle, Repeat, Loader2 } from "l
 import Link from "next/link";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { getWalletData } from "@/lib/user-data";
+import { useAppData } from "@/hooks/use-hydrate-data";
 
 // Data for ReferBolt would come from a backend for the logged-in user
 const initialReferboltData = {
@@ -33,22 +33,23 @@ const benefits = [
 ];
 
 export default function ReferBoltPage() {
+  const { walletData } = useAppData();
   const { toast } = useToast();
-  const [data, setData] = useState(initialReferboltData);
-  const [autoRenew, setAutoRenew] = useState(data.autoRenew);
-  const [isLoading, setIsLoading] = useState(true);
+  
+  const [data, setData] = useState<typeof initialReferboltData | null>(null);
+  const [autoRenew, setAutoRenew] = useState(false);
 
   useEffect(() => {
-      const walletData = getWalletData(); 
-      setData({
-          ...initialReferboltData,
-          isSubscribed: walletData.referralCode.includes("IBA"), // Mock logic
-      });
-      setIsLoading(false);
-  }, []);
+      if (walletData) {
+          setData({
+              ...initialReferboltData,
+              isSubscribed: walletData.referralCode.includes("IBA"), // Mock logic
+          });
+      }
+  }, [walletData]);
 
   const handleShare = async () => {
-    const walletData = getWalletData();
+    if (!walletData) return;
     const referralCode = walletData.referralCode;
     const shareUrl = `${window.location.origin}/signup?ref=${referralCode}`;
     const benefitsText = benefits.map(b => `✅ ${b.text}`).join("\n");
@@ -86,7 +87,7 @@ Subscribe and start your earning cycle now: ${shareUrl}
     }
   };
   
-  if (isLoading) {
+  if (!data) {
       return (
           <div className="w-full max-w-2xl mx-auto flex items-center justify-center h-96">
               <Loader2 className="animate-spin text-primary" size={32}/>
@@ -225,3 +226,5 @@ Subscribe and start your earning cycle now: ${shareUrl}
     </div>
   );
 }
+
+    

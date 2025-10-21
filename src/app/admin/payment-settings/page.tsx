@@ -8,18 +8,23 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Landmark, Loader2 } from "lucide-react";
-import { getWalletData, setAdminPaymentMethods, type AdminPaymentMethods } from "@/lib/user-data";
+import { useAppData, useDataUpdaters } from "@/hooks/use-hydrate-data";
+import type { AdminPaymentMethods } from "@/lib/user-data";
 import Image from "next/image";
 
 export default function PaymentSettingsPage() {
+    const { walletData } = useAppData();
+    const { setWalletData } = useDataUpdaters();
     const { toast } = useToast();
+    
     const [methods, setMethods] = useState<AdminPaymentMethods | null>(null);
     const [qrFile, setQrFile] = useState<File | null>(null);
 
     useEffect(() => {
-        const data = getWalletData();
-        setMethods(data.adminPaymentMethods);
-    }, [])
+        if (walletData) {
+            setMethods(walletData.adminPaymentMethods);
+        }
+    }, [walletData])
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -35,10 +40,10 @@ export default function PaymentSettingsPage() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!methods) return;
+        if (!methods || !walletData) return;
         
         const updateConfig = (finalMethods: AdminPaymentMethods) => {
-            setAdminPaymentMethods(finalMethods);
+            setWalletData({ ...walletData, adminPaymentMethods: finalMethods });
             toast({
                 title: "Settings Saved!",
                 description: "Payment method details have been successfully updated.",
@@ -140,3 +145,5 @@ export default function PaymentSettingsPage() {
     </div>
   );
 }
+
+    

@@ -84,7 +84,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     const setters = {
         setAcademicConfig: useCallback((config: AcademicConfig) => setData(prev => prev ? { ...prev, academicConfig: config } : null), []),
         setAdminData: useCallback((adminData: AdminData) => setData(prev => prev ? { ...prev, adminData } : null), []),
-        setNotifications: useCallback((notifications: AppNotification[]) => setData(prev => prev ? { ...prev, notifications } : null), []),
+        setNotifications: useCallback((notifications: AppNotification[] | ((prev: AppNotification[]) => AppNotification[])) => setData(prev => prev ? { ...prev, notifications: typeof notifications === 'function' ? notifications(prev.notifications) : notifications } : null), []),
         setTestSets: useCallback((testSets: TestSet[]) => setData(prev => prev ? { ...prev, testSets } : null), []),
         setStoreConfig: useCallback((storeConfig: StoreConfig) => setData(prev => prev ? { ...prev, storeConfig } : null), []),
         setStudentData: useCallback((studentData: StudentProfile[]) => setData(prev => prev ? { ...prev, studentData } : null), []),
@@ -102,11 +102,13 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     }
 
     return (
-        <DataContext.Provider value={data}>
-            <DataUpdateContext.Provider value={setters}>
-                {children}
-            </DataUpdateContext.Provider>
-        </DataContext.Provider>
+        <>
+            <DataContext.Provider value={data}>
+                <DataUpdateContext.Provider value={setters}>
+                    {children}
+                </DataUpdateContext.Provider>
+            </DataContext.Provider>
+        </>
     );
 };
 

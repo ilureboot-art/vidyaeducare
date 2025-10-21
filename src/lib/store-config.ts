@@ -84,3 +84,5 @@ export const defaultStoreConfig: StoreConfig = {
         ibaBonusCommission: 5,
     }
 };
+
+    

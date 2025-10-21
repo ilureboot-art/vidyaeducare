@@ -9,53 +9,41 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Bell, CheckCheck } from "lucide-react";
-import { getUserNotifications, markUserNotificationsAsRead, type AppNotification } from "@/lib/notifications";
+import { useAppData, useDataUpdaters } from "@/hooks/use-hydrate-data";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import type { AppNotification } from "@/lib/notifications";
 
-type FormattedNotification = AppNotification & { formattedTimestamp: string };
 
 export function UserNotifications() {
-  const [notifications, setNotifications] = useState<FormattedNotification[] | null>(null);
+  const { notifications: allNotifications } = useAppData();
+  const { setNotifications } = useDataUpdaters();
+  const [userNotifications, setUserNotifications] = useState<AppNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    const fetchNotifications = () => {
-        const userNotifications = getUserNotifications("user-alex-doe");
-        const formattedNotifications = userNotifications.map(n => ({
-          ...n,
-          formattedTimestamp: format(new Date(n.timestamp), 'P p')
-        }));
-        setNotifications(formattedNotifications);
-        setUnreadCount(userNotifications.filter(n => n.status === 'unread').length);
-    };
-    
-    fetchNotifications();
-    const interval = setInterval(fetchNotifications, 5000); // Poll for new notifications
-    return () => clearInterval(interval);
-  }, []);
+    if (allNotifications) {
+        const currentUserNotifications = allNotifications
+            .filter(n => n.userId === "user-alex-doe")
+            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        
+        setUserNotifications(currentUserNotifications);
+        setUnreadCount(currentUserNotifications.filter(n => n.status === 'unread').length);
+    }
+  }, [allNotifications]);
+
+  const markAllAsRead = () => {
+    setNotifications(prev => prev.map(n => 
+        n.userId === 'user-alex-doe' ? { ...n, status: 'read' as const } : n
+    ));
+  };
 
   const handleOpenChange = (open: boolean) => {
     if (open && unreadCount > 0) {
         setTimeout(() => {
-            markUserNotificationsAsRead("user-alex-doe");
-            const userNotifications = getUserNotifications("user-alex-doe");
-            const formattedNotifications = userNotifications.map(n => ({
-              ...n,
-              formattedTimestamp: format(new Date(n.timestamp), 'P p')
-            }));
-            setNotifications(formattedNotifications);
-            setUnreadCount(0);
+            markAllAsRead();
         }, 500);
     }
-  }
-
-  if (!notifications) {
-    return (
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-6 w-6" />
-        </Button>
-    );
   }
 
   return (
@@ -82,14 +70,14 @@ export function UserNotifications() {
             </p>
           </div>
           <div className="grid gap-2">
-            {notifications.length > 0 ? (
-                notifications.slice(0, 5).map(notif => (
+            {userNotifications.length > 0 ? (
+                userNotifications.slice(0, 5).map(notif => (
                     <div key={notif.id} className="grid grid-cols-[25px_1fr] items-start pb-4 last:mb-0 last:pb-0">
                         {notif.status === 'unread' && <span className="flex h-2 w-2 translate-y-1 rounded-full bg-sky-500" />}
                         <div className={`grid gap-1 ${notif.status === 'read' ? 'col-span-2' : ''}`}>
                             <p className="text-sm font-medium">{notif.message}</p>
                             <p className="text-sm text-muted-foreground">
-                               {notif.formattedTimestamp}
+                               {format(new Date(notif.timestamp), 'P p')}
                             </p>
                         </div>
                     </div>
@@ -99,18 +87,9 @@ export function UserNotifications() {
             )}
           </div>
         </div>
-         {notifications.length > 0 && (
+         {userNotifications.length > 0 && (
             <div className="flex justify-end mt-2">
-                <Button variant="link" size="sm" onClick={() => {
-                    markUserNotificationsAsRead("user-alex-doe");
-                     const userNotifications = getUserNotifications("user-alex-doe");
-                     const formattedNotifications = userNotifications.map(n => ({
-                      ...n,
-                      formattedTimestamp: format(new Date(n.timestamp), 'P p')
-                    }));
-                    setNotifications(formattedNotifications);
-                    setUnreadCount(0);
-                }}>
+                <Button variant="link" size="sm" onClick={markAllAsRead}>
                     <CheckCheck className="mr-2 h-4 w-4" />
                     Mark all as read
                 </Button>
@@ -120,3 +99,5 @@ export function UserNotifications() {
     </Popover>
   );
 }
+
+    

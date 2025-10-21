@@ -16,10 +16,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Download, ArrowUpRight, ArrowDownLeft, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { getWalletData, type Transaction } from "@/lib/user-data";
+import type { Transaction } from "@/lib/user-data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
+import { useAppData } from "@/hooks/use-hydrate-data";
 
 const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -42,20 +43,18 @@ const getTypeIcon = (type: string, amount: number) => {
 }
 
 export default function TransactionsPage() {
+  const { walletData } = useAppData();
   const [transactions, setTransactions] = useState<Transaction[] | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const { toast } = useToast();
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'rejected'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'deposit' | 'withdrawal'>('all');
   
   useEffect(() => {
-    const data = getWalletData();
-    if (data) {
-        // Sorting is done on the client-side to avoid new Date() on server
-        const sortedTransactions = data.transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    if (walletData) {
+        const sortedTransactions = [...walletData.transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         setTransactions(sortedTransactions);
     }
-  }, []);
+  }, [walletData]);
 
   const filteredTransactions = transactions ? transactions.filter(
     (tx) => {
@@ -168,3 +167,5 @@ export default function TransactionsPage() {
     </div>
   );
 }
+
+    

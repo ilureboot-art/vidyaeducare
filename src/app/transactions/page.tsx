@@ -80,13 +80,13 @@ export default function TransactionsPage() {
         <CardHeader>
           <CardTitle>Transaction History</CardTitle>
           <CardDescription>
-            View and manage all financial transactions within the app.
+            View all financial transactions associated with your account.
           </CardDescription>
           <div className="flex flex-col md:flex-row items-center justify-between pt-4 gap-4">
             <div className="relative w-full md:max-w-sm">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input 
-                  placeholder="Search by user or transaction ID..." 
+                  placeholder="Search by description or ID..." 
                   className="pl-8"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -101,8 +101,8 @@ export default function TransactionsPage() {
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem value="all">All Types</SelectItem>
-                        <SelectItem value="deposit">Deposits</SelectItem>
-                        <SelectItem value="withdrawal">Withdrawals</SelectItem>
+                        <SelectItem value="deposit">Deposits & Credits</SelectItem>
+                        <SelectItem value="withdrawal">Withdrawals & Debits</SelectItem>
                     </SelectContent>
                 </Select>
               </div>
@@ -131,8 +131,7 @@ export default function TransactionsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>User</TableHead>
-                <TableHead>Type</TableHead>
+                <TableHead>Description</TableHead>
                 <TableHead>Transaction ID</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Status</TableHead>
@@ -140,9 +139,8 @@ export default function TransactionsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredTransactions.map((tx) => (
+              {filteredTransactions.filter(tx => tx.user === 'Alex Doe' || !tx.user).map((tx) => (
                 <TableRow key={tx.id}>
-                  <TableCell className="font-medium">{tx.user || 'System'}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                         {getTypeIcon(tx.type, tx.amount)}
@@ -169,3 +167,5 @@ export default function TransactionsPage() {
     </div>
   );
 }
+
+    

@@ -14,20 +14,14 @@ import { getAdminNotifications, markAdminNotificationsAsRead, type AppNotificati
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 
-type FormattedNotification = AppNotification & { formattedTimestamp: string };
-
 export function Notifications() {
-  const [notifications, setNotifications] = useState<FormattedNotification[] | null>(null);
+  const [notifications, setNotifications] = useState<AppNotification[] | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     const fetchNotifications = () => {
         const adminNotifications = getAdminNotifications();
-        const formattedNotifications = adminNotifications.map(n => ({
-          ...n,
-          formattedTimestamp: format(new Date(n.timestamp), 'P p')
-        }));
-        setNotifications(formattedNotifications);
+        setNotifications(adminNotifications);
         setUnreadCount(adminNotifications.filter(n => n.status === 'unread').length);
     };
     
@@ -41,11 +35,7 @@ export function Notifications() {
         setTimeout(() => {
           markAdminNotificationsAsRead();
           const adminNotifications = getAdminNotifications();
-          const formattedNotifications = adminNotifications.map(n => ({
-            ...n,
-            formattedTimestamp: format(new Date(n.timestamp), 'P p')
-          }));
-          setNotifications(formattedNotifications);
+          setNotifications(adminNotifications);
           setUnreadCount(0);
         }, 500);
     }
@@ -90,7 +80,7 @@ export function Notifications() {
                         <div className={`grid gap-1 ${notif.status === 'read' ? 'col-span-2' : ''}`}>
                             <p className="text-sm font-medium">{notif.message}</p>
                             <p className="text-sm text-muted-foreground">
-                               {notif.formattedTimestamp}
+                               {format(new Date(notif.timestamp), 'P p')}
                             </p>
                         </div>
                     </div>
@@ -104,12 +94,8 @@ export function Notifications() {
             <div className="flex justify-end mt-2">
                 <Button variant="link" size="sm" onClick={() => {
                     markAdminNotificationsAsRead();
-                     const userNotifications = getAdminNotifications();
-                     const formattedNotifications = userNotifications.map(n => ({
-                      ...n,
-                      formattedTimestamp: format(new Date(n.timestamp), 'P p')
-                    }));
-                    setNotifications(formattedNotifications);
+                    const userNotifications = getAdminNotifications();
+                    setNotifications(userNotifications);
                     setUnreadCount(0);
                 }}>
                     <CheckCheck className="mr-2 h-4 w-4" />
@@ -121,3 +107,5 @@ export function Notifications() {
     </Popover>
   );
 }
+
+    

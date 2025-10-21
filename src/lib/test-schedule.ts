@@ -17,12 +17,22 @@ let scheduledTestsState: ScheduledTest[] | null = null;
 
 const getDefaultScheduledTests = (): ScheduledTest[] => {
     // This must be callable on the server, so we cannot rely on Date() for initial state
+    // BUT, the initialization function itself should only run on the client.
+    // The dates are now calculated inside this function.
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(now.getDate() + 1);
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    const fiveDaysFromNow = new Date(now);
+    fiveDaysFromNow.setDate(now.getDate() + 5);
+
     return [
         {
             id: "SCHED-1",
             testSetId: "SET-172234567890",
             testSetName: "Gravitation Mock Test",
-            dateTime: new Date(new Date().setDate(new Date().getDate() + 1)).toISOString(),
+            dateTime: tomorrow.toISOString(),
             board: "SSC",
             standard: "10th",
             subject: "Science"
@@ -31,7 +41,7 @@ const getDefaultScheduledTests = (): ScheduledTest[] => {
             id: "SCHED-2",
             testSetId: "SET-172242000000",
             testSetName: "Elements Mock Test",
-            dateTime: new Date(new Date().setDate(new Date().getDate() - 1)).toISOString(),
+            dateTime: yesterday.toISOString(),
             board: "SSC",
             standard: "10th",
             subject: "Science"
@@ -40,7 +50,7 @@ const getDefaultScheduledTests = (): ScheduledTest[] => {
             id: "SCHED-3",
             testSetId: "SET-172234567890", // Using Gravitation test for another standard
             testSetName: "Gravitation Mock Test",
-            dateTime: new Date(new Date().setDate(new Date().getDate() + 5)).toISOString(),
+            dateTime: fiveDaysFromNow.toISOString(),
             board: "CBSE",
             standard: "11th",
             subject: "Physics"
@@ -50,7 +60,8 @@ const getDefaultScheduledTests = (): ScheduledTest[] => {
 
 const initializeScheduledTests = (): ScheduledTest[] => {
     if (typeof window === 'undefined') {
-        return getDefaultScheduledTests();
+        // Return a safe, empty array for server-side execution.
+        return [];
     }
 
     if (scheduledTestsState !== null) {

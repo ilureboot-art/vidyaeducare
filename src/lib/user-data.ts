@@ -51,13 +51,13 @@ const defaultWalletData: WalletData = {
     qrCodeUrl: "https://placehold.co/200x200.png?text=QR+Code",
   },
   transactions: [
-    { id: 1001, type: 'deposit' as 'deposit', description: 'Welcome Bonus', amount: 50, date: '2024-07-01', status: 'Completed' as 'Completed', user: 'Alex Doe' },
-    { id: 1002, type: 'deposit' as 'deposit', description: 'Fund Deposit', amount: 500, date: '2024-07-10', status: 'Completed' as 'Completed', user: 'Alex Doe', referenceId: 'UPI-12345' },
-    { id: 1003, type: 'withdrawal' as 'withdrawal', description: '1 Year Subscription Purchase', amount: -3000, date: '2024-07-15', status: 'Completed' as 'Completed', user: 'Alex Doe' },
-    { id: 1004, type: 'withdrawal' as 'withdrawal', description: 'Withdrawal Request', amount: -200, date: '2024-07-20', status: 'Pending' as 'Pending', user: 'Alex Doe', paymentMethod: 'user@upi' },
-    { id: 1005, type: 'deposit' as 'deposit', description: 'Referral Bonus for Priya S.', amount: 5, date: '2024-07-22', status: 'Completed' as 'Completed', user: 'Alex Doe' },
-    { id: 1006, type: 'deposit' as 'deposit', description: 'Game Win', amount: 100, date: '2024-07-25', status: 'Completed' as 'Completed', user: 'Alex Doe' },
-    { id: 1007, type: 'withdrawal' as 'withdrawal', description: 'Withdrawal Request', amount: -500, date: '2024-07-28', status: 'Rejected' as 'Rejected', user: 'Alex Doe', paymentMethod: 'user@upi' },
+    { id: 1001, type: 'deposit' as 'deposit', description: 'Welcome Bonus', amount: 50, date: new Date().toISOString(), status: 'Completed' as 'Completed', user: 'Alex Doe' },
+    { id: 1002, type: 'deposit' as 'deposit', description: 'Fund Deposit', amount: 500, date: new Date().toISOString(), status: 'Completed' as 'Completed', user: 'Alex Doe', referenceId: 'UPI-12345' },
+    { id: 1003, type: 'withdrawal' as 'withdrawal', description: '1 Year Subscription Purchase', amount: -3000, date: new Date().toISOString(), status: 'Completed' as 'Completed', user: 'Alex Doe' },
+    { id: 1004, type: 'withdrawal' as 'withdrawal', description: 'Withdrawal Request', amount: -200, date: new Date().toISOString(), status: 'Pending' as 'Pending', user: 'Alex Doe', paymentMethod: 'user@upi' },
+    { id: 1005, type: 'deposit' as 'deposit', description: 'Referral Bonus for Priya S.', amount: 5, date: new Date().toISOString(), status: 'Completed' as 'Completed', user: 'Alex Doe' },
+    { id: 1006, type: 'deposit' as 'deposit', description: 'Game Win', amount: 100, date: new Date().toISOString(), status: 'Completed' as 'Completed', user: 'Alex Doe' },
+    { id: 1007, type: 'withdrawal' as 'withdrawal', description: 'Withdrawal Request', amount: -500, date: new Date().toISOString(), status: 'Rejected' as 'Rejected', user: 'Alex Doe', paymentMethod: 'user@upi' },
   ],
 };
 

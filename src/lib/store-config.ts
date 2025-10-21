@@ -25,7 +25,7 @@ export type MockTestPackage = {
     months: number;
     bestValue: boolean;
     gstRate: number;
-hsnSacCode: string;
+    hsnSacCode: string;
 };
 
 export type GameSettings = {

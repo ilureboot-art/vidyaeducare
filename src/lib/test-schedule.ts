@@ -16,7 +16,10 @@ export type ScheduledTest = {
 let scheduledTestsState: ScheduledTest[] | null = null;
 
 const getDefaultScheduledTests = (): ScheduledTest[] => {
-    // This function creates dates, so it should only run on the client.
+    // This function creates dates, so it must only run on the client.
+    if (typeof window === 'undefined') {
+        return [];
+    }
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);

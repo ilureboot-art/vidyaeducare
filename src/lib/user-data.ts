@@ -64,9 +64,7 @@ const defaultWalletData: WalletData = {
 let walletDataState: WalletData | null = null;
 
 function initializeWalletData(): WalletData {
-    if (typeof window === 'undefined') {
-        return JSON.parse(JSON.stringify(defaultWalletData));
-    }
+    // This function should only be called on the client side.
     if (walletDataState !== null) {
         return walletDataState;
     }
@@ -83,6 +81,8 @@ function initializeWalletData(): WalletData {
             console.error("Failed to parse walletData from localStorage", e);
         }
     }
+    
+    // Fallback to default if nothing in localStorage
     walletDataState = JSON.parse(JSON.stringify(defaultWalletData));
     localStorage.setItem('walletData', JSON.stringify(walletDataState));
     
@@ -90,6 +90,10 @@ function initializeWalletData(): WalletData {
 };
 
 export function getWalletData(): WalletData {
+    if (typeof window === 'undefined') {
+        // Return a safe, default structure for server-side rendering
+        return JSON.parse(JSON.stringify(defaultWalletData));
+    }
     return initializeWalletData();
 };
 

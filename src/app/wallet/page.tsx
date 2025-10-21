@@ -51,16 +51,14 @@ export default function WalletPage() {
   const [walletState, setWalletState] = useState<WalletData | null>(null);
   const [addFundsOpen, setAddFundsOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
-  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    refreshData();
+  }, []);
 
   const refreshData = () => {
     setWalletState(getWalletData());
   };
-
-  useEffect(() => {
-    setIsClient(true);
-    refreshData();
-  }, []);
 
   const handleAddFunds = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -160,7 +158,7 @@ export default function WalletPage() {
     form.reset();
   }
 
-  if (!isClient || !walletState) {
+  if (!walletState) {
     return (
       <div className="w-full max-w-2xl mx-auto space-y-6 flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />
@@ -336,5 +334,3 @@ export default function WalletPage() {
     </div>
   );
 }
-
-    

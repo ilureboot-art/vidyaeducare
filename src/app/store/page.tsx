@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { getStoreConfig, type TicketPackage, type ReferboltSubscription, type MockTestPackage, type StoreConfig } from "@/lib/store-config";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getActivationCodes, useActivationCode } from "@/lib/student-data";
+import Link from 'next/link';
 
 
 export default function StorePage() {
@@ -320,6 +321,11 @@ export default function StorePage() {
                          <p className="text-xs text-muted-foreground">(Incl. GST)</p>
                         <Button size="lg" className="w-full" onClick={handleReferboltPurchase} disabled={isPurchasing !== null}>
                             {isPurchasing === 'referbolt' ? <Loader2 className="animate-spin"/> : "Subscribe Now"}
+                        </Button>
+                    </CardContent>
+                     <CardContent>
+                        <Button asChild variant="link">
+                            <Link href="/referbolt">Learn More about ReferBolt</Link>
                         </Button>
                     </CardContent>
                 </Card>

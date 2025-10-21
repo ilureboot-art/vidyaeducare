@@ -383,5 +383,3 @@ export default function AdminStoreSettingsPage() {
     </div>
   );
 }
-
-    

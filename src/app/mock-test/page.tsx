@@ -43,17 +43,9 @@ export default function MockTestPage() {
     useEffect(() => {
         const studentId = searchParams.get('studentId');
         const testId = searchParams.get('testId');
-        const liveStatus = searchParams.get('isLive') === 'true';
-
+        
         if (!studentId || !testId) {
             toast({ variant: "destructive", title: "Error", description: "Missing student or test information."});
-            router.push('/profile');
-            return;
-        }
-
-        const student = studentData.find(s => s.id === studentId);
-        if (!student) {
-             toast({ variant: "destructive", title: "Error", description: "Student profile not found."});
             router.push('/profile');
             return;
         }
@@ -65,6 +57,17 @@ export default function MockTestPage() {
             return;
         }
 
+        const now = new Date();
+        const testDate = new Date(schedTest.dateTime);
+        const liveStatus = testDate <= now;
+
+        const student = studentData.find(s => s.id === studentId);
+        if (!student) {
+             toast({ variant: "destructive", title: "Error", description: "Student profile not found."});
+            router.push('/profile');
+            return;
+        }
+        
         const testSet = allTestSets.find(ts => ts.id === schedTest.testSetId);
         if (!testSet || testSet.questions.length === 0) {
             toast({
@@ -372,5 +375,3 @@ export default function MockTestPage() {
         </Card>
     )
 }
-
-    

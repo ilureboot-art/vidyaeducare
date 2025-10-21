@@ -16,15 +16,14 @@ export type ScheduledTest = {
 let scheduledTestsState: ScheduledTest[] | null = null;
 
 const getDefaultScheduledTests = (): ScheduledTest[] => {
-    const futureDate = "2025-08-01T10:00:00.000Z";
-    const pastDate = "2024-07-01T10:00:00.000Z";
-    
+    // IMPORTANT: Use static ISO strings to prevent `new Date()` from running on the server.
+    // Dynamic date logic will be handled on the client side.
     return [
         {
             id: "SCHED-1",
             testSetId: "SET-172234567890",
             testSetName: "Gravitation Mock Test",
-            dateTime: futureDate,
+            dateTime: "2025-08-01T10:00:00.000Z", // Future date
             board: "SSC",
             standard: "10th",
             subject: "Science"
@@ -33,7 +32,7 @@ const getDefaultScheduledTests = (): ScheduledTest[] => {
             id: "SCHED-2",
             testSetId: "SET-172242000000",
             testSetName: "Elements Mock Test",
-            dateTime: pastDate,
+            dateTime: "2024-07-01T10:00:00.000Z", // Past date
             board: "SSC",
             standard: "10th",
             subject: "Science"

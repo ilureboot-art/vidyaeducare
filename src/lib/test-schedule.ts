@@ -16,6 +16,12 @@ export type ScheduledTest = {
 let scheduledTestsState: ScheduledTest[] | null = null;
 
 const getDefaultScheduledTests = (): ScheduledTest[] => {
+    // This function relies on the current date, which is a problem on the server.
+    // However, since getScheduledTestData safely handles server-side execution,
+    // this default data is only generated on the client, which is safe.
+    if (typeof window === 'undefined') {
+        return []; // Return an empty array on the server
+    }
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
@@ -82,7 +88,7 @@ const initializeScheduledTests = (): ScheduledTest[] => {
 
 export const getScheduledTestData = (): ScheduledTest[] => {
     if (typeof window === 'undefined') {
-        return JSON.parse(JSON.stringify(getDefaultScheduledTests()));
+        return [];
     }
     return initializeScheduledTests();
 };

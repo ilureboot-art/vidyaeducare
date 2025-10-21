@@ -1,12 +1,12 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Archive, Search, Send } from "lucide-react";
+import { Archive, Search, Send, Loader2 } from "lucide-react";
 
 type Message = {
     from: 'user' | 'admin';
@@ -22,7 +22,7 @@ type Chat = {
     messages: Message[];
 };
 
-const initialChats: Chat[] = [
+const serverChats: Chat[] = [
     {
         id: "CHAT001",
         user: "Priya Sharma",
@@ -49,10 +49,16 @@ const initialChats: Chat[] = [
 ];
 
 export default function ChatManagementPage() {
-    const [chats, setChats] = useState<Chat[]>(initialChats);
+    const [chats, setChats] = useState<Chat[]>([]);
     const [activeChat, setActiveChat] = useState<Chat | null>(null);
     const [reply, setReply] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
+    const [isClient, setIsClient] = useState(false);
+
+    useEffect(() => {
+        setChats(serverChats);
+        setIsClient(true);
+    }, []);
 
     const handleSelectChat = (chat: Chat) => {
         setActiveChat(chat);
@@ -80,6 +86,14 @@ export default function ChatManagementPage() {
         chat.user.toLowerCase().includes(searchTerm.toLowerCase()) || 
         chat.id.toLowerCase().includes(searchTerm.toLowerCase())
     );
+    
+  if (!isClient) {
+    return (
+      <div className="flex justify-center items-center h-96">
+        <Loader2 className="animate-spin text-primary" size={32} />
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-8rem)]">

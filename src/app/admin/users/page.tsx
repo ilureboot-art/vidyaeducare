@@ -46,10 +46,12 @@ export default function UserManagementPage() {
   const [users, setUsers] = useState<User[] | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
     // Simulate fetching data on the client side to ensure compatibility with production builds.
     setUsers(initialUsers);
+    setIsClient(true);
   }, []);
 
   const handleStatusChange = (userId: string, newStatus: UserStatus) => {
@@ -83,7 +85,7 @@ export default function UserManagementPage() {
       user.email.toLowerCase().includes(searchTerm.toLowerCase())
   ) : [];
 
-  if (!users) {
+  if (!isClient || !users) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />
@@ -191,5 +193,3 @@ export default function UserManagementPage() {
     </div>
   );
 }
-
-    

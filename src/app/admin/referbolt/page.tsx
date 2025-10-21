@@ -1,15 +1,15 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, Users, IndianRupee, Repeat } from "lucide-react";
+import { RefreshCw, Users, IndianRupee, Repeat, Loader2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
 // In a real app, this data would be fetched from a database
-const initialStats = {
+const serverStats = {
   totalCycles: 18,
   totalCommissions: 2700,
   activeReferrers: 12,
@@ -23,22 +23,38 @@ type Cycle = {
   subscriptionType: "Manual" | "Auto-Renewed";
 }
 
-const initialCycles: Cycle[] = [
+const serverCycles: Cycle[] = [
     { id: 'CYC001', referrer: 'Rohan Kumar', referrals: 3, status: 'Completed', subscriptionType: 'Auto-Renewed' },
     { id: 'CYC002', referrer: 'Anika Sharma', referrals: 2, status: 'In Progress', subscriptionType: 'Manual' },
     { id: 'CYC003', referrer: 'Vikram Reddy', referrals: 1, status: 'In Progress', subscriptionType: 'Auto-Renewed' },
     { id: 'CYC004', referrer: 'Isha Jain', referrals: 3, status: 'Completed', subscriptionType: 'Manual' },
 ];
 
-const initialReferralActivity: any[] = [
+const serverReferralActivity: any[] = [
     { id: 'REF001', referrer: 'Rohan Kumar', newUser: 'New User A', date: '2024-07-28', commission: '₹50', status: 'Paid' },
     { id: 'REF002', referrer: 'Anika Sharma', newUser: 'New User B', date: '2024-07-27', commission: '₹50', status: 'Paid' },
 ];
 
 export default function ReferBoltManagementPage() {
-  const [stats, setStats] = useState(initialStats);
-  const [cycles, setCycles] = useState<Cycle[]>(initialCycles);
-  const [referrals, setReferrals] = useState(initialReferralActivity);
+  const [stats, setStats] = useState<any | null>(null);
+  const [cycles, setCycles] = useState<Cycle[]>([]);
+  const [referrals, setReferrals] = useState<any[]>([]);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setStats(serverStats);
+    setCycles(serverCycles);
+    setReferrals(serverReferralActivity);
+    setIsClient(true);
+  }, []);
+
+  if (!isClient || !stats) {
+    return (
+      <div className="flex justify-center items-center h-96">
+        <Loader2 className="animate-spin text-primary" size={32} />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

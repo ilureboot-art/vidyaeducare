@@ -7,7 +7,7 @@ import { BarChart, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Line
 import { Users, Gamepad2, IndianRupee, Loader2 } from "lucide-react";
 
 // In a real app, this data would be fetched from a server
-const userActivityData = [
+const serverUserActivityData = [
   { name: 'Jul 22', users: 120 },
   { name: 'Jul 23', users: 150 },
   { name: 'Jul 24', users: 175 },
@@ -17,7 +17,7 @@ const userActivityData = [
   { name: 'Jul 28', users: 230 },
 ];
 
-const revenueData = [
+const serverRevenueData = [
   { name: 'Week 1', revenue: 4000 },
   { name: 'Week 2', revenue: 3000 },
   { name: 'Week 3', revenue: 5000 },
@@ -28,14 +28,18 @@ export default function AnalyticsPage() {
   const [activeUsers, setActiveUsers] = useState(0);
   const [gamesPlayed, setGamesPlayed] = useState(0);
   const [todaysRevenue, setTodaysRevenue] = useState(0);
+  const [userActivityData, setUserActivityData] = useState<any[]>([]);
+  const [revenueData, setRevenueData] = useState<any[]>([]);
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    setIsClient(true);
-    // In a real app, this data would be fetched and updated
+    // Simulate fetching data on the client side
     setActiveUsers(230);
     setGamesPlayed(1450);
     setTodaysRevenue(5230);
+    setUserActivityData(serverUserActivityData);
+    setRevenueData(serverRevenueData);
+    setIsClient(true);
   }, []);
 
   if (!isClient) {

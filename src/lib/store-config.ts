@@ -88,10 +88,6 @@ const defaultStoreConfig: StoreConfig = {
 let storeConfigState: StoreConfig | null = null;
 
 const initializeStoreConfig = (): StoreConfig => {
-    if (typeof window === 'undefined') {
-        return { ...defaultStoreConfig };
-    }
-    
     if (storeConfigState !== null) {
         return storeConfigState;
     }
@@ -114,6 +110,9 @@ const initializeStoreConfig = (): StoreConfig => {
 };
 
 export const getStoreConfig = (): StoreConfig => {
+    if (typeof window === 'undefined') {
+        return { ...defaultStoreConfig };
+    }
     return initializeStoreConfig();
 };
 

@@ -25,10 +25,6 @@ const defaultAcademicConfig: AcademicConfig = {
 let academicConfigState: AcademicConfig | null = null;
 
 const initializeAcademicConfig = (): AcademicConfig => {
-    if (typeof window === 'undefined') {
-        return { ...defaultAcademicConfig };
-    }
-
     if (academicConfigState !== null) {
         return academicConfigState;
     }
@@ -52,6 +48,9 @@ const initializeAcademicConfig = (): AcademicConfig => {
 };
 
 export const getAcademicConfig = (): AcademicConfig => {
+    if (typeof window === 'undefined') {
+        return { ...defaultAcademicConfig };
+    }
     return initializeAcademicConfig();
 };
 

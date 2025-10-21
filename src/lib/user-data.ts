@@ -64,10 +64,6 @@ gpayUpiId: "sanjaygurav0720@okicici",
 let walletDataState: WalletData | null = null;
 
 function initializeWalletData(): WalletData {
-    if (typeof window === 'undefined') {
-        return JSON.parse(JSON.stringify(defaultWalletData));
-    }
-
     if (walletDataState !== null) {
         return walletDataState;
     }
@@ -90,6 +86,9 @@ function initializeWalletData(): WalletData {
 };
 
 export function getWalletData(): WalletData {
+    if (typeof window === 'undefined') {
+        return JSON.parse(JSON.stringify(defaultWalletData));
+    }
     return initializeWalletData();
 };
 

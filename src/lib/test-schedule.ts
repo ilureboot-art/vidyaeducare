@@ -56,9 +56,6 @@ const getDefaultScheduledTests = (): ScheduledTest[] => {
 let scheduledTestsState: ScheduledTest[] | null = null;
 
 const initializeScheduledTests = (): ScheduledTest[] => {
-    if (typeof window === 'undefined') {
-        return getDefaultScheduledTests();
-    }
     if (scheduledTestsState !== null) {
         return scheduledTestsState;
     }
@@ -78,6 +75,9 @@ const initializeScheduledTests = (): ScheduledTest[] => {
 };
 
 export const getScheduledTestData = (): ScheduledTest[] => {
+    if (typeof window === 'undefined') {
+        return [];
+    }
     return initializeScheduledTests();
 };
 

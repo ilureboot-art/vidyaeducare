@@ -33,10 +33,6 @@ const defaultAdminData: AdminData = {
 let adminDataState: AdminData | null = null;
 
 const initializeAdminData = (): AdminData => {
-    if (typeof window === 'undefined') {
-        return { ...defaultAdminData };
-    }
-    
     if (adminDataState !== null) {
         return adminDataState;
     }
@@ -57,6 +53,9 @@ const initializeAdminData = (): AdminData => {
 };
 
 export const getAdminData = (): AdminData => {
+    if (typeof window === 'undefined') {
+        return { admins: [], requests: [] };
+    }
     return initializeAdminData();
 }
 

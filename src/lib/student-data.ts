@@ -77,9 +77,6 @@ let validActivationCodesState: string[] | null = null;
 const defaultActivationCodes = ["PROD-A1B2C", "PROD-X9Y8Z", "PROD-M4N5P"];
 
 const initializeStudentData = (): StudentProfile[] => {
-    if (typeof window === 'undefined') {
-        return JSON.parse(JSON.stringify(defaultStudentData));
-    }
     if (studentDataState !== null) {
         return studentDataState;
     }
@@ -99,13 +96,13 @@ const initializeStudentData = (): StudentProfile[] => {
 };
 
 export const getAllStudentData = (): StudentProfile[] => {
+    if (typeof window === 'undefined') {
+        return [];
+    }
     return initializeStudentData();
 };
 
 const initializeActivationCodes = (): string[] => {
-    if (typeof window === 'undefined') {
-        return [...defaultActivationCodes];
-    }
     if (validActivationCodesState !== null) {
         return validActivationCodesState;
     }
@@ -125,6 +122,9 @@ const initializeActivationCodes = (): string[] => {
 };
 
 export const getActivationCodes = (): string[] => {
+    if (typeof window === 'undefined') {
+        return [];
+    }
     return initializeActivationCodes();
 }
 

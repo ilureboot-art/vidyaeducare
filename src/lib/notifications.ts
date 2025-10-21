@@ -59,12 +59,12 @@ export function addNotification(notificationData: Omit<AppNotification, 'id' | '
 
 // Function to get notifications for the admin
 export function getAdminNotifications(): AppNotification[] {
-    return initializeNotifications().filter(n => n.userId === 'admin');
+    return initializeNotifications().filter(n => n.userId === 'admin').sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 }
 
 // Function to get notifications for a specific user
 export function getUserNotifications(userId: string): AppNotification[] {
-    return initializeNotifications().filter(n => n.userId === userId);
+    return initializeNotifications().filter(n => n.userId === userId).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 }
 
 // Function to mark all admin notifications as read

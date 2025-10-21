@@ -14,10 +14,6 @@ export type ScheduledTest = {
 };
 
 const getDefaultScheduledTests = (): ScheduledTest[] => {
-    if (typeof window === 'undefined') {
-        return [];
-    }
-
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);

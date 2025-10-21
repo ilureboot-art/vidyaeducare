@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Download, ArrowUpRight, ArrowDownLeft, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { getWalletData, type Transaction, updateTransactionStatus } from "@/lib/user-data";
+import { getWalletData, type Transaction } from "@/lib/user-data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
@@ -58,20 +58,6 @@ export default function TransactionsPage() {
   useEffect(() => {
     refreshTransactions();
   }, []);
-
-
-  const handleTransactionStatus = (id: number, newStatus: "Completed" | "Rejected") => {
-    const success = updateTransactionStatus(id, newStatus);
-    if (success) {
-        toast({
-          title: "Transaction Updated",
-          description: `Transaction ${id} has been marked as ${newStatus}.`,
-        });
-        refreshTransactions();
-    } else {
-         toast({ title: "Action not allowed", description: "This transaction has already been processed."});
-    }
-  };
 
   const filteredTransactions = transactions ? transactions.filter(
     (tx) => {
@@ -185,5 +171,3 @@ export default function TransactionsPage() {
     </div>
   );
 }
-
-    

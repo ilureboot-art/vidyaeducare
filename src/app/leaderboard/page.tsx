@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -11,7 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Trophy, Award } from "lucide-react";
+import { Trophy, Award, Loader2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 type Player = {
@@ -42,7 +42,19 @@ const initialLeaderboardData: Player[] = [
 ];
 
 export default function LeaderboardPage() {
-  const [leaderboardData, setLeaderboardData] = useState<Player[]>(initialLeaderboardData);
+  const [leaderboardData, setLeaderboardData] = useState<Player[] | null>(null);
+
+  useEffect(() => {
+    setLeaderboardData(initialLeaderboardData);
+  }, []);
+
+  if (!leaderboardData) {
+    return (
+      <div className="w-full max-w-3xl mx-auto flex justify-center items-center h-96">
+        <Loader2 className="animate-spin text-primary" size={32} />
+      </div>
+    )
+  }
 
   return (
     <div className="w-full max-w-3xl mx-auto">

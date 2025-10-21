@@ -37,18 +37,16 @@ const serverReferralActivity: any[] = [
 
 export default function ReferBoltManagementPage() {
   const [stats, setStats] = useState<any | null>(null);
-  const [cycles, setCycles] = useState<Cycle[]>([]);
-  const [referrals, setReferrals] = useState<any[]>([]);
-  const [isClient, setIsClient] = useState(false);
+  const [cycles, setCycles] = useState<Cycle[] | null>(null);
+  const [referrals, setReferrals] = useState<any[] | null>(null);
 
   useEffect(() => {
     setStats(serverStats);
     setCycles(serverCycles);
     setReferrals(serverReferralActivity);
-    setIsClient(true);
   }, []);
 
-  if (!isClient || !stats) {
+  if (!stats || !cycles || !referrals) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />

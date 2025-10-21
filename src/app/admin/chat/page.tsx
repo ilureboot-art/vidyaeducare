@@ -49,25 +49,25 @@ const serverChats: Chat[] = [
 ];
 
 export default function ChatManagementPage() {
-    const [chats, setChats] = useState<Chat[]>([]);
+    const [chats, setChats] = useState<Chat[] | null>(null);
     const [activeChat, setActiveChat] = useState<Chat | null>(null);
     const [reply, setReply] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
-    const [isClient, setIsClient] = useState(false);
 
     useEffect(() => {
         setChats(serverChats);
-        setIsClient(true);
     }, []);
 
     const handleSelectChat = (chat: Chat) => {
         setActiveChat(chat);
-        setChats(chats.map(c => c.id === chat.id ? { ...c, unread: false } : c));
+        if (chats) {
+            setChats(chats.map(c => c.id === chat.id ? { ...c, unread: false } : c));
+        }
     };
 
     const handleSendReply = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!reply.trim() || !activeChat) return;
+        if (!reply.trim() || !activeChat || !chats) return;
 
         const newMessage: Message = { from: 'admin', text: reply };
         
@@ -82,12 +82,12 @@ export default function ChatManagementPage() {
         setReply("");
     };
 
-    const filteredChats = chats.filter(chat => 
+    const filteredChats = chats ? chats.filter(chat => 
         chat.user.toLowerCase().includes(searchTerm.toLowerCase()) || 
         chat.id.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    ) : [];
     
-  if (!isClient) {
+  if (!chats) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />

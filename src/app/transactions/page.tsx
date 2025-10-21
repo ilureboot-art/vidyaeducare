@@ -59,10 +59,11 @@ export default function TransactionsPage() {
 
   const filteredTransactions = transactions ? transactions.filter(
     (tx) => {
-      const searchTermMatch = tx.user?.toLowerCase().includes(searchTerm.toLowerCase()) || String(tx.id).toLowerCase().includes(searchTerm.toLowerCase());
+      const searchTermMatch = tx.description.toLowerCase().includes(searchTerm.toLowerCase()) || String(tx.id).toLowerCase().includes(searchTerm.toLowerCase());
       const statusMatch = statusFilter === 'all' || tx.status.toLowerCase() === statusFilter;
       const typeMatch = typeFilter === 'all' || (typeFilter === 'deposit' && tx.amount >= 0) || (typeFilter === 'withdrawal' && tx.amount < 0);
-      return searchTermMatch && statusMatch && typeMatch;
+      const isUserTx = tx.user === 'Alex Doe' || !tx.user;
+      return searchTermMatch && statusMatch && typeMatch && isUserTx;
     }
   ) : [];
 
@@ -139,7 +140,7 @@ export default function TransactionsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredTransactions.filter(tx => tx.user === 'Alex Doe' || !tx.user).map((tx) => (
+              {filteredTransactions.map((tx) => (
                 <TableRow key={tx.id}>
                   <TableCell>
                     <div className="flex items-center gap-2">
@@ -167,5 +168,3 @@ export default function TransactionsPage() {
     </div>
   );
 }
-
-    

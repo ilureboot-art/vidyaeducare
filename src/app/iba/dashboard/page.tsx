@@ -59,15 +59,17 @@ const bonusTiers = [
 
 export default function IBADashboardPage() {
   const { toast } = useToast();
-  const [referralData, setReferralData] = useState(initialReferralData);
-  const [ibaReferralCode, setIbaReferralCode] = useState("");
+  const [referralData, setReferralData] = useState<typeof initialReferralData | null>(null);
+  const [ibaReferralCode, setIbaReferralCode] = useState<string | null>(null);
 
   useEffect(() => {
     const data = getWalletData();
     setIbaReferralCode(data.referralCode); // Using the general referral code for demo
+    setReferralData(initialReferralData);
   }, []);
 
   const handleCopyToClipboard = () => {
+    if (!ibaReferralCode) return;
     navigator.clipboard.writeText(ibaReferralCode);
     toast({
       title: "Copied!",
@@ -76,6 +78,7 @@ export default function IBADashboardPage() {
   };
 
   const handleShare = async () => {
+    if (!ibaReferralCode) return;
     const shareUrl = `${window.location.origin}/signup?ref=${ibaReferralCode}`;
     const message = `🚀 Ace your exams with Vidya EduCare! 🚀
 
@@ -119,16 +122,16 @@ Don't miss out on the best way to prepare for your exams and earn rewards!
     }
   };
   
-  const dailyProgress = referralData.dailySales > 0 ? (referralData.dailySales / dailyTarget) * 100 : 0;
-  const monthlyProgress = referralData.monthlySales > 0 ? (referralData.monthlySales / monthlyTarget) * 100 : 0;
-  
-  if (!ibaReferralCode) {
+  if (!ibaReferralCode || !referralData) {
     return (
       <div className="w-full max-w-4xl mx-auto flex items-center justify-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />
       </div>
     );
   }
+
+  const dailyProgress = referralData.dailySales > 0 ? (referralData.dailySales / dailyTarget) * 100 : 0;
+  const monthlyProgress = referralData.monthlySales > 0 ? (referralData.monthlySales / monthlyTarget) * 100 : 0;
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-6">

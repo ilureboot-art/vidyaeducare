@@ -54,7 +54,9 @@ export default function TransactionsPage() {
 
   const refreshTransactions = () => {
     const data = getWalletData();
-    setTransactions(data.transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+    if (data) {
+        setTransactions(data.transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+    }
   };
 
   const handleTransactionStatus = (id: number, newStatus: "Completed" | "Rejected") => {
@@ -182,3 +184,5 @@ export default function TransactionsPage() {
     </div>
   );
 }
+
+    

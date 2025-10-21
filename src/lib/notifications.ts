@@ -10,37 +10,37 @@ export type AppNotification = {
     userId: 'admin' | string; // 'admin' for admin notifications, or a specific user ID
 };
 
-let notifications: AppNotification[] | null = null;
+let notificationsState: AppNotification[] | null = null;
 const defaultNotifications: AppNotification[] = [];
 
 const initializeNotifications = (): AppNotification[] => {
-    if (notifications !== null) {
-        return notifications;
+    if (typeof window === 'undefined') {
+        return JSON.parse(JSON.stringify(defaultNotifications));
     }
     
-    if (typeof window !== 'undefined') {
-        const savedNotifications = localStorage.getItem('notifications');
-        if (savedNotifications) {
-            try {
-                notifications = JSON.parse(savedNotifications);
-                return notifications!;
-            } catch (e) {
-                console.error("Failed to parse notifications from localStorage", e);
-            }
+    if (notificationsState !== null) {
+        return notificationsState;
+    }
+    
+    const savedNotifications = localStorage.getItem('notifications');
+    if (savedNotifications) {
+        try {
+            notificationsState = JSON.parse(savedNotifications);
+            return notificationsState!;
+        } catch (e) {
+            console.error("Failed to parse notifications from localStorage", e);
         }
-        notifications = JSON.parse(JSON.stringify(defaultNotifications));
-        localStorage.setItem('notifications', JSON.stringify(notifications));
-        return notifications;
     }
     
-    notifications = [];
-    return notifications;
+    notificationsState = JSON.parse(JSON.stringify(defaultNotifications));
+    localStorage.setItem('notifications', JSON.stringify(notificationsState));
+    return notificationsState;
 }
 
 const saveNotifications = (notifs: AppNotification[]) => {
     if (typeof window !== 'undefined') {
         localStorage.setItem('notifications', JSON.stringify(notifs));
-        notifications = notifs;
+        notificationsState = notifs;
     }
 };
 

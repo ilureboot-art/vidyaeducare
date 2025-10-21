@@ -77,8 +77,11 @@ function initializeWalletData(): WalletData {
         try {
             const parsedData = JSON.parse(savedData);
             if (parsedData) {
-                walletDataState = parsedData;
-                return parsedData;
+                // Quick validation
+                if (parsedData.adminPaymentMethods && parsedData.transactions) {
+                    walletDataState = parsedData;
+                    return parsedData;
+                }
             }
         } catch (e) {
             console.error("Failed to parse walletData from localStorage", e);

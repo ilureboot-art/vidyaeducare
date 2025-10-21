@@ -44,11 +44,12 @@ const VidyaEdurankOutputSchema = z.object({
 }).optional();
 export type VidyaEdurankOutput = z.infer<typeof VidyaEdurankOutputSchema>;
 
-const vidyaEdurankPrompt = ai.definePrompt({
-    name: "vidyaEdurankPrompt",
-    input: { schema: VidyaEdurankInputSchema },
-    output: { schema: VidyaEdurankOutputSchema },
-    prompt: `You are the Vidya EduCare AI Agent, a highly intelligent, multilingual AI assistant. Your job is to understand the provided study material (text and/or images) and generate the specific educational content requested.
+const { vidyaEdurankFlow } = (() => {
+  const vidyaEdurankPrompt = ai.definePrompt({
+      name: "vidyaEdurankPrompt",
+      input: { schema: VidyaEdurankInputSchema },
+      output: { schema: VidyaEdurankOutputSchema },
+      prompt: `You are the Vidya EduCare AI Agent, a highly intelligent, multilingual AI assistant. Your job is to understand the provided study material (text and/or images) and generate the specific educational content requested.
 
 Here are the user's specifications:
 - Input Language: {{{language}}}
@@ -96,26 +97,28 @@ Based on the material, please generate the following outputs as requested. The c
 - **Glossary**: Identify 5-10 important keywords and provide brief definitions.
 {{/if}}
 `
-});
+  });
 
 
-const vidyaEdurankFlow = ai.defineFlow(
-  {
-    name: 'vidyaEdurankFlow',
-    inputSchema: VidyaEdurankInputSchema,
-    outputSchema: VidyaEdurankOutputSchema,
-  },
-  async (input) => {
-    const result = await vidyaEdurankPrompt(input);
-    const output = result.output;
-    
-    if (!output) {
-      console.error("AI model returned a null or empty response object.", { usage: result.usage });
-      throw new Error("The AI model returned a null or empty response, indicating a failure to generate content based on the provided material.");
+  const vidyaEdurankFlow = ai.defineFlow(
+    {
+      name: 'vidyaEdurankFlow',
+      inputSchema: VidyaEdurankInputSchema,
+      outputSchema: VidyaEdurankOutputSchema,
+    },
+    async (input) => {
+      const result = await vidyaEdurankPrompt(input);
+      const output = result.output;
+      
+      if (!output) {
+        console.error("AI model returned a null or empty response object.", { usage: result.usage });
+        throw new Error("The AI model returned a null or empty response, indicating a failure to generate content based on the provided material.");
+      }
+      return output;
     }
-    return output;
-  }
-);
+  );
+  return { vidyaEdurankFlow };
+})();
 
 
 export async function generateEducationalContent(input: VidyaEdurankInput): Promise<VidyaEdurankOutput> {

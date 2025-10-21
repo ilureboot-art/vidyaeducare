@@ -18,11 +18,12 @@ const AiHintInputSchema = z.object({
 });
 export type AiHintInput = z.infer<typeof AiHintInputSchema>;
 
-const hintPrompt = ai.definePrompt({
-    name: "hintPrompt",
-    input: { schema: AiHintInputSchema },
-    output: { schema: z.string().nullable() },
-    prompt: `You are a witty and clever game show host for a number guessing game called GuessMaster. The user is trying to guess a secret number. Their last guess was {{{guess}}}. The secret number is actually {{{direction}}} than that.
+const { hintPrompt, hintFlow } = (() => {
+  const hintPrompt = ai.definePrompt({
+      name: "hintPrompt",
+      input: { schema: AiHintInputSchema },
+      output: { schema: z.string().nullable() },
+      prompt: `You are a witty and clever game show host for a number guessing game called GuessMaster. The user is trying to guess a secret number. Their last guess was {{{guess}}}. The secret number is actually {{{direction}}} than that.
 
 Give them a short, creative, and fun hint to guide them. Be encouraging and a bit playful.
 
@@ -39,20 +40,23 @@ Examples:
 - If the secret is lower than 10: "Think smaller, humbler thoughts."
 
 Now, give a hint for a guess of {{{guess}}} where the answer is {{{direction}}}.`
-});
+  });
 
 
-const hintFlow = ai.defineFlow(
-  {
-    name: 'hintFlow',
-    inputSchema: AiHintInputSchema,
-    outputSchema: z.string(),
-  },
-  async (input) => {
-    const { output } = await hintPrompt(input);
-    return output || '';
-  }
-);
+  const hintFlow = ai.defineFlow(
+    {
+      name: 'hintFlow',
+      inputSchema: AiHintInputSchema,
+      outputSchema: z.string(),
+    },
+    async (input) => {
+      const { output } = await hintPrompt(input);
+      return output || '';
+    }
+  );
+
+  return { hintPrompt, hintFlow };
+})();
 
 
 export async function getAiHint(input: AiHintInput): Promise<string> {

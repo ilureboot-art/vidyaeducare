@@ -21,12 +21,12 @@ const AiOutputSchema = z.object({
     questions: QuestionParserOutputSchema,
 });
 
-
-const questionParserPrompt = ai.definePrompt({
-    name: "questionParserPrompt",
-    input: { schema: QuestionParserInputSchema },
-    output: { schema: AiOutputSchema }, // The AI is expected to return an object with a 'questions' property.
-    prompt: `You are an expert data extractor. Your task is to parse the following unstructured text and extract every Multiple Choice Question (MCQ) you find into a structured JSON object containing a 'questions' array.
+const { documentParserFlow } = (() => {
+  const questionParserPrompt = ai.definePrompt({
+      name: "questionParserPrompt",
+      input: { schema: QuestionParserInputSchema },
+      output: { schema: AiOutputSchema }, // The AI is expected to return an object with a 'questions' property.
+      prompt: `You are an expert data extractor. Your task is to parse the following unstructured text and extract every Multiple Choice Question (MCQ) you find into a structured JSON object containing a 'questions' array.
 
 **Extraction Rules:**
 1.  **Focus on Questions**: Your primary goal is to extract the 'questions' array. Ignore top-level document details like 'Test Set Name', 'Board', etc. for now.
@@ -58,40 +58,44 @@ Answer: B. Option 2 (English) / (Marathi)
 {{{documentText}}}
 ---
 `
-});
+  });
 
-const documentParserFlow = ai.defineFlow(
-  {
-    name: 'documentParserFlow',
-    inputSchema: QuestionParserInputSchema,
-    outputSchema: QuestionParserOutputSchema, // The flow itself will return just the array.
-  },
-  async (input) => {
-    // Get the structured output from the AI.
-    const result = await questionParserPrompt(input);
-    const aiOutput = result.output;
+  const documentParserFlow = ai.defineFlow(
+    {
+      name: 'documentParserFlow',
+      inputSchema: QuestionParserInputSchema,
+      outputSchema: QuestionParserOutputSchema, // The flow itself will return just the array.
+    },
+    async (input) => {
+      // Get the structured output from the AI.
+      const result = await questionParserPrompt(input);
+      const aiOutput = result.output;
 
-    // Check if the AI returned a valid object with a 'questions' property that is an array.
-    if (!aiOutput || !Array.isArray(aiOutput.questions)) {
-      throw new Error("The AI model failed to produce a valid questions array.");
+      // Check if the AI returned a valid object with a 'questions' property that is an array.
+      if (!aiOutput || !Array.isArray(aiOutput.questions)) {
+        throw new Error("The AI model failed to produce a valid questions array.");
+      }
+      
+      // Filter out any potentially incomplete questions the AI might have included.
+      // This is a robust way to ensure every item in the final array is valid.
+      const validQuestions = aiOutput.questions.filter((q: any): q is z.infer<typeof QuestionSchema> => {
+          // Use safeParse on each individual question object.
+          // This prevents a single bad object from failing the whole batch.
+          const validationResult = QuestionSchema.safeParse(q);
+          return validationResult.success;
+      });
+
+      if (validQuestions.length === 0) {
+          throw new Error("No valid questions could be parsed from the document. Please ensure all questions have text, 4 options, and a clear answer.");
+      }
+
+      return validQuestions;
     }
-    
-    // Filter out any potentially incomplete questions the AI might have included.
-    // This is a robust way to ensure every item in the final array is valid.
-    const validQuestions = aiOutput.questions.filter((q: any): q is z.infer<typeof QuestionSchema> => {
-        // Use safeParse on each individual question object.
-        // This prevents a single bad object from failing the whole batch.
-        const validationResult = QuestionSchema.safeParse(q);
-        return validationResult.success;
-    });
+  );
 
-    if (validQuestions.length === 0) {
-        throw new Error("No valid questions could be parsed from the document. Please ensure all questions have text, 4 options, and a clear answer.");
-    }
+  return { documentParserFlow };
+})();
 
-    return validQuestions;
-  }
-);
 
 
 export async function parseQuestionsFromDocument(input: QuestionParserInput): Promise<QuestionParserOutput> {

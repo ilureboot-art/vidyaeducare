@@ -88,6 +88,10 @@ const defaultStoreConfig: StoreConfig = {
 let storeConfigState: StoreConfig | null = null;
 
 const initializeStoreConfig = (): StoreConfig => {
+    if (typeof window === 'undefined') {
+        return JSON.parse(JSON.stringify(defaultStoreConfig));
+    }
+
     if (storeConfigState !== null) {
         return storeConfigState;
     }
@@ -104,15 +108,12 @@ const initializeStoreConfig = (): StoreConfig => {
             console.error("Failed to parse storeConfig from localStorage", e);
         }
     }
-    storeConfigState = { ...defaultStoreConfig };
+    storeConfigState = JSON.parse(JSON.stringify(defaultStoreConfig));
     localStorage.setItem('storeConfig', JSON.stringify(storeConfigState));
     return storeConfigState;
 };
 
 export const getStoreConfig = (): StoreConfig => {
-    if (typeof window === 'undefined') {
-        return { ...defaultStoreConfig };
-    }
     return initializeStoreConfig();
 };
 
@@ -158,3 +159,5 @@ export function setReferboltSettings(newSettings: ReferboltSettings) {
     config.referboltSettings = newSettings;
     saveStoreConfig(config);
 }
+
+    

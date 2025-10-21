@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -51,8 +50,8 @@ export default function TransactionsPage() {
   const [isClient, setIsClient] = useState(false);
   
   useEffect(() => {
-    setIsClient(true);
     refreshTransactions();
+    setIsClient(true);
   }, []);
 
   const refreshTransactions = () => {
@@ -185,3 +184,5 @@ export default function TransactionsPage() {
     </div>
   );
 }
+
+    

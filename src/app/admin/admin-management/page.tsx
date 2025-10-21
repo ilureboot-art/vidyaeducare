@@ -61,8 +61,8 @@ export default function AdminManagementPage() {
   }
 
   useEffect(() => {
-    setIsClient(true);
     refreshState();
+    setIsClient(true);
   }, []);
 
   const openWhatsApp = (phone: string, message?: string) => {

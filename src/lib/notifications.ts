@@ -11,12 +11,13 @@ export type AppNotification = {
 };
 
 let notifications: AppNotification[] | null = null;
+const defaultNotifications: AppNotification[] = [];
 
 const initializeNotifications = (): AppNotification[] => {
     if (typeof window === 'undefined') {
-        return [];
+        return JSON.parse(JSON.stringify(defaultNotifications));
     }
-
+    
     if (notifications !== null) {
         return notifications;
     }
@@ -31,7 +32,7 @@ const initializeNotifications = (): AppNotification[] => {
         }
     }
     
-    notifications = [];
+    notifications = JSON.parse(JSON.stringify(defaultNotifications));
     localStorage.setItem('notifications', JSON.stringify(notifications));
     return notifications;
 }
@@ -87,3 +88,5 @@ export function markUserNotificationsAsRead(userId: string) {
     });
     saveNotifications(allNotifications);
 }
+
+    

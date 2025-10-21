@@ -27,8 +27,8 @@ export default function AdminNotificationsPage() {
     const [isClient, setIsClient] = useState(false);
 
     useEffect(() => {
-        setIsClient(true);
         setNotifications(getAdminNotifications());
+        setIsClient(true);
     }, []);
 
     if (!isClient) {
@@ -80,3 +80,5 @@ export default function AdminNotificationsPage() {
         </div>
     );
 }
+
+    

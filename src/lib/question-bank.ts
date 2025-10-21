@@ -57,6 +57,10 @@ const defaultTestSets: TestSet[] = [
 let allTestSetsState: TestSet[] | null = null;
 
 const initializeTestSets = (): TestSet[] => {
+    if (typeof window === 'undefined') {
+        return JSON.parse(JSON.stringify(defaultTestSets));
+    }
+    
     if (allTestSetsState !== null) {
         return allTestSetsState;
     }
@@ -77,9 +81,6 @@ const initializeTestSets = (): TestSet[] => {
 };
 
 export const getAllTestSets = (): TestSet[] => {
-    if (typeof window === 'undefined') {
-        return [];
-    }
     return initializeTestSets();
 };
 
@@ -119,3 +120,5 @@ export function deleteTestSet(testSetId: string) {
     const updatedSets = sets.filter(ts => ts.id !== testSetId);
     saveTestSets(updatedSets);
 }
+
+    

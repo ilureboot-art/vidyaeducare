@@ -25,6 +25,10 @@ const defaultAcademicConfig: AcademicConfig = {
 let academicConfigState: AcademicConfig | null = null;
 
 const initializeAcademicConfig = (): AcademicConfig => {
+    if (typeof window === 'undefined') {
+        return JSON.parse(JSON.stringify(defaultAcademicConfig));
+    }
+    
     if (academicConfigState !== null) {
         return academicConfigState;
     }
@@ -42,15 +46,12 @@ const initializeAcademicConfig = (): AcademicConfig => {
         }
     }
 
-    academicConfigState = { ...defaultAcademicConfig };
+    academicConfigState = JSON.parse(JSON.stringify(defaultAcademicConfig));
     localStorage.setItem('academicConfig', JSON.stringify(academicConfigState));
     return academicConfigState;
 };
 
 export const getAcademicConfig = (): AcademicConfig => {
-    if (typeof window === 'undefined') {
-        return { ...defaultAcademicConfig };
-    }
     return initializeAcademicConfig();
 };
 
@@ -78,3 +79,5 @@ export function setSubjects(newSubjects: string[]) {
     config.subjects = newSubjects.filter(s => s.trim() !== '');
     saveAcademicConfig(config);
 }
+
+    

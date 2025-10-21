@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -19,7 +18,9 @@ function FormattedDate({ dateString }: { dateString: string }) {
   const [formattedDate, setFormattedDate] = useState<string>('');
 
   useEffect(() => {
-    setFormattedDate(format(new Date(dateString), 'P p'));
+    if (dateString) {
+        setFormattedDate(format(new Date(dateString), 'P p'));
+    }
   }, [dateString]);
 
   return <>{formattedDate}</>;
@@ -105,3 +106,5 @@ export function Notifications() {
     </Popover>
   );
 }
+
+    

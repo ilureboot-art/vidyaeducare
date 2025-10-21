@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -56,8 +55,8 @@ export default function TransactionsPage() {
   };
 
   useEffect(() => {
-    setIsClient(true);
     refreshTransactions();
+    setIsClient(true);
   }, []);
 
 
@@ -196,3 +195,5 @@ export default function TransactionsPage() {
     </div>
   );
 }
+
+    

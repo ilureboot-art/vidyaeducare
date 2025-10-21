@@ -105,7 +105,7 @@ export default function AdminStoreSettingsPage() {
   const removePackage = (index: number) => {
     if (!storeConfig) return;
     const newPackages = storeConfig.packages.filter((_, i) => i !== index);
-    setStoreConfig(prev => prev ? ({ ...prev, packages: newPackages }) : null);
+    setStoreConfig(prev => prev ? ({...prev, packages: newPackages}) : null);
   };
   
   const addMockTestPackage = () => {
@@ -383,3 +383,5 @@ export default function AdminStoreSettingsPage() {
     </div>
   );
 }
+
+    

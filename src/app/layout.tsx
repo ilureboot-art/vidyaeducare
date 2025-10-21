@@ -10,6 +10,7 @@ import { Navbar } from '@/components/Navbar';
 import { ChatWidget } from '@/components/ChatWidget';
 import { ThemeProvider } from "next-themes";
 import { useState, useEffect } from 'react';
+import { useHydrateData } from '@/hooks/use-hydrate-data';
 
 export default function RootLayout({
   children,
@@ -17,6 +18,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const pathname = usePathname();
+  useHydrateData();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {

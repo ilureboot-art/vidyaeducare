@@ -15,6 +15,7 @@ export type ScheduledTest = {
 
 let scheduledTestsState: ScheduledTest[] | null = null;
 
+// Use static, non-dynamic dates for default server-side data
 const defaultScheduledTests: ScheduledTest[] = [
     {
         id: "SCHED-1",
@@ -36,35 +37,29 @@ const defaultScheduledTests: ScheduledTest[] = [
     },
 ];
 
-const initializeScheduledTests = (): ScheduledTest[] => {
-    if (typeof window === 'undefined') {
-        return JSON.parse(JSON.stringify(defaultScheduledTests));
-    }
-
+export const getScheduledTestData = (): ScheduledTest[] => {
     if (scheduledTestsState) {
         return scheduledTestsState;
     }
-
-    try {
-        const savedData = localStorage.getItem('scheduledTests');
-        if (savedData) {
-            scheduledTestsState = JSON.parse(savedData);
-            return scheduledTestsState!;
+    if (typeof window !== 'undefined') {
+        try {
+            const savedData = localStorage.getItem('scheduledTests');
+            if (savedData) {
+                scheduledTestsState = JSON.parse(savedData);
+                return scheduledTestsState!;
+            }
+        } catch (e) {
+            console.error("Failed to parse scheduledTests from localStorage", e);
         }
-    } catch (e) {
-        console.error("Failed to parse scheduledTests from localStorage", e);
+        
+        scheduledTestsState = JSON.parse(JSON.stringify(defaultScheduledTests));
+        localStorage.setItem('scheduledTests', JSON.stringify(scheduledTestsState));
+        return scheduledTestsState;
     }
-    
-    scheduledTestsState = JSON.parse(JSON.stringify(defaultScheduledTests));
-    localStorage.setItem('scheduledTests', JSON.stringify(scheduledTestsState));
-    return scheduledTestsState;
+    return JSON.parse(JSON.stringify(defaultScheduledTests));
 };
 
-export const getScheduledTestData = (): ScheduledTest[] => {
-    return initializeScheduledTests();
-};
-
-const saveScheduledTests = (tests: ScheduledTest[]) => {
+export const saveScheduledTests = (tests: ScheduledTest[]) => {
      if (typeof window !== 'undefined') {
         localStorage.setItem('scheduledTests', JSON.stringify(tests));
         scheduledTestsState = tests;

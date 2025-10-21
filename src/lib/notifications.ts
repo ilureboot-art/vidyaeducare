@@ -13,31 +13,28 @@ export type AppNotification = {
 let notificationsState: AppNotification[] | null = null;
 const defaultNotifications: AppNotification[] = [];
 
-const initializeNotifications = (): AppNotification[] => {
-    if (typeof window === 'undefined') {
-        return [];
-    }
-
+export const getNotifications = (): AppNotification[] => {
     if (notificationsState) {
         return notificationsState;
     }
-    
-    try {
-        const savedNotifications = localStorage.getItem('notifications');
-        if (savedNotifications) {
-            notificationsState = JSON.parse(savedNotifications);
-            return notificationsState!;
+    if (typeof window !== 'undefined') {
+        try {
+            const savedNotifications = localStorage.getItem('notifications');
+            if (savedNotifications) {
+                notificationsState = JSON.parse(savedNotifications);
+                return notificationsState!;
+            }
+        } catch (e) {
+            console.error("Failed to parse notifications from localStorage", e);
         }
-    } catch (e) {
-        console.error("Failed to parse notifications from localStorage", e);
+        notificationsState = [...defaultNotifications];
+        localStorage.setItem('notifications', JSON.stringify(notificationsState));
+        return notificationsState;
     }
-    
-    notificationsState = [...defaultNotifications];
-    localStorage.setItem('notifications', JSON.stringify(notificationsState));
-    return notificationsState;
+    return [...defaultNotifications];
 }
 
-const saveNotifications = (notifs: AppNotification[]) => {
+export const saveNotifications = (notifs: AppNotification[]) => {
     if (typeof window !== 'undefined') {
         localStorage.setItem('notifications', JSON.stringify(notifs));
         notificationsState = notifs;
@@ -46,7 +43,7 @@ const saveNotifications = (notifs: AppNotification[]) => {
 
 // Function to add a new notification
 export function addNotification(notificationData: Omit<AppNotification, 'id' | 'timestamp' | 'status'>) {
-    const allNotifications = initializeNotifications();
+    const allNotifications = getNotifications();
     const newNotification: AppNotification = {
         ...notificationData,
         id: Date.now(),
@@ -59,17 +56,17 @@ export function addNotification(notificationData: Omit<AppNotification, 'id' | '
 
 // Function to get notifications for the admin
 export function getAdminNotifications(): AppNotification[] {
-    return initializeNotifications().filter(n => n.userId === 'admin').sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    return getNotifications().filter(n => n.userId === 'admin').sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 }
 
 // Function to get notifications for a specific user
 export function getUserNotifications(userId: string): AppNotification[] {
-    return initializeNotifications().filter(n => n.userId === userId).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    return getNotifications().filter(n => n.userId === userId).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 }
 
 // Function to mark all admin notifications as read
 export function markAdminNotificationsAsRead() {
-    const allNotifications = initializeNotifications();
+    const allNotifications = getNotifications();
     allNotifications.forEach(n => {
         if (n.userId === 'admin') {
             n.status = 'read';
@@ -80,7 +77,7 @@ export function markAdminNotificationsAsRead() {
 
 // Function to mark all user notifications as read
 export function markUserNotificationsAsRead(userId: string) {
-     const allNotifications = initializeNotifications();
+     const allNotifications = getNotifications();
      allNotifications.forEach(n => {
         if (n.userId === userId) {
             n.status = 'read';

@@ -16,14 +16,12 @@ export type ScheduledTest = {
 let scheduledTestsState: ScheduledTest[] | null = null;
 
 const getDefaultScheduledTests = (): ScheduledTest[] => {
-    // This function should be safe to call on server by not using `new Date()` directly for state.
-    // However, since we ensure initializeScheduledTests is main entry, we can keep it for default generation.
     const today = new Date();
-    const tomorrow = new Date(today);
+    const tomorrow = new Date();
     tomorrow.setDate(today.getDate() + 1);
-    const yesterday = new Date(today);
+    const yesterday = new Date();
     yesterday.setDate(today.getDate() - 1);
-    const fiveDaysFromNow = new Date(today);
+    const fiveDaysFromNow = new Date();
     fiveDaysFromNow.setDate(today.getDate() + 5);
 
     return [
@@ -59,22 +57,22 @@ const getDefaultScheduledTests = (): ScheduledTest[] => {
 
 const initializeScheduledTests = (): ScheduledTest[] => {
     if (typeof window === 'undefined') {
-        return JSON.parse(JSON.stringify(getDefaultScheduledTests()));
+        return getDefaultScheduledTests();
     }
 
     if (scheduledTestsState !== null) {
         return scheduledTestsState;
     }
 
-    const savedData = localStorage.getItem('scheduledTests');
-    if (savedData) {
-        try {
+    try {
+        const savedData = localStorage.getItem('scheduledTests');
+        if (savedData) {
             const parsedData = JSON.parse(savedData);
             scheduledTestsState = parsedData;
-            return parsedData;
-        } catch (e) {
-            console.error("Failed to parse scheduledTests from localStorage", e);
+            return scheduledTestsState;
         }
+    } catch (e) {
+        console.error("Failed to parse scheduledTests from localStorage", e);
     }
     
     scheduledTestsState = getDefaultScheduledTests();
@@ -83,6 +81,9 @@ const initializeScheduledTests = (): ScheduledTest[] => {
 };
 
 export const getScheduledTestData = (): ScheduledTest[] => {
+    if (typeof window === 'undefined') {
+        return getDefaultScheduledTests();
+    }
     return initializeScheduledTests();
 };
 

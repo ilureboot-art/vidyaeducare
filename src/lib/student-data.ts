@@ -85,15 +85,15 @@ const initializeStudentData = (): StudentProfile[] => {
         return studentDataState;
     }
 
-    const savedData = localStorage.getItem('studentData');
-    if (savedData) {
-        try {
+    try {
+        const savedData = localStorage.getItem('studentData');
+        if (savedData) {
             const parsedData = JSON.parse(savedData);
             studentDataState = parsedData;
-            return parsedData;
-        } catch (e) {
-            console.error("Failed to parse studentData from localStorage", e);
+            return studentDataState;
         }
+    } catch (e) {
+        console.error("Failed to parse studentData from localStorage", e);
     }
 
     studentDataState = JSON.parse(JSON.stringify(defaultStudentData));
@@ -102,6 +102,9 @@ const initializeStudentData = (): StudentProfile[] => {
 };
 
 export const getAllStudentData = (): StudentProfile[] => {
+    if (typeof window === 'undefined') {
+        return JSON.parse(JSON.stringify(defaultStudentData));
+    }
     return initializeStudentData();
 };
 
@@ -114,15 +117,15 @@ const initializeActivationCodes = (): string[] => {
         return validActivationCodesState;
     }
 
-    const savedCodes = localStorage.getItem('activationCodes');
-    if (savedCodes) {
-        try {
+    try {
+        const savedCodes = localStorage.getItem('activationCodes');
+        if (savedCodes) {
             const parsedCodes = JSON.parse(savedCodes);
             validActivationCodesState = parsedCodes;
-            return parsedCodes;
-        } catch(e) {
-             console.error("Failed to parse activationCodes from localStorage", e);
+            return validActivationCodesState;
         }
+    } catch(e) {
+         console.error("Failed to parse activationCodes from localStorage", e);
     }
     
     validActivationCodesState = [...defaultActivationCodes];
@@ -131,6 +134,9 @@ const initializeActivationCodes = (): string[] => {
 };
 
 export const getActivationCodes = (): string[] => {
+    if (typeof window === 'undefined') {
+        return [...defaultActivationCodes];
+    }
     return initializeActivationCodes();
 }
 

@@ -13,60 +13,71 @@ export type ScheduledTest = {
     subject: string;
 };
 
-const defaultScheduledTests: ScheduledTest[] = [
-    {
-        id: "SCHED-1",
-        testSetId: "SET-172234567890",
-        testSetName: "Gravitation Mock Test",
-        dateTime: new Date(new Date().setDate(new Date().getDate() + 1)).toISOString(),
-        board: "SSC",
-        standard: "10th",
-        subject: "Science"
-    },
-    {
-        id: "SCHED-2",
-        testSetId: "SET-172242000000",
-        testSetName: "Elements Mock Test",
-        dateTime: new Date(new Date().setDate(new Date().getDate() - 1)).toISOString(),
-        board: "SSC",
-        standard: "10th",
-        subject: "Science"
-    },
-    {
-        id: "SCHED-3",
-        testSetId: "SET-172234567890", // Using Gravitation test for another standard
-        testSetName: "Gravitation Mock Test",
-        dateTime: new Date(new Date().setDate(new Date().getDate() + 5)).toISOString(),
-        board: "CBSE",
-        standard: "11th",
-        subject: "Physics"
-    }
-];
+const getDefaultScheduledTests = (): ScheduledTest[] => {
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+    const fiveDaysFromNow = new Date(today);
+    fiveDaysFromNow.setDate(today.getDate() + 5);
+
+    return [
+        {
+            id: "SCHED-1",
+            testSetId: "SET-172234567890",
+            testSetName: "Gravitation Mock Test",
+            dateTime: tomorrow.toISOString(),
+            board: "SSC",
+            standard: "10th",
+            subject: "Science"
+        },
+        {
+            id: "SCHED-2",
+            testSetId: "SET-172242000000",
+            testSetName: "Elements Mock Test",
+            dateTime: yesterday.toISOString(),
+            board: "SSC",
+            standard: "10th",
+            subject: "Science"
+        },
+        {
+            id: "SCHED-3",
+            testSetId: "SET-172234567890", // Using Gravitation test for another standard
+            testSetName: "Gravitation Mock Test",
+            dateTime: fiveDaysFromNow.toISOString(),
+            board: "CBSE",
+            standard: "11th",
+            subject: "Physics"
+        }
+    ];
+};
 
 let scheduledTestsState: ScheduledTest[] | null = null;
 
 const initializeScheduledTests = (): ScheduledTest[] => {
-    if (typeof window === 'undefined') {
-        return defaultScheduledTests;
-    }
-    const savedData = localStorage.getItem('scheduledTests');
-    if (savedData) {
-        try {
-            const parsedData = JSON.parse(savedData);
-            scheduledTestsState = parsedData;
-            return parsedData;
-        } catch (e) {
-            console.error("Failed to parse scheduledTests from localStorage", e);
+    if (typeof window !== 'undefined') {
+        const savedData = localStorage.getItem('scheduledTests');
+        if (savedData) {
+            try {
+                const parsedData = JSON.parse(savedData);
+                scheduledTestsState = parsedData;
+                return parsedData;
+            } catch (e) {
+                console.error("Failed to parse scheduledTests from localStorage", e);
+            }
         }
+        scheduledTestsState = getDefaultScheduledTests();
+        localStorage.setItem('scheduledTests', JSON.stringify(scheduledTestsState));
+        return scheduledTestsState;
     }
-    scheduledTestsState = defaultScheduledTests;
-    localStorage.setItem('scheduledTests', JSON.stringify(scheduledTestsState));
-    return scheduledTestsState;
+    // Return default for server-side
+    return getDefaultScheduledTests();
 };
 
 export const getScheduledTestData = (): ScheduledTest[] => {
     if (typeof window === 'undefined') {
-        return defaultScheduledTests;
+        return getDefaultScheduledTests();
     }
     if (scheduledTestsState === null) {
         return initializeScheduledTests();

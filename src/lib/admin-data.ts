@@ -33,22 +33,23 @@ const defaultAdminData: AdminData = {
 let adminDataState: AdminData | null = null;
 
 const initializeAdminData = (): AdminData => {
-    if (typeof window === 'undefined') {
-        return { ...defaultAdminData };
-    }
-    const savedData = localStorage.getItem('adminData');
-    if (savedData) {
-        try {
-            const parsedData = JSON.parse(savedData);
-            adminDataState = parsedData;
-            return parsedData;
-        } catch (e) {
-            console.error("Failed to parse adminData from localStorage", e);
+    if (typeof window !== 'undefined') {
+        const savedData = localStorage.getItem('adminData');
+        if (savedData) {
+            try {
+                const parsedData = JSON.parse(savedData);
+                adminDataState = parsedData;
+                return parsedData;
+            } catch (e) {
+                console.error("Failed to parse adminData from localStorage", e);
+            }
         }
+        adminDataState = { ...defaultAdminData };
+        localStorage.setItem('adminData', JSON.stringify(adminDataState));
+        return adminDataState;
     }
-    adminDataState = { ...defaultAdminData };
-    localStorage.setItem('adminData', JSON.stringify(adminDataState));
-    return adminDataState;
+    // Return default for server-side
+    return { ...defaultAdminData };
 };
 
 export const getAdminData = (): AdminData => {

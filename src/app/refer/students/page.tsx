@@ -49,6 +49,7 @@ export default function StudentAccessPage() {
   const [clients, setClients] = useState<Client[] | null>(null);
 
   useEffect(() => {
+    // This logic must run on the client side
     const today = new Date();
     const thirtyDaysFromNow = new Date();
     thirtyDaysFromNow.setDate(today.getDate() + 30);
@@ -67,7 +68,7 @@ export default function StudentAccessPage() {
 
   if (!clients) {
     return (
-      <div className="flex justify-center items-center h-96">
+      <div className="w-full max-w-4xl mx-auto flex items-center justify-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />
       </div>
     );

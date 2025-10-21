@@ -25,7 +25,9 @@ const defaultAcademicConfig: AcademicConfig = {
 let academicConfigState: AcademicConfig | null = null;
 
 const initializeAcademicConfig = (): AcademicConfig => {
-    // This function should only be called on the client
+    if (typeof window === 'undefined') {
+        return { ...defaultAcademicConfig };
+    }
     const savedConfig = localStorage.getItem('academicConfig');
     if (savedConfig) {
         try {
@@ -45,7 +47,6 @@ const initializeAcademicConfig = (): AcademicConfig => {
 
 export const getAcademicConfig = (): AcademicConfig => {
     if (typeof window === 'undefined') {
-        // Return a safe default for server-side rendering
         return { ...defaultAcademicConfig };
     }
     if (academicConfigState === null) {

@@ -77,7 +77,9 @@ let validActivationCodesState: string[] | null = null;
 const defaultActivationCodes = ["PROD-A1B2C", "PROD-X9Y8Z", "PROD-M4N5P"];
 
 const initializeStudentData = (): StudentProfile[] => {
-    // This function should only be called on the client
+    if (typeof window === 'undefined') {
+        return [ ...defaultStudentData ];
+    }
     const savedData = localStorage.getItem('studentData');
     if (savedData) {
         try {
@@ -95,7 +97,6 @@ const initializeStudentData = (): StudentProfile[] => {
 
 export const getAllStudentData = (): StudentProfile[] => {
     if (typeof window === 'undefined') {
-        // Return a safe default for server-side rendering
         return [ ...defaultStudentData ];
     }
     if (studentDataState === null) {
@@ -105,7 +106,9 @@ export const getAllStudentData = (): StudentProfile[] => {
 };
 
 const initializeActivationCodes = (): string[] => {
-    // This function should only be called on the client
+    if (typeof window === 'undefined') {
+        return [...defaultActivationCodes];
+    }
     const savedCodes = localStorage.getItem('activationCodes');
     if (savedCodes) {
         try {
@@ -123,7 +126,6 @@ const initializeActivationCodes = (): string[] => {
 
 export const getActivationCodes = (): string[] => {
     if (typeof window === 'undefined') {
-        // Return a safe default for server-side rendering
         return [...defaultActivationCodes];
     }
     if (validActivationCodesState === null) {

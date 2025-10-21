@@ -57,7 +57,9 @@ const defaultTestSets: TestSet[] = [
 let allTestSetsState: TestSet[] | null = null;
 
 const initializeTestSets = (): TestSet[] => {
-    // This function should only be called on the client
+    if (typeof window === 'undefined') {
+        return [ ...defaultTestSets ];
+    }
     const saved = localStorage.getItem('allTestSets');
     if (saved) {
         try {
@@ -75,7 +77,6 @@ const initializeTestSets = (): TestSet[] => {
 
 export const getAllTestSets = (): TestSet[] => {
     if (typeof window === 'undefined') {
-        // Return a safe default for server-side rendering
         return [ ...defaultTestSets ];
     }
     if (allTestSetsState === null) {

@@ -33,7 +33,9 @@ const defaultAdminData: AdminData = {
 let adminDataState: AdminData | null = null;
 
 const initializeAdminData = (): AdminData => {
-    // This function should only be called on the client
+    if (typeof window === 'undefined') {
+        return { ...defaultAdminData };
+    }
     const savedData = localStorage.getItem('adminData');
     if (savedData) {
         try {
@@ -51,7 +53,6 @@ const initializeAdminData = (): AdminData => {
 
 export const getAdminData = (): AdminData => {
     if (typeof window === 'undefined') {
-        // Return a safe default for server-side rendering
         return { ...defaultAdminData };
     }
     if (adminDataState === null) {

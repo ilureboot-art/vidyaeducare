@@ -13,50 +13,42 @@ export type ScheduledTest = {
     subject: string;
 };
 
-const getDefaultScheduledTests = (): ScheduledTest[] => {
-    const now = new Date();
-    const tomorrow = new Date(now);
-    tomorrow.setDate(now.getDate() + 1);
-    const yesterday = new Date(now);
-    yesterday.setDate(now.getDate() - 1);
-    const fiveDaysFromNow = new Date(now);
-    fiveDaysFromNow.setDate(now.getDate() + 5);
-
-    return [
-        {
-            id: "SCHED-1",
-            testSetId: "SET-172234567890",
-            testSetName: "Gravitation Mock Test",
-            dateTime: tomorrow.toISOString(),
-            board: "SSC",
-            standard: "10th",
-            subject: "Science"
-        },
-        {
-            id: "SCHED-2",
-            testSetId: "SET-172242000000",
-            testSetName: "Elements Mock Test",
-            dateTime: yesterday.toISOString(),
-            board: "SSC",
-            standard: "10th",
-            subject: "Science"
-        },
-        {
-            id: "SCHED-3",
-            testSetId: "SET-172234567890", // Using Gravitation test for another standard
-            testSetName: "Gravitation Mock Test",
-            dateTime: fiveDaysFromNow.toISOString(),
-            board: "CBSE",
-            standard: "11th",
-            subject: "Physics"
-        }
-    ];
-};
+const defaultScheduledTests: ScheduledTest[] = [
+    {
+        id: "SCHED-1",
+        testSetId: "SET-172234567890",
+        testSetName: "Gravitation Mock Test",
+        dateTime: new Date(new Date().setDate(new Date().getDate() + 1)).toISOString(),
+        board: "SSC",
+        standard: "10th",
+        subject: "Science"
+    },
+    {
+        id: "SCHED-2",
+        testSetId: "SET-172242000000",
+        testSetName: "Elements Mock Test",
+        dateTime: new Date(new Date().setDate(new Date().getDate() - 1)).toISOString(),
+        board: "SSC",
+        standard: "10th",
+        subject: "Science"
+    },
+    {
+        id: "SCHED-3",
+        testSetId: "SET-172234567890", // Using Gravitation test for another standard
+        testSetName: "Gravitation Mock Test",
+        dateTime: new Date(new Date().setDate(new Date().getDate() + 5)).toISOString(),
+        board: "CBSE",
+        standard: "11th",
+        subject: "Physics"
+    }
+];
 
 let scheduledTestsState: ScheduledTest[] | null = null;
 
 const initializeScheduledTests = (): ScheduledTest[] => {
-    // This function should only be called on the client
+    if (typeof window === 'undefined') {
+        return defaultScheduledTests;
+    }
     const savedData = localStorage.getItem('scheduledTests');
     if (savedData) {
         try {
@@ -67,16 +59,14 @@ const initializeScheduledTests = (): ScheduledTest[] => {
             console.error("Failed to parse scheduledTests from localStorage", e);
         }
     }
-    const defaultData = getDefaultScheduledTests();
-    scheduledTestsState = defaultData;
+    scheduledTestsState = defaultScheduledTests;
     localStorage.setItem('scheduledTests', JSON.stringify(scheduledTestsState));
     return scheduledTestsState;
 };
 
 export const getScheduledTestData = (): ScheduledTest[] => {
     if (typeof window === 'undefined') {
-        // Return a safe default for server-side rendering
-        return getDefaultScheduledTests();
+        return defaultScheduledTests;
     }
     if (scheduledTestsState === null) {
         return initializeScheduledTests();

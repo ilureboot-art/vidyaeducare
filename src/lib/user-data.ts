@@ -64,7 +64,9 @@ const defaultWalletData: WalletData = {
 let walletDataState: WalletData | null = null;
 
 function initializeWalletData(): WalletData {
-    // This function should only be called on the client
+    if (typeof window === 'undefined') {
+        return defaultWalletData;
+    }
     const savedData = localStorage.getItem('walletData');
     if (savedData) {
         try {
@@ -84,7 +86,6 @@ function initializeWalletData(): WalletData {
 
 export function getWalletData(): WalletData {
     if (typeof window === 'undefined') {
-        // Return a safe default for server-side rendering
         return defaultWalletData;
     }
     if (walletDataState === null) {

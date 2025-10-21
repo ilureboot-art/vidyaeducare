@@ -88,7 +88,9 @@ const defaultStoreConfig: StoreConfig = {
 let storeConfigState: StoreConfig | null = null;
 
 const initializeStoreConfig = (): StoreConfig => {
-    // This function should only be called on the client
+    if (typeof window === 'undefined') {
+        return { ...defaultStoreConfig };
+    }
     const savedConfig = localStorage.getItem('storeConfig');
     if (savedConfig) {
         try {
@@ -108,7 +110,6 @@ const initializeStoreConfig = (): StoreConfig => {
 
 export const getStoreConfig = (): StoreConfig => {
     if (typeof window === 'undefined') {
-        // Return a safe default for server-side rendering
         return { ...defaultStoreConfig };
     }
     if (storeConfigState === null) {

@@ -15,23 +15,15 @@ export type ScheduledTest = {
 
 let scheduledTestsState: ScheduledTest[] | null = null;
 
+// CRITICAL FIX: This function MUST NOT use new Date() as it can be evaluated on the server.
+// Use static ISO strings for default data. Components will handle dynamic date logic.
 const getDefaultScheduledTests = (): ScheduledTest[] => {
-    if (typeof window === 'undefined') return [];
-    
-    const now = new Date();
-    const tomorrow = new Date(now);
-    tomorrow.setDate(now.getDate() + 1);
-    const yesterday = new Date(now);
-    yesterday.setDate(now.getDate() - 1);
-    const fiveDaysFromNow = new Date(now);
-    fiveDaysFromNow.setDate(now.getDate() + 5);
-
     return [
         {
             id: "SCHED-1",
             testSetId: "SET-172234567890",
             testSetName: "Gravitation Mock Test",
-            dateTime: tomorrow.toISOString(),
+            dateTime: "2025-07-20T10:00:00.000Z", // Static date in the future
             board: "SSC",
             standard: "10th",
             subject: "Science"
@@ -40,20 +32,11 @@ const getDefaultScheduledTests = (): ScheduledTest[] => {
             id: "SCHED-2",
             testSetId: "SET-172242000000",
             testSetName: "Elements Mock Test",
-            dateTime: yesterday.toISOString(),
+            dateTime: "2024-07-18T10:00:00.000Z", // Static date in the past
             board: "SSC",
             standard: "10th",
             subject: "Science"
         },
-        {
-            id: "SCHED-3",
-            testSetId: "SET-172234567890", // Using Gravitation test for another standard
-            testSetName: "Gravitation Mock Test",
-            dateTime: fiveDaysFromNow.toISOString(),
-            board: "CBSE",
-            standard: "11th",
-            subject: "Physics"
-        }
     ];
 };
 
@@ -79,7 +62,8 @@ const initializeScheduledTests = (): ScheduledTest[] => {
         return scheduledTestsState;
     }
 
-    return []; // Return empty array for server-side rendering
+    // For server-side rendering, return a safe default.
+    return getDefaultScheduledTests();
 };
 
 export const getScheduledTestData = (): ScheduledTest[] => {

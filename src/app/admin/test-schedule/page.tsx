@@ -30,48 +30,48 @@ type ScheduledTestWithStatus = ScheduledTest & { status: TestStatus };
 
 export default function TestSchedulePage() {
     const { toast } = useToast();
-    const [allSchedules, setAllSchedules] = useState<ScheduledTestWithStatus[]>([]);
+    const [allSchedules, setAllSchedules] = useState<ScheduledTestWithStatus[] | null>(null);
     const [date, setDate] = useState<Date | undefined>(new Date());
     const [time, setTime] = useState('10:00'); // Default time
     const [selectedTestSetId, setSelectedTestSetId] = useState('');
-    const [allSets, setAllSets] = useState<TestSet[]>([]);
-    const [isClient, setIsClient] = useState(false);
+    const [allSets, setAllSets] = useState<TestSet[] | null>(null);
 
      const refreshSchedules = () => {
-         const now = new Date();
          const scheduledTests = getScheduledTestData();
-        const updatedSchedules = [...scheduledTests]
-            .sort((a,b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime())
-            .map(test => {
-                const testDate = new Date(test.dateTime);
-                let status: TestStatus = 'Upcoming';
-                if (testDate < now) {
-                    status = 'Completed';
-                }
-                
-                const isToday = format(testDate, 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd');
+         if (scheduledTests) {
+            const now = new Date();
+            const updatedSchedules = [...scheduledTests]
+                .sort((a,b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime())
+                .map(test => {
+                    const testDate = new Date(test.dateTime);
+                    let status: TestStatus = 'Upcoming';
+                    if (testDate < now) {
+                        status = 'Completed';
+                    }
+                    
+                    const isToday = format(testDate, 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd');
 
-                if (isToday) {
-                     if (testDate <= now) {
-                        status = 'Live';
-                     } else {
-                        status = 'Upcoming';
-                     }
-                }
-                return { ...test, status };
-            });
+                    if (isToday) {
+                         if (testDate <= now) {
+                            status = 'Live';
+                         } else {
+                            status = 'Upcoming';
+                         }
+                    }
+                    return { ...test, status };
+                });
 
-        setAllSchedules(updatedSchedules);
+            setAllSchedules(updatedSchedules);
+         }
     }
 
     useEffect(() => {
-        refreshSchedules();
         setAllSets(getAllTestSets());
-        setIsClient(true);
+        refreshSchedules();
     }, []);
 
     const handleScheduleTest = () => {
-        if (!date || !selectedTestSetId || !time) {
+        if (!date || !selectedTestSetId || !time || !allSets) {
             toast({
                 variant: 'destructive',
                 title: "Missing Information",
@@ -114,7 +114,7 @@ export default function TestSchedulePage() {
         setTime('10:00');
     };
     
-    if (!isClient) {
+    if (!allSchedules || !allSets) {
         return (
           <div className="flex justify-center items-center h-96">
             <Loader2 className="animate-spin text-primary" size={32} />

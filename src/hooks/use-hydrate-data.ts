@@ -3,13 +3,13 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { defaultAcademicConfig, type AcademicConfig } from '@/lib/academic-config';
-import { defaultAdminData, type Admin, type AdminData } from '@/lib/admin-data';
+import { defaultAdminData, type AdminData } from '@/lib/admin-data';
 import { defaultNotifications, type AppNotification } from '@/lib/notifications';
 import { defaultTestSets, type TestSet } from '@/lib/question-bank';
 import { defaultStoreConfig, type StoreConfig } from '@/lib/store-config';
 import { defaultStudentData, defaultActivationCodes, type StudentProfile } from '@/lib/student-data';
 import { defaultScheduledTests, type ScheduledTest } from '@/lib/test-schedule';
-import { defaultWalletData, type WalletData, type Transaction } from '@/lib/user-data';
+import { defaultWalletData, type WalletData } from '@/lib/user-data';
 import { Loader2 } from 'lucide-react';
 
 // Centralized state type
@@ -46,9 +46,10 @@ const getInitialState = (key: string, defaultValue: any) => {
 
 export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     const [data, setData] = useState<AppData | null>(null);
+    const [isHydrated, setIsHydrated] = useState(false);
 
     useEffect(() => {
-        const initialState: AppData = {
+        setData({
             academicConfig: getInitialState('academicConfig', defaultAcademicConfig),
             adminData: getInitialState('adminData', defaultAdminData),
             notifications: getInitialState('notifications', defaultNotifications),
@@ -58,12 +59,12 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
             activationCodes: getInitialState('activationCodes', defaultActivationCodes),
             scheduledTests: getInitialState('scheduledTests', defaultScheduledTests),
             walletData: getInitialState('walletData', defaultWalletData),
-        };
-        setData(initialState);
+        });
+        setIsHydrated(true);
     }, []);
 
     useEffect(() => {
-        if (data) {
+        if (isHydrated && data) {
             try {
                 window.localStorage.setItem('academicConfig', JSON.stringify(data.academicConfig));
                 window.localStorage.setItem('adminData', JSON.stringify(data.adminData));
@@ -78,22 +79,22 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
                 console.error("Failed to save data to localStorage", error);
             }
         }
-    }, [data]);
+    }, [data, isHydrated]);
     
     // All setter functions are memoized to prevent unnecessary re-renders
     const setters = {
-        setAcademicConfig: useCallback((config: AcademicConfig) => setData(prev => prev ? { ...prev, academicConfig: config } : null), []),
-        setAdminData: useCallback((adminData: AdminData) => setData(prev => prev ? { ...prev, adminData } : null), []),
-        setNotifications: useCallback((notifications: AppNotification[] | ((prev: AppNotification[]) => AppNotification[])) => setData(prev => prev ? { ...prev, notifications: typeof notifications === 'function' ? notifications(prev.notifications) : notifications } : null), []),
-        setTestSets: useCallback((testSets: TestSet[]) => setData(prev => prev ? { ...prev, testSets } : null), []),
-        setStoreConfig: useCallback((storeConfig: StoreConfig) => setData(prev => prev ? { ...prev, storeConfig } : null), []),
-        setStudentData: useCallback((studentData: StudentProfile[]) => setData(prev => prev ? { ...prev, studentData } : null), []),
-        setActivationCodes: useCallback((codes: string[]) => setData(prev => prev ? { ...prev, activationCodes: codes } : null), []),
-        setScheduledTests: useCallback((tests: ScheduledTest[]) => setData(prev => prev ? { ...prev, scheduledTests: tests } : null), []),
-        setWalletData: useCallback((walletData: WalletData) => setData(prev => prev ? { ...prev, walletData } : null), []),
+        setAcademicConfig: useCallback((config: AcademicConfig) => setData(prev => prev ? ({ ...prev, academicConfig: config }) : null), []),
+        setAdminData: useCallback((adminData: AdminData) => setData(prev => prev ? ({ ...prev, adminData }) : null), []),
+        setNotifications: useCallback((notifications: AppNotification[] | ((prev: AppNotification[]) => AppNotification[])) => setData(prev => prev ? ({ ...prev, notifications: typeof notifications === 'function' ? notifications(prev.notifications) : notifications }) : null), []),
+        setTestSets: useCallback((testSets: TestSet[]) => setData(prev => prev ? ({ ...prev, testSets }) : null), []),
+        setStoreConfig: useCallback((storeConfig: StoreConfig) => setData(prev => prev ? ({ ...prev, storeConfig }) : null), []),
+        setStudentData: useCallback((studentData: StudentProfile[]) => setData(prev => prev ? ({ ...prev, studentData }) : null), []),
+        setActivationCodes: useCallback((codes: string[]) => setData(prev => prev ? ({ ...prev, activationCodes: codes }) : null), []),
+        setScheduledTests: useCallback((tests: ScheduledTest[]) => setData(prev => prev ? ({ ...prev, scheduledTests: tests }) : null), []),
+        setWalletData: useCallback((walletData: WalletData | ((prev: WalletData) => WalletData)) => setData(prev => prev ? ({ ...prev, walletData: typeof walletData === 'function' ? walletData(prev.walletData) : walletData }) : null), []),
     };
 
-    if (!data) {
+    if (!isHydrated || !data) {
         return (
              <div className="flex justify-center items-center h-screen w-screen">
                 <Loader2 className="animate-spin text-primary" size={32} />

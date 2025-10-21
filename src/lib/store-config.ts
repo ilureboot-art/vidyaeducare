@@ -114,6 +114,9 @@ const initializeStoreConfig = (): StoreConfig => {
 };
 
 export const getStoreConfig = (): StoreConfig => {
+    if (typeof window === 'undefined') {
+        return JSON.parse(JSON.stringify(defaultStoreConfig));
+    }
     return initializeStoreConfig();
 };
 
@@ -159,5 +162,3 @@ export function setReferboltSettings(newSettings: ReferboltSettings) {
     config.referboltSettings = newSettings;
     saveStoreConfig(config);
 }
-
-    

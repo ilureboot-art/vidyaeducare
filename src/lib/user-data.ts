@@ -91,6 +91,9 @@ function initializeWalletData(): WalletData {
 };
 
 export function getWalletData(): WalletData {
+    if (typeof window === 'undefined') {
+        return JSON.parse(JSON.stringify(defaultWalletData));
+    }
     return initializeWalletData();
 };
 
@@ -159,5 +162,3 @@ export function updateCoinBalance(newCoins: number) {
     data.coins = newCoins;
     saveWalletData(data);
 }
-
-    

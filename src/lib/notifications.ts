@@ -15,7 +15,7 @@ const defaultNotifications: AppNotification[] = [];
 
 const initializeNotifications = (): AppNotification[] => {
     if (typeof window === 'undefined') {
-        return JSON.parse(JSON.stringify(defaultNotifications));
+        return [];
     }
     
     if (notifications !== null) {
@@ -59,11 +59,17 @@ export function addNotification(notificationData: Omit<AppNotification, 'id' | '
 
 // Function to get notifications for the admin
 export function getAdminNotifications(): AppNotification[] {
+    if (typeof window === 'undefined') {
+        return [];
+    }
     return initializeNotifications().filter(n => n.userId === 'admin');
 }
 
 // Function to get notifications for a specific user
 export function getUserNotifications(userId: string): AppNotification[] {
+    if (typeof window === 'undefined') {
+        return [];
+    }
     return initializeNotifications().filter(n => n.userId === userId);
 }
 
@@ -88,5 +94,3 @@ export function markUserNotificationsAsRead(userId: string) {
     });
     saveNotifications(allNotifications);
 }
-
-    

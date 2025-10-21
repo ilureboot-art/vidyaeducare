@@ -62,8 +62,10 @@ export default function TestSetManagementPage() {
 
   const [step, setStep] = useState(1);
   const [editingTestSet, setEditingTestSet] = useState<TestSet | null>(null);
+  const [isClient, setIsClient] = useState(false);
   
   useEffect(() => {
+    setIsClient(true);
     setTestSets(getAllTestSets());
     setAcademicConfig(getAcademicConfig());
   }, []);
@@ -277,7 +279,7 @@ export default function TestSetManagementPage() {
     resetManualForm();
 };
 
-  if (!academicConfig) {
+  if (!isClient || !academicConfig) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />
@@ -518,5 +520,3 @@ export default function TestSetManagementPage() {
     </div>
   );
 }
-
-    

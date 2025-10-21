@@ -85,6 +85,9 @@ const initializeScheduledTests = (): ScheduledTest[] => {
 };
 
 export const getScheduledTestData = (): ScheduledTest[] => {
+    if (typeof window === 'undefined') {
+        return JSON.parse(JSON.stringify(getDefaultScheduledTests()));
+    }
     return initializeScheduledTests();
 };
 
@@ -124,5 +127,3 @@ export function getScheduledTestById(id: string): ScheduledTest | undefined {
     const currentTests = getScheduledTestData();
     return currentTests.find(test => test.id === id);
 }
-
-    

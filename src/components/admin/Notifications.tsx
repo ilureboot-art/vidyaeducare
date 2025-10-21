@@ -9,26 +9,15 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Bell, UserPlus, CheckCheck } from "lucide-react";
+import { Bell, CheckCheck } from "lucide-react";
 import { getAdminNotifications, markAdminNotificationsAsRead, type AppNotification } from "@/lib/notifications";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 
-function FormattedDate({ dateString }: { dateString: string }) {
-  const [formattedDate, setFormattedDate] = useState<string>('');
-
-  useEffect(() => {
-    if (dateString) {
-        setFormattedDate(format(new Date(dateString), 'P p'));
-    }
-  }, [dateString]);
-
-  return <>{formattedDate}</>;
-}
-
+type FormattedNotification = AppNotification & { formattedTimestamp: string };
 
 export function Notifications() {
-  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [notifications, setNotifications] = useState<FormattedNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isClient, setIsClient] = useState(false);
 
@@ -36,20 +25,30 @@ export function Notifications() {
     setIsClient(true);
     const fetchNotifications = () => {
         const adminNotifications = getAdminNotifications();
-        setNotifications(adminNotifications);
+        const formattedNotifications = adminNotifications.map(n => ({
+          ...n,
+          formattedTimestamp: format(new Date(n.timestamp), 'P p')
+        }));
+        setNotifications(formattedNotifications);
         setUnreadCount(adminNotifications.filter(n => n.status === 'unread').length);
     };
     
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 2000); // Poll for new notifications
+    const interval = setInterval(fetchNotifications, 5000); // Poll for new notifications
     return () => clearInterval(interval);
   }, []);
 
   const handleOpenChange = (open: boolean) => {
     if (open && unreadCount > 0) {
-        markAdminNotificationsAsRead();
-        setNotifications(getAdminNotifications());
-        setUnreadCount(0);
+        setTimeout(() => {
+          markAdminNotificationsAsRead();
+          const updatedNotifications = getAdminNotifications().map(n => ({
+            ...n,
+            formattedTimestamp: format(new Date(n.timestamp), 'P p')
+          }));
+          setNotifications(updatedNotifications);
+          setUnreadCount(0);
+        }, 500);
     }
   }
   
@@ -85,14 +84,14 @@ export function Notifications() {
             </Link>
           </div>
           <div className="grid gap-2 max-h-80 overflow-y-auto">
-            {notifications && notifications.length > 0 ? (
+            {notifications.length > 0 ? (
                 notifications.slice(0, 5).map(notif => (
                     <div key={notif.id} className="grid grid-cols-[25px_1fr] items-start pb-4 last:mb-0 last:pb-0">
-                        <span className="flex h-2 w-2 translate-y-1 rounded-full bg-sky-500" />
-                        <div className="grid gap-1">
+                        {notif.status === 'unread' && <span className="flex h-2 w-2 translate-y-1 rounded-full bg-sky-500" />}
+                        <div className={`grid gap-1 ${notif.status === 'read' ? 'col-span-2' : ''}`}>
                             <p className="text-sm font-medium">{notif.message}</p>
                             <p className="text-sm text-muted-foreground">
-                               <FormattedDate dateString={notif.timestamp} />
+                               {notif.formattedTimestamp}
                             </p>
                         </div>
                     </div>
@@ -106,5 +105,3 @@ export function Notifications() {
     </Popover>
   );
 }
-
-    

@@ -13,21 +13,10 @@ import { getUserNotifications, markUserNotificationsAsRead, type AppNotification
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 
-function FormattedDate({ dateString }: { dateString: string }) {
-  const [formattedDate, setFormattedDate] = useState<string>('');
-  
-  useEffect(() => {
-      if (dateString) {
-        setFormattedDate(format(new Date(dateString), 'P p'));
-      }
-  }, [dateString]);
-
-  return <>{formattedDate}</>;
-}
-
+type FormattedNotification = AppNotification & { formattedTimestamp: string };
 
 export function UserNotifications() {
-  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [notifications, setNotifications] = useState<FormattedNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isClient, setIsClient] = useState(false);
 
@@ -35,20 +24,30 @@ export function UserNotifications() {
     setIsClient(true);
     const fetchNotifications = () => {
         const userNotifications = getUserNotifications("user-alex-doe");
-        setNotifications(userNotifications);
+        const formattedNotifications = userNotifications.map(n => ({
+          ...n,
+          formattedTimestamp: format(new Date(n.timestamp), 'P p')
+        }));
+        setNotifications(formattedNotifications);
         setUnreadCount(userNotifications.filter(n => n.status === 'unread').length);
     };
     
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 2000); // Poll for new notifications
+    const interval = setInterval(fetchNotifications, 5000); // Poll for new notifications
     return () => clearInterval(interval);
   }, []);
 
   const handleOpenChange = (open: boolean) => {
     if (open && unreadCount > 0) {
-        markUserNotificationsAsRead("user-alex-doe");
-        setNotifications(getUserNotifications("user-alex-doe"));
-        setUnreadCount(0);
+        setTimeout(() => {
+            markUserNotificationsAsRead("user-alex-doe");
+            const updatedNotifications = getUserNotifications("user-alex-doe").map(n => ({
+              ...n,
+              formattedTimestamp: format(new Date(n.timestamp), 'P p')
+            }));
+            setNotifications(updatedNotifications);
+            setUnreadCount(0);
+        }, 500);
     }
   }
 
@@ -84,14 +83,14 @@ export function UserNotifications() {
             </p>
           </div>
           <div className="grid gap-2">
-            {notifications && notifications.length > 0 ? (
+            {notifications.length > 0 ? (
                 notifications.slice(0, 5).map(notif => (
                     <div key={notif.id} className="grid grid-cols-[25px_1fr] items-start pb-4 last:mb-0 last:pb-0">
-                        <span className="flex h-2 w-2 translate-y-1 rounded-full bg-sky-500" />
-                        <div className="grid gap-1">
+                        {notif.status === 'unread' && <span className="flex h-2 w-2 translate-y-1 rounded-full bg-sky-500" />}
+                        <div className={`grid gap-1 ${notif.status === 'read' ? 'col-span-2' : ''}`}>
                             <p className="text-sm font-medium">{notif.message}</p>
                             <p className="text-sm text-muted-foreground">
-                               <FormattedDate dateString={notif.timestamp} />
+                               {notif.formattedTimestamp}
                             </p>
                         </div>
                     </div>
@@ -101,11 +100,15 @@ export function UserNotifications() {
             )}
           </div>
         </div>
-         {notifications && notifications.length > 0 && (
+         {notifications.length > 0 && (
             <div className="flex justify-end mt-2">
                 <Button variant="link" size="sm" onClick={() => {
                     markUserNotificationsAsRead("user-alex-doe");
-                    setNotifications(getUserNotifications("user-alex-doe"));
+                     const updatedNotifications = getUserNotifications("user-alex-doe").map(n => ({
+                      ...n,
+                      formattedTimestamp: format(new Date(n.timestamp), 'P p')
+                    }));
+                    setNotifications(updatedNotifications);
                     setUnreadCount(0);
                 }}>
                     <CheckCheck className="mr-2 h-4 w-4" />
@@ -117,5 +120,3 @@ export function UserNotifications() {
     </Popover>
   );
 }
-
-    

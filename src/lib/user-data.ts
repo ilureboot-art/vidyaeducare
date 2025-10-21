@@ -76,7 +76,6 @@ function initializeWalletData(): WalletData {
         const savedData = localStorage.getItem('walletData');
         if (savedData) {
             const parsedData = JSON.parse(savedData);
-            // Quick validation
             if (parsedData && parsedData.adminPaymentMethods && parsedData.transactions) {
                 walletDataState = parsedData;
                 return walletDataState;

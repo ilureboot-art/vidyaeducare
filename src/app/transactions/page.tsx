@@ -48,16 +48,17 @@ export default function TransactionsPage() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'rejected'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'deposit' | 'withdrawal'>('all');
   
-  useEffect(() => {
-    refreshTransactions();
-  }, []);
-
   const refreshTransactions = () => {
     const data = getWalletData();
     if (data) {
         setTransactions(data.transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
     }
   };
+
+  useEffect(() => {
+    refreshTransactions();
+  }, []);
+
 
   const handleTransactionStatus = (id: number, newStatus: "Completed" | "Rejected") => {
     const success = updateTransactionStatus(id, newStatus);
@@ -80,7 +81,7 @@ export default function TransactionsPage() {
       return searchTermMatch && statusMatch && typeMatch;
     }
   ) : [];
-  
+
   if (!transactions) {
     return (
       <div className="flex justify-center items-center h-96">

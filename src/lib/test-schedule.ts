@@ -19,12 +19,16 @@ let scheduledTestsState: ScheduledTest[] | null = null;
 // Dynamic date logic (like calculating if a test is "today" or "upcoming")
 // is now handled on the client-side within the components that use this data.
 const getDefaultScheduledTests = (): ScheduledTest[] => {
+    // These are now static ISO strings to prevent server-side execution of new Date().
+    const futureDate = "2025-08-01T10:00:00.000Z";
+    const pastDate = "2024-07-01T10:00:00.000Z";
+    
     return [
         {
             id: "SCHED-1",
             testSetId: "SET-172234567890",
             testSetName: "Gravitation Mock Test",
-            dateTime: "2025-07-20T10:00:00.000Z", // Static date in the future
+            dateTime: futureDate,
             board: "SSC",
             standard: "10th",
             subject: "Science"
@@ -33,7 +37,7 @@ const getDefaultScheduledTests = (): ScheduledTest[] => {
             id: "SCHED-2",
             testSetId: "SET-172242000000",
             testSetName: "Elements Mock Test",
-            dateTime: "2024-07-18T10:00:00.000Z", // Static date in the past
+            dateTime: pastDate,
             board: "SSC",
             standard: "10th",
             subject: "Science"
@@ -97,9 +101,8 @@ export function addScheduledTest(test: ScheduledTest) {
 // Function to get all tests (upcoming and past) for a specific student profile
 export function getAllTestsForStudent(board: string, standard: string): ScheduledTest[] {
     const currentTests = getScheduledTestData();
-    return currentTests
-        .filter(test => test.board === board && test.standard === standard)
-        .sort((a,b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
+    // Sorting is now done on the client to avoid new Date() on the server
+    return currentTests.filter(test => test.board === board && test.standard === standard);
 }
 
 // Function to get a specific scheduled test by ID

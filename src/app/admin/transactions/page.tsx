@@ -51,7 +51,6 @@ export default function TransactionsPage() {
   const refreshTransactions = () => {
     const data = getWalletData();
     if (data) {
-        // Sorting is done on the client-side to avoid issues with new Date() on server
         const sortedTransactions = data.transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         setTransactions(sortedTransactions);
     }

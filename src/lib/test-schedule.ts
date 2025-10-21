@@ -27,8 +27,8 @@ const defaultScheduledTests: ScheduledTest[] = [
     },
     {
         id: "SCHED-2",
-        testSetId: "SET-172242000000",
-        testSetName: "Elements Mock Test",
+        testSetId: "SET-172234567890", // Using same set for demo purposes
+        testSetName: "Gravitation Practice",
         dateTime: "2024-07-01T10:00:00.000Z", // Static past date
         board: "SSC",
         standard: "10th",
@@ -37,27 +37,27 @@ const defaultScheduledTests: ScheduledTest[] = [
 ];
 
 const initializeScheduledTests = (): ScheduledTest[] => {
+    if (typeof window === 'undefined') {
+        return JSON.parse(JSON.stringify(defaultScheduledTests));
+    }
+
     if (scheduledTestsState) {
         return scheduledTestsState;
     }
 
-    if (typeof window !== 'undefined') {
-        try {
-            const savedData = localStorage.getItem('scheduledTests');
-            if (savedData) {
-                scheduledTestsState = JSON.parse(savedData);
-                return scheduledTestsState!;
-            }
-        } catch (e) {
-            console.error("Failed to parse scheduledTests from localStorage", e);
+    try {
+        const savedData = localStorage.getItem('scheduledTests');
+        if (savedData) {
+            scheduledTestsState = JSON.parse(savedData);
+            return scheduledTestsState!;
         }
-        
-        scheduledTestsState = JSON.parse(JSON.stringify(defaultScheduledTests));
-        localStorage.setItem('scheduledTests', JSON.stringify(scheduledTestsState));
-        return scheduledTestsState;
+    } catch (e) {
+        console.error("Failed to parse scheduledTests from localStorage", e);
     }
-
-    return JSON.parse(JSON.stringify(defaultScheduledTests));
+    
+    scheduledTestsState = JSON.parse(JSON.stringify(defaultScheduledTests));
+    localStorage.setItem('scheduledTests', JSON.stringify(scheduledTestsState));
+    return scheduledTestsState;
 };
 
 export const getScheduledTestData = (): ScheduledTest[] => {

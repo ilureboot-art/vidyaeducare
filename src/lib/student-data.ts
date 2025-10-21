@@ -77,27 +77,27 @@ let validActivationCodesState: string[] | null = null;
 const defaultActivationCodes = ["PROD-A1B2C", "PROD-X9Y8Z", "PROD-M4N5P"];
 
 const initializeStudentData = (): StudentProfile[] => {
+    if (typeof window === 'undefined') {
+        return JSON.parse(JSON.stringify(defaultStudentData));
+    }
+    
     if (studentDataState) {
         return studentDataState;
     }
 
-    if (typeof window !== 'undefined') {
-        try {
-            const savedData = localStorage.getItem('studentData');
-            if (savedData) {
-                studentDataState = JSON.parse(savedData);
-                return studentDataState!;
-            }
-        } catch (e) {
-            console.error("Failed to parse studentData from localStorage", e);
+    try {
+        const savedData = localStorage.getItem('studentData');
+        if (savedData) {
+            studentDataState = JSON.parse(savedData);
+            return studentDataState!;
         }
-
-        studentDataState = JSON.parse(JSON.stringify(defaultStudentData));
-        localStorage.setItem('studentData', JSON.stringify(studentDataState));
-        return studentDataState;
+    } catch (e) {
+        console.error("Failed to parse studentData from localStorage", e);
     }
 
-    return JSON.parse(JSON.stringify(defaultStudentData));
+    studentDataState = JSON.parse(JSON.stringify(defaultStudentData));
+    localStorage.setItem('studentData', JSON.stringify(studentDataState));
+    return studentDataState;
 };
 
 export const getAllStudentData = (): StudentProfile[] => {
@@ -105,27 +105,27 @@ export const getAllStudentData = (): StudentProfile[] => {
 };
 
 const initializeActivationCodes = (): string[] => {
+    if (typeof window === 'undefined') {
+        return [...defaultActivationCodes];
+    }
+    
     if (validActivationCodesState) {
         return validActivationCodesState;
     }
 
-    if (typeof window !== 'undefined') {
-        try {
-            const savedCodes = localStorage.getItem('activationCodes');
-            if (savedCodes) {
-                validActivationCodesState = JSON.parse(savedCodes);
-                return validActivationCodesState!;
-            }
-        } catch(e) {
-             console.error("Failed to parse activationCodes from localStorage", e);
+    try {
+        const savedCodes = localStorage.getItem('activationCodes');
+        if (savedCodes) {
+            validActivationCodesState = JSON.parse(savedCodes);
+            return validActivationCodesState!;
         }
-        
-        validActivationCodesState = [...defaultActivationCodes];
-        localStorage.setItem('activationCodes', JSON.stringify(validActivationCodesState));
-        return validActivationCodesState;
+    } catch(e) {
+         console.error("Failed to parse activationCodes from localStorage", e);
     }
-
-    return [...defaultActivationCodes];
+    
+    validActivationCodesState = [...defaultActivationCodes];
+    localStorage.setItem('activationCodes', JSON.stringify(validActivationCodesState));
+    return validActivationCodesState;
 };
 
 export const getActivationCodes = (): string[] => {

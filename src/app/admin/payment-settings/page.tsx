@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Landmark, Loader2 } from "lucide-react";
 import { getWalletData, setAdminPaymentMethods, type AdminPaymentMethods } from "@/lib/user-data";
+import Image from "next/image";
 
 export default function PaymentSettingsPage() {
     const { toast } = useToast();
@@ -126,7 +127,7 @@ export default function PaymentSettingsPage() {
                             <Label htmlFor="qrCode">Payment QR Code</Label>
                             <Input id="qrCode" type="file" onChange={handleFileChange} accept="image/png, image/jpeg, image/webp" />
                             <p className="text-xs text-muted-foreground">Upload an image of the payment QR code. It will be displayed to users.</p>
-                            {methods.qrCodeUrl && <img src={methods.qrCodeUrl} alt="Current QR Code" className="w-24 h-24 mt-2 rounded-md" />}
+                            {methods.qrCodeUrl && <Image src={methods.qrCodeUrl} alt="Current QR Code" className="w-24 h-24 mt-2 rounded-md" width={96} height={96} />}
                         </div>
                     </div>
                 </div>

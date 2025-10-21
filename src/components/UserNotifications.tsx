@@ -41,11 +41,12 @@ export function UserNotifications() {
     if (open && unreadCount > 0) {
         setTimeout(() => {
             markUserNotificationsAsRead("user-alex-doe");
-            const updatedNotifications = getUserNotifications("user-alex-doe").map(n => ({
+            const userNotifications = getUserNotifications("user-alex-doe");
+            const formattedNotifications = userNotifications.map(n => ({
               ...n,
               formattedTimestamp: format(new Date(n.timestamp), 'P p')
             }));
-            setNotifications(updatedNotifications);
+            setNotifications(formattedNotifications);
             setUnreadCount(0);
         }, 500);
     }
@@ -104,11 +105,12 @@ export function UserNotifications() {
             <div className="flex justify-end mt-2">
                 <Button variant="link" size="sm" onClick={() => {
                     markUserNotificationsAsRead("user-alex-doe");
-                     const updatedNotifications = getUserNotifications("user-alex-doe").map(n => ({
+                     const userNotifications = getUserNotifications("user-alex-doe");
+                     const formattedNotifications = userNotifications.map(n => ({
                       ...n,
                       formattedTimestamp: format(new Date(n.timestamp), 'P p')
                     }));
-                    setNotifications(updatedNotifications);
+                    setNotifications(formattedNotifications);
                     setUnreadCount(0);
                 }}>
                     <CheckCheck className="mr-2 h-4 w-4" />

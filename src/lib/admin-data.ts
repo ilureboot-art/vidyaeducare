@@ -58,6 +58,7 @@ const initializeAdminData = (): AdminData => {
 };
 
 export const getAdminData = (): AdminData => {
+    // This function will now be called within a useEffect hook on the client
     return initializeAdminData();
 }
 
@@ -96,6 +97,7 @@ export function updateAdmin(adminId: string, updatedDetails: Partial<Omit<Admin,
 }
 
 export function resetAdminPassword(adminId: string, newPassword: string) {
+    // This is a simulation, in a real app this would be a secure backend call.
     console.log(`Password for admin ${adminId} has been reset to: ${newPassword}`);
 }
 

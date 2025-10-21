@@ -16,9 +16,7 @@ export type ScheduledTest = {
 let scheduledTestsState: ScheduledTest[] | null = null;
 
 const getDefaultScheduledTests = (): ScheduledTest[] => {
-    // This must be callable on the server, so we cannot rely on Date() for initial state
-    // BUT, the initialization function itself should only run on the client.
-    // The dates are now calculated inside this function.
+    // This logic now runs inside a function to avoid execution on module import on server.
     const now = new Date();
     const tomorrow = new Date(now);
     tomorrow.setDate(now.getDate() + 1);
@@ -60,7 +58,6 @@ const getDefaultScheduledTests = (): ScheduledTest[] => {
 
 const initializeScheduledTests = (): ScheduledTest[] => {
     if (typeof window === 'undefined') {
-        // Return a safe, empty array for server-side execution.
         return [];
     }
 
@@ -99,7 +96,7 @@ const saveScheduledTests = (tests: ScheduledTest[]) => {
 // Function to add a new scheduled test
 export function addScheduledTest(test: ScheduledTest) {
     const currentTests = getScheduledTestData();
-    const testSets = getAllTestSets(); // This needs to be available client-side
+    const testSets = getAllTestSets(); 
     const testSet = testSets.find(ts => ts.id === test.testSetId);
     if (!testSet) return;
 

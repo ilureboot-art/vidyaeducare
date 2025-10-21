@@ -42,11 +42,12 @@ export function Notifications() {
     if (open && unreadCount > 0) {
         setTimeout(() => {
           markAdminNotificationsAsRead();
-          const updatedNotifications = getAdminNotifications().map(n => ({
+          const adminNotifications = getAdminNotifications();
+          const formattedNotifications = adminNotifications.map(n => ({
             ...n,
             formattedTimestamp: format(new Date(n.timestamp), 'P p')
           }));
-          setNotifications(updatedNotifications);
+          setNotifications(formattedNotifications);
           setUnreadCount(0);
         }, 500);
     }

@@ -14,26 +14,25 @@ let notifications: AppNotification[] | null = null;
 const defaultNotifications: AppNotification[] = [];
 
 const initializeNotifications = (): AppNotification[] => {
+    if (typeof window === 'undefined') {
+        return [];
+    }
     if (notifications !== null) {
         return notifications;
     }
     
-    if (typeof window !== 'undefined') {
-        const savedNotifications = localStorage.getItem('notifications');
-        if (savedNotifications) {
-            try {
-                notifications = JSON.parse(savedNotifications);
-                return notifications!;
-            } catch (e) {
-                console.error("Failed to parse notifications from localStorage", e);
-            }
+    const savedNotifications = localStorage.getItem('notifications');
+    if (savedNotifications) {
+        try {
+            notifications = JSON.parse(savedNotifications);
+            return notifications!;
+        } catch (e) {
+            console.error("Failed to parse notifications from localStorage", e);
         }
     }
     
     notifications = JSON.parse(JSON.stringify(defaultNotifications));
-     if (typeof window !== 'undefined') {
-        localStorage.setItem('notifications', JSON.stringify(notifications));
-     }
+    localStorage.setItem('notifications', JSON.stringify(notifications));
     return notifications;
 }
 
@@ -59,17 +58,11 @@ export function addNotification(notificationData: Omit<AppNotification, 'id' | '
 
 // Function to get notifications for the admin
 export function getAdminNotifications(): AppNotification[] {
-    if (typeof window === 'undefined') {
-        return [];
-    }
     return initializeNotifications().filter(n => n.userId === 'admin');
 }
 
 // Function to get notifications for a specific user
 export function getUserNotifications(userId: string): AppNotification[] {
-    if (typeof window === 'undefined') {
-        return [];
-    }
     return initializeNotifications().filter(n => n.userId === userId);
 }
 

@@ -45,9 +45,8 @@ const WhatsAppIcon = () => (
 )
 
 export default function AdminManagementPage() {
-  const [admins, setAdmins] = useState<Admin[]>([]);
-  const [requests, setRequests] = useState<Admin[]>([]);
-  const [isClient, setIsClient] = useState(false);
+  const [admins, setAdmins] = useState<Admin[] | null>(null);
+  const [requests, setRequests] = useState<Admin[] | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isResetPassOpen, setIsResetPassOpen] = useState(false);
@@ -62,7 +61,6 @@ export default function AdminManagementPage() {
 
   useEffect(() => {
     refreshState();
-    setIsClient(true);
   }, []);
 
   const openWhatsApp = (phone: string, message?: string) => {
@@ -96,6 +94,7 @@ export default function AdminManagementPage() {
   }
 
   const handleRequest = (requestId: string, newStatus: "Active" | "Rejected") => {
+    if (!requests) return;
     const requestToProcess = requests.find(req => req.id === requestId);
     if (!requestToProcess) return;
 
@@ -179,6 +178,7 @@ export default function AdminManagementPage() {
   }
 
   const handleDeleteAdmin = (adminId: string) => {
+    if (!admins) return;
     const adminToDelete = admins.find(admin => admin.id === adminId);
     if (!adminToDelete) return;
 
@@ -196,7 +196,7 @@ export default function AdminManagementPage() {
     })
   }
 
-  if (!isClient) {
+  if (!admins || !requests) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />
@@ -452,5 +452,3 @@ export default function AdminManagementPage() {
     </div>
   );
 }
-
-    

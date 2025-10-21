@@ -42,12 +42,11 @@ const getTypeIcon = (type: string, amount: number) => {
 }
 
 export default function TransactionsPage() {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[] | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'rejected'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'deposit' | 'withdrawal'>('all');
-  const [isClient, setIsClient] = useState(false);
   
   const refreshTransactions = () => {
     const data = getWalletData();
@@ -56,7 +55,6 @@ export default function TransactionsPage() {
 
   useEffect(() => {
     refreshTransactions();
-    setIsClient(true);
   }, []);
 
 
@@ -73,16 +71,16 @@ export default function TransactionsPage() {
     }
   };
 
-  const filteredTransactions = transactions.filter(
+  const filteredTransactions = transactions ? transactions.filter(
     (tx) => {
       const searchTermMatch = tx.user?.toLowerCase().includes(searchTerm.toLowerCase()) || String(tx.id).toLowerCase().includes(searchTerm.toLowerCase());
       const statusMatch = statusFilter === 'all' || tx.status.toLowerCase() === statusFilter;
       const typeMatch = typeFilter === 'all' || (typeFilter === 'deposit' && tx.amount >= 0) || (typeFilter === 'withdrawal' && tx.amount < 0);
       return searchTermMatch && statusMatch && typeMatch;
     }
-  );
+  ) : [];
 
-  if (!isClient) {
+  if (!transactions) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />
@@ -171,7 +169,7 @@ export default function TransactionsPage() {
                     {tx.id}
                     {tx.referenceId && <div className="text-ellipsis overflow-hidden">Ref: {tx.referenceId}</div>}
                   </TableCell>
-                  <TableCell>{isClient ? format(new Date(tx.date), 'P') : ''}</TableCell>
+                  <TableCell>{format(new Date(tx.date), 'P')}</TableCell>
                   <TableCell>
                     <Badge variant={getStatusBadgeVariant(tx.status)}>
                       {tx.status}
@@ -195,5 +193,3 @@ export default function TransactionsPage() {
     </div>
   );
 }
-
-    

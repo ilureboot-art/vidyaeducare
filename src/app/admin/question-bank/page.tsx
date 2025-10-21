@@ -50,7 +50,7 @@ const initialTestSetState: TestSet = {
 };
 
 export default function TestSetManagementPage() {
-  const [testSets, setTestSets] = useState<TestSet[]>([]);
+  const [testSets, setTestSets] = useState<TestSet[] | null>(null);
   const [academicConfig, setAcademicConfig] = useState<AcademicConfig | null>(null);
   const { toast } = useToast();
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
@@ -62,10 +62,8 @@ export default function TestSetManagementPage() {
 
   const [step, setStep] = useState(1);
   const [editingTestSet, setEditingTestSet] = useState<TestSet | null>(null);
-  const [isClient, setIsClient] = useState(false);
   
   useEffect(() => {
-    setIsClient(true);
     setTestSets(getAllTestSets());
     setAcademicConfig(getAcademicConfig());
   }, []);
@@ -279,7 +277,7 @@ export default function TestSetManagementPage() {
     resetManualForm();
 };
 
-  if (!isClient || !academicConfig) {
+  if (!testSets || !academicConfig) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />

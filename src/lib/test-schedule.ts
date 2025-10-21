@@ -16,12 +16,7 @@ export type ScheduledTest = {
 let scheduledTestsState: ScheduledTest[] | null = null;
 
 const getDefaultScheduledTests = (): ScheduledTest[] => {
-    // This function relies on the current date, which is a problem on the server.
-    // However, since getScheduledTestData safely handles server-side execution,
-    // this default data is only generated on the client, which is safe.
-    if (typeof window === 'undefined') {
-        return []; // Return an empty array on the server
-    }
+    // This function creates dates, so it should only run on the client.
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
@@ -62,34 +57,30 @@ const getDefaultScheduledTests = (): ScheduledTest[] => {
 };
 
 const initializeScheduledTests = (): ScheduledTest[] => {
+    if (typeof window === 'undefined') {
+        return [];
+    }
     if (scheduledTestsState !== null) {
         return scheduledTestsState;
     }
 
-    if (typeof window !== 'undefined') {
-        const savedData = localStorage.getItem('scheduledTests');
-        if (savedData) {
-            try {
-                const parsedData = JSON.parse(savedData);
-                scheduledTestsState = parsedData;
-                return parsedData;
-            } catch (e) {
-                console.error("Failed to parse scheduledTests from localStorage", e);
-            }
+    const savedData = localStorage.getItem('scheduledTests');
+    if (savedData) {
+        try {
+            const parsedData = JSON.parse(savedData);
+            scheduledTestsState = parsedData;
+            return parsedData;
+        } catch (e) {
+            console.error("Failed to parse scheduledTests from localStorage", e);
         }
     }
     scheduledTestsState = getDefaultScheduledTests();
-    if (typeof window !== 'undefined') {
-        localStorage.setItem('scheduledTests', JSON.stringify(scheduledTestsState));
-    }
+    localStorage.setItem('scheduledTests', JSON.stringify(scheduledTestsState));
     
     return scheduledTestsState;
 };
 
 export const getScheduledTestData = (): ScheduledTest[] => {
-    if (typeof window === 'undefined') {
-        return [];
-    }
     return initializeScheduledTests();
 };
 

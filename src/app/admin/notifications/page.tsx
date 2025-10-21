@@ -23,15 +23,13 @@ const getIconForType = (type: string) => {
 }
 
 export default function AdminNotificationsPage() {
-    const [notifications, setNotifications] = useState<AppNotification[]>([]);
-    const [isClient, setIsClient] = useState(false);
+    const [notifications, setNotifications] = useState<AppNotification[] | null>(null);
 
     useEffect(() => {
         setNotifications(getAdminNotifications());
-        setIsClient(true);
     }, []);
 
-    if (!isClient) {
+    if (!notifications) {
         return (
           <div className="flex justify-center items-center h-96">
             <Loader2 className="animate-spin text-primary" size={32} />
@@ -80,5 +78,3 @@ export default function AdminNotificationsPage() {
         </div>
     );
 }
-
-    

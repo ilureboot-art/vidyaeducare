@@ -12,8 +12,6 @@ import { format } from "date-fns";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getAllTestSets, type TestSet } from '@/lib/question-bank';
-import { getScheduledTestData, addScheduledTest, type ScheduledTest } from '@/lib/test-schedule';
 import {
   Table,
   TableBody,
@@ -23,6 +21,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
+import { useAppData, useDataUpdaters } from "@/hooks/use-hydrate-data";
+import type { TestSet } from "@/lib/question-bank";
+import type { ScheduledTest } from "@/lib/test-schedule";
 
 type TestStatus = 'Live' | 'Upcoming' | 'Completed';
 
@@ -30,17 +31,18 @@ type ScheduledTestWithStatus = ScheduledTest & { status: TestStatus };
 
 export default function TestSchedulePage() {
     const { toast } = useToast();
+    const { scheduledTests: allSchedulesData, testSets: allSetsData } = useAppData();
+    const { setScheduledTests } = useDataUpdaters();
+
     const [allSchedules, setAllSchedules] = useState<ScheduledTestWithStatus[] | null>(null);
     const [date, setDate] = useState<Date | undefined>(undefined);
     const [time, setTime] = useState('10:00'); // Default time
     const [selectedTestSetId, setSelectedTestSetId] = useState('');
-    const [allSets, setAllSets] = useState<TestSet[] | null>(null);
-
-     const refreshSchedules = () => {
-         const scheduledTests = getScheduledTestData();
-         if (scheduledTests) {
+    
+    const refreshSchedules = () => {
+         if (allSchedulesData) {
             const now = new Date();
-            const updatedSchedules = [...scheduledTests]
+            const updatedSchedules = [...allSchedulesData]
                 .sort((a,b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime())
                 .map(test => {
                     const testDate = new Date(test.dateTime);
@@ -64,13 +66,13 @@ export default function TestSchedulePage() {
     }
 
     useEffect(() => {
-        setAllSets(getAllTestSets());
         refreshSchedules();
         setDate(new Date());
-    }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [allSchedulesData]);
 
     const handleScheduleTest = () => {
-        if (!date || !selectedTestSetId || !time || !allSets) {
+        if (!date || !selectedTestSetId || !time || !allSetsData) {
             toast({
                 variant: 'destructive',
                 title: "Missing Information",
@@ -79,7 +81,7 @@ export default function TestSchedulePage() {
             return;
         }
         
-        const testSet = allSets.find(ts => ts.id === selectedTestSetId);
+        const testSet = allSetsData.find(ts => ts.id === selectedTestSetId);
         if (!testSet) {
              toast({ variant: 'destructive', title: "Error", description: "Selected test set could not be found." });
              return;
@@ -99,8 +101,7 @@ export default function TestSchedulePage() {
             subject: testSet.subject,
         };
 
-        addScheduledTest(newTest);
-        refreshSchedules();
+        setScheduledTests(prev => [...prev, newTest]);
 
         toast({
             title: "Test Scheduled!",
@@ -113,7 +114,7 @@ export default function TestSchedulePage() {
         setTime('10:00');
     };
     
-    if (!allSchedules || !allSets) {
+    if (!allSchedules || !allSetsData) {
         return (
           <div className="flex justify-center items-center h-96">
             <Loader2 className="animate-spin text-primary" size={32} />
@@ -141,7 +142,7 @@ export default function TestSchedulePage() {
                             <Select value={selectedTestSetId} onValueChange={setSelectedTestSetId}>
                                 <SelectTrigger id="test-set"><SelectValue placeholder="Select a test set..." /></SelectTrigger>
                                 <SelectContent>
-                                    {allSets.length > 0 ? allSets.map(ts => (
+                                    {allSetsData.length > 0 ? allSetsData.map(ts => (
                                         <SelectItem key={ts.id} value={ts.id}>{ts.name} ({ts.board}/{ts.standard})</SelectItem>
                                     )) : (
                                         <SelectItem value="disabled" disabled>No test sets available. Upload one first.</SelectItem>

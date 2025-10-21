@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,18 +15,21 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { studentData, type StudentProfile } from "@/lib/student-data";
-import { allTestSets, type Question } from "@/lib/question-bank";
-import { getScheduledTestById, type ScheduledTest } from "@/lib/test-schedule";
+import { useAppData, useDataUpdaters } from "@/hooks/use-hydrate-data";
+import type { StudentProfile } from "@/lib/student-data";
+import type { Question } from "@/lib/question-bank";
+import type { ScheduledTest } from "@/lib/test-schedule";
 
 const MOCK_TEST_DURATION = 30 * 60; // 30 minutes in seconds
 
 type TestState = "loading" | "in_progress" | "completed" | "review";
 
-export default function MockTestPage() {
+function MockTestContent() {
     const { toast } = useToast();
     const router = useRouter();
     const searchParams = useSearchParams();
+    const { studentData, testSets, scheduledTests: allScheduledTests } = useAppData();
+    const { setStudentData } = useDataUpdaters();
 
     const [testState, setTestState] = useState<TestState>("loading");
     const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(null);
@@ -44,13 +47,11 @@ export default function MockTestPage() {
         const studentId = searchParams.get('studentId');
         const testId = searchParams.get('testId');
         
-        if (!studentId || !testId) {
-            toast({ variant: "destructive", title: "Error", description: "Missing student or test information."});
-            router.push('/profile');
+        if (!studentId || !testId || !studentData || !allScheduledTests || !testSets) {
             return;
         }
         
-        const schedTest = getScheduledTestById(testId);
+        const schedTest = allScheduledTests.find(t => t.id === testId);
         if (!schedTest) {
              toast({ variant: "destructive", title: "Error", description: "Scheduled test not found."});
             router.push('/profile');
@@ -68,7 +69,7 @@ export default function MockTestPage() {
             return;
         }
         
-        const testSet = allTestSets.find(ts => ts.id === schedTest.testSetId);
+        const testSet = testSets.find(ts => ts.id === schedTest.testSetId);
         if (!testSet || testSet.questions.length === 0) {
             toast({
                 variant: "destructive",
@@ -92,7 +93,7 @@ export default function MockTestPage() {
         setScore(0);
         setTestState("in_progress");
 
-    }, [searchParams, router, toast]);
+    }, [searchParams, router, toast, studentData, testSets, allScheduledTests]);
 
     useEffect(() => {
         if (testState !== "in_progress") return;
@@ -140,30 +141,44 @@ export default function MockTestPage() {
         const finalScore = (correctAnswers / activeQuestions.length) * 100;
         setScore(finalScore);
         
-        // Update student stats
-        const student = studentData.find(s => s.id === studentProfile.id);
-        if (student) {
-            const newPerformanceEntry = { name: scheduledTest.subject, score: finalScore };
-            const existingEntryIndex = student.stats.performance.findIndex(p => p.name === newPerformanceEntry.name);
+        setStudentData(prevData => {
+            return prevData.map(student => {
+                if (student.id === studentProfile.id) {
+                    const newPerformanceEntry = { name: scheduledTest.subject, score: finalScore };
+                    const existingEntryIndex = student.stats.performance.findIndex(p => p.name === newPerformanceEntry.name);
 
-            if (existingEntryIndex > -1) {
-                student.stats.performance[existingEntryIndex] = newPerformanceEntry;
-            } else {
-                student.stats.performance.push(newPerformanceEntry);
-            }
+                    let updatedPerformance: {name: string, score: number}[];
+                    if (existingEntryIndex > -1) {
+                        updatedPerformance = [...student.stats.performance];
+                        updatedPerformance[existingEntryIndex] = newPerformanceEntry;
+                    } else {
+                        updatedPerformance = [...student.stats.performance, newPerformanceEntry];
+                    }
 
-            student.stats.testsTaken = student.stats.performance.length;
-            const totalScore = student.stats.performance.reduce((acc, p) => acc + p.score, 0);
-            student.stats.avgScore = totalScore / student.stats.testsTaken;
-            
-            // Check for overall prize eligibility only if this was a live test
-            const allScoresAreHigh = student.stats.performance.every(p => p.score > 80);
-            if (isLiveTest && allScoresAreHigh) {
-                 setIsPrizeEligible(true);
-            } else {
-                 setIsPrizeEligible(false);
-            }
-        }
+                    const testsTaken = updatedPerformance.length;
+                    const totalScore = updatedPerformance.reduce((acc, p) => acc + p.score, 0);
+                    const avgScore = testsTaken > 0 ? totalScore / testsTaken : 0;
+                    
+                    const allScoresAreHigh = updatedPerformance.every(p => p.score > 80);
+                    if (isLiveTest && allScoresAreHigh) {
+                        setIsPrizeEligible(true);
+                    } else {
+                        setIsPrizeEligible(false);
+                    }
+
+                    return {
+                        ...student,
+                        stats: {
+                            ...student.stats,
+                            performance: updatedPerformance,
+                            testsTaken: testsTaken,
+                            avgScore: avgScore,
+                        }
+                    };
+                }
+                return student;
+            });
+        });
 
         setTestState("completed");
         toast({
@@ -373,5 +388,20 @@ export default function MockTestPage() {
                 </div>
             </CardContent>
         </Card>
+    )
+}
+
+
+export default function MockTestPage() {
+    return (
+        <Suspense fallback={
+            <Card className="w-full max-w-3xl text-center p-8 flex flex-col items-center justify-center gap-4">
+                <Loader2 className="w-10 h-10 animate-spin text-primary"/>
+                <CardTitle>Loading Test...</CardTitle>
+                <CardDescription>Preparing your questions. Please wait.</CardDescription>
+            </Card>
+        }>
+            <MockTestContent />
+        </Suspense>
     )
 }

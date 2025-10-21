@@ -7,17 +7,21 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
-import { getStoreConfig, setGameSettings, type GameSettings } from "@/lib/store-config";
 import { Loader2 } from "lucide-react";
+import { useAppData, useDataUpdaters } from "@/hooks/use-hydrate-data";
+import type { GameSettings } from "@/lib/store-config";
 
 export default function AdminGameSettingsPage() {
     const { toast } = useToast();
+    const { storeConfig } = useAppData();
+    const { setStoreConfig } = useDataUpdaters();
     const [settings, setSettings] = useState<GameSettings | null>(null);
 
     useEffect(() => {
-        const config = getStoreConfig();
-        setSettings(config.gameSettings);
-    }, []);
+        if (storeConfig) {
+            setSettings(storeConfig.gameSettings);
+        }
+    }, [storeConfig]);
 
     const handleRewardChange = (index: number, value: string) => {
         if (!settings) return;
@@ -34,7 +38,9 @@ export default function AdminGameSettingsPage() {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!settings) return;
-        setGameSettings(settings);
+        
+        setStoreConfig(prev => ({...prev, gameSettings: settings}));
+
         toast({
             title: "Settings Saved!",
             description: "Game settings have been successfully updated.",

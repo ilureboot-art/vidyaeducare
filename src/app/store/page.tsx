@@ -6,31 +6,25 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { ShoppingCart, Sparkles, Loader2, BookOpen, Ticket, Zap } from "lucide-react";
-import { getWalletData, addTransaction, type WalletData } from "@/lib/user-data";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getStoreConfig, type TicketPackage, type ReferboltSubscription, type MockTestPackage, type StoreConfig } from "@/lib/store-config";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getActivationCodes, useActivationCode } from "@/lib/student-data";
 import Link from 'next/link';
-
+import { useAppData, useDataUpdaters } from "@/hooks/use-hydrate-data";
+import type { TicketPackage, ReferboltSubscription, MockTestPackage, StoreConfig } from "@/lib/store-config";
+import type { WalletData } from "@/lib/user-data";
 
 export default function StorePage() {
   const { toast } = useToast();
-  const [isPurchasing, setIsPurchasing] = useState<number | string | null>(null);
-  const [walletData, setWalletData] = useState<WalletData | null>(null);
-  const [storeConfig, setStoreConfig] = useState<StoreConfig | null>(null);
+  const { walletData: initialWalletData, storeConfig: initialStoreConfig, activationCodes: initialActivationCodes } = useAppData();
+  const { setWalletData, setActivationCodes, setNotifications } = useDataUpdaters();
 
+  const [isPurchasing, setIsPurchasing] = useState<number | string | null>(null);
+  
   const [referralCode1, setReferralCode1] = useState("");
   const [referralCode2, setReferralCode2] = useState("");
 
-  
-  useEffect(() => {
-    setWalletData(getWalletData());
-    setStoreConfig(getStoreConfig());
-  }, []);
-
-  if (!walletData || !storeConfig) {
+  if (!initialWalletData || !initialStoreConfig || !initialActivationCodes) {
     return (
         <div className="w-full max-w-4xl mx-auto flex justify-center items-center h-64">
             <Loader2 className="animate-spin text-primary" size={32}/>
@@ -39,9 +33,8 @@ export default function StorePage() {
   }
 
   const handleSubscriptionPurchase = (index: number) => {
-    if (!storeConfig || !walletData) return;
     setIsPurchasing(index);
-    const product = storeConfig.mockTestPackages[index];
+    const product = initialStoreConfig.mockTestPackages[index];
     
     const baseDiscount = 0.05; 
     const hasReferral = referralCode1.trim() !== "";
@@ -53,7 +46,7 @@ export default function StorePage() {
     const finalPrice = discountedBasePrice + gstAmount;
 
     setTimeout(() => {
-      if (walletData.balance < finalPrice) {
+      if (initialWalletData.balance < finalPrice) {
         toast({
           variant: "destructive",
           title: "Purchase Failed",
@@ -63,21 +56,25 @@ export default function StorePage() {
         return;
       }
       
-      addTransaction({
-        id: Date.now(),
-        type: 'withdrawal',
-        description: `${product.name} Purchase`,
-        amount: -finalPrice,
-        date: new Date().toISOString(),
-        status: 'Completed',
-        user: "Alex Doe"
-      });
+      setWalletData(prev => ({
+          ...prev,
+          balance: prev.balance - finalPrice,
+          transactions: [...prev.transactions, {
+            id: Date.now(),
+            type: 'withdrawal',
+            description: `${product.name} Purchase`,
+            amount: -finalPrice,
+            date: new Date().toISOString(),
+            status: 'Completed',
+            user: "Alex Doe"
+          }]
+      }));
       
 
       if (hasReferral) {
         const baseCommissionRate = 0.1765;
         const isIbaReferboltSubscriber = true; 
-        const bonusCommission = isIbaReferboltSubscriber ? (storeConfig.referboltSettings.ibaBonusCommission / 100) : 0;
+        const bonusCommission = isIbaReferboltSubscriber ? (initialStoreConfig.referboltSettings.ibaBonusCommission / 100) : 0;
         const totalCommissionRate = baseCommissionRate + bonusCommission;
         const totalCommission = discountedBasePrice * totalCommissionRate;
 
@@ -91,7 +88,7 @@ export default function StorePage() {
         }
         
         if (bonusCommission > 0) {
-            commissionToastDescription += ` (Includes a ${storeConfig.referboltSettings.ibaBonusCommission}% ReferBolt bonus!)`;
+            commissionToastDescription += ` (Includes a ${initialStoreConfig.referboltSettings.ibaBonusCommission}% ReferBolt bonus!)`;
         }
         
         toast({
@@ -101,14 +98,12 @@ export default function StorePage() {
         });
       }
       
-      const newActivationCodes = getActivationCodes();
       const activationCode = `PROD-${String(Date.now()).slice(-5)}`;
-      newActivationCodes.push(activationCode);
-      useActivationCode(activationCode);
+      setActivationCodes(prev => [...prev, activationCode]);
       
       let successDescription = `You've purchased the ${product.name}. Your Activation Code is: ${activationCode}. Use this code in 'My Students' to add a profile.`;
       
-      if (storeConfig.referboltSettings.freeAccessWithMockTest) {
+      if (initialStoreConfig.referboltSettings.freeAccessWithMockTest) {
         successDescription += " As a bonus, you've been granted free access to the ReferBolt system!"
       }
 
@@ -118,71 +113,74 @@ export default function StorePage() {
         duration: 10000,
       });
 
-      setWalletData(getWalletData());
       setIsPurchasing(null);
     }, 1500);
   };
   
   const handleTicketPurchase = (pkg: TicketPackage) => {
-      if (!walletData || !storeConfig) return;
       setIsPurchasing(pkg.price);
       const gstAmount = pkg.price * (pkg.gstRate / 100);
       const finalPrice = pkg.price + gstAmount;
       
       setTimeout(() => {
-          if (walletData.balance < finalPrice) {
+          if (initialWalletData.balance < finalPrice) {
               toast({ variant: 'destructive', title: "Purchase Failed", description: "Insufficient wallet balance." });
               setIsPurchasing(null);
               return;
           }
 
-          addTransaction({
-              id: Date.now(),
-              type: 'withdrawal',
-              description: `${pkg.tickets} Tickets Purchase`,
-              amount: -finalPrice,
-              date: new Date().toISOString(),
-              status: 'Completed',
-              user: 'Alex Doe',
-          });
+          setWalletData(prev => ({
+              ...prev,
+              balance: prev.balance - finalPrice,
+              transactions: [...prev.transactions, {
+                  id: Date.now(),
+                  type: 'withdrawal',
+                  description: `${pkg.tickets} Tickets Purchase`,
+                  amount: -finalPrice,
+                  date: new Date().toISOString(),
+                  status: 'Completed',
+                  user: 'Alex Doe',
+              }]
+          }));
 
           toast({ title: "Purchase Successful!", description: `${pkg.tickets} tickets have been added to your account.` });
-          setWalletData(getWalletData());
           setIsPurchasing(null);
       }, 1500);
   };
   
   const handleReferboltPurchase = () => {
-    if (!walletData || !storeConfig) return;
     setIsPurchasing('referbolt');
-    const cost = storeConfig.referboltSubscription.price;
-    const gstAmount = cost * (storeConfig.referboltSubscription.gstRate / 100);
+    const cost = initialStoreConfig.referboltSubscription.price;
+    const gstAmount = cost * (initialStoreConfig.referboltSubscription.gstRate / 100);
     const finalPrice = cost + gstAmount;
 
     setTimeout(() => {
-        if (walletData.balance < finalPrice) {
+        if (initialWalletData.balance < finalPrice) {
             toast({ variant: 'destructive', title: "Purchase Failed", description: "Insufficient wallet balance." });
             setIsPurchasing(null);
             return;
         }
         
-        addTransaction({
-            id: Date.now(),
-            type: 'withdrawal',
-            description: 'ReferBolt Subscription',
-            amount: -finalPrice,
-            date: new Date().toISOString(),
-            status: 'Completed',
-            user: 'Alex Doe',
-        });
+        setWalletData(prev => ({
+            ...prev,
+            balance: prev.balance - finalPrice,
+            transactions: [...prev.transactions, {
+                id: Date.now(),
+                type: 'withdrawal',
+                description: 'ReferBolt Subscription',
+                amount: -finalPrice,
+                date: new Date().toISOString(),
+                status: 'Completed',
+                user: 'Alex Doe',
+            }]
+        }));
         
-        const bonusTickets = storeConfig.referboltSubscription.ticketBonus;
+        const bonusTickets = initialStoreConfig.referboltSubscription.ticketBonus;
         toast({ 
             title: "Purchase Successful!", 
             description: `You are now subscribed to ReferBolt! A bonus of ${bonusTickets} tickets has been added to your account.`,
             duration: 7000
         });
-        setWalletData(getWalletData());
         setIsPurchasing(null);
     }, 1500);
   };
@@ -196,7 +194,7 @@ export default function StorePage() {
             Product Store
           </CardTitle>
           <CardDescription>
-            Your balance: <span className="font-bold">₹{walletData.balance.toFixed(2)}</span>
+            Your balance: <span className="font-bold">₹{initialWalletData.balance.toFixed(2)}</span>
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -228,7 +226,7 @@ export default function StorePage() {
                     </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
-                {storeConfig.mockTestPackages.map((product, index) => {
+                {initialStoreConfig.mockTestPackages.map((product, index) => {
                     const baseDiscount = 0.05;
                     const referralDiscount = referralCode1.trim() !== "" ? 0.10 : 0;
                     const totalDiscount = baseDiscount + referralDiscount;
@@ -280,7 +278,7 @@ export default function StorePage() {
             <TabsContent value="tickets" className="space-y-6 pt-6">
                 <p className="text-center text-muted-foreground">Purchase tickets to play the GuessMaster skill game.</p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {storeConfig.packages.map((pkg, index) => {
+                    {initialStoreConfig.packages.map((pkg, index) => {
                         const gstAmount = pkg.price * (pkg.gstRate / 100);
                         const finalPrice = pkg.price + gstAmount;
                         return (
@@ -313,11 +311,11 @@ export default function StorePage() {
             <TabsContent value="referbolt" className="pt-6">
                 <Card className="flex flex-col text-center items-center max-w-md mx-auto">
                     <CardHeader>
-                        <CardTitle className="text-2xl flex items-center gap-2"><Zap className="text-primary"/> {storeConfig.referboltSubscription.name} Subscription</CardTitle>
-                         <CardDescription>{storeConfig.referboltSubscription.description}</CardDescription>
+                        <CardTitle className="text-2xl flex items-center gap-2"><Zap className="text-primary"/> {initialStoreConfig.referboltSubscription.name} Subscription</CardTitle>
+                         <CardDescription>{initialStoreConfig.referboltSubscription.description}</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        <p className="text-4xl font-bold">₹{storeConfig.referboltSubscription.price + (storeConfig.referboltSubscription.price * (storeConfig.referboltSubscription.gstRate / 100))}</p>
+                        <p className="text-4xl font-bold">₹{initialStoreConfig.referboltSubscription.price + (initialStoreConfig.referboltSubscription.price * (initialStoreConfig.referboltSubscription.gstRate / 100))}</p>
                          <p className="text-xs text-muted-foreground">(Incl. GST)</p>
                         <Button size="lg" className="w-full" onClick={handleReferboltPurchase} disabled={isPurchasing !== null}>
                             {isPurchasing === 'referbolt' ? <Loader2 className="animate-spin"/> : "Subscribe Now"}

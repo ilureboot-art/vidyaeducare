@@ -6,17 +6,20 @@ import { Badge } from "@/components/ui/badge";
 import { List, CheckCircle, Award, Ticket, Share2, Zap, Coins, UserCheck, TrendingUp, BrainCircuit, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { getStoreConfig, type GameSettings } from "@/lib/store-config";
 import { Separator } from "@/components/ui/separator";
 import { useState, useEffect } from "react";
+import { useAppData } from "@/hooks/use-hydrate-data";
+import type { GameSettings } from "@/lib/store-config";
 
 export default function HowToPlayPage() {
+  const { storeConfig } = useAppData();
   const [gameSettings, setGameSettings] = useState<GameSettings | null>(null);
 
   useEffect(() => {
-    const config = getStoreConfig();
-    setGameSettings(config.gameSettings);
-  }, []);
+    if (storeConfig) {
+      setGameSettings(storeConfig.gameSettings);
+    }
+  }, [storeConfig]);
 
   if (!gameSettings) {
     return (

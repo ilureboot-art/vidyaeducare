@@ -25,13 +25,13 @@ import { Label } from "@/components/ui/label"
 import { PlusCircle, MinusCircle, Info, History, ArrowUpRight, ArrowDownLeft, Coins, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
-import { addTransaction, type Transaction, getWalletData, type WalletData } from "@/lib/user-data";
+import { type Transaction, type WalletData } from "@/lib/user-data";
 import { Badge } from "@/components/ui/badge";
-import { addNotification } from "@/lib/notifications";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Image from "next/image";
 import { CopyButton } from "@/components/CopyButton";
 import { format } from "date-fns";
+import { useAppData, useDataUpdaters } from "@/hooks/use-hydrate-data";
 
 const getStatusBadgeVariant = (status: string) => {
     switch (status.toLowerCase()) {
@@ -48,21 +48,14 @@ const getStatusBadgeVariant = (status: string) => {
 
 export default function WalletPage() {
   const { toast } = useToast();
-  const [walletState, setWalletState] = useState<WalletData | null>(null);
+  const { walletData } = useAppData();
+  const { setWalletData, setNotifications } = useDataUpdaters();
   const [addFundsOpen, setAddFundsOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
 
-  useEffect(() => {
-    refreshData();
-  }, []);
-
-  const refreshData = () => {
-    setWalletState(getWalletData());
-  };
-
   const handleAddFunds = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!walletState) return;
+    if (!walletData) return;
 
     const form = event.currentTarget;
     const amount = parseFloat((form.elements.namedItem('amount-add') as HTMLInputElement).value);
@@ -84,13 +77,15 @@ export default function WalletPage() {
         user: "Alex Doe",
     };
     
-    addTransaction(newTransaction);
-    addNotification({
+    setWalletData(prev => ({...prev, transactions: [...prev.transactions, newTransaction]}));
+    setNotifications(prev => [...prev, {
+        id: Date.now(),
         type: "deposit_request",
         message: `Alex Doe requested to deposit ₹${amount} (Ref: ${txnId}).`,
         userId: 'admin',
-    });
-    refreshData();
+        status: 'unread',
+        timestamp: new Date().toISOString()
+    }]);
 
     toast({
       title: "Request Submitted",
@@ -102,7 +97,7 @@ export default function WalletPage() {
   
   const handleWithdraw = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!walletState) return;
+    if (!walletData) return;
 
     const form = event.currentTarget;
     const amount = parseFloat((form.elements.namedItem('amount-withdraw') as HTMLInputElement).value);
@@ -113,7 +108,7 @@ export default function WalletPage() {
         return;
     }
 
-    if (amount > walletState.balance) {
+    if (amount > walletData.balance) {
         toast({
             variant: "destructive",
             title: "Insufficient Balance",
@@ -142,13 +137,15 @@ export default function WalletPage() {
         user: "Alex Doe",
     };
 
-    addTransaction(newTransaction);
-    addNotification({
+    setWalletData(prev => ({...prev, transactions: [...prev.transactions, newTransaction]}));
+    setNotifications(prev => [...prev, {
+        id: Date.now(),
         type: "withdrawal_request",
         message: `Alex Doe requested to withdraw ₹${amount}.`,
-        userId: 'admin'
-    });
-    refreshData();
+        userId: 'admin',
+        status: 'unread',
+        timestamp: new Date().toISOString(),
+    }]);
 
     toast({
       title: "Request Submitted",
@@ -158,7 +155,7 @@ export default function WalletPage() {
     form.reset();
   }
 
-  if (!walletState) {
+  if (!walletData) {
     return (
       <div className="w-full max-w-2xl mx-auto space-y-6 flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />
@@ -166,7 +163,7 @@ export default function WalletPage() {
     );
   }
 
-  const { adminPaymentMethods, balance, coins, transactions } = walletState;
+  const { adminPaymentMethods, balance, coins, transactions } = walletData;
 
   return (
     <div className="w-full max-w-2xl mx-auto space-y-6">

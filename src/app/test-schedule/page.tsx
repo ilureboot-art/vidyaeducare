@@ -12,8 +12,6 @@ import { format } from "date-fns";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getAllTestSets, type TestSet } from '@/lib/question-bank';
-import { getScheduledTestData, addScheduledTest, type ScheduledTest } from '@/lib/test-schedule';
 import {
   Table,
   TableBody,
@@ -23,51 +21,38 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
+import { useAppData, useDataUpdaters } from "@/hooks/use-hydrate-data";
+import type { ScheduledTest } from "@/lib/test-schedule";
 
 type TestStatus = 'Live' | 'Upcoming' | 'Completed';
-
 type ScheduledTestWithStatus = ScheduledTest & { status: TestStatus };
 
 export default function TestSchedulePage() {
     const { toast } = useToast();
+    const { scheduledTests: allSchedulesData, testSets: allSets } = useAppData();
+    const { setScheduledTests } = useDataUpdaters();
+    
     const [allSchedules, setAllSchedules] = useState<ScheduledTestWithStatus[] | null>(null);
     const [date, setDate] = useState<Date | undefined>(undefined);
     const [time, setTime] = useState('10:00'); // Default time
     const [selectedTestSetId, setSelectedTestSetId] = useState('');
-    const [allSets, setAllSets] = useState<TestSet[] | null>(null);
 
-     const refreshSchedules = () => {
-         const scheduledTests = getScheduledTestData();
-         if (scheduledTests) {
+    useEffect(() => {
+        if (allSchedulesData) {
             const now = new Date();
-            const updatedSchedules = [...scheduledTests]
+            const updatedSchedules = [...allSchedulesData]
                 .sort((a,b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime())
                 .map(test => {
                     const testDate = new Date(test.dateTime);
                     let status: TestStatus = 'Upcoming';
-                    
-                    const isToday = format(testDate, 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd');
-
-                    if (testDate < now) {
-                        status = 'Completed';
-                    }
-
-                    if (isToday && testDate <= now) {
-                       status = 'Live';
-                    }
-                    
+                    if (testDate < now) status = 'Completed';
+                    if (format(testDate, 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd') && testDate <= now) status = 'Live';
                     return { ...test, status };
                 });
-
             setAllSchedules(updatedSchedules);
-         }
-    }
-
-    useEffect(() => {
-        setAllSets(getAllTestSets());
-        refreshSchedules();
+        }
         setDate(new Date());
-    }, []);
+    }, [allSchedulesData]);
 
     const handleScheduleTest = () => {
         if (!date || !selectedTestSetId || !time || !allSets) {
@@ -99,15 +84,13 @@ export default function TestSchedulePage() {
             subject: testSet.subject,
         };
 
-        addScheduledTest(newTest);
-        refreshSchedules();
+        setScheduledTests(prev => [...prev, newTest]);
 
         toast({
             title: "Test Scheduled!",
             description: `"${testSet.name}" has been added to the calendar for ${format(combinedDateTime, "PPP p")}.`
         });
         
-        // Reset form
         setSelectedTestSetId('');
         setDate(new Date());
         setTime('10:00');
@@ -219,5 +202,3 @@ export default function TestSchedulePage() {
         </div>
     );
 }
-
-    

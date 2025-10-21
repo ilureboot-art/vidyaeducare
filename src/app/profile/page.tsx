@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { User, Mail, Calendar, Phone, Edit, GraduationCap, Building, Languages, BookCopy, FileClock, Cake, Medal, BarChart2, Trash2, PlusCircle, TrendingUp, BookOpen, Activity, Info, CalendarCheck, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { getAllStudentData, type StudentProfile, addStudent, deleteStudent, getActivationCodes, useActivationCode } from "@/lib/student-data";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,13 +21,16 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { getAllTestsForStudent, type ScheduledTest } from "@/lib/test-schedule";
 import { format } from "date-fns";
+import { useAppData, useDataUpdaters } from "@/hooks/use-hydrate-data";
+import type { StudentProfile } from "@/lib/student-data";
+import type { ScheduledTest } from "@/lib/test-schedule";
 
 
 export default function ProfilePage() {
-    const [students, setStudents] = useState<StudentProfile[] | null>(null);
-    const [validCodes, setValidCodes] = useState<string[] | null>(null);
+    const { studentData: students, activationCodes: validCodes, scheduledTests: allScheduledTests } = useAppData();
+    const { setStudentData, setActivationCodes } = useDataUpdaters();
+    
     const { toast } = useToast();
     const router = useRouter();
     const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
@@ -38,15 +40,6 @@ export default function ProfilePage() {
     const [isTestDialogOpen, setIsTestDialogOpen] = useState(false);
     const [selectedStudentForTest, setSelectedStudentForTest] = useState<StudentProfile | null>(null);
     const [availableTests, setAvailableTests] = useState<ScheduledTest[]>([]);
-
-    useEffect(() => {
-        setStudents(getAllStudentData());
-        setValidCodes(getActivationCodes());
-    }, []);
-    
-    const refreshStudents = () => {
-        setStudents(getAllStudentData());
-    };
 
     const parentProfile = {
         name: "Alex Doe",
@@ -91,10 +84,9 @@ export default function ProfilePage() {
             badges: [],
         };
         
-        addStudent(newStudent);
-        useActivationCode(activationCode);
-        refreshStudents();
-        setValidCodes(getActivationCodes());
+        setStudentData(prev => [...prev, newStudent]);
+        setActivationCodes(prev => prev.filter(c => c !== activationCode));
+
         toast({ title: "Student Added!", description: `${newStudent.name}'s profile has been created.`});
         setIsAddStudentOpen(false);
         setActivationCode("");
@@ -102,14 +94,14 @@ export default function ProfilePage() {
     }
     
     const handleDeleteStudent = (studentId: string) => {
-        deleteStudent(studentId);
-        refreshStudents();
+        setStudentData(prev => prev.filter(s => s.id !== studentId));
         toast({ title: "Student Removed", description: "The student profile has been deleted." });
     }
     
     const openTestDialog = (student: StudentProfile) => {
+        if (!allScheduledTests) return;
         setSelectedStudentForTest(student);
-        const tests = getAllTestsForStudent(student.academic.board, student.academic.standard);
+        const tests = allScheduledTests.filter(test => test.board === student.academic.board && test.standard === student.academic.standard);
         const sortedTests = tests.sort((a,b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
         setAvailableTests(sortedTests);
         setIsTestDialogOpen(true);
@@ -123,7 +115,7 @@ export default function ProfilePage() {
         router.push(`/mock-test?studentId=${selectedStudentForTest.id}&testId=${test.id}&isLive=${isLive}`);
     }
 
-  if (!students || !validCodes) {
+  if (!students || !validCodes || !allScheduledTests) {
     return (
         <div className="w-full max-w-5xl mx-auto flex items-center justify-center h-96">
             <Loader2 className="animate-spin text-primary" size={32} />

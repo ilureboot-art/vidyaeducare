@@ -36,10 +36,10 @@ import {
   Coins,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getWalletData, addTransaction } from "@/lib/user-data";
-import { getStoreConfig, type GameSettings } from "@/lib/store-config";
-import { addNotification } from "@/lib/notifications";
 import React from "react";
+import { useAppData, useDataUpdaters } from "@/hooks/use-hydrate-data";
+import type { GameSettings } from "@/lib/store-config";
+
 
 const GAME_DURATION = 60; // 60 seconds
 
@@ -86,6 +86,8 @@ const Confetti = () => (
 function PlayPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { storeConfig, walletData } = useAppData();
+  const { setWalletData, setNotifications } = useDataUpdaters();
   
   const [secretNumber, setSecretNumber] = useState(0);
   const [currentGuess, setCurrentGuess] = useState("");
@@ -137,20 +139,22 @@ function PlayPageContent() {
     });
 
     if (endState === 'won' && earnedReward > 0) {
-        let wallet = getWalletData();
-        wallet.coins += earnedReward;
-        addNotification({
+        setWalletData(prev => ({...prev, coins: prev.coins + earnedReward}));
+        setNotifications(prev => [...prev, {
+            id: Date.now(),
             type: "deposit_received",
             message: `You won ${earnedReward} coins in GuessMaster!`,
             userId: 'user-alex-doe',
-        });
+            status: 'unread',
+            timestamp: new Date().toISOString()
+        }]);
         toast({
           title: "You Won!",
           description: `${earnedReward} coins have been added to your balance.`,
         });
     }
 
-  }, [playerStats, stopTimer, toast]);
+  }, [playerStats, stopTimer, toast, setWalletData, setNotifications]);
 
   const resetGame = useCallback(() => {
     if (!gameSettings) return;
@@ -175,13 +179,13 @@ function PlayPageContent() {
   };
 
   useEffect(() => {
-    const config = getStoreConfig();
-    const wallet = getWalletData();
-    setGameSettings(config.gameSettings);
-    setReferralBonus(config.referralBonus);
-    setReferralCode(wallet.referralCode);
-    setGameState(searchParams.get('mode') === 'demo' ? "playing" : "idle");
-  }, [searchParams]);
+    if (storeConfig && walletData) {
+      setGameSettings(storeConfig.gameSettings);
+      setReferralBonus(storeConfig.referralBonus);
+      setReferralCode(walletData.referralCode);
+      setGameState(searchParams.get('mode') === 'demo' ? "playing" : "idle");
+    }
+  }, [storeConfig, walletData, searchParams]);
 
   useEffect(() => {
       if (gameState === 'playing' && !secretNumber) {

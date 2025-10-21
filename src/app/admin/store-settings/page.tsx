@@ -10,27 +10,22 @@ import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PlusCircle, Trash2, Zap, BookOpen, GraduationCap, Percent, Loader2 } from "lucide-react";
 import type { TicketPackage, ReferboltSubscription, MockTestPackage, ReferboltSettings, GameSettings, StoreConfig } from "@/lib/store-config";
-import {
-  getStoreConfig,
-  setPackages,
-  setReferralBonus,
-  setReferboltSubscription,
-  setMockTestPackages,
-  setReferboltSettings,
-  setGameSettings
-} from "@/lib/store-config";
-import { getAcademicConfig, setBoards, setStandards, setSubjects, type AcademicConfig } from "@/lib/academic-config";
+import type { AcademicConfig } from "@/lib/academic-config";
+import { useAppData, useDataUpdaters } from "@/hooks/use-hydrate-data";
 import { Switch } from "@/components/ui/switch";
 
 export default function AdminStoreSettingsPage() {
   const { toast } = useToast();
-  const [storeConfig, setStoreConfig] = useState<StoreConfig | null>(null);
-  const [academicConfig, setAcademicConfig] = useState<AcademicConfig | null>(null);
+  const { storeConfig: initialStoreConfig, academicConfig: initialAcademicConfig } = useAppData();
+  const { setStoreConfig, setAcademicConfig } = useDataUpdaters();
+  
+  const [storeConfig, setLocalStoreConfig] = useState<StoreConfig | null>(null);
+  const [academicConfig, setLocalAcademicConfig] = useState<AcademicConfig | null>(null);
 
   useEffect(() => {
-    setStoreConfig(getStoreConfig());
-    setAcademicConfig(getAcademicConfig());
-  }, []);
+    if (initialStoreConfig) setLocalStoreConfig(JSON.parse(JSON.stringify(initialStoreConfig)));
+    if (initialAcademicConfig) setLocalAcademicConfig(JSON.parse(JSON.stringify(initialAcademicConfig)));
+  }, [initialStoreConfig, initialAcademicConfig]);
 
   const handlePackageChange = (index: number, field: keyof TicketPackage, value: string | number | boolean) => {
     if (!storeConfig) return;
@@ -52,7 +47,7 @@ export default function AdminStoreSettingsPage() {
     }
 
     newPackages[index] = pkg;
-    setStoreConfig(prev => prev ? ({ ...prev, packages: newPackages }) : null);
+    setLocalStoreConfig(prev => prev ? ({ ...prev, packages: newPackages }) : null);
   };
   
   const handleMockTestPackageChange = (index: number, field: keyof MockTestPackage, value: string | number | boolean) => {
@@ -75,12 +70,12 @@ export default function AdminStoreSettingsPage() {
     }
 
     newPackages[index] = pkg;
-    setStoreConfig(prev => prev ? ({...prev, mockTestPackages: newPackages}) : null);
+    setLocalStoreConfig(prev => prev ? ({...prev, mockTestPackages: newPackages}) : null);
   };
   
   const handleReferboltChange = (field: keyof ReferboltSubscription, value: string | number) => {
     if (!storeConfig) return;
-    setStoreConfig(prev => {
+    setLocalStoreConfig(prev => {
         if (!prev) return null;
         const newSub = { ...prev.referboltSubscription };
         if (field === 'price' || field === 'ticketBonus' || field === 'gstRate') {
@@ -93,31 +88,31 @@ export default function AdminStoreSettingsPage() {
 
   const handleReferboltSettingsChange = (field: keyof ReferboltSettings, value: boolean | number) => {
       if (!storeConfig) return;
-      setStoreConfig(prev => prev ? ({ ...prev, referboltSettings: { ...prev.referboltSettings, [field]: value } }) : null);
+      setLocalStoreConfig(prev => prev ? ({ ...prev, referboltSettings: { ...prev.referboltSettings, [field]: value } }) : null);
   };
 
   const addPackage = () => {
     if (!storeConfig) return;
     const newPackages = [...storeConfig.packages, { tickets: 0, price: 0, bestValue: false, games: 0, gstRate: 28, hsnSacCode: '998439' }];
-    setStoreConfig(prev => prev ? ({...prev, packages: newPackages}) : null);
+    setLocalStoreConfig(prev => prev ? ({...prev, packages: newPackages}) : null);
   };
 
   const removePackage = (index: number) => {
     if (!storeConfig) return;
     const newPackages = storeConfig.packages.filter((_, i) => i !== index);
-    setStoreConfig(prev => prev ? ({...prev, packages: newPackages}) : null);
+    setLocalStoreConfig(prev => prev ? ({...prev, packages: newPackages}) : null);
   };
   
   const addMockTestPackage = () => {
     if (!storeConfig) return;
     const newPackages = [...storeConfig.mockTestPackages, { name: 'New Subscription', price: 0, months: 1, bestValue: false, gstRate: 18, hsnSacCode: '999294' }];
-    setStoreConfig(prev => prev ? ({...prev, mockTestPackages: newPackages}) : null);
+    setLocalStoreConfig(prev => prev ? ({...prev, mockTestPackages: newPackages}) : null);
   };
   
   const removeMockTestPackage = (index: number) => {
     if (!storeConfig) return;
     const newPackages = storeConfig.mockTestPackages.filter((_, i) => i !== index);
-    setStoreConfig(prev => prev ? ({ ...prev, mockTestPackages: newPackages }) : null);
+    setLocalStoreConfig(prev => prev ? ({ ...prev, mockTestPackages: newPackages }) : null);
   };
 
   const handleDynamicListChange = (setter: React.Dispatch<React.SetStateAction<AcademicConfig | null>>, listName: keyof AcademicConfig, index: number, value: string) => {
@@ -149,17 +144,8 @@ export default function AdminStoreSettingsPage() {
     e.preventDefault();
     if (!storeConfig || !academicConfig) return;
     
-    setPackages(storeConfig.packages);
-    setMockTestPackages(storeConfig.mockTestPackages);
-    setReferralBonus(storeConfig.referralBonus);
-    setReferboltSubscription(storeConfig.referboltSubscription);
-    setReferboltSettings(storeConfig.referboltSettings);
-    setBoards(academicConfig.boards);
-    setStandards(academicConfig.standards);
-    setSubjects(academicConfig.subjects);
-    if(storeConfig.gameSettings){
-        setGameSettings(storeConfig.gameSettings);
-    }
+    setStoreConfig(storeConfig);
+    setAcademicConfig(academicConfig);
 
     toast({
       title: "Settings Saved!",
@@ -178,13 +164,13 @@ export default function AdminStoreSettingsPage() {
               <Label className="text-lg font-semibold">{title}</Label>
               {list.map((item, index) => (
                   <div key={index} className="flex items-center gap-2">
-                      <Input value={item} onChange={(e) => handleDynamicListChange(setAcademicConfig, listName, index, e.target.value)} />
-                      <Button type="button" variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" onClick={() => removeFromList(setAcademicConfig, listName, index)}>
+                      <Input value={item} onChange={(e) => handleDynamicListChange(setLocalAcademicConfig, listName, index, e.target.value)} />
+                      <Button type="button" variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" onClick={() => removeFromList(setLocalAcademicConfig, listName, index)}>
                           <Trash2 className="h-4 w-4" />
                       </Button>
                   </div>
               ))}
-              <Button type="button" variant="outline" className="w-full" onClick={() => addToList(setAcademicConfig, listName)}>
+              <Button type="button" variant="outline" className="w-full" onClick={() => addToList(setLocalAcademicConfig, listName)}>
                   <PlusCircle className="mr-2 h-4 w-4" />
                   Add {title.slice(0, -1)}
               </Button>
@@ -356,7 +342,7 @@ export default function AdminStoreSettingsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="referralBonus">Referral &amp; Welcome Bonus (₹)</Label>
-                <Input id="referralBonus" type="number" value={storeConfig.referralBonus} onChange={(e) => setStoreConfig(prev => prev ? ({...prev, referralBonus: Number(e.target.value)}) : null)} />
+                <Input id="referralBonus" type="number" value={storeConfig.referralBonus} onChange={(e) => setLocalStoreConfig(prev => prev ? ({...prev, referralBonus: Number(e.target.value)}) : null)} />
                 <p className="text-xs text-muted-foreground">This amount is given to both the referrer and the new user.</p>
               </div>
             </div>

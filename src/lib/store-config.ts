@@ -49,7 +49,7 @@ export type StoreConfig = {
     referboltSettings: ReferboltSettings;
 };
 
-const defaultStoreConfig: StoreConfig = {
+export const defaultStoreConfig: StoreConfig = {
     packages: [
         { tickets: 1, price: 25, bestValue: false, games: 2, gstRate: 28, hsnSacCode: '998439' },
         { tickets: 5, price: 120, bestValue: false, games: 10, gstRate: 28, hsnSacCode: '998439' },
@@ -84,72 +84,3 @@ const defaultStoreConfig: StoreConfig = {
         ibaBonusCommission: 5,
     }
 };
-
-let storeConfigState: StoreConfig | null = null;
-
-export const getStoreConfig = (): StoreConfig => {
-    if (storeConfigState) {
-        return storeConfigState;
-    }
-    if (typeof window !== 'undefined') {
-        try {
-            const savedConfig = localStorage.getItem('storeConfig');
-            if (savedConfig) {
-                const parsedConfig = JSON.parse(savedConfig);
-                if (parsedConfig && parsedConfig.packages && parsedConfig.gameSettings) {
-                    storeConfigState = parsedConfig;
-                    return storeConfigState;
-                }
-            }
-        } catch (e) {
-            console.error("Failed to parse storeConfig from localStorage", e);
-        }
-        storeConfigState = JSON.parse(JSON.stringify(defaultStoreConfig));
-        localStorage.setItem('storeConfig', JSON.stringify(storeConfigState));
-        return storeConfigState;
-    }
-    return JSON.parse(JSON.stringify(defaultStoreConfig));
-};
-
-export const saveStoreConfig = (config: StoreConfig) => {
-    if (typeof window !== 'undefined') {
-        localStorage.setItem('storeConfig', JSON.stringify(config));
-        storeConfigState = config;
-    }
-};
-
-export function setPackages(newPackages: TicketPackage[]) {
-    const config = getStoreConfig();
-    config.packages = newPackages;
-    saveStoreConfig(config);
-}
-
-export function setMockTestPackages(newPackages: MockTestPackage[]) {
-    const config = getStoreConfig();
-    config.mockTestPackages = newPackages;
-    saveStoreConfig(config);
-}
-
-export function setReferboltSubscription(newSub: ReferboltSubscription) {
-    const config = getStoreConfig();
-    config.referboltSubscription = newSub;
-    saveStoreConfig(config);
-}
-
-export function setReferralBonus(newBonus: number) {
-    const config = getStoreConfig();
-    config.referralBonus = newBonus;
-    saveStoreConfig(config);
-}
-
-export function setGameSettings(newSettings: GameSettings) {
-    const config = getStoreConfig();
-    config.gameSettings = newSettings;
-    saveStoreConfig(config);
-}
-
-export function setReferboltSettings(newSettings: ReferboltSettings) {
-    const config = getStoreConfig();
-    config.referboltSettings = newSettings;
-    saveStoreConfig(config);
-}

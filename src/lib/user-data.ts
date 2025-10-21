@@ -34,7 +34,7 @@ export type WalletData = {
   transactions: Transaction[];
 };
 
-const defaultWalletData: WalletData = {
+export const defaultWalletData: WalletData = {
   balance: 550.75,
   coins: 1250,
   referralCode: "ALEX-D7F6E5C",
@@ -60,95 +60,3 @@ const defaultWalletData: WalletData = {
     { id: 1007, type: 'withdrawal' as 'withdrawal', description: 'Withdrawal Request', amount: -500, date: "2024-07-23T12:00:00.000Z", status: 'Rejected' as 'Rejected', user: 'Alex Doe', paymentMethod: 'user@upi' },
   ],
 };
-
-let walletDataState: WalletData | null = null;
-
-export function getWalletData(): WalletData {
-    if (walletDataState) {
-        return walletDataState;
-    }
-    if (typeof window !== 'undefined') {
-        try {
-            const savedData = localStorage.getItem('walletData');
-            if (savedData) {
-                const parsedData = JSON.parse(savedData);
-                if (parsedData && parsedData.adminPaymentMethods && parsedData.transactions) {
-                    walletDataState = parsedData;
-                    return walletDataState;
-                }
-            }
-        } catch (e) {
-            console.error("Failed to parse walletData from localStorage", e);
-        }
-        walletDataState = JSON.parse(JSON.stringify(defaultWalletData));
-        localStorage.setItem('walletData', JSON.stringify(walletDataState));
-        return walletDataState;
-    }
-    return JSON.parse(JSON.stringify(defaultWalletData));
-};
-
-export function saveWalletData(data: WalletData) {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem('walletData', JSON.stringify(data));
-    walletDataState = data;
-  }
-};
-
-export function addTransaction(transaction: Transaction) {
-  let data = getWalletData();
-  data.transactions.unshift(transaction);
-  if (transaction.status === 'Completed') {
-    if (transaction.type === 'deposit') {
-      data.balance += transaction.amount;
-    } else if (transaction.type === 'withdrawal') {
-      data.balance += transaction.amount; 
-    }
-  }
-  saveWalletData(data);
-}
-
-export function updateTransactionStatus(id: number, newStatus: 'Completed' | 'Rejected'): boolean {
-    let data = getWalletData();
-    const txIndex = data.transactions.findIndex((tx: Transaction) => tx.id === id);
-    if (txIndex === -1) return false;
-
-    const tx = data.transactions[txIndex];
-    if (tx.status !== 'Pending') return false;
-
-    if (tx.type === 'deposit' && newStatus === 'Completed') {
-      data.balance += tx.amount;
-    }
-    
-    if (tx.type === 'withdrawal' && newStatus === 'Rejected') {
-        data.balance += Math.abs(tx.amount);
-    }
-    
-    data.transactions[txIndex].status = newStatus;
-    saveWalletData(data);
-    return true;
-}
-
-export function setAdminPaymentMethods(methods: AdminPaymentMethods) {
-  let data = getWalletData();
-  data.adminPaymentMethods = methods;
-  saveWalletData(data);
-}
-
-export function resetWalletData() {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('walletData');
-    }
-    walletDataState = null; 
-}
-
-export function updateWalletBalance(newBalance: number) {
-    let data = getWalletData();
-    data.balance = newBalance;
-    saveWalletData(data);
-}
-
-export function updateCoinBalance(newCoins: number) {
-    let data = getWalletData();
-    data.coins = newCoins;
-    saveWalletData(data);
-}

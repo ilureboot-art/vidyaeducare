@@ -17,7 +17,7 @@ export type TestSet = {
   questions: Question[];
 };
 
-const defaultTestSets: TestSet[] = [
+export const defaultTestSets: TestSet[] = [
   {
     id: "SET-172234567890",
     name: "Gravitation Mock Test",
@@ -53,63 +53,3 @@ const defaultTestSets: TestSet[] = [
     ]
   }
 ];
-
-let allTestSetsState: TestSet[] | null = null;
-
-export const getAllTestSets = (): TestSet[] => {
-    if (allTestSetsState) {
-        return allTestSetsState;
-    }
-    if (typeof window !== 'undefined') {
-        try {
-            const saved = localStorage.getItem('allTestSets');
-            if (saved) {
-                allTestSetsState = JSON.parse(saved);
-                return allTestSetsState!;
-            }
-        } catch (e) {
-            console.error("Failed to parse allTestSets from localStorage", e);
-        }
-        allTestSetsState = JSON.parse(JSON.stringify(defaultTestSets));
-        localStorage.setItem('allTestSets', JSON.stringify(allTestSetsState));
-        return allTestSetsState;
-    }
-    return JSON.parse(JSON.stringify(defaultTestSets));
-};
-
-export const saveTestSets = (sets: TestSet[]) => {
-    if (typeof window !== 'undefined') {
-        localStorage.setItem('allTestSets', JSON.stringify(sets));
-        allTestSetsState = sets;
-    }
-}
-
-export function addTestSet(testSet: TestSet) {
-    const sets = getAllTestSets();
-    const existingIndex = sets.findIndex(ts => ts.id === testSet.id);
-
-    if (existingIndex > -1) {
-        console.warn(`Test set with ID ${testSet.id} already exists. It will be overwritten.`);
-        sets[existingIndex] = testSet;
-    } else {
-        sets.push(testSet);
-    }
-    saveTestSets(sets);
-}
-
-export function updateTestSet(updatedTestSet: TestSet) {
-    let sets = getAllTestSets();
-    const index = sets.findIndex(ts => ts.id === updatedTestSet.id);
-    if (index > -1) {
-        sets[index] = updatedTestSet;
-    } else {
-        sets.push(updatedTestSet);
-    }
-    saveTestSets(sets);
-}
-
-export function deleteTestSet(testSetId: string) {
-    let sets = getAllTestSets();
-    const updatedSets = sets.filter(ts => ts.id !== testSetId);
-    saveTestSets(updatedSets);
-}

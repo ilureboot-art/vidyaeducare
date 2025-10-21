@@ -15,8 +15,9 @@ export type ScheduledTest = {
 
 let scheduledTestsState: ScheduledTest[] | null = null;
 
-// CRITICAL FIX: This function MUST NOT use new Date() as it can be evaluated on the server.
-// Use static ISO strings for default data. Components will handle dynamic date logic.
+// CRITICAL FIX: This function MUST NOT use new Date(). It now returns static ISO strings.
+// Dynamic date logic (like calculating if a test is "today" or "upcoming")
+// is now handled on the client-side within the components that use this data.
 const getDefaultScheduledTests = (): ScheduledTest[] => {
     return [
         {

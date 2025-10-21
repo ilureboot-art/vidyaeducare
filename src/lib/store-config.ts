@@ -88,30 +88,30 @@ const defaultStoreConfig: StoreConfig = {
 let storeConfigState: StoreConfig | null = null;
 
 const initializeStoreConfig = (): StoreConfig => {
-    if (typeof window === 'undefined') {
-        return JSON.parse(JSON.stringify(defaultStoreConfig));
-    }
-    
     if (storeConfigState !== null) {
         return storeConfigState;
     }
     
-    try {
-        const savedConfig = localStorage.getItem('storeConfig');
-        if (savedConfig) {
-            const parsedConfig = JSON.parse(savedConfig);
-            if (parsedConfig && parsedConfig.packages && parsedConfig.gameSettings) {
-                storeConfigState = parsedConfig;
-                return storeConfigState;
+    if (typeof window !== 'undefined') {
+        try {
+            const savedConfig = localStorage.getItem('storeConfig');
+            if (savedConfig) {
+                const parsedConfig = JSON.parse(savedConfig);
+                if (parsedConfig && parsedConfig.packages && parsedConfig.gameSettings) {
+                    storeConfigState = parsedConfig;
+                    return storeConfigState;
+                }
             }
+        } catch (e) {
+            console.error("Failed to parse storeConfig from localStorage", e);
         }
-    } catch (e) {
-        console.error("Failed to parse storeConfig from localStorage", e);
+        
+        storeConfigState = JSON.parse(JSON.stringify(defaultStoreConfig));
+        localStorage.setItem('storeConfig', JSON.stringify(storeConfigState));
+        return storeConfigState;
     }
-    
-    storeConfigState = JSON.parse(JSON.stringify(defaultStoreConfig));
-    localStorage.setItem('storeConfig', JSON.stringify(storeConfigState));
-    return storeConfigState;
+
+    return JSON.parse(JSON.stringify(defaultStoreConfig));
 };
 
 export const getStoreConfig = (): StoreConfig => {

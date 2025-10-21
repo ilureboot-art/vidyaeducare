@@ -16,12 +16,10 @@ import { format } from "date-fns";
 type FormattedNotification = AppNotification & { formattedTimestamp: string };
 
 export function UserNotifications() {
-  const [notifications, setNotifications] = useState<FormattedNotification[]>([]);
+  const [notifications, setNotifications] = useState<FormattedNotification[] | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    setIsClient(true);
     const fetchNotifications = () => {
         const userNotifications = getUserNotifications("user-alex-doe");
         const formattedNotifications = userNotifications.map(n => ({
@@ -52,7 +50,7 @@ export function UserNotifications() {
     }
   }
 
-  if (!isClient) {
+  if (!notifications) {
     return (
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-6 w-6" />

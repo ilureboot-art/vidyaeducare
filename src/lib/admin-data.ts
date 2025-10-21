@@ -33,32 +33,31 @@ const defaultAdminData: AdminData = {
 let adminDataState: AdminData | null = null;
 
 const initializeAdminData = (): AdminData => {
-    if (typeof window === 'undefined') {
-        return JSON.parse(JSON.stringify(defaultAdminData));
-    }
-    
     if (adminDataState !== null) {
         return adminDataState;
     }
     
-    try {
-        const savedData = localStorage.getItem('adminData');
-        if (savedData) {
-            const parsedData = JSON.parse(savedData);
-            adminDataState = parsedData;
-            return parsedData;
+    if (typeof window !== 'undefined') {
+        try {
+            const savedData = localStorage.getItem('adminData');
+            if (savedData) {
+                const parsedData = JSON.parse(savedData);
+                adminDataState = parsedData;
+                return parsedData;
+            }
+        } catch (e) {
+            console.error("Failed to parse adminData from localStorage", e);
         }
-    } catch (e) {
-        console.error("Failed to parse adminData from localStorage", e);
+        
+        adminDataState = JSON.parse(JSON.stringify(defaultAdminData));
+        localStorage.setItem('adminData', JSON.stringify(adminDataState));
+        return adminDataState;
     }
     
-    adminDataState = JSON.parse(JSON.stringify(defaultAdminData));
-    localStorage.setItem('adminData', JSON.stringify(adminDataState));
-    return adminDataState;
+    return JSON.parse(JSON.stringify(defaultAdminData));
 };
 
 export const getAdminData = (): AdminData => {
-    // This function will now be called within a useEffect hook on the client
     return initializeAdminData();
 }
 

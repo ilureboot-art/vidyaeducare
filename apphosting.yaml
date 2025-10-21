@@ -13,4 +13,4 @@ runConfig:
       # For production, replace this value with a secret from Google Cloud Secret Manager.
       # Example:
       # secret: YOUR_GEMINI_API_KEY_SECRET_NAME
-      value: "YOUR_API_KEY_HERE"
+      value: "AIzaSyArX4ziyytJoYRgSj1Sevq0dGIxLO7PRiY"

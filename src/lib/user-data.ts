@@ -64,30 +64,30 @@ const defaultWalletData: WalletData = {
 let walletDataState: WalletData | null = null;
 
 function initializeWalletData(): WalletData {
-    if (typeof window === 'undefined') {
-        return JSON.parse(JSON.stringify(defaultWalletData));
-    }
-    
     if (walletDataState !== null) {
         return walletDataState;
     }
     
-    try {
-        const savedData = localStorage.getItem('walletData');
-        if (savedData) {
-            const parsedData = JSON.parse(savedData);
-            if (parsedData && parsedData.adminPaymentMethods && parsedData.transactions) {
-                walletDataState = parsedData;
-                return walletDataState;
+    if (typeof window !== 'undefined') {
+        try {
+            const savedData = localStorage.getItem('walletData');
+            if (savedData) {
+                const parsedData = JSON.parse(savedData);
+                if (parsedData && parsedData.adminPaymentMethods && parsedData.transactions) {
+                    walletDataState = parsedData;
+                    return walletDataState;
+                }
             }
+        } catch (e) {
+            console.error("Failed to parse walletData from localStorage", e);
         }
-    } catch (e) {
-        console.error("Failed to parse walletData from localStorage", e);
+        
+        walletDataState = JSON.parse(JSON.stringify(defaultWalletData));
+        localStorage.setItem('walletData', JSON.stringify(walletDataState));
+        return walletDataState;
     }
-    
-    walletDataState = JSON.parse(JSON.stringify(defaultWalletData));
-    localStorage.setItem('walletData', JSON.stringify(walletDataState));
-    return walletDataState;
+
+    return JSON.parse(JSON.stringify(defaultWalletData));
 };
 
 export function getWalletData(): WalletData {

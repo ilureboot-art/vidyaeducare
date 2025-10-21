@@ -14,27 +14,27 @@ let notificationsState: AppNotification[] | null = null;
 const defaultNotifications: AppNotification[] = [];
 
 const initializeNotifications = (): AppNotification[] => {
-    if (typeof window === 'undefined') {
-        return [];
-    }
-    
     if (notificationsState !== null) {
         return notificationsState;
     }
     
-    try {
-        const savedNotifications = localStorage.getItem('notifications');
-        if (savedNotifications) {
-            notificationsState = JSON.parse(savedNotifications);
-            return notificationsState!;
+    if (typeof window !== 'undefined') {
+        try {
+            const savedNotifications = localStorage.getItem('notifications');
+            if (savedNotifications) {
+                notificationsState = JSON.parse(savedNotifications);
+                return notificationsState!;
+            }
+        } catch (e) {
+            console.error("Failed to parse notifications from localStorage", e);
         }
-    } catch (e) {
-        console.error("Failed to parse notifications from localStorage", e);
+        
+        notificationsState = [...defaultNotifications];
+        localStorage.setItem('notifications', JSON.stringify(notificationsState));
+        return notificationsState;
     }
     
-    notificationsState = [...defaultNotifications];
-    localStorage.setItem('notifications', JSON.stringify(notificationsState));
-    return notificationsState;
+    return [];
 }
 
 const saveNotifications = (notifs: AppNotification[]) => {

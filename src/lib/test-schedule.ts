@@ -16,7 +16,8 @@ export type ScheduledTest = {
 let scheduledTestsState: ScheduledTest[] | null = null;
 
 const getDefaultScheduledTests = (): ScheduledTest[] => {
-    // This logic now runs inside a function to avoid execution on module import on server.
+    if (typeof window === 'undefined') return [];
+    
     const now = new Date();
     const tomorrow = new Date(now);
     tomorrow.setDate(now.getDate() + 1);
@@ -57,28 +58,28 @@ const getDefaultScheduledTests = (): ScheduledTest[] => {
 };
 
 const initializeScheduledTests = (): ScheduledTest[] => {
-    if (typeof window === 'undefined') {
-        return [];
-    }
-
     if (scheduledTestsState !== null) {
         return scheduledTestsState;
     }
 
-    try {
-        const savedData = localStorage.getItem('scheduledTests');
-        if (savedData) {
-            const parsedData = JSON.parse(savedData);
-            scheduledTestsState = parsedData;
-            return scheduledTestsState;
+    if (typeof window !== 'undefined') {
+        try {
+            const savedData = localStorage.getItem('scheduledTests');
+            if (savedData) {
+                const parsedData = JSON.parse(savedData);
+                scheduledTestsState = parsedData;
+                return scheduledTestsState;
+            }
+        } catch (e) {
+            console.error("Failed to parse scheduledTests from localStorage", e);
         }
-    } catch (e) {
-        console.error("Failed to parse scheduledTests from localStorage", e);
+        
+        scheduledTestsState = getDefaultScheduledTests();
+        localStorage.setItem('scheduledTests', JSON.stringify(scheduledTestsState));
+        return scheduledTestsState;
     }
-    
-    scheduledTestsState = getDefaultScheduledTests();
-    localStorage.setItem('scheduledTests', JSON.stringify(scheduledTestsState));
-    return scheduledTestsState;
+
+    return []; // Return empty array for server-side rendering
 };
 
 export const getScheduledTestData = (): ScheduledTest[] => {

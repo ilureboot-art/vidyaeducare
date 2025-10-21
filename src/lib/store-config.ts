@@ -25,7 +25,7 @@ export type MockTestPackage = {
     months: number;
     bestValue: boolean;
     gstRate: number;
-    hsnSacCode: string;
+hsnSacCode: string;
 };
 
 export type GameSettings = {
@@ -88,28 +88,27 @@ const defaultStoreConfig: StoreConfig = {
 let storeConfigState: StoreConfig | null = null;
 
 const initializeStoreConfig = (): StoreConfig => {
-    if (typeof window !== 'undefined') {
-        const savedConfig = localStorage.getItem('storeConfig');
-        if (savedConfig) {
-            try {
-                const parsedConfig = JSON.parse(savedConfig);
-                if (parsedConfig && parsedConfig.packages && parsedConfig.gameSettings) {
-                    storeConfigState = parsedConfig;
-                    return parsedConfig;
-                }
-            } catch (e) {
-                console.error("Failed to parse storeConfig from localStorage", e);
+    // This function should only be called on the client
+    const savedConfig = localStorage.getItem('storeConfig');
+    if (savedConfig) {
+        try {
+            const parsedConfig = JSON.parse(savedConfig);
+            if (parsedConfig && parsedConfig.packages && parsedConfig.gameSettings) {
+                storeConfigState = parsedConfig;
+                return parsedConfig;
             }
+        } catch (e) {
+            console.error("Failed to parse storeConfig from localStorage", e);
         }
-        storeConfigState = { ...defaultStoreConfig };
-        localStorage.setItem('storeConfig', JSON.stringify(storeConfigState));
-        return storeConfigState;
     }
-    return { ...defaultStoreConfig };
+    storeConfigState = { ...defaultStoreConfig };
+    localStorage.setItem('storeConfig', JSON.stringify(storeConfigState));
+    return storeConfigState;
 };
 
 export const getStoreConfig = (): StoreConfig => {
     if (typeof window === 'undefined') {
+        // Return a safe default for server-side rendering
         return { ...defaultStoreConfig };
     }
     if (storeConfigState === null) {

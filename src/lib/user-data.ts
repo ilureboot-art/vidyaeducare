@@ -64,28 +64,27 @@ const defaultWalletData: WalletData = {
 let walletDataState: WalletData | null = null;
 
 function initializeWalletData(): WalletData {
-    if (typeof window !== 'undefined') {
-        const savedData = localStorage.getItem('walletData');
-        if (savedData) {
-            try {
-                const parsedData = JSON.parse(savedData);
-                if (parsedData) {
-                    walletDataState = parsedData;
-                    return parsedData;
-                }
-            } catch (e) {
-                console.error("Failed to parse walletData from localStorage", e);
+    // This function should only be called on the client
+    const savedData = localStorage.getItem('walletData');
+    if (savedData) {
+        try {
+            const parsedData = JSON.parse(savedData);
+            if (parsedData) {
+                walletDataState = parsedData;
+                return parsedData;
             }
+        } catch (e) {
+            console.error("Failed to parse walletData from localStorage", e);
         }
-        walletDataState = { ...defaultWalletData };
-        localStorage.setItem('walletData', JSON.stringify(walletDataState));
-        return walletDataState;
     }
-    return { ...defaultWalletData };
+    walletDataState = { ...defaultWalletData };
+    localStorage.setItem('walletData', JSON.stringify(walletDataState));
+    return walletDataState;
 };
 
 export function getWalletData(): WalletData {
     if (typeof window === 'undefined') {
+        // Return a safe default for server-side rendering
         return defaultWalletData;
     }
     if (walletDataState === null) {

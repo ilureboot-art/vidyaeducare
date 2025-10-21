@@ -36,7 +36,6 @@ type Client = {
   expiresSoon?: boolean;
 };
 
-// In a real app, this data would be fetched from a database for the specific IBA
 const initialClients: Client[] = [
     { id: 'CLI001', name: 'Rohan Gurav', type: 'Direct', product: '1 Year Subscription', purchaseDate: '2024-07-28', validity: '2025-07-27', status: 'Active' },
     { id: 'CLI002', name: 'Priya Sharma', type: 'Direct', product: '6 Months Subscription', purchaseDate: '2024-07-27', validity: '2025-01-26', status: 'Active' },
@@ -48,8 +47,10 @@ const initialClients: Client[] = [
 
 export default function StudentAccessPage() {
   const [clients, setClients] = useState<Client[] | null>(null);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
     const today = new Date();
     const thirtyDaysFromNow = new Date();
     thirtyDaysFromNow.setDate(today.getDate() + 30);
@@ -66,7 +67,7 @@ export default function StudentAccessPage() {
     setClients(updatedClients);
   }, []);
 
-  if (!clients) {
+  if (!isClient) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />
@@ -100,7 +101,7 @@ export default function StudentAccessPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {clients.length > 0 ? clients.map((client) => (
+                {clients && clients.length > 0 ? clients.map((client) => (
                   <TableRow key={client.id} className={client.expiresSoon ? "bg-yellow-50 dark:bg-yellow-900/20" : ""}>
                     <TableCell className="font-medium">{client.name}</TableCell>
                     <TableCell>

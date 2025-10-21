@@ -16,10 +16,6 @@ export type ScheduledTest = {
 let scheduledTestsState: ScheduledTest[] | null = null;
 
 const getDefaultScheduledTests = (): ScheduledTest[] => {
-    // This function creates dates, so it must only run on the client.
-    if (typeof window === 'undefined') {
-        return [];
-    }
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
@@ -60,30 +56,34 @@ const getDefaultScheduledTests = (): ScheduledTest[] => {
 };
 
 const initializeScheduledTests = (): ScheduledTest[] => {
-    if (typeof window === 'undefined') {
-        return [];
-    }
     if (scheduledTestsState !== null) {
         return scheduledTestsState;
     }
 
-    const savedData = localStorage.getItem('scheduledTests');
-    if (savedData) {
-        try {
-            const parsedData = JSON.parse(savedData);
-            scheduledTestsState = parsedData;
-            return parsedData;
-        } catch (e) {
-            console.error("Failed to parse scheduledTests from localStorage", e);
+    if (typeof window !== 'undefined') {
+        const savedData = localStorage.getItem('scheduledTests');
+        if (savedData) {
+            try {
+                const parsedData = JSON.parse(savedData);
+                scheduledTestsState = parsedData;
+                return parsedData;
+            } catch (e) {
+                console.error("Failed to parse scheduledTests from localStorage", e);
+            }
         }
+        scheduledTestsState = getDefaultScheduledTests();
+        localStorage.setItem('scheduledTests', JSON.stringify(scheduledTestsState));
+        return scheduledTestsState;
     }
-    scheduledTestsState = getDefaultScheduledTests();
-    localStorage.setItem('scheduledTests', JSON.stringify(scheduledTestsState));
     
+    scheduledTestsState = getDefaultScheduledTests();
     return scheduledTestsState;
 };
 
 export const getScheduledTestData = (): ScheduledTest[] => {
+    if (typeof window === 'undefined') {
+        return getDefaultScheduledTests();
+    }
     return initializeScheduledTests();
 };
 

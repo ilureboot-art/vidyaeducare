@@ -10,7 +10,7 @@ import { Navbar } from '@/components/Navbar';
 import { ChatWidget } from '@/components/ChatWidget';
 import { ThemeProvider } from "next-themes";
 import { useState, useEffect } from 'react';
-import { DataProvider } from '@/hooks/use-hydrate-data';
+import { DataProvider } from '@/hooks/use-hydrate-data.tsx';
 
 export default function RootLayout({
   children,

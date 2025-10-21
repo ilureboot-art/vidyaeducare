@@ -48,8 +48,10 @@ export default function TransactionsPage() {
   const { toast } = useToast();
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'rejected'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'deposit' | 'withdrawal'>('all');
+  const [isClient, setIsClient] = useState(false);
   
   useEffect(() => {
+    setIsClient(true);
     refreshTransactions();
   }, []);
 
@@ -80,7 +82,7 @@ export default function TransactionsPage() {
     }
   ) : [];
 
-  if (!transactions) {
+  if (!isClient) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />

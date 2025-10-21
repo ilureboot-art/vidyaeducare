@@ -15,24 +15,23 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 
 function FormattedDate({ dateString }: { dateString: string }) {
-  const [isClient, setIsClient] = useState(false);
+  const [formattedDate, setFormattedDate] = useState<string | null>(null);
+
   useEffect(() => {
-    setIsClient(true);
-  }, []);
+    setFormattedDate(format(new Date(dateString), 'P p'));
+  }, [dateString]);
 
-  if (!isClient) {
-    return null;
-  }
-
-  return <span>{format(new Date(dateString), 'P p')}</span>;
+  return <>{formattedDate}</>;
 }
 
 
 export function Notifications() {
   const [notifications, setNotifications] = useState<AppNotification[] | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
     const fetchNotifications = () => {
         const adminNotifications = getAdminNotifications();
         setNotifications(adminNotifications);
@@ -50,6 +49,14 @@ export function Notifications() {
         setNotifications(getAdminNotifications());
         setUnreadCount(0);
     }
+  }
+  
+  if (!isClient) {
+      return (
+          <Button variant="outline" size="icon" className="relative">
+              <Bell className="h-5 w-5" />
+          </Button>
+      );
   }
 
   return (

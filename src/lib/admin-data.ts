@@ -37,24 +37,29 @@ const initializeAdminData = (): AdminData => {
         return adminDataState;
     }
 
-    const savedData = localStorage.getItem('adminData');
-    if (savedData) {
-        try {
-            const parsedData = JSON.parse(savedData);
-            adminDataState = parsedData;
-            return parsedData;
-        } catch (e) {
-            console.error("Failed to parse adminData from localStorage", e);
+    if (typeof window !== 'undefined') {
+        const savedData = localStorage.getItem('adminData');
+        if (savedData) {
+            try {
+                const parsedData = JSON.parse(savedData);
+                adminDataState = parsedData;
+                return parsedData;
+            } catch (e) {
+                console.error("Failed to parse adminData from localStorage", e);
+            }
         }
     }
-    adminDataState = { ...defaultAdminData };
-    localStorage.setItem('adminData', JSON.stringify(adminDataState));
+
+    adminDataState = JSON.parse(JSON.stringify(defaultAdminData));
+    if(typeof window !== 'undefined') {
+        localStorage.setItem('adminData', JSON.stringify(adminDataState));
+    }
     return adminDataState;
 };
 
 export const getAdminData = (): AdminData => {
     if (typeof window === 'undefined') {
-        return { admins: [], requests: [] };
+        return JSON.parse(JSON.stringify(defaultAdminData));
     }
     return initializeAdminData();
 }
@@ -94,8 +99,6 @@ export function updateAdmin(adminId: string, updatedDetails: Partial<Omit<Admin,
 }
 
 export function resetAdminPassword(adminId: string, newPassword: string) {
-    // In a real app, this would make an API call to a secure backend.
-    // For this prototype, we'll just log it and assume success.
     console.log(`Password for admin ${adminId} has been reset to: ${newPassword}`);
 }
 

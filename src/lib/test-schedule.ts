@@ -14,6 +14,7 @@ export type ScheduledTest = {
 };
 
 const getDefaultScheduledTests = (): ScheduledTest[] => {
+    // This function will only be called on the client, so `new Date()` is safe here.
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
@@ -59,18 +60,24 @@ const initializeScheduledTests = (): ScheduledTest[] => {
     if (scheduledTestsState !== null) {
         return scheduledTestsState;
     }
-    const savedData = localStorage.getItem('scheduledTests');
-    if (savedData) {
-        try {
-            const parsedData = JSON.parse(savedData);
-            scheduledTestsState = parsedData;
-            return parsedData;
-        } catch (e) {
-            console.error("Failed to parse scheduledTests from localStorage", e);
+
+    if (typeof window !== 'undefined') {
+        const savedData = localStorage.getItem('scheduledTests');
+        if (savedData) {
+            try {
+                const parsedData = JSON.parse(savedData);
+                scheduledTestsState = parsedData;
+                return parsedData;
+            } catch (e) {
+                console.error("Failed to parse scheduledTests from localStorage", e);
+            }
         }
+        scheduledTestsState = getDefaultScheduledTests();
+        localStorage.setItem('scheduledTests', JSON.stringify(scheduledTestsState));
+    } else {
+        scheduledTestsState = [];
     }
-    scheduledTestsState = getDefaultScheduledTests();
-    localStorage.setItem('scheduledTests', JSON.stringify(scheduledTestsState));
+    
     return scheduledTestsState;
 };
 

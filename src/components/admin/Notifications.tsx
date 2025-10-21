@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -9,13 +10,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Bell, UserPlus } from "lucide-react";
+import { Bell, UserPlus, CheckCheck } from "lucide-react";
 import { getAdminNotifications, markAdminNotificationsAsRead, type AppNotification } from "@/lib/notifications";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 
 function FormattedDate({ dateString }: { dateString: string }) {
-  const [formattedDate, setFormattedDate] = useState<string | null>(null);
+  const [formattedDate, setFormattedDate] = useState<string>('');
 
   useEffect(() => {
     setFormattedDate(format(new Date(dateString), 'P p'));
@@ -26,7 +27,7 @@ function FormattedDate({ dateString }: { dateString: string }) {
 
 
 export function Notifications() {
-  const [notifications, setNotifications] = useState<AppNotification[] | null>(null);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isClient, setIsClient] = useState(false);
 
@@ -89,8 +90,8 @@ export function Notifications() {
                         <span className="flex h-2 w-2 translate-y-1 rounded-full bg-sky-500" />
                         <div className="grid gap-1">
                             <p className="text-sm font-medium">{notif.message}</p>
-                            <p className="text-xs text-muted-foreground">
-                                <FormattedDate dateString={notif.timestamp} />
+                            <p className="text-sm text-muted-foreground">
+                               <FormattedDate dateString={notif.timestamp} />
                             </p>
                         </div>
                     </div>

@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -14,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 
 function FormattedDate({ dateString }: { dateString: string }) {
-  const [formattedDate, setFormattedDate] = useState<string | null>(null);
+  const [formattedDate, setFormattedDate] = useState<string>('');
   
   useEffect(() => {
     setFormattedDate(format(new Date(dateString), 'P p'));
@@ -25,7 +26,7 @@ function FormattedDate({ dateString }: { dateString: string }) {
 
 
 export function UserNotifications() {
-  const [notifications, setNotifications] = useState<AppNotification[] | null>(null);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isClient, setIsClient] = useState(false);
 

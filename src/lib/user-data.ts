@@ -45,7 +45,7 @@ const defaultWalletData: WalletData = {
     bankName: "ICICI Bank",
     upiId: "sanjug123@icici",
     gpayNumber: "9167992350",
-gpayUpiId: "sanjaygurav0720@okicici",
+    gpayUpiId: "sanjaygurav0720@okicici",
     phonepeNumber: "9167992350",
     phonepeUpiId: "9167992350@ybl",
     qrCodeUrl: "https://placehold.co/200x200.png?text=QR+Code",
@@ -68,20 +68,24 @@ function initializeWalletData(): WalletData {
         return walletDataState;
     }
 
-    const savedData = localStorage.getItem('walletData');
-    if (savedData) {
-        try {
-            const parsedData = JSON.parse(savedData);
-            if (parsedData) {
-                walletDataState = parsedData;
-                return parsedData;
+    if(typeof window !== 'undefined') {
+        const savedData = localStorage.getItem('walletData');
+        if (savedData) {
+            try {
+                const parsedData = JSON.parse(savedData);
+                if (parsedData) {
+                    walletDataState = parsedData;
+                    return parsedData;
+                }
+            } catch (e) {
+                console.error("Failed to parse walletData from localStorage", e);
             }
-        } catch (e) {
-            console.error("Failed to parse walletData from localStorage", e);
         }
+        walletDataState = JSON.parse(JSON.stringify(defaultWalletData));
+        localStorage.setItem('walletData', JSON.stringify(walletDataState));
+    } else {
+        walletDataState = JSON.parse(JSON.stringify(defaultWalletData));
     }
-    walletDataState = JSON.parse(JSON.stringify(defaultWalletData));
-    localStorage.setItem('walletData', JSON.stringify(walletDataState));
     return walletDataState;
 };
 

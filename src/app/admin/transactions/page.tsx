@@ -172,7 +172,7 @@ export default function TransactionsPage() {
                     {tx.id}
                     {tx.referenceId && <div className="text-ellipsis overflow-hidden">Ref: {tx.referenceId}</div>}
                   </TableCell>
-                  <TableCell>{format(new Date(tx.date), 'P')}</TableCell>
+                  <TableCell>{isClient ? format(new Date(tx.date), 'P') : ''}</TableCell>
                   <TableCell>
                     <Badge variant={getStatusBadgeVariant(tx.status)}>
                       {tx.status}

@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -46,8 +47,10 @@ export default function UserManagementPage() {
   const [users, setUsers] = useState<User[] | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
     // Simulate fetching data on the client side to ensure compatibility with production builds.
     setUsers(initialUsers);
   }, []);
@@ -83,7 +86,7 @@ export default function UserManagementPage() {
       user.email.toLowerCase().includes(searchTerm.toLowerCase())
   ) : [];
 
-  if (!users) {
+  if (!isClient || !users) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />
@@ -147,7 +150,7 @@ export default function UserManagementPage() {
                       {user.status}
                     </Badge>
                   </TableCell>
-                  <TableCell>{format(new Date(user.joinDate), 'P')}</TableCell>
+                  <TableCell>{isClient ? format(new Date(user.joinDate), 'P') : ''}</TableCell>
                   <TableCell className="text-right font-medium">₹{user.wallet.toFixed(2)}</TableCell>
                   <TableCell className="text-center">
                     <DropdownMenu>

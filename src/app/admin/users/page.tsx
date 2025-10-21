@@ -48,7 +48,7 @@ export default function UserManagementPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Simulate fetching data
+    // Simulate fetching data on the client side to ensure compatibility with production builds.
     setUsers(initialUsers);
   }, []);
 

@@ -51,7 +51,8 @@ export default function TransactionsPage() {
   useEffect(() => {
     const data = getWalletData();
     if (data) {
-        setTransactions(data.transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+        const sortedTransactions = data.transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        setTransactions(sortedTransactions);
     }
   }, []);
 

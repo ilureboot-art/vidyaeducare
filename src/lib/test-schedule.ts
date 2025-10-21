@@ -56,33 +56,29 @@ const getDefaultScheduledTests = (): ScheduledTest[] => {
 let scheduledTestsState: ScheduledTest[] | null = null;
 
 const initializeScheduledTests = (): ScheduledTest[] => {
-    if (typeof window !== 'undefined') {
-        const savedData = localStorage.getItem('scheduledTests');
-        if (savedData) {
-            try {
-                const parsedData = JSON.parse(savedData);
-                scheduledTestsState = parsedData;
-                return parsedData;
-            } catch (e) {
-                console.error("Failed to parse scheduledTests from localStorage", e);
-            }
-        }
-        scheduledTestsState = getDefaultScheduledTests();
-        localStorage.setItem('scheduledTests', JSON.stringify(scheduledTestsState));
-        return scheduledTestsState;
-    }
-    // Return default for server-side
-    return getDefaultScheduledTests();
-};
-
-export const getScheduledTestData = (): ScheduledTest[] => {
     if (typeof window === 'undefined') {
         return getDefaultScheduledTests();
     }
-    if (scheduledTestsState === null) {
-        return initializeScheduledTests();
+    if (scheduledTestsState !== null) {
+        return scheduledTestsState;
     }
-    return scheduledTestsState!;
+    const savedData = localStorage.getItem('scheduledTests');
+    if (savedData) {
+        try {
+            const parsedData = JSON.parse(savedData);
+            scheduledTestsState = parsedData;
+            return parsedData;
+        } catch (e) {
+            console.error("Failed to parse scheduledTests from localStorage", e);
+        }
+    }
+    scheduledTestsState = getDefaultScheduledTests();
+    localStorage.setItem('scheduledTests', JSON.stringify(scheduledTestsState));
+    return scheduledTestsState;
+};
+
+export const getScheduledTestData = (): ScheduledTest[] => {
+    return initializeScheduledTests();
 };
 
 const saveScheduledTests = (tests: ScheduledTest[]) => {

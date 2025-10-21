@@ -88,35 +88,33 @@ const defaultStoreConfig: StoreConfig = {
 let storeConfigState: StoreConfig | null = null;
 
 const initializeStoreConfig = (): StoreConfig => {
-    if (typeof window !== 'undefined') {
-        const savedConfig = localStorage.getItem('storeConfig');
-        if (savedConfig) {
-            try {
-                const parsedConfig = JSON.parse(savedConfig);
-                if (parsedConfig && parsedConfig.packages && parsedConfig.gameSettings) {
-                    storeConfigState = parsedConfig;
-                    return parsedConfig;
-                }
-            } catch (e) {
-                console.error("Failed to parse storeConfig from localStorage", e);
-            }
-        }
-        storeConfigState = { ...defaultStoreConfig };
-        localStorage.setItem('storeConfig', JSON.stringify(storeConfigState));
-        return storeConfigState;
-    }
-    // Return default for server-side
-    return { ...defaultStoreConfig };
-};
-
-export const getStoreConfig = (): StoreConfig => {
     if (typeof window === 'undefined') {
         return { ...defaultStoreConfig };
     }
-    if (storeConfigState === null) {
-        return initializeStoreConfig();
+    
+    if (storeConfigState !== null) {
+        return storeConfigState;
     }
+
+    const savedConfig = localStorage.getItem('storeConfig');
+    if (savedConfig) {
+        try {
+            const parsedConfig = JSON.parse(savedConfig);
+            if (parsedConfig && parsedConfig.packages && parsedConfig.gameSettings) {
+                storeConfigState = parsedConfig;
+                return parsedConfig;
+            }
+        } catch (e) {
+            console.error("Failed to parse storeConfig from localStorage", e);
+        }
+    }
+    storeConfigState = { ...defaultStoreConfig };
+    localStorage.setItem('storeConfig', JSON.stringify(storeConfigState));
     return storeConfigState;
+};
+
+export const getStoreConfig = (): StoreConfig => {
+    return initializeStoreConfig();
 };
 
 const saveStoreConfig = (config: StoreConfig) => {

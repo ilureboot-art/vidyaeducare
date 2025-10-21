@@ -25,35 +25,34 @@ const defaultAcademicConfig: AcademicConfig = {
 let academicConfigState: AcademicConfig | null = null;
 
 const initializeAcademicConfig = (): AcademicConfig => {
-    if (typeof window !== 'undefined') {
-        const savedConfig = localStorage.getItem('academicConfig');
-        if (savedConfig) {
-            try {
-                const parsedConfig = JSON.parse(savedConfig);
-                if (parsedConfig && parsedConfig.boards) {
-                    academicConfigState = parsedConfig;
-                    return parsedConfig;
-                }
-            } catch (e) {
-                console.error("Failed to parse academicConfig from localStorage", e);
-            }
-        }
-        academicConfigState = { ...defaultAcademicConfig };
-        localStorage.setItem('academicConfig', JSON.stringify(academicConfigState));
-        return academicConfigState;
-    }
-    // Return default config for server-side rendering
-    return { ...defaultAcademicConfig };
-};
-
-export const getAcademicConfig = (): AcademicConfig => {
     if (typeof window === 'undefined') {
         return { ...defaultAcademicConfig };
     }
-    if (academicConfigState === null) {
-        return initializeAcademicConfig();
+
+    if (academicConfigState !== null) {
+        return academicConfigState;
     }
+
+    const savedConfig = localStorage.getItem('academicConfig');
+    if (savedConfig) {
+        try {
+            const parsedConfig = JSON.parse(savedConfig);
+            if (parsedConfig && parsedConfig.boards) {
+                academicConfigState = parsedConfig;
+                return parsedConfig;
+            }
+        } catch (e) {
+            console.error("Failed to parse academicConfig from localStorage", e);
+        }
+    }
+
+    academicConfigState = { ...defaultAcademicConfig };
+    localStorage.setItem('academicConfig', JSON.stringify(academicConfigState));
     return academicConfigState;
+};
+
+export const getAcademicConfig = (): AcademicConfig => {
+    return initializeAcademicConfig();
 };
 
 const saveAcademicConfig = (config: AcademicConfig) => {

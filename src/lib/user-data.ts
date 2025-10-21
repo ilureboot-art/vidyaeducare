@@ -64,35 +64,33 @@ gpayUpiId: "sanjaygurav0720@okicici",
 let walletDataState: WalletData | null = null;
 
 function initializeWalletData(): WalletData {
-    if (typeof window !== 'undefined') {
-        const savedData = localStorage.getItem('walletData');
-        if (savedData) {
-            try {
-                const parsedData = JSON.parse(savedData);
-                if (parsedData) {
-                    walletDataState = parsedData;
-                    return parsedData;
-                }
-            } catch (e) {
-                console.error("Failed to parse walletData from localStorage", e);
-            }
-        }
-        walletDataState = { ...defaultWalletData };
-        localStorage.setItem('walletData', JSON.stringify(walletDataState));
+    if (typeof window === 'undefined') {
+        return JSON.parse(JSON.stringify(defaultWalletData));
+    }
+
+    if (walletDataState !== null) {
         return walletDataState;
     }
-    // Return default for server-side
-    return { ...defaultWalletData };
+
+    const savedData = localStorage.getItem('walletData');
+    if (savedData) {
+        try {
+            const parsedData = JSON.parse(savedData);
+            if (parsedData) {
+                walletDataState = parsedData;
+                return parsedData;
+            }
+        } catch (e) {
+            console.error("Failed to parse walletData from localStorage", e);
+        }
+    }
+    walletDataState = JSON.parse(JSON.stringify(defaultWalletData));
+    localStorage.setItem('walletData', JSON.stringify(walletDataState));
+    return walletDataState;
 };
 
 export function getWalletData(): WalletData {
-    if (typeof window === 'undefined') {
-        return { ...defaultWalletData };
-    }
-    if (walletDataState === null) {
-        return initializeWalletData();
-    }
-    return walletDataState;
+    return initializeWalletData();
 };
 
 function saveWalletData(data: WalletData) {

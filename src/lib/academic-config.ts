@@ -52,9 +52,6 @@ const initializeAcademicConfig = (): AcademicConfig => {
 };
 
 export const getAcademicConfig = (): AcademicConfig => {
-    if (typeof window === 'undefined') {
-        return JSON.parse(JSON.stringify(defaultAcademicConfig));
-    }
     return initializeAcademicConfig();
 };
 

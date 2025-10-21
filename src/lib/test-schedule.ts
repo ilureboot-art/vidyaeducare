@@ -16,20 +16,13 @@ export type ScheduledTest = {
 let scheduledTestsState: ScheduledTest[] | null = null;
 
 const getDefaultScheduledTests = (): ScheduledTest[] => {
-    const today = new Date();
-    const tomorrow = new Date();
-    tomorrow.setDate(today.getDate() + 1);
-    const yesterday = new Date();
-    yesterday.setDate(today.getDate() - 1);
-    const fiveDaysFromNow = new Date();
-    fiveDaysFromNow.setDate(today.getDate() + 5);
-
+    // This must be callable on the server, so we cannot rely on Date() for initial state
     return [
         {
             id: "SCHED-1",
             testSetId: "SET-172234567890",
             testSetName: "Gravitation Mock Test",
-            dateTime: tomorrow.toISOString(),
+            dateTime: new Date(new Date().setDate(new Date().getDate() + 1)).toISOString(),
             board: "SSC",
             standard: "10th",
             subject: "Science"
@@ -38,7 +31,7 @@ const getDefaultScheduledTests = (): ScheduledTest[] => {
             id: "SCHED-2",
             testSetId: "SET-172242000000",
             testSetName: "Elements Mock Test",
-            dateTime: yesterday.toISOString(),
+            dateTime: new Date(new Date().setDate(new Date().getDate() - 1)).toISOString(),
             board: "SSC",
             standard: "10th",
             subject: "Science"
@@ -47,7 +40,7 @@ const getDefaultScheduledTests = (): ScheduledTest[] => {
             id: "SCHED-3",
             testSetId: "SET-172234567890", // Using Gravitation test for another standard
             testSetName: "Gravitation Mock Test",
-            dateTime: fiveDaysFromNow.toISOString(),
+            dateTime: new Date(new Date().setDate(new Date().getDate() + 5)).toISOString(),
             board: "CBSE",
             standard: "11th",
             subject: "Physics"
@@ -81,9 +74,6 @@ const initializeScheduledTests = (): ScheduledTest[] => {
 };
 
 export const getScheduledTestData = (): ScheduledTest[] => {
-    if (typeof window === 'undefined') {
-        return getDefaultScheduledTests();
-    }
     return initializeScheduledTests();
 };
 

@@ -102,9 +102,6 @@ const initializeStudentData = (): StudentProfile[] => {
 };
 
 export const getAllStudentData = (): StudentProfile[] => {
-    if (typeof window === 'undefined') {
-        return JSON.parse(JSON.stringify(defaultStudentData));
-    }
     return initializeStudentData();
 };
 
@@ -134,9 +131,6 @@ const initializeActivationCodes = (): string[] => {
 };
 
 export const getActivationCodes = (): string[] => {
-    if (typeof window === 'undefined') {
-        return [...defaultActivationCodes];
-    }
     return initializeActivationCodes();
 }
 

@@ -58,9 +58,6 @@ const initializeAdminData = (): AdminData => {
 };
 
 export const getAdminData = (): AdminData => {
-    if (typeof window === 'undefined') {
-        return JSON.parse(JSON.stringify(defaultAdminData));
-    }
     return initializeAdminData();
 }
 

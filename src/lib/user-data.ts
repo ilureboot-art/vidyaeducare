@@ -91,9 +91,6 @@ function initializeWalletData(): WalletData {
 };
 
 export function getWalletData(): WalletData {
-    if (typeof window === 'undefined') {
-        return JSON.parse(JSON.stringify(defaultWalletData));
-    }
     return initializeWalletData();
 };
 

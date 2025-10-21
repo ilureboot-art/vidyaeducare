@@ -82,9 +82,6 @@ const initializeTestSets = (): TestSet[] => {
 };
 
 export const getAllTestSets = (): TestSet[] => {
-    if (typeof window === 'undefined') {
-        return JSON.parse(JSON.stringify(defaultTestSets));
-    }
     return initializeTestSets();
 };
 

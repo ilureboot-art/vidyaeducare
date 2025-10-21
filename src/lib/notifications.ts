@@ -46,7 +46,6 @@ const saveNotifications = (notifs: AppNotification[]) => {
 
 // Function to add a new notification
 export function addNotification(notificationData: Omit<AppNotification, 'id' | 'timestamp' | 'status'>) {
-    if (typeof window === 'undefined') return;
     const allNotifications = initializeNotifications();
     const newNotification: AppNotification = {
         ...notificationData,
@@ -60,19 +59,16 @@ export function addNotification(notificationData: Omit<AppNotification, 'id' | '
 
 // Function to get notifications for the admin
 export function getAdminNotifications(): AppNotification[] {
-    if (typeof window === 'undefined') return [];
     return initializeNotifications().filter(n => n.userId === 'admin');
 }
 
 // Function to get notifications for a specific user
 export function getUserNotifications(userId: string): AppNotification[] {
-    if (typeof window === 'undefined') return [];
     return initializeNotifications().filter(n => n.userId === userId);
 }
 
 // Function to mark all admin notifications as read
 export function markAdminNotificationsAsRead() {
-    if (typeof window === 'undefined') return;
     const allNotifications = initializeNotifications();
     allNotifications.forEach(n => {
         if (n.userId === 'admin') {
@@ -84,7 +80,6 @@ export function markAdminNotificationsAsRead() {
 
 // Function to mark all user notifications as read
 export function markUserNotificationsAsRead(userId: string) {
-    if (typeof window === 'undefined') return;
      const allNotifications = initializeNotifications();
      allNotifications.forEach(n => {
         if (n.userId === userId) {

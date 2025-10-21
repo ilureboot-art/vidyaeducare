@@ -115,9 +115,6 @@ const initializeStoreConfig = (): StoreConfig => {
 };
 
 export const getStoreConfig = (): StoreConfig => {
-    if (typeof window === 'undefined') {
-        return JSON.parse(JSON.stringify(defaultStoreConfig));
-    }
     return initializeStoreConfig();
 };
 

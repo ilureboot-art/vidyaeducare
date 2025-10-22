@@ -1,7 +1,6 @@
 
 "use client";
 
-import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { AppHeader } from '@/components/AppHeader';
@@ -10,7 +9,7 @@ import { Navbar } from '@/components/Navbar';
 import { ChatWidget } from '@/components/ChatWidget';
 import { ThemeProvider } from "next-themes";
 import { useState, useEffect } from 'react';
-import { DataProvider } from '@/hooks/use-hydrate-data.tsx';
+import { DataProvider } from '@/hooks/use-hydrate-data';
 
 export default function RootLayout({
   children,
@@ -32,7 +31,6 @@ export default function RootLayout({
 
   const isAdminPage = pathname.startsWith('/admin');
   const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup') || pathname.startsWith('/forgot-password') || pathname.startsWith('/admin/login');
-  const isPublicPage = ['/', '/how-to-play'].includes(pathname);
 
   const bodyClassName = `font-body antialiased ${isAdminPage ? '' : 'flex flex-col min-h-screen'}`;
   

@@ -86,6 +86,14 @@ export default function TransactionsPage() {
     });
   };
 
+  if (!transactions || !walletData) {
+    return (
+      <div className="flex justify-center items-center h-96">
+        <Loader2 className="animate-spin text-primary" size={32} />
+      </div>
+    );
+  }
+
   const filteredTransactions = transactions ? transactions.filter(
     (tx) => {
       const searchTermMatch = tx.user?.toLowerCase().includes(searchTerm.toLowerCase()) || String(tx.id).toLowerCase().includes(searchTerm.toLowerCase());
@@ -94,14 +102,6 @@ export default function TransactionsPage() {
       return searchTermMatch && statusMatch && typeMatch;
     }
   ) : [];
-
-  if (!transactions) {
-    return (
-      <div className="flex justify-center items-center h-96">
-        <Loader2 className="animate-spin text-primary" size={32} />
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">

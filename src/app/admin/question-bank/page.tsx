@@ -69,8 +69,10 @@ export default function TestSetManagementPage() {
   const [editingTestSet, setEditingTestSet] = useState<TestSet | null>(null);
   
   useEffect(() => {
-    setLocalTestSets(allTestSets);
-    setAcademicConfig(initialAcademicConfig);
+    if (allTestSets && initialAcademicConfig) {
+      setLocalTestSets(allTestSets);
+      setAcademicConfig(initialAcademicConfig);
+    }
   }, [allTestSets, initialAcademicConfig]);
 
   const resetManualForm = () => {

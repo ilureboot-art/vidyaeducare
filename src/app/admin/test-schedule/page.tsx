@@ -39,6 +39,14 @@ export default function TestSchedulePage() {
     const [time, setTime] = useState('10:00'); // Default time
     const [selectedTestSetId, setSelectedTestSetId] = useState('');
     
+    useEffect(() => {
+        if (allSchedulesData) {
+            refreshSchedules();
+        }
+        setDate(new Date());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [allSchedulesData]);
+    
     const refreshSchedules = () => {
          if (allSchedulesData) {
             const now = new Date();
@@ -65,11 +73,6 @@ export default function TestSchedulePage() {
          }
     }
 
-    useEffect(() => {
-        refreshSchedules();
-        setDate(new Date());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [allSchedulesData]);
 
     const handleScheduleTest = () => {
         if (!date || !selectedTestSetId || !time || !allSetsData) {
@@ -220,3 +223,5 @@ export default function TestSchedulePage() {
         </div>
     );
 }
+
+    

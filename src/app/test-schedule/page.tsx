@@ -105,65 +105,11 @@ export default function TestSchedulePage() {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="w-full max-w-4xl mx-auto space-y-6">
             <h1 className="text-3xl font-bold flex items-center gap-2">
-                <CalendarIcon /> Mock Test Scheduler
+                <CalendarIcon /> Mock Test Schedule
             </h1>
             
-            <Card>
-                <CardHeader>
-                    <CardTitle>Schedule a New Mock Test</CardTitle>
-                    <CardDescription>
-                        Select a pre-defined test set and assign it a date and time on the calendar.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                       <div className="space-y-2">
-                            <Label htmlFor="test-set">Test Set</Label>
-                            <Select value={selectedTestSetId} onValueChange={setSelectedTestSetId}>
-                                <SelectTrigger id="test-set"><SelectValue placeholder="Select a test set..." /></SelectTrigger>
-                                <SelectContent>
-                                    {allSets.length > 0 ? allSets.map(ts => (
-                                        <SelectItem key={ts.id} value={ts.id}>{ts.name} ({ts.board}/{ts.standard})</SelectItem>
-                                    )) : (
-                                        <SelectItem value="disabled" disabled>No test sets available. Upload one first.</SelectItem>
-                                    )}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Test Date</Label>
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                    <Button variant={"outline"} className="w-full justify-start text-left font-normal">
-                                        <CalendarIcon className="mr-2 h-4 w-4" />
-                                        {date ? format(date, "PPP") : <span>Pick a date</span>}
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0">
-                                    <Calendar mode="single" selected={date} onSelect={setDate} initialFocus />
-                                </PopoverContent>
-                            </Popover>
-                        </div>
-                        <div className="space-y-2">
-                             <Label htmlFor="test-time">Test Time</Label>
-                             <Input 
-                                id="test-time"
-                                type="time"
-                                value={time}
-                                onChange={(e) => setTime(e.target.value)}
-                             />
-                        </div>
-                    </div>
-                     <div className="flex justify-end pt-4">
-                        <Button onClick={handleScheduleTest} disabled={!selectedTestSetId || !date || !time}>
-                            <FilePlus className="mr-2"/> Schedule Test
-                        </Button>
-                    </div>
-                </CardContent>
-            </Card>
-
             <Card>
                 <CardHeader>
                     <CardTitle>Upcoming & Past Tests</CardTitle>
@@ -202,3 +148,5 @@ export default function TestSchedulePage() {
         </div>
     );
 }
+
+    

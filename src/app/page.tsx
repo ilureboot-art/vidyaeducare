@@ -7,11 +7,10 @@ import { BookOpen, Trophy, Users, LogIn, CheckCircle, GraduationCap, Gamepad2, I
 import Link from "next/link";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
-import { StoreConfig } from "@/lib/store-config";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useState, useEffect } from "react";
-import { useAppData } from "@/hooks/use-hydrate-data";
-import { WalletData } from "@/lib/user-data";
+import { defaultStoreConfig } from "@/lib/store-config";
+import { defaultWalletData } from "@/lib/user-data";
 
 const features = [
   {
@@ -54,22 +53,15 @@ const testimonials = [
 
 
 export default function HomePage() {
-  const appData = useAppData();
   const { toast } = useToast();
   
   const [bonus, setBonus] = useState<number | null>(null);
   const [refCode, setRefCode] = useState<string | null>(null);
 
   useEffect(() => {
-    if (appData) {
-        if(appData.storeConfig) {
-            setBonus(appData.storeConfig.referralBonus);
-        }
-        if(appData.walletData) {
-            setRefCode(appData.walletData.referralCode);
-        }
-    }
-  }, [appData]);
+    setBonus(defaultStoreConfig.referralBonus);
+    setRefCode(defaultWalletData.referralCode);
+  }, []);
 
   const handleShare = async () => {
     if (refCode === null || bonus === null) return;
@@ -107,7 +99,7 @@ Start your journey to success now: ${url}
     }
   };
 
-  if (!appData || bonus === null || refCode === null) {
+  if (bonus === null || refCode === null) {
       return (
         <div className="w-full max-w-6xl mx-auto flex items-center justify-center h-screen">
           <Loader2 className="animate-spin text-primary" size={48} />
@@ -277,5 +269,3 @@ Start your journey to success now: ${url}
     </div>
   );
 }
-
-    

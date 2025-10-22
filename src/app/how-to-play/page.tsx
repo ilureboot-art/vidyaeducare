@@ -8,20 +8,17 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useState, useEffect } from "react";
-import { useAppData } from "@/hooks/use-hydrate-data";
 import type { GameSettings } from "@/lib/store-config";
+import { defaultStoreConfig } from "@/lib/store-config";
 
 export default function HowToPlayPage() {
-  const appData = useAppData();
   const [gameSettings, setGameSettings] = useState<GameSettings | null>(null);
 
   useEffect(() => {
-    if (appData && appData.storeConfig) {
-      setGameSettings(appData.storeConfig.gameSettings);
-    }
-  }, [appData]);
+    setGameSettings(defaultStoreConfig.gameSettings);
+  }, []);
 
-  if (!appData || !gameSettings) {
+  if (!gameSettings) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />
@@ -152,5 +149,3 @@ export default function HowToPlayPage() {
     </div>
   );
 }
-
-    

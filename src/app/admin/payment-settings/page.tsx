@@ -8,23 +8,19 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Landmark, Loader2 } from "lucide-react";
-import { useAppData, useDataUpdaters } from "@/hooks/use-hydrate-data";
 import type { AdminPaymentMethods } from "@/lib/user-data";
+import { defaultWalletData } from "@/lib/user-data";
 import Image from "next/image";
 
 export default function PaymentSettingsPage() {
-    const appData = useAppData();
-    const { setWalletData } = useDataUpdaters();
     const { toast } = useToast();
     
     const [methods, setMethods] = useState<AdminPaymentMethods | null>(null);
     const [qrFile, setQrFile] = useState<File | null>(null);
 
     useEffect(() => {
-        if (appData && appData.walletData) {
-            setMethods(appData.walletData.adminPaymentMethods);
-        }
-    }, [appData])
+        setMethods(defaultWalletData.adminPaymentMethods);
+    }, [])
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -40,10 +36,11 @@ export default function PaymentSettingsPage() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!methods || !appData || !appData.walletData) return;
+        if (!methods) return;
         
         const updateConfig = (finalMethods: AdminPaymentMethods) => {
-            setWalletData({ ...appData.walletData!, adminPaymentMethods: finalMethods });
+            // In a real app, this would make an API call to save the data.
+            console.log("Saving payment methods:", finalMethods);
             toast({
                 title: "Settings Saved!",
                 description: "Payment method details have been successfully updated.",
@@ -65,7 +62,7 @@ export default function PaymentSettingsPage() {
 
     }
 
-    if (!appData || !methods) {
+    if (!methods) {
         return (
           <div className="flex justify-center items-center h-96">
             <Loader2 className="animate-spin text-primary" size={32} />
@@ -145,5 +142,3 @@ export default function PaymentSettingsPage() {
     </div>
   );
 }
-
-    

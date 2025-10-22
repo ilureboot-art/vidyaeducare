@@ -11,23 +11,20 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { PlusCircle, Trash2, Zap, BookOpen, GraduationCap, Percent, Loader2 } from "lucide-react";
 import type { TicketPackage, ReferboltSubscription, MockTestPackage, ReferboltSettings, GameSettings, StoreConfig } from "@/lib/store-config";
 import type { AcademicConfig } from "@/lib/academic-config";
-import { useAppData, useDataUpdaters } from "@/hooks/use-hydrate-data";
+import { defaultStoreConfig } from "@/lib/store-config";
+import { defaultAcademicConfig } from "@/lib/academic-config";
 import { Switch } from "@/components/ui/switch";
 
 export default function AdminStoreSettingsPage() {
   const { toast } = useToast();
-  const appData = useAppData();
-  const { setStoreConfig, setAcademicConfig } = useDataUpdaters();
   
   const [storeConfig, setLocalStoreConfig] = useState<StoreConfig | null>(null);
   const [academicConfig, setLocalAcademicConfig] = useState<AcademicConfig | null>(null);
 
   useEffect(() => {
-    if (appData) {
-        if (appData.storeConfig) setLocalStoreConfig(JSON.parse(JSON.stringify(appData.storeConfig)));
-        if (appData.academicConfig) setLocalAcademicConfig(JSON.parse(JSON.stringify(appData.academicConfig)));
-    }
-  }, [appData]);
+    setLocalStoreConfig(JSON.parse(JSON.stringify(defaultStoreConfig)));
+    setLocalAcademicConfig(JSON.parse(JSON.stringify(defaultAcademicConfig)));
+  }, []);
 
   const handlePackageChange = (index: number, field: keyof TicketPackage, value: string | number | boolean) => {
     if (!storeConfig) return;
@@ -146,8 +143,9 @@ export default function AdminStoreSettingsPage() {
     e.preventDefault();
     if (!storeConfig || !academicConfig) return;
     
-    setStoreConfig(storeConfig);
-    setAcademicConfig(academicConfig);
+    // In a real app, you'd save this to a backend.
+    console.log("Saving Store Config:", storeConfig);
+    console.log("Saving Academic Config:", academicConfig);
 
     toast({
       title: "Settings Saved!",
@@ -180,7 +178,7 @@ export default function AdminStoreSettingsPage() {
       );
   };
 
-  if (!appData || !storeConfig || !academicConfig) {
+  if (!storeConfig || !academicConfig) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />
@@ -371,5 +369,3 @@ export default function AdminStoreSettingsPage() {
     </div>
   );
 }
-
-    

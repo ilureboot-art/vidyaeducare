@@ -26,12 +26,12 @@ import { PlusCircle, MinusCircle, Info, History, ArrowUpRight, ArrowDownLeft, Co
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { type Transaction, type WalletData } from "@/lib/user-data";
+import { defaultWalletData } from "@/lib/user-data";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Image from "next/image";
 import { CopyButton } from "@/components/CopyButton";
 import { format } from "date-fns";
-import { useAppData, useDataUpdaters } from "@/hooks/use-hydrate-data";
 
 const getStatusBadgeVariant = (status: string) => {
     switch (status.toLowerCase()) {
@@ -48,14 +48,17 @@ const getStatusBadgeVariant = (status: string) => {
 
 export default function WalletPage() {
   const { toast } = useToast();
-  const appData = useAppData();
-  const { setWalletData, setNotifications } = useDataUpdaters();
+  const [walletData, setWalletData] = useState<WalletData | null>(null);
   const [addFundsOpen, setAddFundsOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
 
+  useEffect(() => {
+    setWalletData(defaultWalletData);
+  }, []);
+
   const handleAddFunds = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!appData || !appData.walletData) return;
+    if (!walletData) return;
 
     const form = event.currentTarget;
     const amount = parseFloat((form.elements.namedItem('amount-add') as HTMLInputElement).value);
@@ -78,15 +81,8 @@ export default function WalletPage() {
     };
     
     setWalletData(prev => ({...prev!, transactions: [...prev!.transactions, newTransaction]}));
-    setNotifications(prev => [...prev, {
-        id: Date.now(),
-        type: "deposit_request",
-        message: `Alex Doe requested to deposit ₹${amount} (Ref: ${txnId}).`,
-        userId: 'admin',
-        status: 'unread',
-        timestamp: new Date().toISOString()
-    }]);
 
+    // In a real app, you'd also send a notification to the admin via an API call
     toast({
       title: "Request Submitted",
       description: "Your fund deposit request has been sent for admin approval.",
@@ -97,7 +93,7 @@ export default function WalletPage() {
   
   const handleWithdraw = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!appData || !appData.walletData) return;
+    if (!walletData) return;
 
     const form = event.currentTarget;
     const amount = parseFloat((form.elements.namedItem('amount-withdraw') as HTMLInputElement).value);
@@ -108,7 +104,7 @@ export default function WalletPage() {
         return;
     }
 
-    if (amount > appData.walletData.balance) {
+    if (amount > walletData.balance) {
         toast({
             variant: "destructive",
             title: "Insufficient Balance",
@@ -138,15 +134,8 @@ export default function WalletPage() {
     };
 
     setWalletData(prev => ({...prev!, transactions: [...prev!.transactions, newTransaction]}));
-    setNotifications(prev => [...prev, {
-        id: Date.now(),
-        type: "withdrawal_request",
-        message: `Alex Doe requested to withdraw ₹${amount}.`,
-        userId: 'admin',
-        status: 'unread',
-        timestamp: new Date().toISOString(),
-    }]);
 
+    // In a real app, you'd also send a notification to the admin via an API call
     toast({
       title: "Request Submitted",
       description: `Your withdrawal request for ₹${amount} has been sent for admin approval.`,
@@ -155,7 +144,7 @@ export default function WalletPage() {
     form.reset();
   }
 
-  if (!appData || !appData.walletData) {
+  if (!walletData) {
     return (
       <div className="w-full max-w-2xl mx-auto space-y-6 flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />
@@ -163,7 +152,7 @@ export default function WalletPage() {
     );
   }
 
-  const { adminPaymentMethods, balance, coins, transactions } = appData.walletData;
+  const { adminPaymentMethods, balance, coins, transactions } = walletData;
 
   return (
     <div className="w-full max-w-2xl mx-auto space-y-6">
@@ -331,5 +320,3 @@ export default function WalletPage() {
     </div>
   );
 }
-
-    

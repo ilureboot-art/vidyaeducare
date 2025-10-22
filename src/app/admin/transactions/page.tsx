@@ -17,10 +17,10 @@ import { Button } from "@/components/ui/button";
 import { Search, Download, ArrowUpRight, ArrowDownLeft, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { type Transaction } from "@/lib/user-data";
+import { defaultWalletData } from "@/lib/user-data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
-import { useAppData, useDataUpdaters } from "@/hooks/use-hydrate-data";
 
 const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -43,8 +43,6 @@ const getTypeIcon = (type: string, amount: number) => {
 }
 
 export default function TransactionsPage() {
-  const appData = useAppData();
-  const { setWalletData } = useDataUpdaters();
   const { toast } = useToast();
 
   const [transactions, setTransactions] = useState<Transaction[] | null>(null);
@@ -53,32 +51,26 @@ export default function TransactionsPage() {
   const [typeFilter, setTypeFilter] = useState<'all' | 'deposit' | 'withdrawal'>('all');
   
   useEffect(() => {
-    if (appData && appData.walletData) {
-        const sortedTransactions = [...appData.walletData.transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        setTransactions(sortedTransactions);
-    }
-  }, [appData]);
+    const sortedTransactions = [...defaultWalletData.transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    setTransactions(sortedTransactions);
+  }, []);
 
 
   const handleTransactionStatus = (id: number, newStatus: "Completed" | "Rejected") => {
-    if (!appData || !appData.walletData) return;
+    if (!transactions) return;
 
-    const txToUpdate = appData.walletData.transactions.find(tx => tx.id === id);
+    const txToUpdate = transactions.find(tx => tx.id === id);
     if (!txToUpdate || txToUpdate.status !== "Pending") {
         toast({ title: "Action not allowed", description: "This transaction has already been processed."});
         return;
     }
 
-    const updatedTransactions = appData.walletData.transactions.map(tx => 
+    const updatedTransactions = transactions.map(tx => 
         tx.id === id ? { ...tx, status: newStatus } : tx
     );
     
-    let newBalance = appData.walletData.balance;
-    if (newStatus === 'Completed' && txToUpdate.type === 'deposit') {
-        newBalance += txToUpdate.amount;
-    }
-
-    setWalletData({ ...appData.walletData, transactions: updatedTransactions, balance: newBalance });
+    // In a real app, you would also update the user's balance.
+    setTransactions(updatedTransactions);
 
     toast({
       title: "Transaction Updated",
@@ -86,7 +78,7 @@ export default function TransactionsPage() {
     });
   };
 
-  if (!appData || !transactions) {
+  if (!transactions) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />
@@ -208,5 +200,3 @@ export default function TransactionsPage() {
     </div>
   );
 }
-
-    

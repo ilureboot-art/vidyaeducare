@@ -8,20 +8,16 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
-import { useAppData, useDataUpdaters } from "@/hooks/use-hydrate-data";
 import type { GameSettings } from "@/lib/store-config";
+import { defaultStoreConfig } from "@/lib/store-config";
 
 export default function AdminGameSettingsPage() {
     const { toast } = useToast();
-    const appData = useAppData();
-    const { setStoreConfig } = useDataUpdaters();
     const [settings, setSettings] = useState<GameSettings | null>(null);
 
     useEffect(() => {
-        if (appData && appData.storeConfig) {
-            setSettings(appData.storeConfig.gameSettings);
-        }
-    }, [appData]);
+        setSettings(defaultStoreConfig.gameSettings);
+    }, []);
 
     const handleRewardChange = (index: number, value: string) => {
         if (!settings) return;
@@ -37,9 +33,11 @@ export default function AdminGameSettingsPage() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!settings || !appData || !appData.storeConfig) return;
+        if (!settings) return;
         
-        setStoreConfig({...appData.storeConfig, gameSettings: settings});
+        // Here you would typically make an API call to save the settings.
+        // For this demo, we'll just show a toast.
+        console.log("Saving settings:", settings);
 
         toast({
             title: "Settings Saved!",
@@ -47,7 +45,7 @@ export default function AdminGameSettingsPage() {
         });
     }
 
-    if (!appData || !settings) {
+    if (!settings) {
         return (
           <div className="flex justify-center items-center h-96">
             <Loader2 className="animate-spin text-primary" size={32} />
@@ -99,5 +97,3 @@ export default function AdminGameSettingsPage() {
     </div>
   );
 }
-
-    

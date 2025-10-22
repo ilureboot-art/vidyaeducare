@@ -37,8 +37,10 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import React from "react";
-import { useAppData, useDataUpdaters } from "@/hooks/use-hydrate-data";
 import type { GameSettings } from "@/lib/store-config";
+import { defaultStoreConfig } from "@/lib/store-config";
+import { defaultWalletData } from "@/lib/user-data";
+import { defaultNotifications } from "@/lib/notifications";
 
 
 const GAME_DURATION = 60; // 60 seconds
@@ -64,8 +66,6 @@ const Confetti = () => (
                 style={{
                     left: `${Math.random() * 100}%`,
                     top: `${-20 - Math.random() * 100}%`,
-                    width: `${Math.random() * 8 + 4}px`,
-                    height: `${Math.random() * 8 + 4}px`,
                     animation: `confetti-fall ${Math.random() * 3 + 2}s linear ${Math.random() * 2}s infinite`,
                 }}
             />
@@ -86,8 +86,6 @@ const Confetti = () => (
 function PlayPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { storeConfig, walletData } = useAppData();
-  const { setWalletData, setNotifications } = useDataUpdaters();
   
   const [secretNumber, setSecretNumber] = useState(0);
   const [currentGuess, setCurrentGuess] = useState("");
@@ -139,22 +137,16 @@ function PlayPageContent() {
     });
 
     if (endState === 'won' && earnedReward > 0) {
-        setWalletData(prev => ({...prev, coins: prev.coins + earnedReward}));
-        setNotifications(prev => [...prev, {
-            id: Date.now(),
-            type: "deposit_received",
-            message: `You won ${earnedReward} coins in GuessMaster!`,
-            userId: 'user-alex-doe',
-            status: 'unread',
-            timestamp: new Date().toISOString()
-        }]);
+        // In a real app, this would be an API call.
+        // We'll just simulate the state update and toast.
+        console.log(`Adding ${earnedReward} coins to wallet.`);
         toast({
           title: "You Won!",
           description: `${earnedReward} coins have been added to your balance.`,
         });
     }
 
-  }, [playerStats, stopTimer, toast, setWalletData, setNotifications]);
+  }, [playerStats, stopTimer, toast]);
 
   const resetGame = useCallback(() => {
     if (!gameSettings) return;
@@ -179,13 +171,11 @@ function PlayPageContent() {
   };
 
   useEffect(() => {
-    if (storeConfig && walletData) {
-      setGameSettings(storeConfig.gameSettings);
-      setReferralBonus(storeConfig.referralBonus);
-      setReferralCode(walletData.referralCode);
-      setGameState(searchParams.get('mode') === 'demo' ? "playing" : "idle");
-    }
-  }, [storeConfig, walletData, searchParams]);
+    setGameSettings(defaultStoreConfig.gameSettings);
+    setReferralBonus(defaultStoreConfig.referralBonus);
+    setReferralCode(defaultWalletData.referralCode);
+    setGameState(searchParams.get('mode') === 'demo' ? "playing" : "idle");
+  }, [searchParams]);
 
   useEffect(() => {
       if (gameState === 'playing' && !secretNumber) {

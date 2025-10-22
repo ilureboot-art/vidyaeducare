@@ -9,31 +9,28 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Bell, CheckCheck } from "lucide-react";
-import { useAppData, useDataUpdaters } from "@/hooks/use-hydrate-data";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import type { AppNotification } from "@/lib/notifications";
+import { defaultNotifications } from "@/lib/notifications";
 
 
 export function UserNotifications() {
-  const { notifications: allNotifications } = useAppData();
-  const { setNotifications } = useDataUpdaters();
+  const [allNotifications, setAllNotifications] = useState<AppNotification[]>(defaultNotifications);
   const [userNotifications, setUserNotifications] = useState<AppNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    if (allNotifications) {
-        const currentUserNotifications = allNotifications
-            .filter(n => n.userId === "user-alex-doe")
-            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-        
-        setUserNotifications(currentUserNotifications);
-        setUnreadCount(currentUserNotifications.filter(n => n.status === 'unread').length);
-    }
+    const currentUserNotifications = allNotifications
+        .filter(n => n.userId === "user-alex-doe")
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    
+    setUserNotifications(currentUserNotifications);
+    setUnreadCount(currentUserNotifications.filter(n => n.status === 'unread').length);
   }, [allNotifications]);
 
   const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => 
+    setAllNotifications(prev => prev.map(n => 
         n.userId === 'user-alex-doe' ? { ...n, status: 'read' as const } : n
     ));
   };
@@ -99,5 +96,3 @@ export function UserNotifications() {
     </Popover>
   );
 }
-
-    

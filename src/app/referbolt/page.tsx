@@ -11,7 +11,7 @@ import { Zap, Share2, IndianRupee, Users, CheckCircle, Repeat, Loader2 } from "l
 import Link from "next/link";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { useAppData } from "@/hooks/use-hydrate-data";
+import { defaultWalletData } from "@/lib/user-data";
 
 // Data for ReferBolt would come from a backend for the logged-in user
 const initialReferboltData = {
@@ -33,24 +33,20 @@ const benefits = [
 ];
 
 export default function ReferBoltPage() {
-  const appData = useAppData();
   const { toast } = useToast();
   
   const [data, setData] = useState<typeof initialReferboltData | null>(null);
   const [autoRenew, setAutoRenew] = useState(false);
 
   useEffect(() => {
-      if (appData && appData.walletData) {
-          setData({
-              ...initialReferboltData,
-              isSubscribed: appData.walletData.referralCode.includes("IBA"), // Mock logic
-          });
-      }
-  }, [appData]);
+      setData({
+          ...initialReferboltData,
+          isSubscribed: defaultWalletData.referralCode.includes("IBA"), // Mock logic
+      });
+  }, []);
 
   const handleShare = async () => {
-    if (!appData || !appData.walletData) return;
-    const referralCode = appData.walletData.referralCode;
+    const referralCode = defaultWalletData.referralCode;
     const shareUrl = `${window.location.origin}/signup?ref=${referralCode}`;
     const benefitsText = benefits.map(b => `✅ ${b.text}`).join("\n");
 
@@ -87,7 +83,7 @@ Subscribe and start your earning cycle now: ${shareUrl}
     }
   };
   
-  if (!appData || !data) {
+  if (!data) {
       return (
           <div className="w-full max-w-2xl mx-auto flex items-center justify-center h-96">
               <Loader2 className="animate-spin text-primary" size={32}/>
@@ -226,5 +222,3 @@ Subscribe and start your earning cycle now: ${shareUrl}
     </div>
   );
 }
-
-    

@@ -22,17 +22,19 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { format } from "date-fns";
-import { useAppData, useDataUpdaters } from "@/hooks/use-hydrate-data";
 import type { StudentProfile } from "@/lib/student-data";
+import { defaultStudentData, defaultActivationCodes } from "@/lib/student-data";
 import type { ScheduledTest } from "@/lib/test-schedule";
+import { defaultScheduledTests } from "@/lib/test-schedule";
 
 
 export default function ProfilePage() {
-    const { studentData: students, activationCodes: validCodes, scheduledTests: allScheduledTests } = useAppData();
-    const { setStudentData, setActivationCodes } = useDataUpdaters();
-    
     const { toast } = useToast();
     const router = useRouter();
+    const [students, setStudents] = useState<StudentProfile[] | null>(null);
+    const [validCodes, setValidCodes] = useState<string[] | null>(null);
+    const [allScheduledTests, setAllScheduledTests] = useState<ScheduledTest[] | null>(null);
+    
     const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
     const [activationCode, setActivationCode] = useState("");
     const [isCodeVerified, setIsCodeVerified] = useState(false);
@@ -40,6 +42,12 @@ export default function ProfilePage() {
     const [isTestDialogOpen, setIsTestDialogOpen] = useState(false);
     const [selectedStudentForTest, setSelectedStudentForTest] = useState<StudentProfile | null>(null);
     const [availableTests, setAvailableTests] = useState<ScheduledTest[]>([]);
+
+    useEffect(() => {
+        setStudents(defaultStudentData);
+        setValidCodes(defaultActivationCodes);
+        setAllScheduledTests(defaultScheduledTests);
+    }, []);
 
     const parentProfile = {
         name: "Alex Doe",
@@ -60,6 +68,8 @@ export default function ProfilePage() {
     
     const handleAddStudent = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+        if (!students || !validCodes) return;
+
         const formData = new FormData(e.currentTarget);
         const newStudent: StudentProfile = {
             id: `STU-${String(Date.now()).slice(-6)}`,
@@ -84,8 +94,8 @@ export default function ProfilePage() {
             badges: [],
         };
         
-        setStudentData(prev => [...prev, newStudent]);
-        setActivationCodes(prev => prev.filter(c => c !== activationCode));
+        setStudents(prev => [...(prev || []), newStudent]);
+        setValidCodes(prev => (prev || []).filter(c => c !== activationCode));
 
         toast({ title: "Student Added!", description: `${newStudent.name}'s profile has been created.`});
         setIsAddStudentOpen(false);
@@ -94,7 +104,8 @@ export default function ProfilePage() {
     }
     
     const handleDeleteStudent = (studentId: string) => {
-        setStudentData(prev => prev.filter(s => s.id !== studentId));
+        if (!students) return;
+        setStudents(prev => (prev || []).filter(s => s.id !== studentId));
         toast({ title: "Student Removed", description: "The student profile has been deleted." });
     }
     

@@ -7,8 +7,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Bell, UserPlus, ArrowDown, ArrowUp, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { useAppData } from "@/hooks/use-hydrate-data";
 import type { AppNotification } from "@/lib/notifications";
+import { defaultNotifications } from "@/lib/notifications";
 
 const getIconForType = (type: string) => {
     switch(type) {
@@ -24,19 +24,16 @@ const getIconForType = (type: string) => {
 }
 
 export default function AdminNotificationsPage() {
-    const appData = useAppData();
     const [notifications, setNotifications] = useState<AppNotification[] | null>(null);
 
     useEffect(() => {
-        if (appData && appData.notifications) {
-            const adminNotifications = appData.notifications
-                .filter(n => n.userId === 'admin')
-                .sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-            setNotifications(adminNotifications);
-        }
-    }, [appData]);
+        const adminNotifications = defaultNotifications
+            .filter(n => n.userId === 'admin')
+            .sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        setNotifications(adminNotifications);
+    }, []);
 
-    if (!appData || !notifications) {
+    if (!notifications) {
         return (
           <div className="flex justify-center items-center h-96">
             <Loader2 className="animate-spin text-primary" size={32} />
@@ -85,5 +82,3 @@ export default function AdminNotificationsPage() {
         </div>
     );
 }
-
-    

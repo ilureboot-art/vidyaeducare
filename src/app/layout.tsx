@@ -9,7 +9,6 @@ import { Navbar } from '@/components/Navbar';
 import { ChatWidget } from '@/components/ChatWidget';
 import { ThemeProvider } from "next-themes";
 import { useState, useEffect } from 'react';
-import { DataProvider } from '@/hooks/use-hydrate-data';
 
 export default function RootLayout({
   children,
@@ -49,7 +48,6 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
         >
-          <DataProvider>
             {isAdminPage && !isAuthPage ? (
               <>{children}</>
             ) : (isAuthPage || pathname === '/' || pathname === '/how-to-play') ? (
@@ -65,7 +63,6 @@ export default function RootLayout({
               </>
             )}
             <Toaster />
-          </DataProvider>
         </ThemeProvider>
       </body>
     </html>

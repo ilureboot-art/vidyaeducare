@@ -17,11 +17,9 @@ import { Label } from "@/components/ui/label";
 import { Gamepad2, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { useAppData, useDataUpdaters } from "@/hooks/use-hydrate-data";
+import { defaultStoreConfig } from "@/lib/store-config";
 
 export default function SignupPage() {
-  const appData = useAppData();
-  const { setWalletData, setNotifications } = useDataUpdaters();
   const searchParams = useSearchParams();
   const router = useRouter();
   const { toast } = useToast();
@@ -34,82 +32,24 @@ export default function SignupPage() {
     if (refCode) {
       setReferralCode(refCode);
     }
-    if (appData && appData.storeConfig) {
-      setReferralBonus(appData.storeConfig.referralBonus);
-    }
-  }, [searchParams, appData]);
+    setReferralBonus(defaultStoreConfig.referralBonus);
+  }, [searchParams]);
 
   const handleSignup = (e: React.FormEvent) => {
     e.preventDefault();
     
-    setNotifications(prev => [...prev, {
-      id: Date.now(),
-      type: "new_user",
-      message: `A new user just signed up!`,
-      userId: 'admin',
-      status: 'unread',
-      timestamp: new Date().toISOString(),
-    }]);
-
-    if (referralCode && referralBonus !== null) {
-        const bonusAmount = referralBonus;
-        // In a real app, this logic would live on the backend.
-        setWalletData(prev => {
-            if (!prev) return prev;
-            return {
-                ...prev,
-                transactions: [
-                    ...prev.transactions,
-                    {
-                        id: Date.now(),
-                        type: 'deposit',
-                        description: 'Welcome Bonus (from referral)',
-                        amount: bonusAmount,
-                        date: new Date().toISOString(),
-                        status: 'Completed',
-                        user: "New User" // In a real app, this would be the new user's name
-                    },
-                    {
-                        id: Date.now() + 1, // To avoid key collision
-                        type: 'deposit',
-                        description: `Referral Bonus for new user`,
-                        amount: bonusAmount,
-                        date: new Date().toISOString(),
-                        status: 'Completed',
-                        user: "Alex Doe" // This is the referrer
-                    }
-                ]
-            }
-        });
-        
-        setNotifications(prev => [...prev,
-            {
-              id: Date.now() + 2,
-              type: 'deposit_received',
-              message: `You received a ₹${bonusAmount} Welcome Bonus!`,
-              userId: 'user-alex-doe', // This should be the new user's ID
-              status: 'unread',
-              timestamp: new Date().toISOString(),
-            },
-            {
-              id: Date.now() + 3,
-              type: 'deposit_received',
-              message: `You received a ₹${bonusAmount} bonus for referring a new user.`,
-              userId: 'user-alex-doe', // This is the referrer's ID
-              status: 'unread',
-              timestamp: new Date().toISOString(),
-            }
-        ]);
-    }
-
+    // In a real app, you would handle creating notifications and updating wallet data
+    // on the backend after successful signup and referral code application.
+    // For this demo, we just show a toast.
+    
     toast({
         title: "Account Created Successfully!",
-        description: "Welcome to Vidya EduCare! Redirecting you to login.",
+        description: `Welcome to Vidya EduCare! ${referralCode ? 'Your welcome bonus has been applied.' : ''} Redirecting you to login.`,
     });
     router.push("/login");
   };
 
-  if (!appData) {
+  if (referralBonus === null) {
       return (
           <div className="w-full max-w-md mx-auto flex items-center justify-center h-screen">
               <Loader2 className="animate-spin text-primary" size={32} />
@@ -184,5 +124,3 @@ export default function SignupPage() {
     </div>
   );
 }
-
-    

@@ -6,25 +6,19 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Share2, IndianRupee, Gift, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { useAppData } from "@/hooks/use-hydrate-data";
+import { defaultStoreConfig } from "@/lib/store-config";
+import { defaultWalletData } from "@/lib/user-data";
 
 export default function ReferAndEarnPage() {
-    const appData = useAppData();
     const { toast } = useToast();
     
     const [referralBonus, setReferralBonus] = useState<number | null>(null);
     const [referralCode, setReferralCode] = useState<string | null>(null);
 
     useEffect(() => {
-        if (appData) {
-            if (appData.storeConfig) {
-                setReferralBonus(appData.storeConfig.referralBonus);
-            }
-            if (appData.walletData) {
-                setReferralCode(appData.walletData.referralCode);
-            }
-        }
-    }, [appData]);
+        setReferralBonus(defaultStoreConfig.referralBonus);
+        setReferralCode(defaultWalletData.referralCode);
+    }, []);
 
     const handleShare = async () => {
         if (referralCode === null || referralBonus === null) return;
@@ -60,7 +54,7 @@ Click here to join: ${url}`;
         }
     };
     
-    if (!appData || referralCode === null || referralBonus === null) {
+    if (referralCode === null || referralBonus === null) {
         return (
           <div className="w-full max-w-2xl mx-auto flex items-center justify-center h-96">
             <Loader2 className="animate-spin text-primary" size={32} />
@@ -117,5 +111,3 @@ Click here to join: ${url}`;
         </div>
     );
 }
-
-    

@@ -29,10 +29,10 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { type TestSet, type Question } from "@/lib/question-bank";
+import { type TestSet, type Question, defaultTestSets } from "@/lib/question-bank";
 import type { AcademicConfig } from "@/lib/academic-config";
+import { defaultAcademicConfig } from "@/lib/academic-config";
 import { parseQuestionsFromDocument, type QuestionParserOutput } from "@/ai/flows/document-parser-flow";
-import { useAppData, useDataUpdaters } from "@/hooks/use-hydrate-data";
 
 
 const initialQuestionState: Omit<Question, 'id'> = {
@@ -51,8 +51,6 @@ const initialTestSetState: TestSet = {
 };
 
 export default function TestSetManagementPage() {
-  const appData = useAppData();
-  const { setTestSets } = useDataUpdaters();
   const { toast } = useToast();
 
   const [testSets, setLocalTestSets] = useState<TestSet[] | null>(null);
@@ -69,11 +67,9 @@ export default function TestSetManagementPage() {
   const [editingTestSet, setEditingTestSet] = useState<TestSet | null>(null);
   
   useEffect(() => {
-    if (appData && appData.testSets && appData.academicConfig) {
-      setLocalTestSets(appData.testSets);
-      setAcademicConfig(appData.academicConfig);
-    }
-  }, [appData]);
+    setLocalTestSets(defaultTestSets);
+    setAcademicConfig(defaultAcademicConfig);
+  }, []);
 
   const resetManualForm = () => {
       setStep(1);
@@ -106,7 +102,7 @@ export default function TestSetManagementPage() {
   const handleDelete = (testSetId: string) => {
     if (!testSets) return;
     const updatedTestSets = testSets.filter(ts => ts.id !== testSetId);
-    setTestSets(updatedTestSets);
+    setLocalTestSets(updatedTestSets);
     toast({ title: "Test Set Deleted", description: "The test set has been removed from the bank."});
   }
   
@@ -150,7 +146,7 @@ export default function TestSetManagementPage() {
 
             const updatedSet = { ...existingSet, questions: [...existingSet.questions, ...uniqueNewQuestions] };
             const updatedTestSets = testSets.map(ts => ts.id === existingTestSetId ? updatedSet : ts);
-            setTestSets(updatedTestSets);
+            setLocalTestSets(updatedTestSets);
 
             toast({
               title: "Questions Appended!",
@@ -162,7 +158,7 @@ export default function TestSetManagementPage() {
                 id: `SET-${Date.now()}`,
                 questions: questionsWithIds
             };
-            setTestSets([...(testSets || []), newTestSet]);
+            setLocalTestSets([...(testSets || []), newTestSet]);
             toast({
               title: "Test Set Saved!",
               description: `"${newTestSet.name}" with ${newTestSet.questions.length} questions has been added.`
@@ -269,10 +265,10 @@ export default function TestSetManagementPage() {
 
     if (isEditing) {
         const updatedTestSets = testSets.map(ts => ts.id === finalTestSetData.id ? finalTestSetData : ts);
-        setTestSets(updatedTestSets);
+        setLocalTestSets(updatedTestSets);
     } else {
         const newSetWithFinalId = {...finalTestSetData, id: `SET-${Date.now()}`};
-        setTestSets([...testSets, newSetWithFinalId]);
+        setLocalTestSets([...testSets, newSetWithFinalId]);
     }
     
     toast({ title: isEditing ? 'Test Set Updated!' : 'Test Set Created!', description: `"${finalTestSetData.name}" has been saved.` });
@@ -281,7 +277,7 @@ export default function TestSetManagementPage() {
     resetManualForm();
 };
 
-  if (!appData || !testSets || !academicConfig) {
+  if (!testSets || !academicConfig) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />
@@ -522,5 +518,3 @@ export default function TestSetManagementPage() {
     </div>
   );
 }
-
-    

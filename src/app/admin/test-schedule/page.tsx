@@ -21,9 +21,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
-import { useAppData, useDataUpdaters } from "@/hooks/use-hydrate-data";
 import type { TestSet } from "@/lib/question-bank";
+import { defaultTestSets } from "@/lib/question-bank";
 import type { ScheduledTest } from "@/lib/test-schedule";
+import { defaultScheduledTests } from "@/lib/test-schedule";
 
 type TestStatus = 'Live' | 'Upcoming' | 'Completed';
 
@@ -31,8 +32,6 @@ type ScheduledTestWithStatus = ScheduledTest & { status: TestStatus };
 
 export default function TestSchedulePage() {
     const { toast } = useToast();
-    const appData = useAppData();
-    const { setScheduledTests } = useDataUpdaters();
 
     const [allSchedules, setAllSchedules] = useState<ScheduledTestWithStatus[] | null>(null);
     const [testSets, setTestSets] = useState<TestSet[] | null>(null);
@@ -41,17 +40,10 @@ export default function TestSchedulePage() {
     const [selectedTestSetId, setSelectedTestSetId] = useState('');
     
     useEffect(() => {
-        if (appData) {
-            if (appData.scheduledTests) {
-                refreshSchedules(appData.scheduledTests);
-            }
-            if (appData.testSets) {
-                setTestSets(appData.testSets);
-            }
-        }
+        refreshSchedules(defaultScheduledTests);
+        setTestSets(defaultTestSets);
         setDate(new Date());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [appData]);
+    }, []);
     
     const refreshSchedules = (schedules: ScheduledTest[]) => {
          if (schedules) {
@@ -110,7 +102,8 @@ export default function TestSchedulePage() {
             subject: testSet.subject,
         };
 
-        setScheduledTests(prev => [...prev, newTest]);
+        const newSchedules = [...allSchedules, newTest];
+        refreshSchedules(newSchedules);
 
         toast({
             title: "Test Scheduled!",
@@ -123,7 +116,7 @@ export default function TestSchedulePage() {
         setTime('10:00');
     };
     
-    if (!appData || !allSchedules || !testSets) {
+    if (!allSchedules || !testSets) {
         return (
           <div className="flex justify-center items-center h-96">
             <Loader2 className="animate-spin text-primary" size={32} />

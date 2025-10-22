@@ -15,10 +15,12 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { useAppData, useDataUpdaters } from "@/hooks/use-hydrate-data";
 import type { StudentProfile } from "@/lib/student-data";
+import { defaultStudentData } from "@/lib/student-data";
 import type { Question } from "@/lib/question-bank";
+import { defaultTestSets } from "@/lib/question-bank";
 import type { ScheduledTest } from "@/lib/test-schedule";
+import { defaultScheduledTests } from "@/lib/test-schedule";
 
 const MOCK_TEST_DURATION = 30 * 60; // 30 minutes in seconds
 
@@ -28,8 +30,6 @@ function MockTestContent() {
     const { toast } = useToast();
     const router = useRouter();
     const searchParams = useSearchParams();
-    const { studentData, testSets, scheduledTests: allScheduledTests } = useAppData();
-    const { setStudentData } = useDataUpdaters();
 
     const [testState, setTestState] = useState<TestState>("loading");
     const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(null);
@@ -47,11 +47,11 @@ function MockTestContent() {
         const studentId = searchParams.get('studentId');
         const testId = searchParams.get('testId');
         
-        if (!studentId || !testId || !studentData || !allScheduledTests || !testSets) {
+        if (!studentId || !testId) {
             return;
         }
         
-        const schedTest = allScheduledTests.find(t => t.id === testId);
+        const schedTest = defaultScheduledTests.find(t => t.id === testId);
         if (!schedTest) {
              toast({ variant: "destructive", title: "Error", description: "Scheduled test not found."});
             router.push('/profile');
@@ -62,14 +62,14 @@ function MockTestContent() {
         const testDate = new Date(schedTest.dateTime);
         const liveStatus = testDate <= now;
 
-        const student = studentData.find(s => s.id === studentId);
+        const student = defaultStudentData.find(s => s.id === studentId);
         if (!student) {
              toast({ variant: "destructive", title: "Error", description: "Student profile not found."});
             router.push('/profile');
             return;
         }
         
-        const testSet = testSets.find(ts => ts.id === schedTest.testSetId);
+        const testSet = defaultTestSets.find(ts => ts.id === schedTest.testSetId);
         if (!testSet || testSet.questions.length === 0) {
             toast({
                 variant: "destructive",
@@ -93,7 +93,7 @@ function MockTestContent() {
         setScore(0);
         setTestState("in_progress");
 
-    }, [searchParams, router, toast, studentData, testSets, allScheduledTests]);
+    }, [searchParams, router, toast]);
 
     useEffect(() => {
         if (testState !== "in_progress") return;
@@ -141,44 +141,8 @@ function MockTestContent() {
         const finalScore = (correctAnswers / activeQuestions.length) * 100;
         setScore(finalScore);
         
-        setStudentData(prevData => {
-            return prevData.map(student => {
-                if (student.id === studentProfile.id) {
-                    const newPerformanceEntry = { name: scheduledTest.subject, score: finalScore };
-                    const existingEntryIndex = student.stats.performance.findIndex(p => p.name === newPerformanceEntry.name);
-
-                    let updatedPerformance: {name: string, score: number}[];
-                    if (existingEntryIndex > -1) {
-                        updatedPerformance = [...student.stats.performance];
-                        updatedPerformance[existingEntryIndex] = newPerformanceEntry;
-                    } else {
-                        updatedPerformance = [...student.stats.performance, newPerformanceEntry];
-                    }
-
-                    const testsTaken = updatedPerformance.length;
-                    const totalScore = updatedPerformance.reduce((acc, p) => acc + p.score, 0);
-                    const avgScore = testsTaken > 0 ? totalScore / testsTaken : 0;
-                    
-                    const allScoresAreHigh = updatedPerformance.every(p => p.score > 80);
-                    if (isLiveTest && allScoresAreHigh) {
-                        setIsPrizeEligible(true);
-                    } else {
-                        setIsPrizeEligible(false);
-                    }
-
-                    return {
-                        ...student,
-                        stats: {
-                            ...student.stats,
-                            performance: updatedPerformance,
-                            testsTaken: testsTaken,
-                            avgScore: avgScore,
-                        }
-                    };
-                }
-                return student;
-            });
-        });
+        // In a real app, this data would be saved via an API call.
+        console.log("Saving test results for student:", studentProfile.id, "Score:", finalScore);
 
         setTestState("completed");
         toast({
@@ -275,22 +239,22 @@ function MockTestContent() {
                         </Alert>
                     )}
 
-                    {isLiveTest && isPrizeEligible && (
+                    {isLiveTest && score > 80 && (
                         <Alert variant="default" className="bg-green-100 dark:bg-green-900 border-green-500 text-left">
                              <CheckCircle className="h-4 w-4 text-green-700" />
                             <AlertTitle className="text-green-800">Congratulations! Prize Eligible!</AlertTitle>
                             <AlertDescription className="text-green-700">
-                                This student has maintained a score of over 80% in all subject tests, including this one. Rewards will be credited to your wallet shortly.
+                                Rewards will be credited to your wallet shortly based on your rank. Check the leaderboard!
                             </AlertDescription>
                         </Alert>
                     )}
 
-                     {isLiveTest && !isPrizeEligible && (
+                     {isLiveTest && score <= 80 && (
                          <Alert variant="destructive" className="text-left">
                              <XCircle className="h-4 w-4" />
                             <AlertTitle>Keep Practicing!</AlertTitle>
                             <AlertDescription>
-                                To be eligible for a prize, the student must score above 80% in this test and all other subject tests they have taken. If the score for any subject test drops below 80%, eligibility is lost.
+                                You need a score above 80% to be eligible for prizes in a live test.
                             </AlertDescription>
                         </Alert>
                     )}

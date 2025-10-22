@@ -16,10 +16,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Download, ArrowUpRight, ArrowDownLeft, Loader2 } from "lucide-react";
 import type { Transaction } from "@/lib/user-data";
+import { defaultWalletData } from "@/lib/user-data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
-import { useAppData } from "@/hooks/use-hydrate-data";
 
 const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -42,20 +42,17 @@ const getTypeIcon = (type: string, amount: number) => {
 }
 
 export default function TransactionsPage() {
-  const appData = useAppData();
   const [transactions, setTransactions] = useState<Transaction[] | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'rejected'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'deposit' | 'withdrawal'>('all');
   
   useEffect(() => {
-    if (appData && appData.walletData) {
-        const sortedTransactions = [...appData.walletData.transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        setTransactions(sortedTransactions);
-    }
-  }, [appData]);
+    const sortedTransactions = [...defaultWalletData.transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    setTransactions(sortedTransactions);
+  }, []);
 
-  if (!appData || !transactions) {
+  if (!transactions) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />
@@ -166,5 +163,3 @@ export default function TransactionsPage() {
     </div>
   );
 }
-
-    

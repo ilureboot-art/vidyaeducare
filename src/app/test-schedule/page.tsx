@@ -21,16 +21,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
-import { useAppData, useDataUpdaters } from "@/hooks/use-hydrate-data";
 import type { ScheduledTest } from "@/lib/test-schedule";
+import { defaultScheduledTests } from "@/lib/test-schedule";
 
 type TestStatus = 'Live' | 'Upcoming' | 'Completed';
 type ScheduledTestWithStatus = ScheduledTest & { status: TestStatus };
 
 export default function TestSchedulePage() {
     const { toast } = useToast();
-    const appData = useAppData();
-    const { setScheduledTests } = useDataUpdaters();
     
     const [allSchedules, setAllSchedules] = useState<ScheduledTestWithStatus[] | null>(null);
     const [date, setDate] = useState<Date | undefined>(undefined);
@@ -38,65 +36,29 @@ export default function TestSchedulePage() {
     const [selectedTestSetId, setSelectedTestSetId] = useState('');
 
     useEffect(() => {
-        if (appData && appData.scheduledTests) {
-            const now = new Date();
-            const updatedSchedules = [...appData.scheduledTests]
-                .sort((a,b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime())
-                .map(test => {
-                    const testDate = new Date(test.dateTime);
-                    let status: TestStatus = 'Upcoming';
-                    if (testDate < now) status = 'Completed';
-                    if (format(testDate, 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd') && testDate <= now) status = 'Live';
-                    return { ...test, status };
-                });
-            setAllSchedules(updatedSchedules);
-        }
+        const now = new Date();
+        const updatedSchedules = [...defaultScheduledTests]
+            .sort((a,b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime())
+            .map(test => {
+                const testDate = new Date(test.dateTime);
+                let status: TestStatus = 'Upcoming';
+                if (testDate < now) status = 'Completed';
+                if (format(testDate, 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd') && testDate <= now) status = 'Live';
+                return { ...test, status };
+            });
+        setAllSchedules(updatedSchedules);
         setDate(new Date());
-    }, [appData]);
+    }, []);
 
     const handleScheduleTest = () => {
-        if (!date || !selectedTestSetId || !time || !appData || !appData.testSets) {
-            toast({
-                variant: 'destructive',
-                title: "Missing Information",
-                description: "Please select a test set, a date, and a time.",
-            });
-            return;
-        }
-        
-        const testSet = appData.testSets.find(ts => ts.id === selectedTestSetId);
-        if (!testSet) {
-             toast({ variant: 'destructive', title: "Error", description: "Selected test set could not be found." });
-             return;
-        }
-
-        const [hours, minutes] = time.split(':').map(Number);
-        const combinedDateTime = new Date(date);
-        combinedDateTime.setHours(hours, minutes, 0, 0);
-
-        const newTest: ScheduledTest = {
-            id: `SCHED-${Date.now()}`,
-            testSetId: testSet.id,
-            testSetName: testSet.name,
-            dateTime: combinedDateTime.toISOString(),
-            board: testSet.board,
-            standard: testSet.standard,
-            subject: testSet.subject,
-        };
-
-        setScheduledTests(prev => [...prev, newTest]);
-
+        // This is a read-only page for users. The functionality is in the admin panel.
         toast({
-            title: "Test Scheduled!",
-            description: `"${testSet.name}" has been added to the calendar for ${format(combinedDateTime, "PPP p")}.`
+            title: "Action Not Available",
+            description: "Test scheduling is only available in the admin panel.",
         });
-        
-        setSelectedTestSetId('');
-        setDate(new Date());
-        setTime('10:00');
     };
     
-    if (!appData || !allSchedules) {
+    if (!allSchedules) {
         return (
           <div className="flex justify-center items-center h-96">
             <Loader2 className="animate-spin text-primary" size={32} />

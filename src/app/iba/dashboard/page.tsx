@@ -23,7 +23,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useAppData } from "@/hooks/use-hydrate-data";
+import { defaultWalletData } from "@/lib/user-data";
 
 const initialReferralData = {
   referralCode: "ALEX-IBA-5C", // This can be dynamically generated for the user
@@ -58,17 +58,14 @@ const bonusTiers = [
 ];
 
 export default function IBADashboardPage() {
-  const appData = useAppData();
   const { toast } = useToast();
   const [referralData, setReferralData] = useState<typeof initialReferralData | null>(null);
   const [ibaReferralCode, setIbaReferralCode] = useState<string | null>(null);
 
   useEffect(() => {
-    if (appData && appData.walletData) {
-        setIbaReferralCode(appData.walletData.referralCode); // Using the general referral code for demo
-        setReferralData(initialReferralData);
-    }
-  }, [appData]);
+    setIbaReferralCode(defaultWalletData.referralCode); // Using the general referral code for demo
+    setReferralData(initialReferralData);
+  }, []);
 
   const handleCopyToClipboard = () => {
     if (!ibaReferralCode) return;
@@ -124,7 +121,7 @@ Don't miss out on the best way to prepare for your exams and earn rewards!
     }
   };
   
-  if (!appData || !ibaReferralCode || !referralData) {
+  if (!ibaReferralCode || !referralData) {
     return (
       <div className="w-full max-w-4xl mx-auto flex items-center justify-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />
@@ -305,5 +302,3 @@ Don't miss out on the best way to prepare for your exams and earn rewards!
     </div>
   );
 }
-
-    

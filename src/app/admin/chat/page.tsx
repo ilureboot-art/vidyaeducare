@@ -81,11 +81,6 @@ export default function ChatManagementPage() {
         setActiveChat(updatedChat);
         setReply("");
     };
-
-    const filteredChats = chats ? chats.filter(chat => 
-        chat.user.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        chat.id.toLowerCase().includes(searchTerm.toLowerCase())
-    ) : [];
     
   if (!chats) {
     return (
@@ -94,6 +89,11 @@ export default function ChatManagementPage() {
       </div>
     );
   }
+
+  const filteredChats = chats.filter(chat => 
+    chat.user.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    chat.id.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-8rem)]">

@@ -28,8 +28,8 @@ export default function AnalyticsPage() {
   const [activeUsers, setActiveUsers] = useState<number | null>(null);
   const [gamesPlayed, setGamesPlayed] = useState<number | null>(null);
   const [todaysRevenue, setTodaysRevenue] = useState<number | null>(null);
-  const [userActivityData, setUserActivityData] = useState<any[]>([]);
-  const [revenueData, setRevenueData] = useState<any[]>([]);
+  const [userActivityData, setUserActivityData] = useState<any[] | null>(null);
+  const [revenueData, setRevenueData] = useState<any[] | null>(null);
 
   useEffect(() => {
     // Simulate fetching data on the client side
@@ -40,7 +40,7 @@ export default function AnalyticsPage() {
     setRevenueData(serverRevenueData);
   }, []);
 
-  if (activeUsers === null || gamesPlayed === null || todaysRevenue === null) {
+  if (activeUsers === null || gamesPlayed === null || todaysRevenue === null || !userActivityData || !revenueData) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />

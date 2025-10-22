@@ -15,7 +15,6 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Download, ArrowUpRight, ArrowDownLeft, Loader2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
 import type { Transaction } from "@/lib/user-data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
@@ -56,16 +55,6 @@ export default function TransactionsPage() {
     }
   }, [walletData]);
 
-  const filteredTransactions = transactions ? transactions.filter(
-    (tx) => {
-      const searchTermMatch = tx.description.toLowerCase().includes(searchTerm.toLowerCase()) || String(tx.id).toLowerCase().includes(searchTerm.toLowerCase());
-      const statusMatch = statusFilter === 'all' || tx.status.toLowerCase() === statusFilter;
-      const typeMatch = typeFilter === 'all' || (typeFilter === 'deposit' && tx.amount >= 0) || (typeFilter === 'withdrawal' && tx.amount < 0);
-      const isUserTx = tx.user === 'Alex Doe' || !tx.user;
-      return searchTermMatch && statusMatch && typeMatch && isUserTx;
-    }
-  ) : [];
-
   if (!transactions) {
     return (
       <div className="flex justify-center items-center h-96">
@@ -73,6 +62,16 @@ export default function TransactionsPage() {
       </div>
     );
   }
+
+  const filteredTransactions = transactions.filter(
+    (tx) => {
+      const searchTermMatch = tx.description.toLowerCase().includes(searchTerm.toLowerCase()) || String(tx.id).toLowerCase().includes(searchTerm.toLowerCase());
+      const statusMatch = statusFilter === 'all' || tx.status.toLowerCase() === statusFilter;
+      const typeMatch = typeFilter === 'all' || (typeFilter === 'deposit' && tx.amount >= 0) || (typeFilter === 'withdrawal' && tx.amount < 0);
+      const isUserTx = tx.user === 'Alex Doe' || !tx.user;
+      return searchTermMatch && statusMatch && typeMatch && isUserTx;
+    }
+  );
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-6">
@@ -167,5 +166,3 @@ export default function TransactionsPage() {
     </div>
   );
 }
-
-    

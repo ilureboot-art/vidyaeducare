@@ -100,7 +100,7 @@ export default function StudentAccessPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {clients && clients.length > 0 ? clients.map((client) => (
+                {clients.length > 0 ? clients.map((client) => (
                   <TableRow key={client.id} className={client.expiresSoon ? "bg-yellow-50 dark:bg-yellow-900/20" : ""}>
                     <TableCell className="font-medium">{client.name}</TableCell>
                     <TableCell>

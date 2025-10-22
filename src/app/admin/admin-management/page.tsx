@@ -474,5 +474,3 @@ export default function AdminManagementPage() {
     </div>
   );
 }
-
-    

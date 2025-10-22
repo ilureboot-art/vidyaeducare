@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Loader2 } from 'lucide-react';
 
 import { defaultAcademicConfig, type AcademicConfig } from '@/lib/academic-config';
@@ -41,15 +41,15 @@ const setItem = <T,>(key: string, value: T) => {
 
 
 interface AppData {
-  academicConfig: AcademicConfig;
-  adminData: AdminData;
-  notifications: AppNotification[];
-  testSets: TestSet[];
-  storeConfig: StoreConfig;
-  studentData: StudentProfile[];
-  activationCodes: string[];
-  scheduledTests: ScheduledTest[];
-  walletData: WalletData;
+  academicConfig: AcademicConfig | null;
+  adminData: AdminData | null;
+  notifications: AppNotification[] | null;
+  testSets: TestSet[] | null;
+  storeConfig: StoreConfig | null;
+  studentData: StudentProfile[] | null;
+  activationCodes: string[] | null;
+  scheduledTests: ScheduledTest[] | null;
+  walletData: WalletData | null;
 }
 
 type DataUpdaters = {
@@ -143,7 +143,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     );
 };
 
-export const useAppData = () => {
+export const useAppData = (): AppData => {
     const context = useContext(DataContext);
     if (context === null) {
         throw new Error('useAppData must be used within a DataProvider');
@@ -151,7 +151,7 @@ export const useAppData = () => {
     return context;
 };
 
-export const useDataUpdaters = () => {
+export const useDataUpdaters = (): DataUpdaters => {
     const context = useContext(DataUpdateContext);
     if (context === null) {
         throw new Error('useDataUpdaters must be used within a DataProvider');

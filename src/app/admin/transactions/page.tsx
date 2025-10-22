@@ -43,7 +43,7 @@ const getTypeIcon = (type: string, amount: number) => {
 }
 
 export default function TransactionsPage() {
-  const { walletData } = useAppData();
+  const appData = useAppData();
   const { setWalletData } = useDataUpdaters();
   const { toast } = useToast();
 
@@ -53,32 +53,32 @@ export default function TransactionsPage() {
   const [typeFilter, setTypeFilter] = useState<'all' | 'deposit' | 'withdrawal'>('all');
   
   useEffect(() => {
-    if (walletData) {
-        const sortedTransactions = [...walletData.transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    if (appData && appData.walletData) {
+        const sortedTransactions = [...appData.walletData.transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         setTransactions(sortedTransactions);
     }
-  }, [walletData]);
+  }, [appData]);
 
 
   const handleTransactionStatus = (id: number, newStatus: "Completed" | "Rejected") => {
-    if (!walletData) return;
+    if (!appData || !appData.walletData) return;
 
-    const txToUpdate = walletData.transactions.find(tx => tx.id === id);
+    const txToUpdate = appData.walletData.transactions.find(tx => tx.id === id);
     if (!txToUpdate || txToUpdate.status !== "Pending") {
         toast({ title: "Action not allowed", description: "This transaction has already been processed."});
         return;
     }
 
-    const updatedTransactions = walletData.transactions.map(tx => 
+    const updatedTransactions = appData.walletData.transactions.map(tx => 
         tx.id === id ? { ...tx, status: newStatus } : tx
     );
     
-    let newBalance = walletData.balance;
+    let newBalance = appData.walletData.balance;
     if (newStatus === 'Completed' && txToUpdate.type === 'deposit') {
         newBalance += txToUpdate.amount;
     }
 
-    setWalletData({ ...walletData, transactions: updatedTransactions, balance: newBalance });
+    setWalletData({ ...appData.walletData, transactions: updatedTransactions, balance: newBalance });
 
     toast({
       title: "Transaction Updated",
@@ -86,7 +86,7 @@ export default function TransactionsPage() {
     });
   };
 
-  if (!transactions || !walletData) {
+  if (!appData || !transactions) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />
@@ -94,14 +94,14 @@ export default function TransactionsPage() {
     );
   }
 
-  const filteredTransactions = transactions ? transactions.filter(
+  const filteredTransactions = transactions.filter(
     (tx) => {
       const searchTermMatch = tx.user?.toLowerCase().includes(searchTerm.toLowerCase()) || String(tx.id).toLowerCase().includes(searchTerm.toLowerCase());
       const statusMatch = statusFilter === 'all' || tx.status.toLowerCase() === statusFilter;
       const typeMatch = typeFilter === 'all' || (typeFilter === 'deposit' && tx.amount >= 0) || (typeFilter === 'withdrawal' && tx.amount < 0);
       return searchTermMatch && statusMatch && typeMatch;
     }
-  ) : [];
+  );
 
   return (
     <div className="space-y-6">

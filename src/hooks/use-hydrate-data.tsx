@@ -92,26 +92,53 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         setWalletData(getItem('walletData', defaultWalletData));
         setIsHydrated(true);
     }, []);
+    
+    useEffect(() => {
+        if(isHydrated) setItem('academicConfig', academicConfig);
+    }, [academicConfig, isHydrated]);
+    
+    useEffect(() => {
+        if(isHydrated) setItem('adminData', adminData);
+    }, [adminData, isHydrated]);
 
-    const createSetter = <T,>(stateSetter: React.Dispatch<React.SetStateAction<T>>, key: string) => 
-        (updater: React.SetStateAction<T>) => {
-            stateSetter(prevState => {
-                const newState = typeof updater === 'function' ? (updater as (prevState: T) => T)(prevState) : updater;
-                setItem(key, newState);
-                return newState;
-            });
-        };
+    useEffect(() => {
+        if(isHydrated) setItem('notifications', notifications);
+    }, [notifications, isHydrated]);
+    
+    useEffect(() => {
+        if(isHydrated) setItem('testSets', testSets);
+    }, [testSets, isHydrated]);
+
+    useEffect(() => {
+        if(isHydrated) setItem('storeConfig', storeConfig);
+    }, [storeConfig, isHydrated]);
+
+    useEffect(() => {
+        if(isHydrated) setItem('studentData', studentData);
+    }, [studentData, isHydrated]);
+
+    useEffect(() => {
+        if(isHydrated) setItem('activationCodes', activationCodes);
+    }, [activationCodes, isHydrated]);
+    
+    useEffect(() => {
+        if(isHydrated) setItem('scheduledTests', scheduledTests);
+    }, [scheduledTests, isHydrated]);
+
+    useEffect(() => {
+        if(isHydrated) setItem('walletData', walletData);
+    }, [walletData, isHydrated]);
 
     const updaters: DataUpdaters = {
-        setAcademicConfig: createSetter(setAcademicConfig, 'academicConfig'),
-        setAdminData: createSetter(setAdminData, 'adminData'),
-        setNotifications: createSetter(setNotifications, 'notifications'),
-        setTestSets: createSetter(setTestSets, 'testSets'),
-        setStoreConfig: createSetter(setStoreConfig, 'storeConfig'),
-        setStudentData: createSetter(setStudentData, 'studentData'),
-        setActivationCodes: createSetter(setActivationCodes, 'activationCodes'),
-        setScheduledTests: createSetter(setScheduledTests, 'scheduledTests'),
-        setWalletData: createSetter(setWalletData, 'walletData'),
+        setAcademicConfig,
+        setAdminData,
+        setNotifications,
+        setTestSets,
+        setStoreConfig,
+        setStudentData,
+        setActivationCodes,
+        setScheduledTests,
+        setWalletData,
     };
     
     if (!isHydrated) {
@@ -143,12 +170,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     );
 };
 
-export const useAppData = (): AppData => {
-    const context = useContext(DataContext);
-    if (context === null) {
-        throw new Error('useAppData must be used within a DataProvider');
-    }
-    return context;
+export const useAppData = (): AppData | null => {
+    return useContext(DataContext);
 };
 
 export const useDataUpdaters = (): DataUpdaters => {
@@ -158,3 +181,5 @@ export const useDataUpdaters = (): DataUpdaters => {
     }
     return context;
 };
+
+    

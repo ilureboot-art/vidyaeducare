@@ -29,7 +29,7 @@ type ScheduledTestWithStatus = ScheduledTest & { status: TestStatus };
 
 export default function TestSchedulePage() {
     const { toast } = useToast();
-    const { scheduledTests: allSchedulesData, testSets: allSets } = useAppData();
+    const appData = useAppData();
     const { setScheduledTests } = useDataUpdaters();
     
     const [allSchedules, setAllSchedules] = useState<ScheduledTestWithStatus[] | null>(null);
@@ -38,9 +38,9 @@ export default function TestSchedulePage() {
     const [selectedTestSetId, setSelectedTestSetId] = useState('');
 
     useEffect(() => {
-        if (allSchedulesData) {
+        if (appData && appData.scheduledTests) {
             const now = new Date();
-            const updatedSchedules = [...allSchedulesData]
+            const updatedSchedules = [...appData.scheduledTests]
                 .sort((a,b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime())
                 .map(test => {
                     const testDate = new Date(test.dateTime);
@@ -52,10 +52,10 @@ export default function TestSchedulePage() {
             setAllSchedules(updatedSchedules);
         }
         setDate(new Date());
-    }, [allSchedulesData]);
+    }, [appData]);
 
     const handleScheduleTest = () => {
-        if (!date || !selectedTestSetId || !time || !allSets) {
+        if (!date || !selectedTestSetId || !time || !appData || !appData.testSets) {
             toast({
                 variant: 'destructive',
                 title: "Missing Information",
@@ -64,7 +64,7 @@ export default function TestSchedulePage() {
             return;
         }
         
-        const testSet = allSets.find(ts => ts.id === selectedTestSetId);
+        const testSet = appData.testSets.find(ts => ts.id === selectedTestSetId);
         if (!testSet) {
              toast({ variant: 'destructive', title: "Error", description: "Selected test set could not be found." });
              return;
@@ -96,7 +96,7 @@ export default function TestSchedulePage() {
         setTime('10:00');
     };
     
-    if (!allSchedules || !allSets) {
+    if (!appData || !allSchedules) {
         return (
           <div className="flex justify-center items-center h-96">
             <Loader2 className="animate-spin text-primary" size={32} />

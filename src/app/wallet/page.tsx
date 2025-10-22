@@ -48,14 +48,14 @@ const getStatusBadgeVariant = (status: string) => {
 
 export default function WalletPage() {
   const { toast } = useToast();
-  const { walletData } = useAppData();
+  const appData = useAppData();
   const { setWalletData, setNotifications } = useDataUpdaters();
   const [addFundsOpen, setAddFundsOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
 
   const handleAddFunds = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!walletData) return;
+    if (!appData || !appData.walletData) return;
 
     const form = event.currentTarget;
     const amount = parseFloat((form.elements.namedItem('amount-add') as HTMLInputElement).value);
@@ -77,7 +77,7 @@ export default function WalletPage() {
         user: "Alex Doe",
     };
     
-    setWalletData(prev => ({...prev, transactions: [...prev.transactions, newTransaction]}));
+    setWalletData(prev => ({...prev!, transactions: [...prev!.transactions, newTransaction]}));
     setNotifications(prev => [...prev, {
         id: Date.now(),
         type: "deposit_request",
@@ -97,7 +97,7 @@ export default function WalletPage() {
   
   const handleWithdraw = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!walletData) return;
+    if (!appData || !appData.walletData) return;
 
     const form = event.currentTarget;
     const amount = parseFloat((form.elements.namedItem('amount-withdraw') as HTMLInputElement).value);
@@ -108,7 +108,7 @@ export default function WalletPage() {
         return;
     }
 
-    if (amount > walletData.balance) {
+    if (amount > appData.walletData.balance) {
         toast({
             variant: "destructive",
             title: "Insufficient Balance",
@@ -137,7 +137,7 @@ export default function WalletPage() {
         user: "Alex Doe",
     };
 
-    setWalletData(prev => ({...prev, transactions: [...prev.transactions, newTransaction]}));
+    setWalletData(prev => ({...prev!, transactions: [...prev!.transactions, newTransaction]}));
     setNotifications(prev => [...prev, {
         id: Date.now(),
         type: "withdrawal_request",
@@ -155,7 +155,7 @@ export default function WalletPage() {
     form.reset();
   }
 
-  if (!walletData) {
+  if (!appData || !appData.walletData) {
     return (
       <div className="w-full max-w-2xl mx-auto space-y-6 flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />
@@ -163,7 +163,7 @@ export default function WalletPage() {
     );
   }
 
-  const { adminPaymentMethods, balance, coins, transactions } = walletData;
+  const { adminPaymentMethods, balance, coins, transactions } = appData.walletData;
 
   return (
     <div className="w-full max-w-2xl mx-auto space-y-6">
@@ -331,3 +331,5 @@ export default function WalletPage() {
     </div>
   );
 }
+
+    

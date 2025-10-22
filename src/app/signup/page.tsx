@@ -14,30 +14,30 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Gamepad2 } from "lucide-react";
+import { Gamepad2, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useAppData, useDataUpdaters } from "@/hooks/use-hydrate-data";
 
 export default function SignupPage() {
-  const { storeConfig } = useAppData();
+  const appData = useAppData();
   const { setWalletData, setNotifications } = useDataUpdaters();
   const searchParams = useSearchParams();
   const router = useRouter();
   const { toast } = useToast();
   
   const [referralCode, setReferralCode] = useState('');
-  const [referralBonus, setReferralBonus] = useState(0);
+  const [referralBonus, setReferralBonus] = useState<number | null>(null);
 
   useEffect(() => {
     const refCode = searchParams.get('ref');
     if (refCode) {
       setReferralCode(refCode);
     }
-    if (storeConfig) {
-      setReferralBonus(storeConfig.referralBonus);
+    if (appData && appData.storeConfig) {
+      setReferralBonus(appData.storeConfig.referralBonus);
     }
-  }, [searchParams, storeConfig]);
+  }, [searchParams, appData]);
 
   const handleSignup = (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,33 +51,36 @@ export default function SignupPage() {
       timestamp: new Date().toISOString(),
     }]);
 
-    if (referralCode) {
+    if (referralCode && referralBonus !== null) {
         const bonusAmount = referralBonus;
         // In a real app, this logic would live on the backend.
-        setWalletData(prev => ({
-            ...prev,
-            transactions: [
-                ...prev.transactions,
-                {
-                    id: Date.now(),
-                    type: 'deposit',
-                    description: 'Welcome Bonus (from referral)',
-                    amount: bonusAmount,
-                    date: new Date().toISOString(),
-                    status: 'Completed',
-                    user: "New User" // In a real app, this would be the new user's name
-                },
-                {
-                    id: Date.now() + 1, // To avoid key collision
-                    type: 'deposit',
-                    description: `Referral Bonus for new user`,
-                    amount: bonusAmount,
-                    date: new Date().toISOString(),
-                    status: 'Completed',
-                    user: "Alex Doe" // This is the referrer
-                }
-            ]
-        }));
+        setWalletData(prev => {
+            if (!prev) return prev;
+            return {
+                ...prev,
+                transactions: [
+                    ...prev.transactions,
+                    {
+                        id: Date.now(),
+                        type: 'deposit',
+                        description: 'Welcome Bonus (from referral)',
+                        amount: bonusAmount,
+                        date: new Date().toISOString(),
+                        status: 'Completed',
+                        user: "New User" // In a real app, this would be the new user's name
+                    },
+                    {
+                        id: Date.now() + 1, // To avoid key collision
+                        type: 'deposit',
+                        description: `Referral Bonus for new user`,
+                        amount: bonusAmount,
+                        date: new Date().toISOString(),
+                        status: 'Completed',
+                        user: "Alex Doe" // This is the referrer
+                    }
+                ]
+            }
+        });
         
         setNotifications(prev => [...prev,
             {
@@ -105,6 +108,14 @@ export default function SignupPage() {
     });
     router.push("/login");
   };
+
+  if (!appData) {
+      return (
+          <div className="w-full max-w-md mx-auto flex items-center justify-center h-screen">
+              <Loader2 className="animate-spin text-primary" size={32} />
+          </div>
+      );
+  }
 
   return (
     <div className="w-full max-w-md mx-auto flex flex-col items-center justify-center min-h-screen space-y-4">

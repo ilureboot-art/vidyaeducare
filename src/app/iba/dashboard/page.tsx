@@ -58,17 +58,17 @@ const bonusTiers = [
 ];
 
 export default function IBADashboardPage() {
-  const { walletData } = useAppData();
+  const appData = useAppData();
   const { toast } = useToast();
   const [referralData, setReferralData] = useState<typeof initialReferralData | null>(null);
   const [ibaReferralCode, setIbaReferralCode] = useState<string | null>(null);
 
   useEffect(() => {
-    if (walletData) {
-        setIbaReferralCode(walletData.referralCode); // Using the general referral code for demo
+    if (appData && appData.walletData) {
+        setIbaReferralCode(appData.walletData.referralCode); // Using the general referral code for demo
         setReferralData(initialReferralData);
     }
-  }, [walletData]);
+  }, [appData]);
 
   const handleCopyToClipboard = () => {
     if (!ibaReferralCode) return;
@@ -124,7 +124,7 @@ Don't miss out on the best way to prepare for your exams and earn rewards!
     }
   };
   
-  if (!ibaReferralCode || !referralData) {
+  if (!appData || !ibaReferralCode || !referralData) {
     return (
       <div className="w-full max-w-4xl mx-auto flex items-center justify-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />

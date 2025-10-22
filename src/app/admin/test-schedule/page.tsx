@@ -31,26 +31,32 @@ type ScheduledTestWithStatus = ScheduledTest & { status: TestStatus };
 
 export default function TestSchedulePage() {
     const { toast } = useToast();
-    const { scheduledTests: allSchedulesData, testSets: allSetsData } = useAppData();
+    const appData = useAppData();
     const { setScheduledTests } = useDataUpdaters();
 
     const [allSchedules, setAllSchedules] = useState<ScheduledTestWithStatus[] | null>(null);
+    const [testSets, setTestSets] = useState<TestSet[] | null>(null);
     const [date, setDate] = useState<Date | undefined>(undefined);
     const [time, setTime] = useState('10:00'); // Default time
     const [selectedTestSetId, setSelectedTestSetId] = useState('');
     
     useEffect(() => {
-        if (allSchedulesData) {
-            refreshSchedules();
+        if (appData) {
+            if (appData.scheduledTests) {
+                refreshSchedules(appData.scheduledTests);
+            }
+            if (appData.testSets) {
+                setTestSets(appData.testSets);
+            }
         }
         setDate(new Date());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [allSchedulesData]);
+    }, [appData]);
     
-    const refreshSchedules = () => {
-         if (allSchedulesData) {
+    const refreshSchedules = (schedules: ScheduledTest[]) => {
+         if (schedules) {
             const now = new Date();
-            const updatedSchedules = [...allSchedulesData]
+            const updatedSchedules = [...schedules]
                 .sort((a,b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime())
                 .map(test => {
                     const testDate = new Date(test.dateTime);
@@ -75,7 +81,7 @@ export default function TestSchedulePage() {
 
 
     const handleScheduleTest = () => {
-        if (!date || !selectedTestSetId || !time || !allSetsData) {
+        if (!date || !selectedTestSetId || !time || !testSets || !allSchedules) {
             toast({
                 variant: 'destructive',
                 title: "Missing Information",
@@ -84,7 +90,7 @@ export default function TestSchedulePage() {
             return;
         }
         
-        const testSet = allSetsData.find(ts => ts.id === selectedTestSetId);
+        const testSet = testSets.find(ts => ts.id === selectedTestSetId);
         if (!testSet) {
              toast({ variant: 'destructive', title: "Error", description: "Selected test set could not be found." });
              return;
@@ -117,7 +123,7 @@ export default function TestSchedulePage() {
         setTime('10:00');
     };
     
-    if (!allSchedules || !allSetsData) {
+    if (!appData || !allSchedules || !testSets) {
         return (
           <div className="flex justify-center items-center h-96">
             <Loader2 className="animate-spin text-primary" size={32} />
@@ -145,7 +151,7 @@ export default function TestSchedulePage() {
                             <Select value={selectedTestSetId} onValueChange={setSelectedTestSetId}>
                                 <SelectTrigger id="test-set"><SelectValue placeholder="Select a test set..." /></SelectTrigger>
                                 <SelectContent>
-                                    {allSetsData.length > 0 ? allSetsData.map(ts => (
+                                    {testSets.length > 0 ? testSets.map(ts => (
                                         <SelectItem key={ts.id} value={ts.id}>{ts.name} ({ts.board}/{ts.standard})</SelectItem>
                                     )) : (
                                         <SelectItem value="disabled" disabled>No test sets available. Upload one first.</SelectItem>

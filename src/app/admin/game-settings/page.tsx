@@ -13,15 +13,15 @@ import type { GameSettings } from "@/lib/store-config";
 
 export default function AdminGameSettingsPage() {
     const { toast } = useToast();
-    const { storeConfig } = useAppData();
+    const appData = useAppData();
     const { setStoreConfig } = useDataUpdaters();
     const [settings, setSettings] = useState<GameSettings | null>(null);
 
     useEffect(() => {
-        if (storeConfig) {
-            setSettings(storeConfig.gameSettings);
+        if (appData && appData.storeConfig) {
+            setSettings(appData.storeConfig.gameSettings);
         }
-    }, [storeConfig]);
+    }, [appData]);
 
     const handleRewardChange = (index: number, value: string) => {
         if (!settings) return;
@@ -37,9 +37,9 @@ export default function AdminGameSettingsPage() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!settings) return;
+        if (!settings || !appData || !appData.storeConfig) return;
         
-        setStoreConfig(prev => ({...prev, gameSettings: settings}));
+        setStoreConfig({...appData.storeConfig, gameSettings: settings});
 
         toast({
             title: "Settings Saved!",
@@ -47,7 +47,7 @@ export default function AdminGameSettingsPage() {
         });
     }
 
-    if (!settings) {
+    if (!appData || !settings) {
         return (
           <div className="flex justify-center items-center h-96">
             <Loader2 className="animate-spin text-primary" size={32} />
@@ -99,3 +99,5 @@ export default function AdminGameSettingsPage() {
     </div>
   );
 }
+
+    

@@ -46,7 +46,7 @@ const WhatsAppIcon = () => (
 )
 
 export default function AdminManagementPage() {
-  const { adminData } = useAppData();
+  const appData = useAppData();
   const { setAdminData } = useDataUpdaters();
 
   const [admins, setAdmins] = useState<Admin[] | null>(null);
@@ -58,11 +58,11 @@ export default function AdminManagementPage() {
   const { toast } = useToast();
   
   useEffect(() => {
-    if (adminData) {
-        setAdmins(adminData.admins);
-        setRequests(adminData.requests);
+    if (appData && appData.adminData) {
+        setAdmins(appData.adminData.admins);
+        setRequests(appData.adminData.requests);
     }
-  }, [adminData]);
+  }, [appData]);
 
   const openWhatsApp = (phone: string, message?: string) => {
     const cleanedPhone = phone.replace(/\D/g, '');
@@ -95,12 +95,12 @@ export default function AdminManagementPage() {
   }
 
   const handleRequest = (requestId: string, newStatus: "Active" | "Rejected") => {
-    if (!requests || !adminData) return;
+    if (!requests || !appData || !appData.adminData) return;
     const requestToProcess = requests.find(req => req.id === requestId);
     if (!requestToProcess) return;
 
     const updatedRequests = requests.filter(req => req.id !== requestId);
-    let updatedAdmins = [...adminData.admins];
+    let updatedAdmins = [...appData.adminData.admins];
 
     if (newStatus === "Active") {
       const newAdmin = { ...requestToProcess, status: "Active" as const, joinDate: new Date().toISOString() };
@@ -117,7 +117,7 @@ export default function AdminManagementPage() {
 
   const handleCreateAdmin = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!adminData) return;
+    if (!appData || !appData.adminData) return;
 
     const form = e.currentTarget;
     const name = (form.elements.namedItem('name') as HTMLInputElement).value;
@@ -142,7 +142,7 @@ export default function AdminManagementPage() {
         joinDate: new Date().toISOString(),
     };
     
-    setAdminData({ ...adminData, admins: [...adminData.admins, newAdmin] });
+    setAdminData({ ...appData.adminData, admins: [...appData.adminData.admins, newAdmin] });
 
     toast({
         title: "Admin Created",
@@ -153,7 +153,7 @@ export default function AdminManagementPage() {
   
   const handleEditAdmin = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!selectedAdmin || !adminData) return;
+    if (!selectedAdmin || !appData || !appData.adminData) return;
     const form = e.currentTarget;
     const name = (form.elements.namedItem('name-edit') as HTMLInputElement).value;
     const email = (form.elements.namedItem('email-edit') as HTMLInputElement).value;
@@ -165,11 +165,11 @@ export default function AdminManagementPage() {
         return;
     }
     
-    const updatedAdmins = adminData.admins.map(admin =>
+    const updatedAdmins = appData.adminData.admins.map(admin =>
         admin.id === selectedAdmin.id ? { ...admin, name, email, phone, role } : admin
     );
 
-    setAdminData({ ...adminData, admins: updatedAdmins });
+    setAdminData({ ...appData.adminData, admins: updatedAdmins });
     
     toast({ title: 'Admin Updated', description: `${name}'s details have been saved.`});
     setIsEditDialogOpen(false);
@@ -200,7 +200,7 @@ export default function AdminManagementPage() {
   }
 
   const handleDeleteAdmin = (adminId: string) => {
-    if (!admins || !adminData) return;
+    if (!admins || !appData || !appData.adminData) return;
     const adminToDelete = admins.find(admin => admin.id === adminId);
     if (!adminToDelete) return;
 
@@ -209,8 +209,8 @@ export default function AdminManagementPage() {
         return;
     }
     
-    const updatedAdmins = adminData.admins.filter(admin => admin.id !== adminId);
-    setAdminData({ ...adminData, admins: updatedAdmins });
+    const updatedAdmins = appData.adminData.admins.filter(admin => admin.id !== adminId);
+    setAdminData({ ...appData.adminData, admins: updatedAdmins });
 
     toast({
         title: "Admin Deleted",
@@ -218,7 +218,7 @@ export default function AdminManagementPage() {
     })
   }
 
-  if (!admins || !requests) {
+  if (!appData || !admins || !requests) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />
@@ -474,3 +474,5 @@ export default function AdminManagementPage() {
     </div>
   );
 }
+
+    

@@ -16,16 +16,18 @@ import { Switch } from "@/components/ui/switch";
 
 export default function AdminStoreSettingsPage() {
   const { toast } = useToast();
-  const { storeConfig: initialStoreConfig, academicConfig: initialAcademicConfig } = useAppData();
+  const appData = useAppData();
   const { setStoreConfig, setAcademicConfig } = useDataUpdaters();
   
   const [storeConfig, setLocalStoreConfig] = useState<StoreConfig | null>(null);
   const [academicConfig, setLocalAcademicConfig] = useState<AcademicConfig | null>(null);
 
   useEffect(() => {
-    if (initialStoreConfig) setLocalStoreConfig(JSON.parse(JSON.stringify(initialStoreConfig)));
-    if (initialAcademicConfig) setLocalAcademicConfig(JSON.parse(JSON.stringify(initialAcademicConfig)));
-  }, [initialStoreConfig, initialAcademicConfig]);
+    if (appData) {
+        if (appData.storeConfig) setLocalStoreConfig(JSON.parse(JSON.stringify(appData.storeConfig)));
+        if (appData.academicConfig) setLocalAcademicConfig(JSON.parse(JSON.stringify(appData.academicConfig)));
+    }
+  }, [appData]);
 
   const handlePackageChange = (index: number, field: keyof TicketPackage, value: string | number | boolean) => {
     if (!storeConfig) return;
@@ -178,7 +180,7 @@ export default function AdminStoreSettingsPage() {
       );
   };
 
-  if (!storeConfig || !academicConfig) {
+  if (!appData || !storeConfig || !academicConfig) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />
@@ -369,3 +371,5 @@ export default function AdminStoreSettingsPage() {
     </div>
   );
 }
+
+    

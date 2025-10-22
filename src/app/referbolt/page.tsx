@@ -33,24 +33,24 @@ const benefits = [
 ];
 
 export default function ReferBoltPage() {
-  const { walletData } = useAppData();
+  const appData = useAppData();
   const { toast } = useToast();
   
   const [data, setData] = useState<typeof initialReferboltData | null>(null);
   const [autoRenew, setAutoRenew] = useState(false);
 
   useEffect(() => {
-      if (walletData) {
+      if (appData && appData.walletData) {
           setData({
               ...initialReferboltData,
-              isSubscribed: walletData.referralCode.includes("IBA"), // Mock logic
+              isSubscribed: appData.walletData.referralCode.includes("IBA"), // Mock logic
           });
       }
-  }, [walletData]);
+  }, [appData]);
 
   const handleShare = async () => {
-    if (!walletData) return;
-    const referralCode = walletData.referralCode;
+    if (!appData || !appData.walletData) return;
+    const referralCode = appData.walletData.referralCode;
     const shareUrl = `${window.location.origin}/signup?ref=${referralCode}`;
     const benefitsText = benefits.map(b => `✅ ${b.text}`).join("\n");
 
@@ -87,7 +87,7 @@ Subscribe and start your earning cycle now: ${shareUrl}
     }
   };
   
-  if (!data) {
+  if (!appData || !data) {
       return (
           <div className="w-full max-w-2xl mx-auto flex items-center justify-center h-96">
               <Loader2 className="animate-spin text-primary" size={32}/>

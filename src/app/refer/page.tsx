@@ -9,22 +9,25 @@ import { useState, useEffect } from "react";
 import { useAppData } from "@/hooks/use-hydrate-data";
 
 export default function ReferAndEarnPage() {
-    const { storeConfig, walletData } = useAppData();
+    const appData = useAppData();
     const { toast } = useToast();
     
-    const [referralBonus, setReferralBonus] = useState(0);
-    const [referralCode, setReferralCode] = useState('');
+    const [referralBonus, setReferralBonus] = useState<number | null>(null);
+    const [referralCode, setReferralCode] = useState<string | null>(null);
 
     useEffect(() => {
-        if (storeConfig) {
-            setReferralBonus(storeConfig.referralBonus);
+        if (appData) {
+            if (appData.storeConfig) {
+                setReferralBonus(appData.storeConfig.referralBonus);
+            }
+            if (appData.walletData) {
+                setReferralCode(appData.walletData.referralCode);
+            }
         }
-        if (walletData) {
-            setReferralCode(walletData.referralCode);
-        }
-    }, [storeConfig, walletData]);
+    }, [appData]);
 
     const handleShare = async () => {
+        if (referralCode === null || referralBonus === null) return;
         const url = `${window.location.origin}/signup?ref=${referralCode}`;
         const bonusAmount = referralBonus;
         
@@ -57,7 +60,7 @@ Click here to join: ${url}`;
         }
     };
     
-    if (!referralCode) {
+    if (!appData || referralCode === null || referralBonus === null) {
         return (
           <div className="w-full max-w-2xl mx-auto flex items-center justify-center h-96">
             <Loader2 className="animate-spin text-primary" size={32} />

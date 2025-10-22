@@ -12,16 +12,16 @@ import { useAppData } from "@/hooks/use-hydrate-data";
 import type { GameSettings } from "@/lib/store-config";
 
 export default function HowToPlayPage() {
-  const { storeConfig } = useAppData();
+  const appData = useAppData();
   const [gameSettings, setGameSettings] = useState<GameSettings | null>(null);
 
   useEffect(() => {
-    if (storeConfig) {
-      setGameSettings(storeConfig.gameSettings);
+    if (appData && appData.storeConfig) {
+      setGameSettings(appData.storeConfig.gameSettings);
     }
-  }, [storeConfig]);
+  }, [appData]);
 
-  if (!gameSettings) {
+  if (!appData || !gameSettings) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />
@@ -152,3 +152,5 @@ export default function HowToPlayPage() {
     </div>
   );
 }
+
+    

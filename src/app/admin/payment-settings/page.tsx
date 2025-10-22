@@ -13,7 +13,7 @@ import type { AdminPaymentMethods } from "@/lib/user-data";
 import Image from "next/image";
 
 export default function PaymentSettingsPage() {
-    const { walletData } = useAppData();
+    const appData = useAppData();
     const { setWalletData } = useDataUpdaters();
     const { toast } = useToast();
     
@@ -21,10 +21,10 @@ export default function PaymentSettingsPage() {
     const [qrFile, setQrFile] = useState<File | null>(null);
 
     useEffect(() => {
-        if (walletData) {
-            setMethods(walletData.adminPaymentMethods);
+        if (appData && appData.walletData) {
+            setMethods(appData.walletData.adminPaymentMethods);
         }
-    }, [walletData])
+    }, [appData])
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -40,10 +40,10 @@ export default function PaymentSettingsPage() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!methods || !walletData) return;
+        if (!methods || !appData || !appData.walletData) return;
         
         const updateConfig = (finalMethods: AdminPaymentMethods) => {
-            setWalletData({ ...walletData, adminPaymentMethods: finalMethods });
+            setWalletData({ ...appData.walletData!, adminPaymentMethods: finalMethods });
             toast({
                 title: "Settings Saved!",
                 description: "Payment method details have been successfully updated.",
@@ -65,7 +65,7 @@ export default function PaymentSettingsPage() {
 
     }
 
-    if (!methods) {
+    if (!appData || !methods) {
         return (
           <div className="flex justify-center items-center h-96">
             <Loader2 className="animate-spin text-primary" size={32} />

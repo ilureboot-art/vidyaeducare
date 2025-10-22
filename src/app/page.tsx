@@ -11,6 +11,7 @@ import { StoreConfig } from "@/lib/store-config";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useState, useEffect } from "react";
 import { useAppData } from "@/hooks/use-hydrate-data";
+import { WalletData } from "@/lib/user-data";
 
 const features = [
   {
@@ -53,22 +54,25 @@ const testimonials = [
 
 
 export default function HomePage() {
-  const { storeConfig, walletData } = useAppData();
+  const appData = useAppData();
   const { toast } = useToast();
   
-  const [bonus, setBonus] = useState(0);
-  const [refCode, setRefCode] = useState('');
+  const [bonus, setBonus] = useState<number | null>(null);
+  const [refCode, setRefCode] = useState<string | null>(null);
 
   useEffect(() => {
-    if (storeConfig) {
-      setBonus(storeConfig.referralBonus);
+    if (appData) {
+        if(appData.storeConfig) {
+            setBonus(appData.storeConfig.referralBonus);
+        }
+        if(appData.walletData) {
+            setRefCode(appData.walletData.referralCode);
+        }
     }
-    if (walletData) {
-      setRefCode(walletData.referralCode);
-    }
-  }, [storeConfig, walletData]);
+  }, [appData]);
 
   const handleShare = async () => {
+    if (refCode === null || bonus === null) return;
     const url = `${window.location.origin}/signup?ref=${refCode}`;
     const message = `🎓 Check out Vidya EduCare! It's an amazing platform for mock tests, skill-based games, and earning rewards. 
     
@@ -103,7 +107,7 @@ Start your journey to success now: ${url}
     }
   };
 
-  if (!storeConfig || !walletData) {
+  if (!appData || bonus === null || refCode === null) {
       return (
         <div className="w-full max-w-6xl mx-auto flex items-center justify-center h-screen">
           <Loader2 className="animate-spin text-primary" size={48} />

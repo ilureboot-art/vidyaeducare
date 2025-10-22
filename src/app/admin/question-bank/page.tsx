@@ -51,7 +51,7 @@ const initialTestSetState: TestSet = {
 };
 
 export default function TestSetManagementPage() {
-  const { testSets: allTestSets, academicConfig: initialAcademicConfig } = useAppData();
+  const appData = useAppData();
   const { setTestSets } = useDataUpdaters();
   const { toast } = useToast();
 
@@ -69,11 +69,11 @@ export default function TestSetManagementPage() {
   const [editingTestSet, setEditingTestSet] = useState<TestSet | null>(null);
   
   useEffect(() => {
-    if (allTestSets && initialAcademicConfig) {
-      setLocalTestSets(allTestSets);
-      setAcademicConfig(initialAcademicConfig);
+    if (appData && appData.testSets && appData.academicConfig) {
+      setLocalTestSets(appData.testSets);
+      setAcademicConfig(appData.academicConfig);
     }
-  }, [allTestSets, initialAcademicConfig]);
+  }, [appData]);
 
   const resetManualForm = () => {
       setStep(1);
@@ -281,7 +281,7 @@ export default function TestSetManagementPage() {
     resetManualForm();
 };
 
-  if (!testSets || !academicConfig) {
+  if (!appData || !testSets || !academicConfig) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />

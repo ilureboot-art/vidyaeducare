@@ -45,6 +45,7 @@ export default function LeaderboardPage() {
   const [leaderboardData, setLeaderboardData] = useState<Player[] | null>(null);
 
   useEffect(() => {
+    // Simulate fetching data, but ensure it only runs on the client.
     setLeaderboardData(initialLeaderboardData);
   }, []);
 
@@ -123,3 +124,5 @@ export default function LeaderboardPage() {
     </div>
   );
 }
+
+    

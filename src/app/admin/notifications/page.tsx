@@ -24,19 +24,19 @@ const getIconForType = (type: string) => {
 }
 
 export default function AdminNotificationsPage() {
-    const { notifications: allNotifications } = useAppData();
+    const appData = useAppData();
     const [notifications, setNotifications] = useState<AppNotification[] | null>(null);
 
     useEffect(() => {
-        if (allNotifications) {
-            const adminNotifications = allNotifications
+        if (appData && appData.notifications) {
+            const adminNotifications = appData.notifications
                 .filter(n => n.userId === 'admin')
                 .sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
             setNotifications(adminNotifications);
         }
-    }, [allNotifications]);
+    }, [appData]);
 
-    if (!notifications) {
+    if (!appData || !notifications) {
         return (
           <div className="flex justify-center items-center h-96">
             <Loader2 className="animate-spin text-primary" size={32} />
@@ -85,3 +85,5 @@ export default function AdminNotificationsPage() {
         </div>
     );
 }
+
+    

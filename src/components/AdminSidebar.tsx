@@ -38,6 +38,7 @@ import {
 const adminNavItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/admin/vidya-ai", label: "Vidya AI Agent", icon: BrainCircuit },
   { href: "/admin/notifications", label: "Notifications", icon: Bell },
   { href: "/admin/users", label: "User Management", icon: Users },
   { href: "/admin/transactions", label: "Transactions", icon: CreditCard },

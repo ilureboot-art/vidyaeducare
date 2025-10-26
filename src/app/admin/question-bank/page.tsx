@@ -125,7 +125,14 @@ export default function TestSetManagementPage() {
                 };
             }
         } else {
-            throw new Error("Invalid File Type. Please upload a .json file.");
+            toast({
+              variant: 'destructive',
+              title: "AI Generation Disabled",
+              description: "AI-based file processing is temporarily disabled. Please upload a valid JSON file.",
+              duration: 9000
+            });
+            setIsUploading(false);
+            return;
         }
 
         if (!parsedQuestionArray || parsedQuestionArray.length === 0) {

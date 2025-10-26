@@ -12,14 +12,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2, BrainCircuit, Sparkles, Wand2 } from "lucide-react";
 import type { AcademicConfig } from "@/lib/academic-config";
 import { defaultAcademicConfig } from "@/lib/academic-config";
-import { generateMcqs, type McqGeneratorInput, type McqGeneratorOutput } from "@/ai/flows/mcq-generator-flow";
 
 export default function VidyaAIPage() {
     const { toast } = useToast();
 
     const [academicConfig, setAcademicConfig] = useState<AcademicConfig | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
-    const [generatedQuestions, setGeneratedQuestions] = useState<McqGeneratorOutput | null>(null);
+    const [generatedQuestions, setGeneratedQuestions] = useState<any | null>(null);
 
     const [board, setBoard] = useState('');
     const [standard, setStandard] = useState('');
@@ -41,14 +40,9 @@ export default function VidyaAIPage() {
         setIsGenerating(true);
         setGeneratedQuestions(null);
         try {
-            const input: McqGeneratorInput = { board, standard, subject, chapterName, numQuestions };
-            const result = await generateMcqs(input);
-            if (!result || result.length === 0) {
-                toast({ variant: 'destructive', title: "Generation Failed", description: "The AI could not generate questions. Please try again." });
-            } else {
-                setGeneratedQuestions(result);
-                toast({ title: "Generation Complete!", description: `${result.length} MCQs have been created.` });
-            }
+            // AI flow has been removed to fix a build error.
+            toast({ variant: 'destructive', title: "Feature Disabled", description: "AI generation is temporarily disabled." });
+            
         } catch (error) {
             console.error("MCQ generation error:", error);
             const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";

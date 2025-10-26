@@ -32,7 +32,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { type TestSet, type Question, defaultTestSets } from "@/lib/question-bank";
 import type { AcademicConfig } from "@/lib/academic-config";
 import { defaultAcademicConfig } from "@/lib/academic-config";
-import { parseQuestionsFromDocument, type QuestionParserOutput } from "@/ai/flows/document-parser-flow";
 
 
 const initialQuestionState: Omit<Question, 'id'> = {
@@ -110,7 +109,7 @@ export default function TestSetManagementPage() {
     setIsUploading(true);
 
     try {
-        let parsedQuestionArray: QuestionParserOutput = [];
+        let parsedQuestionArray: Question[] = [];
         let inferredDetails: Omit<TestSet, 'id' | 'questions'> = { name: '', board: 'SSC', standard: '', subject: '' };
         
         if (file.type === 'application/json') {

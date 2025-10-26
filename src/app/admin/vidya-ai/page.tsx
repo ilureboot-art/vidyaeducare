@@ -32,24 +32,7 @@ export default function VidyaAIPage() {
 
     const handleGenerate = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!board || !standard || !subject || !chapterName || !numQuestions) {
-            toast({ variant: 'destructive', title: "Missing Information", description: "Please fill out all fields."});
-            return;
-        }
-
-        setIsGenerating(true);
-        setGeneratedQuestions(null);
-        try {
-            // AI flow has been removed to fix a build error.
-            toast({ variant: 'destructive', title: "Feature Disabled", description: "AI generation is temporarily disabled." });
-            
-        } catch (error) {
-            console.error("MCQ generation error:", error);
-            const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-            toast({ variant: 'destructive', title: "Generation Error", description: errorMessage });
-        } finally {
-            setIsGenerating(false);
-        }
+        toast({ variant: 'destructive', title: "Feature Disabled", description: "AI generation is temporarily disabled." });
     };
     
     const handleCopyToClipboard = () => {

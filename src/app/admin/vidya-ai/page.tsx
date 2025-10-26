@@ -32,7 +32,7 @@ export default function VidyaAIPage() {
 
     const handleGenerate = async (e: React.FormEvent) => {
         e.preventDefault();
-        toast({ variant: 'destructive', title: "Feature Disabled", description: "AI generation is temporarily disabled while we resolve an issue." });
+        toast({ variant: 'destructive', title: "Feature Disabled", description: "AI generation is temporarily disabled." });
     };
     
     const handleCopyToClipboard = () => {

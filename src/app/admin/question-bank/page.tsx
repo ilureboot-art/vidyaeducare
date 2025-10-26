@@ -127,8 +127,8 @@ export default function TestSetManagementPage() {
         } else {
             toast({
               variant: 'destructive',
-              title: "AI Generation Disabled",
-              description: "AI-based file processing is temporarily disabled. Please upload a valid JSON file.",
+              title: "Upload Failed",
+              description: "Please upload a valid JSON file.",
               duration: 9000
             });
             setIsUploading(false);

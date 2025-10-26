@@ -57,7 +57,6 @@ export default function TestSetManagementPage() {
 
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [isManualCreateOpen, setIsManualCreateOpen] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
   const [isAppendDialogOpen, setIsAppendDialogOpen] = useState(false);
   const [testSetToAppend, setTestSetToAppend] = useState<TestSet | null>(null);
   const appendFileInputRef = useRef<HTMLInputElement>(null);
@@ -352,15 +351,6 @@ export default function TestSetManagementPage() {
                         </div>
                     </DialogContent>
                 </Dialog>
-                
-                 {isUploading && (
-                    <div className="fixed inset-0 bg-background/80 flex items-center justify-center z-50">
-                        <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                            <Loader2 className="animate-spin h-5 w-5" />
-                            <span>Processing file... This may take a moment.</span>
-                        </div>
-                    </div>
-                 )}
 
               </div>
             </div>

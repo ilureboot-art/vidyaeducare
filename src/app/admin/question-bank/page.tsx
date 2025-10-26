@@ -104,102 +104,21 @@ export default function TestSetManagementPage() {
     setLocalTestSets(updatedTestSets);
     toast({ title: "Test Set Deleted", description: "The test set has been removed from the bank."});
   }
-  
-  const processAndSaveFile = async (file: File, existingTestSetId: string | null = null) => {
-    setIsUploading(true);
-
-    try {
-        let parsedQuestionArray: Question[] = [];
-        let inferredDetails: Omit<TestSet, 'id' | 'questions'> = { name: '', board: 'SSC', standard: '', subject: '' };
-        
-        if (file.type === 'application/json') {
-            const content = await file.text();
-            const jsonObj = JSON.parse(content);
-            parsedQuestionArray = jsonObj.questions || [];
-            if (!existingTestSetId) {
-                inferredDetails = {
-                    name: jsonObj.name || file.name.replace('.json', ''),
-                    board: jsonObj.board || 'SSC',
-                    standard: jsonObj.standard || '',
-                    subject: jsonObj.subject || ''
-                };
-            }
-        } else {
-            toast({
-              variant: 'destructive',
-              title: "Upload Failed",
-              description: "Please upload a valid JSON file.",
-              duration: 9000
-            });
-            setIsUploading(false);
-            return;
-        }
-
-        if (!parsedQuestionArray || parsedQuestionArray.length === 0) {
-            throw new Error("No valid questions could be parsed from the document.");
-        }
-      
-        const questionsWithIds = parsedQuestionArray.map((q, i) => ({ ...q, id: `Q-${Date.now()}-${i}`}));
-        
-        if (existingTestSetId) {
-            if (!testSets) throw new Error("Test sets not loaded.");
-            const existingSet = testSets.find(ts => ts.id === existingTestSetId);
-            if (!existingSet) throw new Error("Could not find the test set to append to.");
-            
-            const existingQuestionTexts = new Set(existingSet.questions.map(q => q.text.en.trim()));
-            const uniqueNewQuestions = questionsWithIds.filter(q => !existingQuestionTexts.has(q.text.en.trim()));
-            const skippedCount = questionsWithIds.length - uniqueNewQuestions.length;
-
-            const updatedSet = { ...existingSet, questions: [...existingSet.questions, ...uniqueNewQuestions] };
-            const updatedTestSets = testSets.map(ts => ts.id === existingTestSetId ? updatedSet : ts);
-            setLocalTestSets(updatedTestSets);
-
-            toast({
-              title: "Questions Appended!",
-              description: `${uniqueNewQuestions.length} new questions added to "${existingSet.name}". ${skippedCount} duplicates were skipped.`
-            });
-        } else {
-            const newTestSet: TestSet = {
-                ...inferredDetails,
-                id: `SET-${Date.now()}`,
-                questions: questionsWithIds
-            };
-            setLocalTestSets([...(testSets || []), newTestSet]);
-            toast({
-              title: "Test Set Saved!",
-              description: `"${newTestSet.name}" with ${newTestSet.questions.length} questions has been added.`
-            });
-        }
-        
-    } catch (error) {
-        console.error("File processing error:", error);
-        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-         toast({
-            variant: 'destructive',
-            title: "Upload Failed",
-            description: `Failed to process file. ${errorMessage}`,
-            duration: 9000
-         });
-    } finally {
-        setIsUploading(false);
-    }
-  }
 
   const handleBulkUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    setIsBulkUploadOpen(false);
-    await processAndSaveFile(file);
-    if (event.target) event.target.value = '';
+    toast({
+        variant: 'destructive',
+        title: "Feature Disabled",
+        description: "Bulk upload is temporarily disabled.",
+    });
   }
   
   const handleAppendUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0];
-      if (!file || !testSetToAppend) return;
-      setIsAppendDialogOpen(false);
-      await processAndSaveFile(file, testSetToAppend.id);
-      if (event.target) event.target.value = '';
-      setTestSetToAppend(null);
+    toast({
+        variant: 'destructive',
+        title: "Feature Disabled",
+        description: "Appending questions is temporarily disabled.",
+    });
   };
   
   const handleSetDetailChange = (field: keyof Omit<TestSet, 'id'|'questions'>, value: string) => {
@@ -403,7 +322,7 @@ export default function TestSetManagementPage() {
                          <DialogHeader>
                             <DialogTitle>Bulk Upload a New Test Set</DialogTitle>
                             <DialogDescription>
-                                This will create a brand new test set from your file.
+                                This feature is temporarily disabled.
                             </DialogDescription>
                         </DialogHeader>
                         <div className="space-y-6 py-4">
@@ -427,7 +346,7 @@ export default function TestSetManagementPage() {
                            </div>
                              <div className="space-y-2">
                                 <Label htmlFor="file-upload" className="font-semibold">Upload Your File (.json)</Label>
-                                <Input id="file-upload" type="file" accept=".json" onChange={handleBulkUpload} disabled={isUploading} className="file:text-primary file:font-semibold" />
+                                <Input id="file-upload" type="file" accept=".json" onChange={handleBulkUpload} disabled={true} className="file:text-primary file:font-semibold" />
                                 <p className="text-xs text-muted-foreground">The test set will be saved immediately after upload.</p>
                             </div>
                         </div>
@@ -504,7 +423,7 @@ export default function TestSetManagementPage() {
               <DialogHeader>
                   <DialogTitle>Append Questions to "{testSetToAppend?.name}"</DialogTitle>
                   <DialogDescription>
-                      Upload a JSON file. The questions inside will be added to the end of this test set.
+                      This feature is temporarily disabled.
                   </DialogDescription>
               </DialogHeader>
               <div className="py-4">
@@ -515,7 +434,7 @@ export default function TestSetManagementPage() {
                       ref={appendFileInputRef}
                       onChange={handleAppendUpload}
                       accept=".json" 
-                      disabled={isUploading} 
+                      disabled={true} 
                       className="file:text-primary file:font-semibold" 
                   />
               </div>
@@ -524,3 +443,5 @@ export default function TestSetManagementPage() {
     </div>
   );
 }
+
+    

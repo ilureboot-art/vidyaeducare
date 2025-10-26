@@ -18,7 +18,7 @@ export default function VidyaAIPage() {
 
     const [academicConfig, setAcademicConfig] = useState<AcademicConfig | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
-    const [generatedQuestions, setGeneratedQuestions] = useState<any | null>(null);
+    const [generatedOutput, setGeneratedOutput] = useState<string | null>(null);
 
     const [board, setBoard] = useState('');
     const [standard, setStandard] = useState('');
@@ -32,18 +32,17 @@ export default function VidyaAIPage() {
 
     const handleGenerate = async (e: React.FormEvent) => {
         e.preventDefault();
-        toast({ variant: 'destructive', title: "Feature Disabled", description: "AI generation is temporarily disabled." });
+        toast({ variant: 'destructive', title: "Feature Disabled", description: "AI generation is temporarily disabled while we resolve an issue." });
     };
     
     const handleCopyToClipboard = () => {
-        if (!generatedQuestions) return;
+        if (!generatedOutput) return;
 
-        const jsonString = JSON.stringify(generatedQuestions, null, 2);
-        navigator.clipboard.writeText(jsonString).then(() => {
-            toast({ title: "Copied to Clipboard", description: "Generated questions copied as JSON." });
+        navigator.clipboard.writeText(generatedOutput).then(() => {
+            toast({ title: "Copied to Clipboard", description: "Generated output copied as JSON." });
         }).catch(err => {
             console.error("Copy failed:", err);
-            toast({ variant: 'destructive', title: "Copy Failed", description: "Could not copy questions to clipboard." });
+            toast({ variant: 'destructive', title: "Copy Failed", description: "Could not copy output to clipboard." });
         });
     };
 
@@ -60,9 +59,9 @@ export default function VidyaAIPage() {
             <h1 className="text-3xl font-bold flex items-center gap-2"><BrainCircuit /> Vidya EduCare AI</h1>
             <Card>
                 <CardHeader>
-                    <CardTitle>MCQ Generator</CardTitle>
+                    <CardTitle>Content Generator</CardTitle>
                     <CardDescription>
-                        Generate Multiple Choice Questions by providing the academic details. The AI will create questions and answers in both English and Marathi.
+                        This feature is temporarily disabled.
                     </CardDescription>
                 </CardHeader>
                 <form onSubmit={handleGenerate}>
@@ -70,21 +69,21 @@ export default function VidyaAIPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="board">Board</Label>
-                                <Select value={board} onValueChange={setBoard} required>
+                                <Select value={board} onValueChange={setBoard} required disabled>
                                     <SelectTrigger id="board"><SelectValue placeholder="Select..."/></SelectTrigger>
                                     <SelectContent>{academicConfig.boards.map((b: string) => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
                                 </Select>
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="standard">Standard</Label>
-                                <Select value={standard} onValueChange={setStandard} required>
+                                <Select value={standard} onValueChange={setStandard} required disabled>
                                     <SelectTrigger id="standard"><SelectValue placeholder="Select..."/></SelectTrigger>
                                     <SelectContent>{academicConfig.standards.map((s: string) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                                 </Select>
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="subject">Subject</Label>
-                                <Select value={subject} onValueChange={setSubject} required>
+                                <Select value={subject} onValueChange={setSubject} required disabled>
                                     <SelectTrigger id="subject"><SelectValue placeholder="Select..."/></SelectTrigger>
                                     <SelectContent>{academicConfig.subjects.map((s: string) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                                 </Select>
@@ -93,24 +92,24 @@ export default function VidyaAIPage() {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div className="space-y-2 md:col-span-2">
                                 <Label htmlFor="chapterName">Chapter Name / Topic</Label>
-                                <Input id="chapterName" value={chapterName} onChange={(e) => setChapterName(e.target.value)} placeholder="e.g., Gravitation, The Indian Constitution" required />
+                                <Input id="chapterName" value={chapterName} onChange={(e) => setChapterName(e.target.value)} placeholder="e.g., Gravitation, The Indian Constitution" required disabled/>
                             </div>
                              <div className="space-y-2">
                                 <Label htmlFor="numQuestions">Number of Questions</Label>
-                                <Input id="numQuestions" type="number" value={numQuestions} onChange={(e) => setNumQuestions(Number(e.target.value))} min={1} max={20} required />
+                                <Input id="numQuestions" type="number" value={numQuestions} onChange={(e) => setNumQuestions(Number(e.target.value))} min={1} max={20} required disabled/>
                             </div>
                         </div>
                          <div className="flex justify-end pt-4">
-                            <Button type="submit" disabled={isGenerating}>
-                                {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
-                                Generate MCQs
+                            <Button type="submit" disabled>
+                                <Wand2 className="mr-2 h-4 w-4" />
+                                Generate Content
                             </Button>
                         </div>
                     </CardContent>
                 </form>
             </Card>
 
-            {(isGenerating || generatedQuestions) && (
+            {(isGenerating || generatedOutput) && (
                  <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center justify-between">
@@ -118,25 +117,25 @@ export default function VidyaAIPage() {
                                 <Sparkles className="text-primary"/>
                                 Generated Output
                             </div>
-                            {generatedQuestions && (
+                            {generatedOutput && (
                                 <Button variant="outline" size="sm" onClick={handleCopyToClipboard}>Copy JSON</Button>
                             )}
                         </CardTitle>
                         <CardDescription>
-                            {isGenerating ? "The AI is thinking... Please wait a moment." : "Review the generated questions below."}
+                            {isGenerating ? "The AI is thinking... Please wait a moment." : "Review the generated output below."}
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
                         {isGenerating && (
                              <div className="flex flex-col items-center justify-center text-center text-muted-foreground gap-4 h-64">
                                 <Loader2 className="animate-spin text-primary" size={32} />
-                                <p>Generating {numQuestions} questions for '{chapterName}'...</p>
+                                <p>Generating content for '{chapterName}'...</p>
                              </div>
                         )}
-                        {generatedQuestions && (
+                        {generatedOutput && (
                             <Textarea 
                                 readOnly
-                                value={JSON.stringify(generatedQuestions, null, 2)}
+                                value={generatedOutput}
                                 className="min-h-[400px] text-xs font-mono bg-muted/50"
                             />
                         )}

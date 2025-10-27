@@ -309,10 +309,6 @@ export default function AdminManagementPage() {
                             <Input id="phone" name="phone" type="tel" required placeholder="e.g. 919876543210"/>
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="password">Password</Label>
-                            <Input id="password" name="password" type="password" required />
-                        </div>
-                        <div className="space-y-2">
                             <Label htmlFor="role">Role</Label>
                              <Select name="role" required>
                                 <SelectTrigger id="role">
@@ -469,5 +465,3 @@ export default function AdminManagementPage() {
     </div>
   );
 }
-
-    

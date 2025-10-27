@@ -315,7 +315,7 @@ export default function TestSetManagementPage() {
 
                 <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
                     <DialogTrigger asChild>
-                        <Button><Upload className="mr-2 h-4 w-4" /> Bulk Upload</Button>
+                        <Button disabled><Upload className="mr-2 h-4 w-4" /> Bulk Upload</Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-xl">
                          <DialogHeader>
@@ -324,31 +324,6 @@ export default function TestSetManagementPage() {
                                 This feature is temporarily disabled.
                             </DialogDescription>
                         </DialogHeader>
-                        <div className="space-y-6 py-4">
-                           <div className="space-y-2">
-                               <Label className="font-semibold">JSON File Format:</Label>
-                               <pre className="p-3 bg-muted text-xs rounded-md overflow-x-auto whitespace-pre-wrap">
-{`{
-  "name": "Test Name",
-  "board": "SSC",
-  "standard": "10th",
-  "subject": "Science",
-  "questions": [
-    {
-      "text": {"en": "Q Text", "mr": "Q Text"},
-      "options": {"en": [], "mr": []},
-      "correctAnswer": {"en": "Ans", "mr": "Ans"}
-    }
-  ]
-}`}
-                               </pre>
-                           </div>
-                             <div className="space-y-2">
-                                <Label htmlFor="file-upload" className="font-semibold">Upload Your File (.json)</Label>
-                                <Input id="file-upload" type="file" accept=".json" onChange={handleBulkUpload} disabled={true} className="file:text-primary file:font-semibold" />
-                                <p className="text-xs text-muted-foreground">The test set will be saved immediately after upload.</p>
-                            </div>
-                        </div>
                     </DialogContent>
                 </Dialog>
 
@@ -388,7 +363,7 @@ export default function TestSetManagementPage() {
                         <DropdownMenuItem onClick={() => handleOpenEditDialog(ts)}>
                             <Edit className="mr-2 h-4 w-4"/> View/Edit
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleOpenAppendDialog(ts)}>
+                        <DropdownMenuItem onClick={() => handleOpenAppendDialog(ts)} disabled>
                             <UploadCloud className="mr-2 h-4 w-4" /> Upload & Append
                         </DropdownMenuItem>
                         <DropdownMenuItem className="text-red-600 focus:text-red-500 focus:bg-red-950/50" onClick={() => handleDelete(ts.id)}>
@@ -416,21 +391,8 @@ export default function TestSetManagementPage() {
                       This feature is temporarily disabled.
                   </DialogDescription>
               </DialogHeader>
-              <div className="py-4">
-                  <Label htmlFor="append-file-upload">File to Upload</Label>
-                  <Input 
-                      id="append-file-upload" 
-                      type="file" 
-                      ref={appendFileInputRef}
-                      onChange={handleAppendUpload}
-                      accept=".json" 
-                      disabled={true} 
-                      className="file:text-primary file:font-semibold" 
-                  />
-              </div>
           </DialogContent>
       </Dialog>
     </div>
   );
 }
-

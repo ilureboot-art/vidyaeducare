@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Trash2, Edit, Upload, BookCopy, FilePlus, ScrollText, ArrowRight, Save, Loader2, UploadCloud } from "lucide-react";
+import { MoreHorizontal, Trash2, Edit, BookCopy, FilePlus, ScrollText, ArrowRight, Save, Loader2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -286,9 +286,7 @@ export default function TestSetManagementPage() {
                         )}
                     </DialogContent>
                  </Dialog>
-
-                <Button disabled><Upload className="mr-2 h-4 w-4" /> Bulk Upload</Button>
-
+                <Button disabled>Bulk Upload (Disabled)</Button>
               </div>
             </div>
         </CardHeader>
@@ -324,9 +322,6 @@ export default function TestSetManagementPage() {
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuItem onClick={() => handleOpenEditDialog(ts)}>
                             <Edit className="mr-2 h-4 w-4"/> View/Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem disabled>
-                            <UploadCloud className="mr-2 h-4 w-4" /> Upload & Append
                         </DropdownMenuItem>
                         <DropdownMenuItem className="text-red-600 focus:text-red-500 focus:bg-red-950/50" onClick={() => handleDelete(ts.id)}>
                             <Trash2 className="mr-2 h-4 w-4"/> Delete

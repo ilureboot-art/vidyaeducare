@@ -55,11 +55,7 @@ export default function TestSetManagementPage() {
   const [testSets, setLocalTestSets] = useState<TestSet[] | null>(null);
   const [academicConfig, setAcademicConfig] = useState<AcademicConfig | null>(null);
 
-  const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [isManualCreateOpen, setIsManualCreateOpen] = useState(false);
-  const [isAppendDialogOpen, setIsAppendDialogOpen] = useState(false);
-  const [testSetToAppend, setTestSetToAppend] = useState<TestSet | null>(null);
-  const appendFileInputRef = useRef<HTMLInputElement>(null);
 
   const [step, setStep] = useState(1);
   const [editingTestSet, setEditingTestSet] = useState<TestSet | null>(null);
@@ -90,12 +86,6 @@ export default function TestSetManagementPage() {
     setStep(1);
     setIsManualCreateOpen(true);
   };
-  
-  const handleOpenAppendDialog = (testSet: TestSet) => {
-    setTestSetToAppend(testSet);
-    setIsAppendDialogOpen(true);
-  };
-
 
   const handleDelete = (testSetId: string) => {
     if (!testSets) return;
@@ -103,22 +93,6 @@ export default function TestSetManagementPage() {
     setLocalTestSets(updatedTestSets);
     toast({ title: "Test Set Deleted", description: "The test set has been removed from the bank."});
   }
-
-  const handleBulkUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    toast({
-        variant: 'destructive',
-        title: "Feature Disabled",
-        description: "Bulk upload is temporarily disabled.",
-    });
-  }
-  
-  const handleAppendUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    toast({
-        variant: 'destructive',
-        title: "Feature Disabled",
-        description: "Appending questions is temporarily disabled.",
-    });
-  };
   
   const handleSetDetailChange = (field: keyof Omit<TestSet, 'id'|'questions'>, value: string) => {
       if (!editingTestSet) return;
@@ -219,7 +193,7 @@ export default function TestSetManagementPage() {
               <div>
                 <CardTitle>All Test Sets</CardTitle>
                 <CardDescription>
-                    Create or upload sets of questions for mock tests.
+                    Create or manage sets of questions for mock tests.
                 </CardDescription>
               </div>
               <div className="flex gap-2">
@@ -313,19 +287,7 @@ export default function TestSetManagementPage() {
                     </DialogContent>
                  </Dialog>
 
-                <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
-                    <DialogTrigger asChild>
-                        <Button disabled><Upload className="mr-2 h-4 w-4" /> Bulk Upload</Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-xl">
-                         <DialogHeader>
-                            <DialogTitle>Bulk Upload a New Test Set</DialogTitle>
-                            <DialogDescription>
-                                This feature is temporarily disabled.
-                            </DialogDescription>
-                        </DialogHeader>
-                    </DialogContent>
-                </Dialog>
+                <Button disabled><Upload className="mr-2 h-4 w-4" /> Bulk Upload</Button>
 
               </div>
             </div>
@@ -363,7 +325,7 @@ export default function TestSetManagementPage() {
                         <DropdownMenuItem onClick={() => handleOpenEditDialog(ts)}>
                             <Edit className="mr-2 h-4 w-4"/> View/Edit
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleOpenAppendDialog(ts)} disabled>
+                        <DropdownMenuItem disabled>
                             <UploadCloud className="mr-2 h-4 w-4" /> Upload & Append
                         </DropdownMenuItem>
                         <DropdownMenuItem className="text-red-600 focus:text-red-500 focus:bg-red-950/50" onClick={() => handleDelete(ts.id)}>
@@ -382,17 +344,6 @@ export default function TestSetManagementPage() {
           </Table>
         </CardContent>
       </Card>
-      
-      <Dialog open={isAppendDialogOpen} onOpenChange={setIsAppendDialogOpen}>
-          <DialogContent>
-              <DialogHeader>
-                  <DialogTitle>Append Questions to "{testSetToAppend?.name}"</DialogTitle>
-                  <DialogDescription>
-                      This feature is temporarily disabled.
-                  </DialogDescription>
-              </DialogHeader>
-          </DialogContent>
-      </Dialog>
     </div>
   );
 }

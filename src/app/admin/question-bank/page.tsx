@@ -177,61 +177,61 @@ export default function TestSetManagementPage() {
 
   if (!testSets || !academicConfig) {
     return (
-      <div class="flex justify-center items-center h-96">
-        <Loader2 class="animate-spin text-primary" size={32} />
+      <div className="flex justify-center items-center h-96">
+        <Loader2 className="animate-spin text-primary" size={32} />
       </div>
     );
   }
 
   return (
-    <div class="space-y-6">
-      <h1 class="text-3xl font-bold flex items-center gap-2"><BookCopy /> Test Set Management</h1>
+    <div className="space-y-6">
+      <h1 className="text-3xl font-bold flex items-center gap-2"><BookCopy /> Test Set Management</h1>
 
       <Card>
         <CardHeader>
-            <div class="flex items-center justify-between">
+            <div className="flex items-center justify-between">
               <div>
                 <CardTitle>All Test Sets</CardTitle>
                 <CardDescription>
                     Create or manage sets of questions for mock tests.
                 </CardDescription>
               </div>
-              <div class="flex gap-2">
+              <div className="flex gap-2">
                  <Dialog open={isManualCreateOpen} onOpenChange={(isOpen) => {
                       if (!isOpen) resetManualForm();
                       setIsManualCreateOpen(isOpen);
                   }}>
                     <DialogTrigger asChild>
-                        <Button variant="outline" onClick={handleOpenCreateDialog}><FilePlus class="mr-2 h-4 w-4" /> Create Manually</Button>
+                        <Button variant="outline" onClick={handleOpenCreateDialog}><FilePlus className="mr-2 h-4 w-4" /> Create Manually</Button>
                     </DialogTrigger>
-                    <DialogContent class="max-w-4xl h-[90vh]">
+                    <DialogContent className="max-w-4xl h-[90vh]">
                         {editingTestSet && step === 1 && (
                             <>
                             <DialogHeader>
                                 <DialogTitle>{editingTestSet.id.startsWith('NEW-') ? 'Create New Test Set' : 'Edit Test Set Details'} (Step 1 of 2)</DialogTitle>
                                 <DialogDescription>First, provide the details for your new test set.</DialogDescription>
                             </DialogHeader>
-                            <form onSubmit={handleManualSetDetailSubmit} class="space-y-4 py-4">
-                                <div class="space-y-2">
+                            <form onSubmit={handleManualSetDetailSubmit} className="space-y-4 py-4">
+                                <div className="space-y-2">
                                     <Label htmlFor="manual-name">Test Set Name</Label>
                                     <Input id="manual-name" value={editingTestSet.name} onChange={(e) => handleSetDetailChange('name', e.target.value)} placeholder="e.g., SSC Science Final Practice" />
                                 </div>
-                                <div class="grid grid-cols-3 gap-4">
-                                    <div class="space-y-2">
+                                <div className="grid grid-cols-3 gap-4">
+                                    <div className="space-y-2">
                                         <Label htmlFor="manual-board">Board</Label>
                                         <Select value={editingTestSet.board} onValueChange={(val) => handleSetDetailChange('board', val as 'SSC' | 'CBSE' | 'ICSE')}><SelectTrigger id="manual-board"><SelectValue placeholder="Select..."/></SelectTrigger><SelectContent>{academicConfig.boards.map((b: string) => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent></Select>
                                     </div>
-                                    <div class="space-y-2">
+                                    <div className="space-y-2">
                                         <Label htmlFor="manual-standard">Standard</Label>
                                         <Select value={editingTestSet.standard} onValueChange={(val) => handleSetDetailChange('standard', val)}><SelectTrigger id="manual-standard"><SelectValue placeholder="Select..."/></SelectTrigger><SelectContent>{academicConfig.standards.map((s: string) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>
                                     </div>
-                                    <div class="space-y-2">
+                                    <div className="space-y-2">
                                         <Label htmlFor="manual-subject">Subject</Label>
                                         <Select value={editingTestSet.subject} onValueChange={(val) => handleSetDetailChange('subject', val)}><SelectTrigger id="manual-subject"><SelectValue placeholder="Select..."/></SelectTrigger><SelectContent>{academicConfig.subjects.map((s: string) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>
                                     </div>
                                 </div>
                                 <DialogFooter>
-                                    <Button type="submit">Next: Add Questions <ArrowRight class="ml-2"/></Button>
+                                    <Button type="submit">Next: Add Questions <ArrowRight className="ml-2"/></Button>
                                 </DialogFooter>
                             </form>
                             </>
@@ -242,22 +242,22 @@ export default function TestSetManagementPage() {
                                 <DialogTitle>{editingTestSet.id.startsWith("NEW-") ? 'Add' : 'Edit'} Questions (Step 2 of 2)</DialogTitle>
                                 <DialogDescription>Enter questions for the "{editingTestSet.name}" test set. You can save your progress and add more later.</DialogDescription>
                             </DialogHeader>
-                             <ScrollArea class="h-full -mx-6 px-6">
-                                <div class="space-y-4 py-4">
+                             <ScrollArea className="h-full -mx-6 px-6">
+                                <div className="space-y-4 py-4">
                                     {editingTestSet.questions.map((q, qIndex) => (
-                                        <div key={q.id || `q-${qIndex}`} class="p-4 border rounded-lg space-y-4 bg-muted/50">
-                                            <h4 class="font-semibold flex items-center gap-2"><ScrollText size={16}/> Question {qIndex + 1}</h4>
-                                            <div class="grid grid-cols-2 gap-4">
-                                                <div class="space-y-2">
+                                        <div key={q.id || `q-${qIndex}`} className="p-4 border rounded-lg space-y-4 bg-muted/50">
+                                            <h4 className="font-semibold flex items-center gap-2"><ScrollText size={16}/> Question {qIndex + 1}</h4>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="space-y-2">
                                                     <Label>Question Text (Marathi)</Label>
                                                     <Textarea value={q.text.mr} onChange={(e) => handleQuestionChange(qIndex, 'text', 'mr', e.target.value)} />
                                                 </div>
-                                                 <div class="space-y-2">
+                                                 <div className="space-y-2">
                                                     <Label>Question Text (English)</Label>
                                                     <Textarea value={q.text.en} onChange={(e) => handleQuestionChange(qIndex, 'text', 'en', e.target.value)} />
                                                 </div>
                                             </div>
-                                            <div class="grid grid-cols-2 gap-x-4 gap-y-2">
+                                            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                                                 {[0,1,2,3].map(optIndex => (
                                                     <React.Fragment key={optIndex}>
                                                         <Input placeholder={`Option ${optIndex + 1} (Marathi)`} value={q.options.mr[optIndex] || ''} onChange={(e) => handleQuestionChange(qIndex, 'option', 'mr', e.target.value, optIndex)} />
@@ -265,7 +265,7 @@ export default function TestSetManagementPage() {
                                                     </React.Fragment>
                                                 ))}
                                             </div>
-                                            <div class="space-y-2">
+                                            <div className="space-y-2">
                                                 <Label>Correct Answer (select the Marathi option)</Label>
                                                 <Select value={q.correctAnswer.mr} onValueChange={(val) => handleQuestionChange(qIndex, 'answer', 'mr', val)}>
                                                     <SelectTrigger><SelectValue placeholder="Select correct answer..." /></SelectTrigger>
@@ -278,16 +278,16 @@ export default function TestSetManagementPage() {
                                     ))}
                                 </div>
                              </ScrollArea>
-                            <DialogFooter class="mt-4">
+                            <DialogFooter className="mt-4">
                                 <Button variant="outline" onClick={() => setStep(1)}>Back</Button>
-                                <Button onClick={handleManualSubmit}><Save class="mr-2 h-4 w-4"/>Save Test Set</Button>
+                                <Button onClick={handleManualSubmit}><Save className="mr-2 h-4 w-4"/>Save Test Set</Button>
                             </DialogFooter>
                             </>
                         )}
                     </DialogContent>
                  </Dialog>
 
-                <Button disabled><Upload class="mr-2 h-4 w-4" /> Bulk Upload</Button>
+                <Button disabled><Upload className="mr-2 h-4 w-4" /> Bulk Upload</Button>
 
               </div>
             </div>
@@ -296,7 +296,7 @@ export default function TestSetManagementPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead class="w-[40%]">Test Set Name</TableHead>
+                <TableHead className="w-[40%]">Test Set Name</TableHead>
                 <TableHead>Subject</TableHead>
                 <TableHead>Standard</TableHead>
                 <TableHead>Board</TableHead>
@@ -307,7 +307,7 @@ export default function TestSetManagementPage() {
             <TableBody>
               {testSets.length > 0 ? testSets.map((ts) => (
                 <TableRow key={ts.id}>
-                  <TableCell class="font-medium">{ts.name}</TableCell>
+                  <TableCell className="font-medium">{ts.name}</TableCell>
                   <TableCell>{ts.subject}</TableCell>
                   <TableCell>{ts.standard}</TableCell>
                   <TableCell>{ts.board}</TableCell>
@@ -315,21 +315,21 @@ export default function TestSetManagementPage() {
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" class="h-8 w-8 p-0">
-                          <span class="sr-only">Open menu</span>
-                          <MoreHorizontal class="h-4 w-4" />
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <span className="sr-only">Open menu</span>
+                          <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuItem onClick={() => handleOpenEditDialog(ts)}>
-                            <Edit class="mr-2 h-4 w-4"/> View/Edit
+                            <Edit className="mr-2 h-4 w-4"/> View/Edit
                         </DropdownMenuItem>
                         <DropdownMenuItem disabled>
-                            <UploadCloud class="mr-2 h-4 w-4" /> Upload & Append
+                            <UploadCloud className="mr-2 h-4 w-4" /> Upload & Append
                         </DropdownMenuItem>
-                        <DropdownMenuItem class="text-red-600 focus:text-red-500 focus:bg-red-950/50" onClick={() => handleDelete(ts.id)}>
-                            <Trash2 class="mr-2 h-4 w-4"/> Delete
+                        <DropdownMenuItem className="text-red-600 focus:text-red-500 focus:bg-red-950/50" onClick={() => handleDelete(ts.id)}>
+                            <Trash2 className="mr-2 h-4 w-4"/> Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -337,7 +337,7 @@ export default function TestSetManagementPage() {
                 </TableRow>
               )) : (
                 <TableRow>
-                    <TableCell colSpan={6} class="text-center text-muted-foreground h-24">No test sets uploaded yet.</TableCell>
+                    <TableCell colSpan={6} className="text-center text-muted-foreground h-24">No test sets uploaded yet.</TableCell>
                 </TableRow>
               )}
             </TableBody>

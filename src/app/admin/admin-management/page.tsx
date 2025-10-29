@@ -52,6 +52,7 @@ export default function AdminManagementPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isResetPassOpen, setIsResetPassOpen] = useState(false);
   const [selectedAdmin, setSelectedAdmin] = useState<Admin | null>(null);
+  const [newAdminRole, setNewAdminRole] = useState<AdminRole | ''>('');
   const { toast } = useToast();
   
   useEffect(() => {
@@ -119,8 +120,7 @@ export default function AdminManagementPage() {
     const name = (form.elements.namedItem('name') as HTMLInputElement).value;
     const email = (form.elements.namedItem('email') as HTMLInputElement).value;
     const phone = (form.elements.namedItem('phone') as HTMLInputElement).value;
-    const role = (form.querySelector('[name=role]') as HTMLInputElement)?.value as AdminRole | undefined;
-
+    const role = newAdminRole;
 
     if (!name || !email || !phone || !role) {
         toast({ variant: 'destructive', title: 'Missing Information', description: 'Please fill out all fields.'});
@@ -144,6 +144,7 @@ export default function AdminManagementPage() {
         description: `Admin account for ${name} has been created successfully.`
     });
     setIsCreateDialogOpen(false);
+    setNewAdminRole('');
   }
   
   const handleEditAdmin = (e: React.FormEvent<HTMLFormElement>) => {
@@ -310,7 +311,7 @@ export default function AdminManagementPage() {
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="role">Role</Label>
-                             <Select name="role" required>
+                             <Select name="role" required value={newAdminRole} onValueChange={(value) => setNewAdminRole(value as AdminRole)}>
                                 <SelectTrigger id="role">
                                     <SelectValue placeholder="Select a role" />
                                 </SelectTrigger>

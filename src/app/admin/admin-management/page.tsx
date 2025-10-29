@@ -306,7 +306,7 @@ export default function AdminManagementPage() {
                         </div>
                          <div className="space-y-2">
                             <Label htmlFor="phone">WhatsApp Number (with country code)</Label>
-                            <Input id="phone" name="phone" type="tel" required placeholder="e.g. 919876543210"/>
+                            <Input id="phone" name="phone" type="tel" required placeholder="e.g., 919876543210"/>
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="role">Role</Label>

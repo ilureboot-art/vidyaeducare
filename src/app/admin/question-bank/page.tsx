@@ -286,7 +286,7 @@ export default function TestSetManagementPage() {
                         )}
                     </DialogContent>
                  </Dialog>
-                <Button disabled>Bulk Upload (Disabled)</Button>
+                 <Button disabled>AI Generate (Disabled)</Button>
               </div>
             </div>
         </CardHeader>

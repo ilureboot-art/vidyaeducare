@@ -33,7 +33,7 @@ export default function VidyaAIPage() {
                 <CardHeader>
                     <CardTitle>Content Generator</CardTitle>
                     <CardDescription>
-                        This feature is temporarily disabled. The AI packages have been removed to allow the application to publish successfully.
+                        This feature is temporarily disabled to resolve publishing issues. The AI packages have been removed.
                     </CardDescription>
                 </CardHeader>
                 <form>

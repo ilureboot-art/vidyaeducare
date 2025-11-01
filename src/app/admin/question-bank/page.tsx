@@ -285,7 +285,7 @@ export default function TestSetManagementPage() {
                         )}
                     </DialogContent>
                  </Dialog>
-                 <Button disabled>AI Generate (Temporarily Disabled)</Button>
+                 <Button disabled title="This feature is temporarily unavailable.">AI Generate (Temporarily Disabled)</Button>
               </div>
             </div>
         </CardHeader>

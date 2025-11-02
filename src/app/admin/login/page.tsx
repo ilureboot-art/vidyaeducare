@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -88,7 +87,7 @@ export default function AdminLoginPage() {
         <h1 className="text-4xl font-bold text-primary flex items-center gap-2 justify-center">
             <Shield className="w-10 h-10" /> Admin Panel
         </h1>
-        <p className="text-muted-foreground">NumberAce Administration</p>
+        <p className="text-muted-foreground">Vidya EduCare Administration</p>
       </div>
       <Card className="w-full">
         <Tabs defaultValue="login">

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -44,7 +43,7 @@ export default function SignupPage() {
     
     toast({
         title: "Account Created Successfully!",
-        description: `Welcome to NumberAce! ${referralCode ? 'Your welcome bonus has been applied.' : ''} Redirecting you to login.`,
+        description: `Welcome to Vidya EduCare! ${referralCode ? 'Your welcome bonus has been applied.' : ''} Redirecting you to login.`,
     });
     router.push("/login");
   };
@@ -61,7 +60,7 @@ export default function SignupPage() {
     <div className="w-full max-w-md mx-auto flex flex-col items-center justify-center min-h-screen space-y-4 p-4">
        <div className="text-center space-y-2">
         <h1 className="text-4xl font-bold text-primary flex items-center gap-2 justify-center">
-            <Gamepad2 className="w-10 h-10" /> NumberAce
+            <Gamepad2 className="w-10 h-10" /> Vidya EduCare
         </h1>
         <p className="text-muted-foreground">Create your account to start your journey.</p>
       </div>

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -13,7 +12,7 @@ export default function AdminGameSettingsPage() {
           <CardTitle className="flex items-center gap-2 text-muted-foreground"><Ban/>Feature Removed</CardTitle>
         </CardHeader>
         <CardContent>
-            <p className="text-muted-foreground text-center h-24 flex items-center justify-center">The GuessMaster game has been removed from the application, so its settings are no longer available.</p>
+            <p className="text-muted-foreground text-center h-24 flex items-center justify-center">The game feature has been removed from the application, so its settings are no longer available.</p>
         </CardContent>
       </Card>
     </div>

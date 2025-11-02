@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -66,7 +65,7 @@ export function AdminSidebar() {
         <SidebarHeader>
             <Link href="/admin" className="flex items-center gap-2 font-bold text-primary text-lg">
                 <Shield className="w-6 h-6" />
-                <span className="group-data-[collapsible=icon]:hidden">NumberAce</span>
+                <span className="group-data-[collapsible=icon]:hidden">Vidya EduCare</span>
             </Link>
         </SidebarHeader>
         <SidebarContent>

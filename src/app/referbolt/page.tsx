@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -50,7 +49,7 @@ export default function ReferBoltPage() {
     const shareUrl = `${window.location.origin}/signup?ref=${referralCode}`;
     const benefitsText = benefits.map(b => `✅ ${b.text}`).join("\n");
 
-    const message = `🤝 Unlock continuous earnings with the ReferBolt System on NumberAce! 🤝
+    const message = `🤝 Unlock continuous earnings with the ReferBolt System on Vidya EduCare! 🤝
 
 🚀 Use my referral code: ${referralCode}
 
@@ -60,7 +59,7 @@ ${benefitsText}
 💸 This is the ultimate way to build a steady stream of income.
 Subscribe and start your earning cycle now: ${shareUrl}
 
-#NumberAce #ReferBolt #PassiveIncome #ReferAndEarn`;
+#VidyaEduCare #ReferBolt #PassiveIncome #ReferAndEarn`;
 
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -56,7 +55,7 @@ export default function LoginPage() {
     <div className="w-full max-w-md mx-auto flex flex-col items-center justify-center min-h-screen space-y-4 p-4">
       <div className="text-center space-y-2">
         <h1 className="text-4xl font-bold text-primary flex items-center gap-2 justify-center">
-            <Gamepad2 className="w-10 h-10" /> NumberAce
+            <Gamepad2 className="w-10 h-10" /> Vidya EduCare
         </h1>
         <p className="text-muted-foreground">Welcome back! Please login to your account.</p>
       </div>

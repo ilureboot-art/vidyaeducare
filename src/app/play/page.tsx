@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect } from "react";
@@ -21,7 +20,7 @@ export default function PlayPage() {
         </CardHeader>
         <CardContent className="min-h-[200px] flex flex-col items-center justify-center text-center space-y-4">
           <Loader2 className="animate-spin text-primary" size={32} />
-          <CardDescription>The GuessMaster game has been removed. Redirecting to the homepage.</CardDescription>
+          <CardDescription>The game feature has been removed. Redirecting to the homepage.</CardDescription>
         </CardContent>
       </Card>
     </div>

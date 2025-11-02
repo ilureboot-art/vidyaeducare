@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -74,7 +73,7 @@ export default function VidyaAIPage() {
                          <div className="flex justify-end pt-4">
                             <Button type="submit" disabled>
                                 <Wand2 className="mr-2 h-4 w-4" />
-                                Generate Content
+                                Generate Content (Disabled)
                             </Button>
                         </div>
                     </CardContent>

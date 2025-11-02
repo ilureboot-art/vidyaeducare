@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
@@ -286,7 +285,7 @@ export default function TestSetManagementPage() {
                         )}
                     </DialogContent>
                  </Dialog>
-                 <Button disabled title="AI features are temporarily disabled.">AI Generate</Button>
+                 <Button disabled title="AI features are temporarily disabled.">AI Generate (Disabled)</Button>
               </div>
             </div>
         </CardHeader>

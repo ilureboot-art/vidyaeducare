@@ -162,14 +162,10 @@ export default function WalletPage() {
           <CardDescription>Your balance and recent activity.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4">
               <Card className="text-center p-6 bg-primary/10">
                 <p className="text-sm font-medium text-primary">CASH BALANCE</p>
                 <p className="text-5xl font-bold text-primary">₹{balance.toFixed(2)}</p>
-              </Card>
-              <Card className="text-center p-6 bg-amber-400/10">
-                 <p className="text-sm font-medium text-amber-600 flex items-center justify-center gap-2"><Coins/> COIN BALANCE</p>
-                <p className="text-5xl font-bold text-amber-600">{coins.toLocaleString()}</p>
               </Card>
           </div>
           <div className="grid grid-cols-2 gap-4">

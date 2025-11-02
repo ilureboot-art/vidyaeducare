@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 import { 
     LayoutDashboard, 
     Users, 
-    Gamepad2, 
     CreditCard,
     Shield,
     LogOut,
@@ -22,7 +21,8 @@ import {
     Bell,
     BookCopy,
     BrainCircuit,
-    Calendar
+    Calendar,
+    Ban
 } from "lucide-react";
 import {
     Sidebar,
@@ -45,7 +45,6 @@ const adminNavItems = [
   { href: "/admin/chat", label: "Support Chat", icon: MessageSquare },
   { href: "/admin/question-bank", label: "Test Set Management", icon: BookCopy },
   { href: "/admin/test-schedule", label: "Test Schedule", icon: Calendar },
-  { href: "/admin/game-settings", label: "Game Settings", icon: Gamepad2 },
   { href: "/admin/store-settings", label: "Store Settings", icon: ShoppingCart },
   { href: "/admin/payment-settings", label: "Payment Settings", icon: Landmark },
   { href: "/admin/referbolt", label: "ReferBolt Mgt.", icon: Zap },
@@ -55,6 +54,10 @@ const adminNavItems = [
   { href: "/admin/support", label: "Support", icon: LifeBuoy },
 ];
 
+const deprecatedNavItems = [
+    { href: "/admin/game-settings", label: "Game Settings", icon: Ban },
+]
+
 export function AdminSidebar() {
   const pathname = usePathname();
 
@@ -63,7 +66,7 @@ export function AdminSidebar() {
         <SidebarHeader>
             <Link href="/admin" className="flex items-center gap-2 font-bold text-primary text-lg">
                 <Shield className="w-6 h-6" />
-                <span className="group-data-[collapsible=icon]:hidden">GuessMaster</span>
+                <span className="group-data-[collapsible=icon]:hidden">NumberAce</span>
             </Link>
         </SidebarHeader>
         <SidebarContent>
@@ -74,6 +77,19 @@ export function AdminSidebar() {
                         <SidebarMenuItem key={item.href}>
                             <Link href={item.href}>
                                 <SidebarMenuButton tooltip={item.label} isActive={isActive}>
+                                    <item.icon/>
+                                    <span>{item.label}</span>
+                                </SidebarMenuButton>
+                            </Link>
+                        </SidebarMenuItem>
+                    );
+                })}
+                 {deprecatedNavItems.map((item) => {
+                    const isActive = pathname.startsWith(item.href);
+                    return (
+                        <SidebarMenuItem key={item.href}>
+                            <Link href={item.href}>
+                                <SidebarMenuButton tooltip={item.label} isActive={isActive} className="text-muted-foreground line-through">
                                     <item.icon/>
                                     <span>{item.label}</span>
                                 </SidebarMenuButton>

@@ -25,7 +25,7 @@ const initialReferboltData = {
 };
 
 const benefits = [
-    { text: "Earn a ₹50 commission for every referral who subscribes." },
+    { text: "Earn a commission for every referral who subscribes." },
     { text: "Complete a cycle with just 3 referrals." },
     { text: "Earn from both direct & indirect referrals as your network grows." },
     { text: "Unlimited earning potential through continuous cycles." },
@@ -50,7 +50,7 @@ export default function ReferBoltPage() {
     const shareUrl = `${window.location.origin}/signup?ref=${referralCode}`;
     const benefitsText = benefits.map(b => `✅ ${b.text}`).join("\n");
 
-    const message = `🤝 Unlock continuous earnings with the ReferBolt System on Vidya EduCare! 🤝
+    const message = `🤝 Unlock continuous earnings with the ReferBolt System on NumberAce! 🤝
 
 🚀 Use my referral code: ${referralCode}
 
@@ -60,7 +60,7 @@ ${benefitsText}
 💸 This is the ultimate way to build a steady stream of income.
 Subscribe and start your earning cycle now: ${shareUrl}
 
-#VidyaEduCare #ReferBolt #PassiveIncome #ReferAndEarn #SkillGaming`;
+#NumberAce #ReferBolt #PassiveIncome #ReferAndEarn`;
 
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;

@@ -50,11 +50,7 @@ export type StoreConfig = {
 };
 
 export const defaultStoreConfig: StoreConfig = {
-    packages: [
-        { tickets: 1, price: 25, bestValue: false, games: 2, gstRate: 28, hsnSacCode: '998439' },
-        { tickets: 5, price: 120, bestValue: false, games: 10, gstRate: 28, hsnSacCode: '998439' },
-        { tickets: 10, price: 225, bestValue: true, games: 20, gstRate: 28, hsnSacCode: '998439' },
-    ],
+    packages: [],
     
     mockTestPackages: [
         { name: "1 Year Subscription", price: 3000, months: 12, bestValue: true, gstRate: 18, hsnSacCode: '999294' },
@@ -64,8 +60,8 @@ export const defaultStoreConfig: StoreConfig = {
     referboltSubscription: {
         name: "ReferBolt",
         price: 100,
-        description: "Activate to earn commissions and get a bonus of 4 tickets (worth 8 games).",
-        ticketBonus: 4,
+        description: "Activate to earn commissions from an extended referral network.",
+        ticketBonus: 0,
         gstRate: 18,
         hsnSacCode: '998314',
     },
@@ -73,10 +69,10 @@ export const defaultStoreConfig: StoreConfig = {
     referralBonus: 5,
     
     gameSettings: {
-        maxAttempts: 5,
-        welcomeBonus: 2,
+        maxAttempts: 0,
+        welcomeBonus: 0,
         welcomeCoins: 50,
-        rewards: [100, 75, 50, 25, 10],
+        rewards: [],
     },
     
     referboltSettings: {
@@ -84,5 +80,3 @@ export const defaultStoreConfig: StoreConfig = {
         ibaBonusCommission: 5,
     }
 };
-
-    

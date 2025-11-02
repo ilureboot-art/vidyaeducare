@@ -24,10 +24,6 @@ const userFaqs = [
     {
         question: "How do I add a student to my profile?",
         answer: "To add a student, you first need to purchase a subscription from the Store. This will give you a unique Product Activation Code. Go to the 'My Students' page, click 'Add New Student', enter the code, and then fill in the student's details."
-    },
-    {
-        question: "How do game tickets work?",
-        answer: "One ticket gives you two plays in the GuessMaster game. You can buy more tickets from the Store. You can also play a demo game for free to practice."
     }
 ];
 
@@ -94,5 +90,3 @@ export default function SupportPage() {
     </div>
   );
 }
-
-    

@@ -25,7 +25,7 @@ export default function ReferAndEarnPage() {
         const url = `${window.location.origin}/signup?ref=${referralCode}`;
         const bonusAmount = referralBonus;
         
-        const message = `🎉 Join me on Vidya EduCare! Sign up with my code and we both get a ₹${bonusAmount} welcome bonus!
+        const message = `🎉 Join me on NumberAce! Sign up with my code and we both get a ₹${bonusAmount} welcome bonus!
 
 It's a great platform for mock tests and fun skill games where you can win cash prizes.
 

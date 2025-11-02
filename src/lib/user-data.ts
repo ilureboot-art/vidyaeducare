@@ -56,7 +56,6 @@ export const defaultWalletData: WalletData = {
     { id: 1003, type: 'withdrawal' as 'withdrawal', description: '1 Year Subscription Purchase', amount: -3000, date: "2024-07-27T12:00:00.000Z", status: 'Completed' as 'Completed', user: 'Alex Doe' },
     { id: 1004, type: 'withdrawal' as 'withdrawal', description: 'Withdrawal Request', amount: -200, date: "2024-07-26T12:00:00.000Z", status: 'Pending' as 'Pending', user: 'Alex Doe', paymentMethod: 'user@upi' },
     { id: 1005, type: 'deposit' as 'deposit', description: 'Referral Bonus for Priya S.', amount: 5, date: "2024-07-25T12:00:00.000Z", status: 'Completed' as 'Completed', user: 'Alex Doe' },
-    { id: 1006, type: 'deposit' as 'deposit', description: 'Game Win', amount: 100, date: "2024-07-24T12:00:00.000Z", status: 'Completed' as 'Completed', user: 'Alex Doe' },
     { id: 1007, type: 'withdrawal' as 'withdrawal', description: 'Withdrawal Request', amount: -500, date: "2024-07-23T12:00:00.000Z", status: 'Rejected' as 'Rejected', user: 'Alex Doe', paymentMethod: 'user@upi' },
   ],
 };

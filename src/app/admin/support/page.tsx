@@ -25,8 +25,8 @@ const adminFaqs = [
         answer: "The AI Agent is a powerful tool for generating educational content. You can find it under the 'Vidya EduCare AI Agent' tab. Provide it with study material (text or a file), specify the topic, grade, and desired outputs (like notes, MCQs, or a study plan), and the AI will generate the content for you to use on the platform."
     },
     {
-        question: "How can I change the ticket prices or referral bonuses?",
-        answer: "All store-related configurations are on the 'Store Settings' page. There, you can add or remove ticket packages, change their prices, and adjust the monetary values for the referral bonus and the ReferBolt system."
+        question: "How can I change the subscription prices or referral bonuses?",
+        answer: "All store-related configurations are on the 'Store Settings' page. There, you can add or remove mock test packages, change their prices, and adjust the monetary values for the referral bonus and the ReferBolt system."
     }
 ];
 
@@ -57,7 +57,7 @@ export default function SupportPage() {
           </CardHeader>
           <CardContent>
              <p className="text-muted-foreground">
-              Find guides, tutorials, and API references to help you manage your GuessMaster application effectively.
+              Find guides, tutorials, and API references to help you manage your NumberAce application effectively.
             </p>
              <Button variant="outline" className="mt-4 w-full">
                 View Documentation

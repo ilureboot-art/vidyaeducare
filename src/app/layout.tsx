@@ -39,7 +39,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet" />
-        <title>Vidya EduCare</title>
+        <title>NumberAce</title>
       </head>
       <body className={bodyClassName}>
         <ThemeProvider
@@ -51,7 +51,7 @@ export default function RootLayout({
             {isAdminPage && !isAuthPage ? (
               <>{children}</>
             ) : (isAuthPage || pathname === '/' || pathname === '/how-to-play') ? (
-              <main className="flex-1 flex flex-col w-full">{children}</main>
+              <main className="flex-1 flex flex-col w-full p-4">{children}</main>
             ) : (
               <>
                 <AppHeader />

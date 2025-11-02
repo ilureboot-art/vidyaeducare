@@ -14,7 +14,6 @@ const navItems = [
     { href: "/profile", label: "My Students", icon: Users },
     { href: "/refer", label: "Refer & Earn", icon: Share2 },
     { href: "/iba/dashboard", label: "IBA Dashboard", icon: ShieldCheck },
-    { href: "/play", label: "Play Game", icon: Gamepad2 },
     { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
     { href: "/wallet", label: "Wallet", icon: Wallet },
     { href: "/transactions", label: "Transactions", icon: History },

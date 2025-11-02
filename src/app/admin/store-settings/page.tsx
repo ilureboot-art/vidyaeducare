@@ -26,29 +26,6 @@ export default function AdminStoreSettingsPage() {
     setLocalAcademicConfig(JSON.parse(JSON.stringify(defaultAcademicConfig)));
   }, []);
 
-  const handlePackageChange = (index: number, field: keyof TicketPackage, value: string | number | boolean) => {
-    if (!storeConfig) return;
-    const newPackages = [...storeConfig.packages];
-    const pkg = { ...newPackages[index] };
-
-    if (field === 'price' || field === 'tickets' || field === 'games' || field === 'gstRate') {
-        value = Number(value) || 0;
-    }
-    
-    (pkg as any)[field] = value;
-
-    if (field === 'bestValue' && value === true) {
-        newPackages.forEach((p, i) => {
-            if (i !== index) {
-                p.bestValue = false;
-            }
-        });
-    }
-
-    newPackages[index] = pkg;
-    setLocalStoreConfig(prev => prev ? ({ ...prev, packages: newPackages }) : null);
-  };
-  
   const handleMockTestPackageChange = (index: number, field: keyof MockTestPackage, value: string | number | boolean) => {
     if (!storeConfig) return;
     const newPackages = [...storeConfig.mockTestPackages];
@@ -90,18 +67,6 @@ export default function AdminStoreSettingsPage() {
       setLocalStoreConfig(prev => prev ? ({ ...prev, referboltSettings: { ...prev.referboltSettings, [field]: value } }) : null);
   };
 
-  const addPackage = () => {
-    if (!storeConfig) return;
-    const newPackages = [...storeConfig.packages, { tickets: 0, price: 0, bestValue: false, games: 0, gstRate: 28, hsnSacCode: '998439' }];
-    setLocalStoreConfig(prev => prev ? ({...prev, packages: newPackages}) : null);
-  };
-
-  const removePackage = (index: number) => {
-    if (!storeConfig) return;
-    const newPackages = storeConfig.packages.filter((_, i) => i !== index);
-    setLocalStoreConfig(prev => prev ? ({...prev, packages: newPackages}) : null);
-  };
-  
   const addMockTestPackage = () => {
     if (!storeConfig) return;
     const newPackages = [...storeConfig.mockTestPackages, { name: 'New Subscription', price: 0, months: 1, bestValue: false, gstRate: 18, hsnSacCode: '999294' }];
@@ -190,52 +155,6 @@ export default function AdminStoreSettingsPage() {
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Store & Academic Settings</h1>
       <form onSubmit={handleSubmit}>
-        <Card>
-          <CardHeader>
-            <CardTitle>Ticket Packages</CardTitle>
-            <CardDescription>Configure ticket packages and their GST rates. These are for the GuessMaster game.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {storeConfig.packages.map((pkg, index) => (
-              <div key={index} className="p-4 border rounded-lg space-y-4 relative">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor={`tickets-${index}`}>Tickets</Label>
-                    <Input id={`tickets-${index}`} type="number" value={pkg.tickets} onChange={(e) => handlePackageChange(index, 'tickets', e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor={`price-${index}`}>Base Price (₹)</Label>
-                    <Input id={`price-${index}`} type="number" value={pkg.price} onChange={(e) => handlePackageChange(index, 'price', e.target.value)} />
-                  </div>
-                   <div className="space-y-2">
-                    <Label htmlFor={`gst-rate-pkg-${index}`}>GST Rate (%)</Label>
-                    <Input id={`gst-rate-pkg-${index}`} type="number" value={pkg.gstRate} onChange={(e) => handlePackageChange(index, 'gstRate', e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor={`hsn-sac-pkg-${index}`}>HSN/SAC</Label>
-                    <Input id={`hsn-sac-pkg-${index}`} type="text" value={pkg.hsnSacCode} onChange={(e) => handlePackageChange(index, 'hsnSacCode', e.target.value)} />
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2 pt-2">
-                  <Checkbox id={`best-value-${index}`} checked={pkg.bestValue} onCheckedChange={(checked) => handlePackageChange(index, 'bestValue', !!checked)} />
-                  <Label htmlFor={`best-value-${index}`}>Mark as 'Best Value'</Label>
-                </div>
-                 <div className="space-y-2">
-                    <Label htmlFor={`games-${index}`}>Games Equivalent</Label>
-                    <Input id={`games-${index}`} type="number" value={pkg.games} onChange={(e) => handlePackageChange(index, 'games', e.target.value)} />
-                 </div>
-                <Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2 text-muted-foreground hover:text-destructive" onClick={() => removePackage(index)}>
-                  <Trash2 className="h-4 w-4" />
-                  <span className="sr-only">Remove Package</span>
-                </Button>
-              </div>
-            ))}
-            <Button type="button" variant="outline" className="w-full" onClick={addPackage}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add New Package
-            </Button>
-          </CardContent>
-        </Card>
         
         <Card className="mt-6">
           <CardHeader>
@@ -294,10 +213,6 @@ export default function AdminStoreSettingsPage() {
               <div className="space-y-2">
                 <Label htmlFor="referboltCost">Base Price (₹)</Label>
                 <Input id="referboltCost" type="number" value={storeConfig.referboltSubscription.price} onChange={(e) => handleReferboltChange('price', e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="referboltTickets">Ticket Bonus (on subscribe)</Label>
-                <Input id="referboltTickets" type="number" value={storeConfig.referboltSubscription.ticketBonus} onChange={(e) => handleReferboltChange('ticketBonus', e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="referbolt-gst">GST Rate (%)</Label>

@@ -17,6 +17,8 @@ import { Gamepad2, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { defaultStoreConfig } from "@/lib/store-config";
+import { auth } from "@/lib/firebase";
+import { createUserWithEmailAndPassword } from "firebase/auth";
 
 export default function SignupPage() {
   const searchParams = useSearchParams();
@@ -25,6 +27,7 @@ export default function SignupPage() {
   
   const [referralCode, setReferralCode] = useState('');
   const [referralBonus, setReferralBonus] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const refCode = searchParams.get('ref');
@@ -34,18 +37,32 @@ export default function SignupPage() {
     setReferralBonus(defaultStoreConfig.referralBonus);
   }, [searchParams]);
 
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
     
-    // In a real app, you would handle creating notifications and updating wallet data
-    // on the backend after successful signup and referral code application.
-    // For this demo, we just show a toast.
-    
-    toast({
-        title: "Account Created Successfully!",
-        description: `Welcome to Vidya EduCare! ${referralCode ? 'Your welcome bonus has been applied.' : ''} Redirecting you to login.`,
-    });
-    router.push("/login");
+    const form = e.target as HTMLFormElement;
+    const email = (form.elements.namedItem('email') as HTMLInputElement).value;
+    const password = (form.elements.namedItem('password') as HTMLInputElement).value;
+
+    try {
+      await createUserWithEmailAndPassword(auth, email, password);
+
+      toast({
+          title: "Account Created Successfully!",
+          description: `Welcome to Vidya EduCare! ${referralCode ? 'Your welcome bonus has been applied.' : ''} Redirecting you to login.`,
+      });
+      router.push("/login");
+
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Signup Failed",
+        description: error.message,
+      });
+    } finally {
+        setIsLoading(false);
+    }
   };
 
   if (referralBonus === null) {
@@ -80,18 +97,18 @@ export default function SignupPage() {
             </div>
             <div className="space-y-2">
                 <Label htmlFor="email">Email Address</Label>
-                <Input id="email" type="email" placeholder="you@example.com" required />
-                <p className="text-xs text-muted-foreground">Used for account recovery.</p>
+                <Input id="email" name="email" type="email" placeholder="you@example.com" required />
+                <p className="text-xs text-muted-foreground">Used for login and account recovery.</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="phone">WhatsApp Number</Label>
               <Input id="phone" type="tel" placeholder="+91 12345 67890" required />
-              <p className="text-xs text-muted-foreground">We'll use this for login and important notifications.</p>
+              <p className="text-xs text-muted-foreground">We'll use this for important notifications.</p>
             </div>
             <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
-                <Input id="password" type="password" required />
-                <p className="text-xs text-muted-foreground">Choose a strong password with at least 8 characters.</p>
+                <Input id="password" name="password" type="password" required />
+                <p className="text-xs text-muted-foreground">Choose a strong password with at least 6 characters.</p>
             </div>
             <Separator />
             <div className="space-y-2">
@@ -108,8 +125,8 @@ export default function SignupPage() {
             </div>
           </CardContent>
           <CardContent>
-            <Button className="w-full" type="submit">
-              Create Account
+            <Button className="w-full" type="submit" disabled={isLoading}>
+              {isLoading ? "Creating Account..." : "Create Account"}
             </Button>
           </CardContent>
         </form>

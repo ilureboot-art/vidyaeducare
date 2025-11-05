@@ -17,38 +17,55 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Gamepad2, Shield, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
+import { auth } from "@/lib/firebase";
+import { signInWithEmailAndPassword } from "firebase/auth";
 
 export default function LoginPage() {
   const { toast } = useToast();
   const router = useRouter();
 
-  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    const rememberedPhone = localStorage.getItem('rememberedUser');
-    if (rememberedPhone) {
-      setPhone(rememberedPhone);
+    const rememberedEmail = localStorage.getItem('rememberedUser');
+    if (rememberedEmail) {
+      setEmail(rememberedEmail);
       setRememberMe(true);
     }
   }, []);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (rememberMe) {
-      localStorage.setItem('rememberedUser', phone);
-    } else {
-      localStorage.removeItem('rememberedUser');
-    }
+    setIsLoading(true);
+    const password = (e.currentTarget.querySelector('#password') as HTMLInputElement).value;
 
-    // In a real app, you'd verify credentials here.
-    toast({
-        title: "Login Successful!",
-        description: "Welcome back!",
-    });
-    router.push("/");
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+
+      if (rememberMe) {
+        localStorage.setItem('rememberedUser', email);
+      } else {
+        localStorage.removeItem('rememberedUser');
+      }
+
+      toast({
+          title: "Login Successful!",
+          description: "Welcome back!",
+      });
+      router.push("/");
+
+    } catch (error: any) {
+        toast({
+            variant: "destructive",
+            title: "Login Failed",
+            description: error.message,
+        });
+    } finally {
+        setIsLoading(false);
+    }
   };
 
   return (
@@ -64,19 +81,19 @@ export default function LoginPage() {
           <CardHeader>
             <CardTitle>Login</CardTitle>
             <CardDescription>
-              Enter your WhatsApp number and password to log in.
+              Enter your email and password to log in.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="phone">WhatsApp Number</Label>
+              <Label htmlFor="email">Email Address</Label>
               <Input 
-                id="phone" 
-                type="tel" 
-                placeholder="+91 12345 67890" 
+                id="email" 
+                type="email" 
+                placeholder="you@example.com" 
                 required 
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
               />
             </div>
             <div className="space-y-2 relative">
@@ -114,8 +131,8 @@ export default function LoginPage() {
             </div>
           </CardContent>
           <CardFooter className="flex-col gap-4">
-            <Button className="w-full" type="submit">
-              Login
+            <Button className="w-full" type="submit" disabled={isLoading}>
+              {isLoading ? "Logging in..." : "Login"}
             </Button>
           </CardFooter>
         </form>

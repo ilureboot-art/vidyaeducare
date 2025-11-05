@@ -17,6 +17,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
+import { auth } from "@/lib/firebase";
+import { signInWithEmailAndPassword } from "firebase/auth";
 
 export default function AdminLoginPage() {
   const [isOtpSent, setIsOtpSent] = useState(false);
@@ -24,14 +26,15 @@ export default function AdminLoginPage() {
   const { toast } = useToast();
   const router = useRouter();
 
-  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const rememberedAdmin = localStorage.getItem('rememberedAdmin');
     if (rememberedAdmin) {
-      setPhone(rememberedAdmin);
+      setEmail(rememberedAdmin);
       setRememberMe(true);
     }
   }, []);
@@ -45,21 +48,35 @@ export default function AdminLoginPage() {
     });
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (rememberMe) {
-      localStorage.setItem('rememberedAdmin', phone);
-    } else {
-      localStorage.removeItem('rememberedAdmin');
-    }
+    setIsLoading(true);
+    const password = (e.currentTarget.querySelector('#password-login') as HTMLInputElement).value;
 
-    // In a real app, you would verify credentials here.
-    toast({
-        title: "Login Successful!",
-        description: "Redirecting to admin dashboard...",
-    });
-    router.push("/admin/analytics");
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+
+      if (rememberMe) {
+        localStorage.setItem('rememberedAdmin', email);
+      } else {
+        localStorage.removeItem('rememberedAdmin');
+      }
+
+      toast({
+          title: "Login Successful!",
+          description: "Redirecting to admin dashboard...",
+      });
+      router.push("/admin/analytics");
+
+    } catch (error: any) {
+       toast({
+        variant: "destructive",
+        title: "Login Failed",
+        description: error.message,
+      });
+    } finally {
+        setIsLoading(false);
+    }
   };
 
   const handleSignup = (e: React.FormEvent) => {
@@ -105,13 +122,13 @@ export default function AdminLoginPage() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                             <div className="space-y-2">
-                                <Label htmlFor="phone-login">WhatsApp Number</Label>
+                                <Label htmlFor="email-login">Email Address</Label>
                                 <Input 
-                                  id="phone-login" 
-                                  type="tel" 
+                                  id="email-login" 
+                                  type="email" 
                                   required 
-                                  value={phone}
-                                  onChange={(e) => setPhone(e.target.value)}
+                                  value={email}
+                                  onChange={(e) => setEmail(e.target.value)}
                                 />
                             </div>
                             <div className="space-y-2 relative">
@@ -142,8 +159,8 @@ export default function AdminLoginPage() {
                                 Remember me
                               </Label>
                             </div>
-                            <Button type="submit" className="w-full !mt-6">
-                                Login
+                            <Button type="submit" className="w-full !mt-6" disabled={isLoading}>
+                                {isLoading ? 'Logging in...' : 'Login'}
                             </Button>
                     </CardContent>
                 </form>

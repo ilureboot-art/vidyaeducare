@@ -25,7 +25,7 @@ import { Label } from "@/components/ui/label"
 import { PlusCircle, MinusCircle, Info, History, ArrowUpRight, ArrowDownLeft, Coins, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
-import { type Transaction, type WalletData } from "@/lib/user-data";
+import { type Transaction, type WalletData, defaultWalletData } from "@/lib/user-data";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Image from "next/image";
@@ -53,7 +53,7 @@ export default function WalletPage() {
 
   useEffect(() => {
     // In a real app, this data would be fetched from Firestore
-    // setWalletData(defaultWalletData);
+    setWalletData(defaultWalletData);
   }, []);
 
   const handleAddFunds = (event: React.FormEvent<HTMLFormElement>) => {

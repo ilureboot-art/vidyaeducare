@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -14,7 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Gamepad2, Shield, Eye, EyeOff } from "lucide-react";
+import { Gamepad2, Shield, Eye, EyeOff, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase";
@@ -55,7 +56,7 @@ export default function LoginPage() {
           title: "Login Successful!",
           description: "Welcome back!",
       });
-      router.push("/");
+      router.push("/profile");
 
     } catch (error: any) {
         toast({
@@ -132,7 +133,7 @@ export default function LoginPage() {
           </CardContent>
           <CardFooter className="flex-col gap-4">
             <Button className="w-full" type="submit" disabled={isLoading}>
-              {isLoading ? "Logging in..." : "Login"}
+              {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Logging in...</> : "Login"}
             </Button>
           </CardFooter>
         </form>

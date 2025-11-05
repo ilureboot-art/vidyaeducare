@@ -1,3 +1,4 @@
+
 "use client";
 
 import './globals.css';
@@ -7,30 +8,66 @@ import { usePathname } from 'next/navigation';
 import { Navbar } from '@/components/Navbar';
 import { ChatWidget } from '@/components/ChatWidget';
 import { ThemeProvider } from "next-themes";
-import { useState, useEffect } from 'react';
+import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { Loader2 } from 'lucide-react';
+
+function AppLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const { user, loading } = useAuth();
+  
+  const isAdminPage = pathname.startsWith('/admin');
+  const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup') || pathname.startsWith('/forgot-password') || pathname.startsWith('/admin/login');
+  const isPublicPage = isAuthPage || pathname === '/' || pathname === '/how-to-play';
+
+  if (loading) {
+    return (
+        <div className="flex items-center justify-center min-h-screen bg-background">
+            <Loader2 className="w-12 h-12 animate-spin text-primary" />
+        </div>
+    );
+  }
+
+  if (isAdminPage) {
+    if (pathname === '/admin/login') {
+      return (
+        <main className="flex-1 flex flex-col w-full p-4 items-center justify-center min-h-screen bg-muted/40">
+          {children}
+        </main>
+      );
+    }
+    // This assumes an admin is logged in. We can add admin-specific auth later.
+    return <>{children}</>;
+  }
+  
+  if (!user && !isPublicPage) {
+     // Redirecting is better handled by middleware in Next.js, 
+     // but for this component-based approach, we'll just show a loading state
+     // or a redirect message. A simple null will prevent flicker.
+    return null;
+  }
+  
+  const showMainLayout = user && !isPublicPage;
+
+  return (
+      <div className='flex flex-col min-h-screen'>
+        {showMainLayout && <AppHeader />}
+        <main className={`flex-1 flex flex-col w-full p-4 ${showMainLayout ? 'pb-24 pt-20 items-center' : ''}`}>
+          {children}
+        </main>
+        {showMainLayout && <Navbar />}
+        {showMainLayout && <ChatWidget />}
+      </div>
+  );
+}
+
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const pathname = usePathname();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  useEffect(() => {
-    // In a real app, this would be a check against a token or session.
-    // For this prototype, we'll consider any non-auth/public page as "authenticated".
-    const publicPages = ['/', '/login', '/signup', '/forgot-password', '/admin/login', '/how-to-play'];
-    const isAdminPage = pathname.startsWith('/admin');
-    
-    setIsAuthenticated(!publicPages.includes(pathname) && !isAdminPage);
-
-  }, [pathname]);
-
-  const isAdminPage = pathname.startsWith('/admin');
-  const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup') || pathname.startsWith('/forgot-password') || pathname.startsWith('/admin/login');
-
-  const bodyClassName = `font-body antialiased ${isAdminPage ? '' : 'flex flex-col min-h-screen'}`;
+  
+  const bodyClassName = `font-body antialiased`;
   
   return (
     <html lang="en" suppressHydrationWarning>
@@ -47,21 +84,10 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
         >
-            {isAdminPage && !isAuthPage ? (
-              <>{children}</>
-            ) : (isAuthPage || pathname === '/' || pathname === '/how-to-play') ? (
-              <main className="flex-1 flex flex-col w-full p-4">{children}</main>
-            ) : (
-              <>
-                <AppHeader />
-                <main className="flex-1 flex flex-col items-center w-full p-4 pb-24 pt-20">
-                  {children}
-                </main>
-                <Navbar />
-                <ChatWidget />
-              </>
-            )}
+          <AuthProvider>
+            <AppLayout>{children}</AppLayout>
             <Toaster />
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

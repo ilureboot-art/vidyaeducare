@@ -9,6 +9,10 @@ import { Menu, BookOpen, Trophy, Store, Users, Wallet, Settings, ChevronRight, X
 import { Separator } from "@/components/ui/separator";
 import { UserNotifications } from "@/components/UserNotifications";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useAuth } from "@/context/AuthContext";
+import { auth } from "@/lib/firebase";
+import { signOut } from "firebase/auth";
+import { useRouter } from "next/navigation";
 
 const navItems = [
     { href: "/profile", label: "My Students", icon: Users },
@@ -22,6 +26,14 @@ const navItems = [
 
 export function AppHeader() {
   const [isOpen, setIsOpen] = useState(false);
+  const { user } = useAuth();
+  const router = useRouter();
+
+  const handleSignOut = async () => {
+      await signOut(auth);
+      setIsOpen(false);
+      router.push('/login');
+  }
 
   return (
     <header className="fixed top-0 left-0 right-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
@@ -46,7 +58,7 @@ export function AppHeader() {
                         <SheetDescription asChild>
                             <div className="flex items-center gap-3 pt-4">
                                 <User className="w-5 h-5" />
-                                <span className="font-medium">Alex Doe</span>
+                                <span className="font-medium">{user?.email || "User"}</span>
                             </div>
                         </SheetDescription>
                     </SheetHeader>
@@ -75,16 +87,15 @@ export function AppHeader() {
                         </nav>
                     </ScrollArea>
                     <div className="p-4 mt-auto border-t">
-                         <Link
-                            href="/login"
-                            onClick={() => setIsOpen(false)}
-                            className="flex items-center justify-between p-3 text-sm font-medium rounded-lg hover:bg-muted"
+                         <button
+                            onClick={handleSignOut}
+                            className="flex items-center justify-between p-3 text-sm font-medium rounded-lg hover:bg-muted w-full"
                         >
                             <div className="flex items-center gap-4">
                                 <LogOut className="w-5 h-5 text-destructive" />
                                 <span>Sign Out</span>
                             </div>
-                        </Link>
+                        </button>
                     </div>
                 </SheetContent>
             </Sheet>

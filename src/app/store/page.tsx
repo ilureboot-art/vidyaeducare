@@ -13,7 +13,6 @@ import Link from 'next/link';
 import type { TicketPackage, ReferboltSubscription, MockTestPackage, StoreConfig } from "@/lib/store-config";
 import { defaultStoreConfig } from "@/lib/store-config";
 import type { WalletData } from "@/lib/user-data";
-import { defaultWalletData } from "@/lib/user-data";
 
 export default function StorePage() {
   const { toast } = useToast();
@@ -27,7 +26,8 @@ export default function StorePage() {
   const [referralCode2, setReferralCode2] = useState("");
 
   useEffect(() => {
-    setLocalWalletData(defaultWalletData);
+    // In a real app, this data would be fetched from Firestore
+    // setLocalWalletData(defaultWalletData);
     setLocalStoreConfig(defaultStoreConfig);
   }, []);
 

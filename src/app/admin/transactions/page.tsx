@@ -17,7 +17,6 @@ import { Button } from "@/components/ui/button";
 import { Search, Download, ArrowUpRight, ArrowDownLeft, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { type Transaction } from "@/lib/user-data";
-import { defaultWalletData } from "@/lib/user-data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
@@ -51,12 +50,13 @@ export default function TransactionsPage() {
   const [typeFilter, setTypeFilter] = useState<'all' | 'deposit' | 'withdrawal'>('all');
   
   useEffect(() => {
-    const sortedTransactions = [...defaultWalletData.transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    setTransactions(sortedTransactions);
+    // In a real app, this data would be fetched from Firestore
+    // const sortedTransactions = [...defaultWalletData.transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    // setTransactions(sortedTransactions);
   }, []);
 
 
-  const handleTransactionStatus = (id: number, newStatus: "Completed" | "Rejected") => {
+  const handleTransactionStatus = (id: string | number, newStatus: "Completed" | "Rejected") => {
     if (!transactions) return;
 
     const txToUpdate = transactions.find(tx => tx.id === id);

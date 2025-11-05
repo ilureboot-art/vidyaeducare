@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
@@ -28,7 +29,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { type TestSet, type Question, defaultTestSets } from "@/lib/question-bank";
+import { type TestSet, type Question } from "@/lib/question-bank";
 import type { AcademicConfig } from "@/lib/academic-config";
 import { defaultAcademicConfig } from "@/lib/academic-config";
 
@@ -60,7 +61,8 @@ export default function TestSetManagementPage() {
   const [editingTestSet, setEditingTestSet] = useState<TestSet | null>(null);
   
   useEffect(() => {
-    setLocalTestSets(defaultTestSets);
+    // In a real app, this data would be fetched from Firestore
+    // setLocalTestSets(defaultTestSets);
     setAcademicConfig(defaultAcademicConfig);
   }, []);
 

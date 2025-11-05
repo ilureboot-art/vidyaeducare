@@ -22,9 +22,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
 import type { TestSet } from "@/lib/question-bank";
-import { defaultTestSets } from "@/lib/question-bank";
 import type { ScheduledTest } from "@/lib/test-schedule";
-import { defaultScheduledTests } from "@/lib/test-schedule";
 
 type TestStatus = 'Live' | 'Upcoming' | 'Completed';
 
@@ -40,8 +38,9 @@ export default function TestSchedulePage() {
     const [selectedTestSetId, setSelectedTestSetId] = useState('');
     
     useEffect(() => {
-        refreshSchedules(defaultScheduledTests);
-        setTestSets(defaultTestSets);
+        // In a real app, this data would be fetched from Firestore
+        // refreshSchedules(defaultScheduledTests);
+        // setTestSets(defaultTestSets);
         setDate(new Date());
     }, []);
     

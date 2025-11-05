@@ -13,14 +13,14 @@ import { Bell, CheckCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import type { AppNotification } from "@/lib/notifications";
-import { defaultNotifications } from "@/lib/notifications";
 
 export function Notifications() {
-  const [allNotifications, setAllNotifications] = useState<AppNotification[]>(defaultNotifications);
+  const [allNotifications, setAllNotifications] = useState<AppNotification[]>([]);
   const [adminNotifications, setAdminNotifications] = useState<AppNotification[] | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
+    // In a real app, this data would be fetched from Firestore
     const currentAdminNotifications = allNotifications
         .filter(n => n.userId === 'admin')
         .sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
@@ -30,6 +30,7 @@ export function Notifications() {
   }, [allNotifications]);
   
   const markAllAsRead = () => {
+    // In a real app, this would be an API call to update Firestore
     setAllNotifications(prev => prev.map(n => 
         n.userId === 'admin' ? { ...n, status: 'read' as const } : n
     ));

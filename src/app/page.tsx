@@ -10,7 +10,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useState, useEffect } from "react";
 import { defaultStoreConfig } from "@/lib/store-config";
-import { defaultWalletData } from "@/lib/user-data";
 
 const features = [
   {
@@ -60,11 +59,19 @@ export default function HomePage() {
 
   useEffect(() => {
     setBonus(defaultStoreConfig.referralBonus);
-    setRefCode(defaultWalletData.referralCode);
+    // In a real app, this would be fetched from the logged-in user's data
+    // setRefCode(defaultWalletData.referralCode); 
   }, []);
 
   const handleShare = async () => {
-    if (refCode === null || bonus === null) return;
+    if (refCode === null || bonus === null) {
+      toast({
+        variant: "destructive",
+        title: "Not Logged In",
+        description: "You must be logged in to share a referral code.",
+      });
+      return;
+    }
     const url = `${window.location.origin}/signup?ref=${refCode}`;
     const message = `🎓 Check out Vidya EduCare! It's an amazing platform for mock tests and earning rewards. 
     
@@ -99,7 +106,7 @@ Start your journey to success now: ${url}
     }
   };
 
-  if (bonus === null || refCode === null) {
+  if (bonus === null) {
       return (
         <div className="w-full max-w-6xl mx-auto flex items-center justify-center h-screen">
           <Loader2 className="animate-spin text-primary" size={48} />

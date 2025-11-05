@@ -22,7 +22,6 @@ import {
 } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
 import type { ScheduledTest } from "@/lib/test-schedule";
-import { defaultScheduledTests } from "@/lib/test-schedule";
 
 type TestStatus = 'Live' | 'Upcoming' | 'Completed';
 type ScheduledTestWithStatus = ScheduledTest & { status: TestStatus };
@@ -36,17 +35,18 @@ export default function TestSchedulePage() {
     const [selectedTestSetId, setSelectedTestSetId] = useState('');
 
     useEffect(() => {
-        const now = new Date();
-        const updatedSchedules = [...defaultScheduledTests]
-            .sort((a,b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime())
-            .map(test => {
-                const testDate = new Date(test.dateTime);
-                let status: TestStatus = 'Upcoming';
-                if (testDate < now) status = 'Completed';
-                if (format(testDate, 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd') && testDate <= now) status = 'Live';
-                return { ...test, status };
-            });
-        setAllSchedules(updatedSchedules);
+        // In a real app, this data would be fetched from Firestore
+        // const now = new Date();
+        // const updatedSchedules = [...defaultScheduledTests]
+        //     .sort((a,b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime())
+        //     .map(test => {
+        //         const testDate = new Date(test.dateTime);
+        //         let status: TestStatus = 'Upcoming';
+        //         if (testDate < now) status = 'Completed';
+        //         if (format(testDate, 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd') && testDate <= now) status = 'Live';
+        //         return { ...test, status };
+        //     });
+        // setAllSchedules(updatedSchedules);
         setDate(new Date());
     }, []);
 

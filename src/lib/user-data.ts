@@ -2,7 +2,7 @@
 'use client';
 
 export type Transaction = {
-  id: number;
+  id: number | string;
   type: 'deposit' | 'withdrawal';
   description: string;
   amount: number;
@@ -32,30 +32,4 @@ export type WalletData = {
   referralCode: string;
   adminPaymentMethods: AdminPaymentMethods;
   transactions: Transaction[];
-};
-
-export const defaultWalletData: WalletData = {
-  balance: 550.75,
-  coins: 1250,
-  referralCode: "ALEX-D7F6E5C",
-  adminPaymentMethods: {
-    accountHolderName: "Sanjay Gurav (Founder/owner : Vidya Educare)",
-    accountNumber: "123101501925",
-    ifscCode: "ICIC0001200",
-    bankName: "ICICI Bank",
-    upiId: "sanjug123@icici",
-    gpayNumber: "9167992350",
-    gpayUpiId: "sanjaygurav0720@okicici",
-    phonepeNumber: "9167992350",
-    phonepeUpiId: "9167992350@ybl",
-    qrCodeUrl: "https://placehold.co/200x200.png?text=QR+Code",
-  },
-  transactions: [
-    { id: 1001, type: 'deposit' as 'deposit', description: 'Welcome Bonus', amount: 50, date: "2024-07-29T12:00:00.000Z", status: 'Completed' as 'Completed', user: 'Alex Doe' },
-    { id: 1002, type: 'deposit' as 'deposit', description: 'Fund Deposit', amount: 500, date: "2024-07-28T12:00:00.000Z", status: 'Completed' as 'Completed', user: 'Alex Doe', referenceId: 'UPI-12345' },
-    { id: 1003, type: 'withdrawal' as 'withdrawal', description: '1 Year Subscription Purchase', amount: -3000, date: "2024-07-27T12:00:00.000Z", status: 'Completed' as 'Completed', user: 'Alex Doe' },
-    { id: 1004, type: 'withdrawal' as 'withdrawal', description: 'Withdrawal Request', amount: -200, date: "2024-07-26T12:00:00.000Z", status: 'Pending' as 'Pending', user: 'Alex Doe', paymentMethod: 'user@upi' },
-    { id: 1005, type: 'deposit' as 'deposit', description: 'Referral Bonus for Priya S.', amount: 5, date: "2024-07-25T12:00:00.000Z", status: 'Completed' as 'Completed', user: 'Alex Doe' },
-    { id: 1007, type: 'withdrawal' as 'withdrawal', description: 'Withdrawal Request', amount: -500, date: "2024-07-23T12:00:00.000Z", status: 'Rejected' as 'Rejected', user: 'Alex Doe', paymentMethod: 'user@upi' },
-  ],
 };

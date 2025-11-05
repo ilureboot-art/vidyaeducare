@@ -23,7 +23,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { defaultWalletData } from "@/lib/user-data";
 
 const initialReferralData = {
   referralCode: "ALEX-IBA-5C", // This can be dynamically generated for the user
@@ -63,7 +62,8 @@ export default function IBADashboardPage() {
   const [ibaReferralCode, setIbaReferralCode] = useState<string | null>(null);
 
   useEffect(() => {
-    setIbaReferralCode(defaultWalletData.referralCode); // Using the general referral code for demo
+    // In a real app, this data would be fetched from Firestore
+    // setIbaReferralCode(defaultWalletData.referralCode);
     setReferralData(initialReferralData);
   }, []);
 

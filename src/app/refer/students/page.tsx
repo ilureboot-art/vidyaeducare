@@ -36,34 +36,26 @@ type Client = {
   expiresSoon?: boolean;
 };
 
-const initialClients: Client[] = [
-    { id: 'CLI001', name: 'Rohan Gurav', type: 'Direct', product: '1 Year Subscription', purchaseDate: '2024-07-28', validity: '2025-07-27', status: 'Active' },
-    { id: 'CLI002', name: 'Priya Sharma', type: 'Direct', product: '6 Months Subscription', purchaseDate: '2024-07-27', validity: '2025-01-26', status: 'Active' },
-    { id: 'CLI003', name: 'User A', type: 'Indirect', product: '1 Year Subscription', purchaseDate: '2024-07-26', validity: '2025-07-25', status: 'Active' },
-    { id: 'CLI004', name: 'User B', type: 'Indirect', product: '6 Months Subscription', purchaseDate: '2024-01-15', validity: '2024-07-14', status: 'Expired' },
-    { id: 'CLI005', name: 'User C', type: 'Direct', product: '1 Year Subscription', purchaseDate: '2023-08-10', validity: '2024-08-09', status: 'Active' },
-];
-
 
 export default function StudentAccessPage() {
   const [clients, setClients] = useState<Client[] | null>(null);
 
   useEffect(() => {
-    // This logic must run on the client side
-    const today = new Date();
-    const thirtyDaysFromNow = new Date();
-    thirtyDaysFromNow.setDate(today.getDate() + 30);
+    // This logic must run on the client side and would be fetched from Firestore
+    // const today = new Date();
+    // const thirtyDaysFromNow = new Date();
+    // thirtyDaysFromNow.setDate(today.getDate() + 30);
 
-    const updatedClients = initialClients.map(client => {
-      const expiryDate = new Date(client.validity);
-      const isActive = expiryDate >= today;
-      return {
-        ...client,
-        status: isActive ? "Active" : "Expired",
-        expiresSoon: isActive && expiryDate <= thirtyDaysFromNow,
-      };
-    });
-    setClients(updatedClients);
+    // const updatedClients = initialClients.map(client => {
+    //   const expiryDate = new Date(client.validity);
+    //   const isActive = expiryDate >= today;
+    //   return {
+    //     ...client,
+    //     status: isActive ? "Active" : "Expired",
+    //     expiresSoon: isActive && expiryDate <= thirtyDaysFromNow,
+    //   };
+    // });
+    // setClients(updatedClients);
   }, []);
 
   if (!clients) {

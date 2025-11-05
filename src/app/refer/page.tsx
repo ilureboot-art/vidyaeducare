@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useToast } from "@/hooks/use-toast";
@@ -6,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Share2, IndianRupee, Gift, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { defaultStoreConfig } from "@/lib/store-config";
-import { defaultWalletData } from "@/lib/user-data";
 
 export default function ReferAndEarnPage() {
     const { toast } = useToast();
@@ -16,7 +16,8 @@ export default function ReferAndEarnPage() {
 
     useEffect(() => {
         setReferralBonus(defaultStoreConfig.referralBonus);
-        setReferralCode(defaultWalletData.referralCode);
+        // In a real app, this would be fetched from the logged-in user's data
+        // setReferralCode(defaultWalletData.referralCode);
     }, []);
 
     const handleShare = async () => {

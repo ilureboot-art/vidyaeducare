@@ -49,6 +49,7 @@ export type StoreConfig = {
     referboltSettings: ReferboltSettings;
 };
 
+// This can remain as it is configuration, not user-specific data.
 export const defaultStoreConfig: StoreConfig = {
     packages: [],
     

@@ -26,7 +26,6 @@ import { PlusCircle, MinusCircle, Info, History, ArrowUpRight, ArrowDownLeft, Co
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { type Transaction, type WalletData } from "@/lib/user-data";
-import { defaultWalletData } from "@/lib/user-data";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Image from "next/image";
@@ -53,7 +52,8 @@ export default function WalletPage() {
   const [withdrawOpen, setWithdrawOpen] = useState(false);
 
   useEffect(() => {
-    setWalletData(defaultWalletData);
+    // In a real app, this data would be fetched from Firestore
+    // setWalletData(defaultWalletData);
   }, []);
 
   const handleAddFunds = (event: React.FormEvent<HTMLFormElement>) => {
@@ -80,9 +80,9 @@ export default function WalletPage() {
         user: "Alex Doe",
     };
     
-    setWalletData(prev => ({...prev!, transactions: [...prev!.transactions, newTransaction]}));
+    // In a real app, this would be an API call to Firestore
+    setWalletData(prev => prev ? ({...prev, transactions: [...prev.transactions, newTransaction]}) : null);
 
-    // In a real app, you'd also send a notification to the admin via an API call
     toast({
       title: "Request Submitted",
       description: "Your fund deposit request has been sent for admin approval.",
@@ -133,9 +133,9 @@ export default function WalletPage() {
         user: "Alex Doe",
     };
 
-    setWalletData(prev => ({...prev!, transactions: [...prev!.transactions, newTransaction]}));
+    // In a real app, this would be an API call to Firestore
+    setWalletData(prev => prev ? ({...prev, transactions: [...prev.transactions, newTransaction]}) : null);
 
-    // In a real app, you'd also send a notification to the admin via an API call
     toast({
       title: "Request Submitted",
       description: `Your withdrawal request for ₹${amount} has been sent for admin approval.`,

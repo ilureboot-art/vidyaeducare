@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -10,7 +11,6 @@ import { Zap, Share2, IndianRupee, Users, CheckCircle, Repeat, Loader2 } from "l
 import Link from "next/link";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { defaultWalletData } from "@/lib/user-data";
 
 // Data for ReferBolt would come from a backend for the logged-in user
 const initialReferboltData = {
@@ -20,7 +20,8 @@ const initialReferboltData = {
   totalReferrals: 0,
   cycleProgress: 0,
   cycleGoal: 3,
-  referralHistory: [] as any[]
+  referralHistory: [] as any[],
+  referralCode: "USER-ABC-123"
 };
 
 const benefits = [
@@ -38,14 +39,13 @@ export default function ReferBoltPage() {
   const [autoRenew, setAutoRenew] = useState(false);
 
   useEffect(() => {
-      setData({
-          ...initialReferboltData,
-          isSubscribed: defaultWalletData.referralCode.includes("IBA"), // Mock logic
-      });
+      // In a real app, this data would be fetched from Firestore for the logged-in user
+      setData(initialReferboltData);
   }, []);
 
   const handleShare = async () => {
-    const referralCode = defaultWalletData.referralCode;
+    if (!data) return;
+    const referralCode = data.referralCode;
     const shareUrl = `${window.location.origin}/signup?ref=${referralCode}`;
     const benefitsText = benefits.map(b => `✅ ${b.text}`).join("\n");
 

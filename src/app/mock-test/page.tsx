@@ -16,11 +16,8 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import type { StudentProfile } from "@/lib/student-data";
-import { defaultStudentData } from "@/lib/student-data";
 import type { Question } from "@/lib/question-bank";
-import { defaultTestSets } from "@/lib/question-bank";
 import type { ScheduledTest } from "@/lib/test-schedule";
-import { defaultScheduledTests } from "@/lib/test-schedule";
 
 const MOCK_TEST_DURATION = 30 * 60; // 30 minutes in seconds
 
@@ -51,47 +48,48 @@ function MockTestContent() {
             return;
         }
         
-        const schedTest = defaultScheduledTests.find(t => t.id === testId);
-        if (!schedTest) {
-             toast({ variant: "destructive", title: "Error", description: "Scheduled test not found."});
-            router.push('/profile');
-            return;
-        }
+        // In a real app, all this data would be fetched from Firestore
+        // const schedTest = defaultScheduledTests.find(t => t.id === testId);
+        // if (!schedTest) {
+        //      toast({ variant: "destructive", title: "Error", description: "Scheduled test not found."});
+        //     router.push('/profile');
+        //     return;
+        // }
 
-        const now = new Date();
-        const testDate = new Date(schedTest.dateTime);
-        const liveStatus = testDate <= now;
+        // const now = new Date();
+        // const testDate = new Date(schedTest.dateTime);
+        // const liveStatus = testDate <= now;
 
-        const student = defaultStudentData.find(s => s.id === studentId);
-        if (!student) {
-             toast({ variant: "destructive", title: "Error", description: "Student profile not found."});
-            router.push('/profile');
-            return;
-        }
+        // const student = defaultStudentData.find(s => s.id === studentId);
+        // if (!student) {
+        //      toast({ variant: "destructive", title: "Error", description: "Student profile not found."});
+        //     router.push('/profile');
+        //     return;
+        // }
         
-        const testSet = defaultTestSets.find(ts => ts.id === schedTest.testSetId);
-        if (!testSet || testSet.questions.length === 0) {
-            toast({
-                variant: "destructive",
-                title: "No Questions Available",
-                description: `We couldn't find any questions for the test "${schedTest.testSetName}".`,
-                duration: 7000
-            });
-            router.push('/profile');
-            return;
-        }
+        // const testSet = defaultTestSets.find(ts => ts.id === schedTest.testSetId);
+        // if (!testSet || testSet.questions.length === 0) {
+        //     toast({
+        //         variant: "destructive",
+        //         title: "No Questions Available",
+        //         description: `We couldn't find any questions for the test "${schedTest.testSetName}".`,
+        //         duration: 7000
+        //     });
+        //     router.push('/profile');
+        //     return;
+        // }
 
-        setStudentProfile(student);
-        setScheduledTest(schedTest);
-        setActiveQuestions(testSet.questions);
-        setIsLiveTest(liveStatus);
+        // setStudentProfile(student);
+        // setScheduledTest(schedTest);
+        // setActiveQuestions(testSet.questions);
+        // setIsLiveTest(liveStatus);
 
-        // Reset state for new test
-        setTimeLeft(MOCK_TEST_DURATION);
-        setCurrentQuestionIndex(0);
-        setAnswers({});
-        setScore(0);
-        setTestState("in_progress");
+        // // Reset state for new test
+        // setTimeLeft(MOCK_TEST_DURATION);
+        // setCurrentQuestionIndex(0);
+        // setAnswers({});
+        // setScore(0);
+        // setTestState("in_progress");
 
     }, [searchParams, router, toast]);
 
@@ -151,7 +149,7 @@ function MockTestContent() {
         });
     };
     
-    if (testState === "loading" || !studentProfile || !scheduledTest) {
+    if (testState === "loading" || !studentProfile || !scheduledTest || activeQuestions.length === 0) {
         return (
              <Card className="w-full max-w-3xl text-center p-8 flex flex-col items-center justify-center gap-4">
                 <Loader2 className="w-10 h-10 animate-spin text-primary"/>

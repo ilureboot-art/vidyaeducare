@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -35,7 +36,6 @@ import {
 } from "@/components/ui/select"
 import { format } from 'date-fns';
 import type { Admin, AdminRole } from "@/lib/admin-data";
-import { defaultAdminData } from "@/lib/admin-data";
 
 
 const WhatsAppIcon = () => (
@@ -55,8 +55,9 @@ export default function AdminManagementPage() {
   const { toast } = useToast();
   
   useEffect(() => {
-    setAdmins(defaultAdminData.admins);
-    setRequests(defaultAdminData.requests);
+    // In a real app, this data would be fetched from Firestore
+    // setAdmins(defaultAdminData.admins);
+    // setRequests(defaultAdminData.requests);
   }, []);
 
   const openWhatsApp = (phone: string, message?: string) => {

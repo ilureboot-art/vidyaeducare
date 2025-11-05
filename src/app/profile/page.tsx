@@ -23,9 +23,8 @@ import {
 } from "@/components/ui/tooltip";
 import { format } from "date-fns";
 import type { StudentProfile } from "@/lib/student-data";
-import { defaultStudentData, defaultActivationCodes } from "@/lib/student-data";
+import { defaultActivationCodes } from "@/lib/student-data";
 import type { ScheduledTest } from "@/lib/test-schedule";
-import { defaultScheduledTests } from "@/lib/test-schedule";
 
 
 export default function ProfilePage() {
@@ -44,9 +43,10 @@ export default function ProfilePage() {
     const [availableTests, setAvailableTests] = useState<ScheduledTest[]>([]);
 
     useEffect(() => {
-        setStudents(defaultStudentData);
+        // In a real app, this data would be fetched from Firestore
+        // setStudents(defaultStudentData);
+        // setAllScheduledTests(defaultScheduledTests);
         setValidCodes(defaultActivationCodes);
-        setAllScheduledTests(defaultScheduledTests);
     }, []);
 
     const parentProfile = {

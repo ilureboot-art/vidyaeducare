@@ -11,6 +11,9 @@ import { Zap, Share2, IndianRupee, Users, CheckCircle, Repeat, Loader2 } from "l
 import Link from "next/link";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { useAuth } from "@/context/AuthContext";
+import { db } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
 
 const benefits = [
     { text: "Earn a commission for every referral who subscribes." },
@@ -22,13 +25,26 @@ const benefits = [
 
 export default function ReferBoltPage() {
   const { toast } = useToast();
+  const { user } = useAuth();
   
   const [data, setData] = useState<any | null>(null);
   const [autoRenew, setAutoRenew] = useState(false);
 
   useEffect(() => {
-      // In a real app, this data would be fetched from Firestore for the logged-in user
-  }, []);
+    if (user) {
+        const fetchReferboltData = async () => {
+            const referboltDocRef = doc(db, "referbolt", user.uid);
+            const referboltDocSnap = await getDoc(referboltDocRef);
+
+            if (referboltDocSnap.exists()) {
+                setData(referboltDocSnap.data());
+            } else {
+                setData({ isSubscribed: false });
+            }
+        };
+        fetchReferboltData();
+    }
+  }, [user]);
 
   const handleShare = async () => {
     if (!data) return;

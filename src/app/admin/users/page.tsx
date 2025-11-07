@@ -19,6 +19,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { format } from 'date-fns';
+import { db } from "@/lib/firebase";
+import { collection, getDocs, doc, updateDoc, deleteDoc } from "firebase/firestore";
 
 type UserStatus = "Active" | "Banned" | "Inactive";
 type User = {
@@ -39,33 +41,51 @@ export default function UserManagementPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
 
-  useEffect(() => {
-    // In a real app, this data would be fetched from Firestore.
-  }, []);
-
-  const handleStatusChange = (userId: string, newStatus: UserStatus) => {
-    if (!users) return;
-    const updatedUsers = users.map((user) =>
-        user.id === userId ? { ...user, status: newStatus } : user
-      );
-    setUsers(updatedUsers);
-    // In a real app, you would also update your backend data source.
-    toast({
-      title: `User ${newStatus}`,
-      description: `User ${userId} has been ${newStatus.toLowerCase()}.`,
-    });
+  const fetchUsers = async () => {
+      const usersCollection = collection(db, "users");
+      const userSnapshot = await getDocs(usersCollection);
+      const userList = userSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
+      setUsers(userList);
   };
 
-  const handleDeleteUser = (userId: string) => {
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const handleStatusChange = async (userId: string, newStatus: UserStatus) => {
+    if (!users) return;
+    
+    try {
+        const userDocRef = doc(db, "users", userId);
+        await updateDoc(userDocRef, { status: newStatus });
+        await fetchUsers(); // Refresh data
+        
+        toast({
+          title: `User ${newStatus}`,
+          description: `User ${userId} has been ${newStatus.toLowerCase()}.`,
+        });
+    } catch (error) {
+        console.error("Error changing user status:", error);
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not change user status.'});
+    }
+  };
+
+  const handleDeleteUser = async (userId: string) => {
     if (!users) return;
     const userToDelete = users.find(user => user.id === userId);
-    const updatedUsers = users.filter(user => user.id !== userId);
-    setUsers(updatedUsers);
-    // In a real app, you would also update your backend data source.
-    toast({
-        title: "User Deleted",
-        description: `User account for ${userToDelete?.name} has been deleted.`
-    });
+    if (!userToDelete) return;
+
+    try {
+        await deleteDoc(doc(db, "users", userId));
+        await fetchUsers(); // Refresh data
+        toast({
+            title: "User Deleted",
+            description: `User account for ${userToDelete.name} has been deleted.`
+        });
+    } catch(error) {
+        console.error("Error deleting user:", error);
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not delete user.' });
+    }
   }
 
   if (!users) {

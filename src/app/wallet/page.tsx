@@ -31,6 +31,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Image from "next/image";
 import { CopyButton } from "@/components/CopyButton";
 import { format } from "date-fns";
+import { useAuth } from "@/context/AuthContext";
+import { db } from "@/lib/firebase";
+import { doc, getDoc, setDoc, collection, addDoc, query, where, orderBy, limit, onSnapshot } from "firebase/firestore";
 
 const getStatusBadgeVariant = (status: string) => {
     switch (status.toLowerCase()) {
@@ -47,36 +50,55 @@ const getStatusBadgeVariant = (status: string) => {
 
 export default function WalletPage() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [walletData, setWalletData] = useState<WalletData | null>(null);
   const [addFundsOpen, setAddFundsOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
 
   useEffect(() => {
-    // In a real app, this data would be fetched from Firestore
-    // For now, we will simulate this with an empty state until connected to DB
-    setWalletData({
-        balance: 0,
-        coins: 0,
-        referralCode: "LOADING...",
-        adminPaymentMethods: {
-            accountHolderName: "",
-            accountNumber: "",
-            ifscCode: "",
-            bankName: "",
-            upiId: "",
-            gpayNumber: "",
-            gpayUpiId: "",
-            phonepeNumber: "",
-            phonepeUpiId: "",
-            qrCodeUrl: "",
-        },
-        transactions: []
-    });
-  }, []);
+    if (user) {
+        // Fetch admin payment methods
+        const paymentMethodsRef = doc(db, "configs", "paymentMethods");
+        const unsubPaymentMethods = onSnapshot(paymentMethodsRef, (doc) => {
+            if (doc.exists()) {
+                setWalletData(prev => ({ ...prev, adminPaymentMethods: doc.data() } as WalletData));
+            }
+        });
 
-  const handleAddFunds = (event: React.FormEvent<HTMLFormElement>) => {
+        // Fetch wallet data
+        const walletRef = doc(db, "wallets", user.uid);
+        const unsubWallet = onSnapshot(walletRef, (doc) => {
+            if (doc.exists()) {
+                setWalletData(prev => ({ ...prev, ...doc.data() } as WalletData));
+            } else {
+                 setWalletData(prev => ({
+                    ...prev,
+                    balance: 0,
+                    coins: 0,
+                    referralCode: `REF${user.uid.slice(0,6).toUpperCase()}`
+                } as WalletData));
+            }
+        });
+
+        // Fetch recent transactions
+        const txsRef = collection(db, "transactions");
+        const q = query(txsRef, where("user", "==", user.uid), orderBy("date", "desc"), limit(5));
+        const unsubTransactions = onSnapshot(q, (querySnapshot) => {
+            const transactions = querySnapshot.docs.map(doc => doc.data() as Transaction);
+            setWalletData(prev => ({ ...prev, transactions } as WalletData));
+        });
+
+        return () => {
+            unsubPaymentMethods();
+            unsubWallet();
+            unsubTransactions();
+        };
+    }
+  }, [user]);
+
+  const handleAddFunds = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!walletData) return;
+    if (!walletData || !user) return;
 
     const form = event.currentTarget;
     const amount = parseFloat((form.elements.namedItem('amount-add') as HTMLInputElement).value);
@@ -87,31 +109,33 @@ export default function WalletPage() {
         return;
     }
 
-    const newTransaction: Transaction = {
-        id: Date.now(),
+    const newTransaction: Omit<Transaction, 'id'> = {
         type: 'deposit',
         description: 'Fund Deposit Request',
         amount: amount,
         date: new Date().toISOString(),
         status: 'Pending',
         referenceId: txnId,
-        user: "Alex Doe",
+        user: user.uid,
     };
     
-    // In a real app, this would be an API call to Firestore
-    setWalletData(prev => prev ? ({...prev, transactions: [...prev.transactions, newTransaction]}) : null);
-
-    toast({
-      title: "Request Submitted",
-      description: "Your fund deposit request has been sent for admin approval.",
-    });
-    setAddFundsOpen(false);
-    form.reset();
+    try {
+        await addDoc(collection(db, "transactions"), newTransaction);
+        toast({
+          title: "Request Submitted",
+          description: "Your fund deposit request has been sent for admin approval.",
+        });
+        setAddFundsOpen(false);
+        form.reset();
+    } catch(error) {
+        console.error("Error submitting deposit request:", error);
+        toast({ variant: 'destructive', title: "Error", description: "Could not submit your request."});
+    }
   }
   
-  const handleWithdraw = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleWithdraw = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!walletData) return;
+    if (!walletData || !user) return;
 
     const form = event.currentTarget;
     const amount = parseFloat((form.elements.namedItem('amount-withdraw') as HTMLInputElement).value);
@@ -140,26 +164,28 @@ export default function WalletPage() {
         return;
     }
     
-    const newTransaction: Transaction = {
-        id: Date.now(),
+    const newTransaction: Omit<Transaction, 'id'> = {
         type: 'withdrawal',
         description: 'Withdrawal Request',
         amount: -amount,
         date: new Date().toISOString(),
         status: 'Pending',
         paymentMethod: upiId,
-        user: "Alex Doe",
+        user: user.uid,
     };
 
-    // In a real app, this would be an API call to Firestore
-    setWalletData(prev => prev ? ({...prev, transactions: [...prev.transactions, newTransaction]}) : null);
-
-    toast({
-      title: "Request Submitted",
-      description: `Your withdrawal request for ₹${amount} has been sent for admin approval.`,
-    });
-    setWithdrawOpen(false);
-    form.reset();
+    try {
+        await addDoc(collection(db, "transactions"), newTransaction);
+        toast({
+          title: "Request Submitted",
+          description: `Your withdrawal request for ₹${amount} has been sent for admin approval.`,
+        });
+        setWithdrawOpen(false);
+        form.reset();
+    } catch(error) {
+        console.error("Error submitting withdrawal request:", error);
+        toast({ variant: 'destructive', title: "Error", description: "Could not submit your request."});
+    }
   }
 
   if (!walletData) {
@@ -199,6 +225,7 @@ export default function WalletPage() {
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 pt-2">
+                    {adminPaymentMethods ? (
                     <Tabs defaultValue="upi" className="w-full">
                         <TabsList className="grid w-full grid-cols-2">
                             <TabsTrigger value="upi">UPI / QR Code</TabsTrigger>
@@ -245,6 +272,7 @@ export default function WalletPage() {
                             </div>
                         </TabsContent>
                     </Tabs>
+                    ) : ( <p className="text-center text-muted-foreground">Admin payment methods not configured.</p> )}
                     <form onSubmit={handleAddFunds} className="space-y-4 border-t pt-4">
                         <div>
                             <Label htmlFor="amount-add">Amount (INR)</Label>
@@ -292,9 +320,9 @@ export default function WalletPage() {
 
           <div className="space-y-4 pt-4">
             <h3 className="font-semibold text-lg text-center">Recent Activity</h3>
-            {transactions.length > 0 ? (
+            {transactions && transactions.length > 0 ? (
                 <div className="space-y-2">
-                    {[...transactions].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 3).map((tx) => (
+                    {transactions.map((tx) => (
                          <div key={tx.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                             <div className="flex items-center gap-3">
                                 <div className={`p-2 rounded-full ${tx.amount >= 0 ? 'bg-green-100 dark:bg-green-900' : 'bg-red-100 dark:bg-red-900'}`}>

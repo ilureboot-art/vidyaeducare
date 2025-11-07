@@ -23,6 +23,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import type { TestSet } from "@/lib/question-bank";
 import type { ScheduledTest } from "@/lib/test-schedule";
+import { db } from "@/lib/firebase";
+import { collection, getDocs, doc, setDoc } from "firebase/firestore";
 
 type TestStatus = 'Live' | 'Upcoming' | 'Completed';
 
@@ -33,13 +35,24 @@ export default function TestSchedulePage() {
 
     const [allSchedules, setAllSchedules] = useState<ScheduledTestWithStatus[] | null>(null);
     const [testSets, setTestSets] = useState<TestSet[] | null>(null);
-    const [date, setDate] = useState<Date | undefined>(undefined);
+    const [date, setDate] = useState<Date | undefined>(new Date());
     const [time, setTime] = useState('10:00'); // Default time
     const [selectedTestSetId, setSelectedTestSetId] = useState('');
     
+    const fetchData = async () => {
+        const testSetsCollection = collection(db, "testSets");
+        const testSetSnapshot = await getDocs(testSetsCollection);
+        const testSetList = testSetSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TestSet));
+        setTestSets(testSetList);
+
+        const schedulesCollection = collection(db, "scheduledTests");
+        const scheduleSnapshot = await getDocs(schedulesCollection);
+        const scheduleList = scheduleSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ScheduledTest));
+        refreshSchedules(scheduleList);
+    };
+
     useEffect(() => {
-        // In a real app, this data would be fetched from Firestore
-        setDate(new Date());
+        fetchData();
     }, []);
     
     const refreshSchedules = (schedules: ScheduledTest[]) => {
@@ -51,13 +64,13 @@ export default function TestSchedulePage() {
                     const testDate = new Date(test.dateTime);
                     let status: TestStatus = 'Upcoming';
                     
-                    const isToday = format(testDate, 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd');
-
                     if (testDate < now) {
                         status = 'Completed';
                     }
 
-                    if (isToday && testDate <= now) {
+                    // Check if the test is today and the time has passed or is current
+                    const isToday = format(testDate, 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd');
+                    if (isToday && testDate.getHours() <= now.getHours()) {
                        status = 'Live';
                     }
                     
@@ -69,7 +82,7 @@ export default function TestSchedulePage() {
     }
 
 
-    const handleScheduleTest = () => {
+    const handleScheduleTest = async () => {
         if (!date || !selectedTestSetId || !time || !testSets || !allSchedules) {
             toast({
                 variant: 'destructive',
@@ -89,8 +102,9 @@ export default function TestSchedulePage() {
         const combinedDateTime = new Date(date);
         combinedDateTime.setHours(hours, minutes, 0, 0);
 
+        const newTestId = `SCHED-${Date.now()}`;
         const newTest: ScheduledTest = {
-            id: `SCHED-${Date.now()}`,
+            id: newTestId,
             testSetId: testSet.id,
             testSetName: testSet.name,
             dateTime: combinedDateTime.toISOString(),
@@ -99,18 +113,23 @@ export default function TestSchedulePage() {
             subject: testSet.subject,
         };
 
-        const newSchedules = [...allSchedules, newTest];
-        refreshSchedules(newSchedules);
-
-        toast({
-            title: "Test Scheduled!",
-            description: `"${testSet.name}" has been added to the calendar for ${format(combinedDateTime, "PPP p")}.`
-        });
-        
-        // Reset form
-        setSelectedTestSetId('');
-        setDate(new Date());
-        setTime('10:00');
+        try {
+            await setDoc(doc(db, "scheduledTests", newTestId), newTest);
+            await fetchData(); // Re-fetch all data to update the UI
+            
+            toast({
+                title: "Test Scheduled!",
+                description: `"${testSet.name}" has been added to the calendar for ${format(combinedDateTime, "PPP p")}.`
+            });
+            
+            // Reset form
+            setSelectedTestSetId('');
+            setDate(new Date());
+            setTime('10:00');
+        } catch (error) {
+            console.error("Error scheduling test:", error);
+            toast({ variant: 'destructive', title: "Error", description: "Could not schedule the test." });
+        }
     };
     
     if (!allSchedules || !testSets) {

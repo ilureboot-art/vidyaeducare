@@ -19,6 +19,9 @@ import type { Transaction } from "@/lib/user-data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
+import { useAuth } from "@/context/AuthContext";
+import { db } from "@/lib/firebase";
+import { collection, query, where, getDocs, orderBy } from "firebase/firestore";
 
 const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -41,14 +44,24 @@ const getTypeIcon = (type: string, amount: number) => {
 }
 
 export default function TransactionsPage() {
+  const { user } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[] | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'rejected'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'deposit' | 'withdrawal'>('all');
   
   useEffect(() => {
-    // In a real app, this data would be fetched from Firestore
-  }, []);
+    if (user) {
+        const fetchTransactions = async () => {
+            const txsRef = collection(db, "transactions");
+            const q = query(txsRef, where("user", "==", user.uid), orderBy("date", "desc"));
+            const querySnapshot = await getDocs(q);
+            const txs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
+            setTransactions(txs);
+        };
+        fetchTransactions();
+    }
+  }, [user]);
 
   if (!transactions) {
     return (
@@ -63,8 +76,7 @@ export default function TransactionsPage() {
       const searchTermMatch = tx.description.toLowerCase().includes(searchTerm.toLowerCase()) || String(tx.id).toLowerCase().includes(searchTerm.toLowerCase());
       const statusMatch = statusFilter === 'all' || tx.status.toLowerCase() === statusFilter;
       const typeMatch = typeFilter === 'all' || (typeFilter === 'deposit' && tx.amount >= 0) || (typeFilter === 'withdrawal' && tx.amount < 0);
-      const isUserTx = tx.user === 'Alex Doe' || !tx.user;
-      return searchTermMatch && statusMatch && typeMatch && isUserTx;
+      return searchTermMatch && statusMatch && typeMatch;
     }
   );
 

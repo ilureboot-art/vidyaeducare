@@ -9,8 +9,9 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Landmark, Loader2 } from "lucide-react";
 import type { AdminPaymentMethods } from "@/lib/user-data";
-import { defaultWalletData } from "@/lib/user-data";
 import Image from "next/image";
+import { db } from "@/lib/firebase";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 
 export default function PaymentSettingsPage() {
     const { toast } = useToast();
@@ -19,7 +20,20 @@ export default function PaymentSettingsPage() {
     const [qrFile, setQrFile] = useState<File | null>(null);
 
     useEffect(() => {
-        setMethods(defaultWalletData.adminPaymentMethods);
+        const fetchPaymentMethods = async () => {
+            const docRef = doc(db, "configs", "paymentMethods");
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                setMethods(docSnap.data() as AdminPaymentMethods);
+            } else {
+                // Initialize with empty state if not found
+                setMethods({
+                    accountHolderName: "", bankName: "", accountNumber: "", ifscCode: "",
+                    upiId: "", gpayNumber: "", gpayUpiId: "", phonepeNumber: "", phonepeUpiId: "", qrCodeUrl: ""
+                });
+            }
+        };
+        fetchPaymentMethods();
     }, [])
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -38,13 +52,17 @@ export default function PaymentSettingsPage() {
         e.preventDefault();
         if (!methods) return;
         
-        const updateConfig = (finalMethods: AdminPaymentMethods) => {
-            // In a real app, this would make an API call to save the data.
-            console.log("Saving payment methods:", finalMethods);
-            toast({
-                title: "Settings Saved!",
-                description: "Payment method details have been successfully updated.",
-            });
+        const updateConfig = async (finalMethods: AdminPaymentMethods) => {
+            try {
+                await setDoc(doc(db, "configs", "paymentMethods"), finalMethods);
+                toast({
+                    title: "Settings Saved!",
+                    description: "Payment method details have been successfully updated.",
+                });
+            } catch(error) {
+                console.error("Error saving payment methods:", error);
+                toast({ variant: 'destructive', title: "Error", description: "Could not save payment settings." });
+            }
         }
         
         if (qrFile) {

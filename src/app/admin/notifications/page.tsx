@@ -8,6 +8,8 @@ import { Bell, UserPlus, ArrowDown, ArrowUp, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import type { AppNotification } from "@/lib/notifications";
+import { db } from "@/lib/firebase";
+import { collection, getDocs, query, where, orderBy } from "firebase/firestore";
 
 const getIconForType = (type: string) => {
     switch(type) {
@@ -26,7 +28,14 @@ export default function AdminNotificationsPage() {
     const [notifications, setNotifications] = useState<AppNotification[] | null>(null);
 
     useEffect(() => {
-        // In a real app, this data would be fetched from Firestore
+        const fetchNotifications = async () => {
+            const notifsRef = collection(db, "notifications");
+            const q = query(notifsRef, where("userId", "==", "admin"), orderBy("timestamp", "desc"));
+            const querySnapshot = await getDocs(q);
+            const notifs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppNotification));
+            setNotifications(notifs);
+        };
+        fetchNotifications();
     }, []);
 
     if (!notifications) {

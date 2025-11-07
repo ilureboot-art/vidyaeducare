@@ -23,6 +23,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useAuth } from "@/context/AuthContext";
+import { db } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
 
 
 const dailyTarget = 5;
@@ -38,12 +41,36 @@ const bonusTiers = [
 
 export default function IBADashboardPage() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [referralData, setReferralData] = useState<any | null>(null);
   const [ibaReferralCode, setIbaReferralCode] = useState<string | null>(null);
 
   useEffect(() => {
-    // In a real app, this data would be fetched from Firestore
-  }, []);
+    if (user) {
+        const fetchIbaData = async () => {
+            const ibaDocRef = doc(db, "iba", user.uid);
+            const ibaDocSnap = await getDoc(ibaDocRef);
+
+            if (ibaDocSnap.exists()) {
+                const data = ibaDocSnap.data();
+                setReferralData(data);
+                setIbaReferralCode(data.referralCode);
+            } else {
+                // Handle case where user is not an IBA
+                setReferralData({
+                    totalCommission: 0,
+                    totalReferrals: 0,
+                    dailySales: 0,
+                    monthlySales: 0,
+                    salesHistory: [],
+                    recentReferrals: [],
+                });
+                setIbaReferralCode('NOT-AN-IBA');
+            }
+        };
+        fetchIbaData();
+    }
+  }, [user]);
 
   const handleCopyToClipboard = () => {
     if (!ibaReferralCode) return;

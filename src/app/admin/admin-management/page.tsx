@@ -36,6 +36,8 @@ import {
 } from "@/components/ui/select"
 import { format } from 'date-fns';
 import type { Admin, AdminRole } from "@/lib/admin-data";
+import { db } from "@/lib/firebase";
+import { collection, getDocs, doc, setDoc, deleteDoc, updateDoc } from "firebase/firestore";
 
 
 const WhatsAppIcon = () => (
@@ -54,8 +56,20 @@ export default function AdminManagementPage() {
   const [newAdminRole, setNewAdminRole] = useState<AdminRole | ''>('');
   const { toast } = useToast();
   
+  const fetchAdmins = async () => {
+    const adminsCollection = collection(db, "admins");
+    const adminSnapshot = await getDocs(adminsCollection);
+    const adminList = adminSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Admin));
+    
+    const allAdmins = adminList.filter(admin => admin.status === "Active");
+    const pendingRequests = adminList.filter(admin => admin.status === "Pending");
+
+    setAdmins(allAdmins);
+    setRequests(pendingRequests);
+  };
+  
   useEffect(() => {
-    // In a real app, this data would be fetched from Firestore
+    fetchAdmins();
   }, []);
 
   const openWhatsApp = (phone: string, message?: string) => {
@@ -88,29 +102,33 @@ export default function AdminManagementPage() {
     });
   }
 
-  const handleRequest = (requestId: string, newStatus: "Active" | "Rejected") => {
+  const handleRequest = async (requestId: string, newStatus: "Active" | "Rejected") => {
     if (!requests || !admins) return;
     const requestToProcess = requests.find(req => req.id === requestId);
     if (!requestToProcess) return;
 
-    const updatedRequests = requests.filter(req => req.id !== requestId);
-    let updatedAdmins = [...admins];
+    try {
+        const adminDocRef = doc(db, "admins", requestId);
+        if (newStatus === "Active") {
+            await updateDoc(adminDocRef, { status: "Active" });
+        } else {
+            await deleteDoc(adminDocRef);
+        }
+        
+        await fetchAdmins(); // Re-fetch data to update UI
 
-    if (newStatus === "Active") {
-      const newAdmin = { ...requestToProcess, status: "Active" as const, joinDate: new Date().toISOString() };
-      updatedAdmins.push(newAdmin);
+        toast({
+          title: `Request ${newStatus === 'Active' ? 'Approved' : 'Rejected'}`,
+          description: `The request from ${requestToProcess.name} has been ${newStatus.toLowerCase()}.`,
+        });
+
+    } catch (error) {
+        console.error("Error processing request:", error);
+        toast({ variant: 'destructive', title: "Error", description: "Could not process the request."});
     }
-    
-    setRequests(updatedRequests);
-    setAdmins(updatedAdmins);
-
-    toast({
-      title: `Request ${newStatus === 'Active' ? 'Approved' : 'Rejected'}`,
-      description: `The request from ${requestToProcess.name} has been ${newStatus.toLowerCase()}.`,
-    });
   };
 
-  const handleCreateAdmin = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleCreateAdmin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!admins) return;
 
@@ -125,8 +143,9 @@ export default function AdminManagementPage() {
         return;
     }
 
+    const newAdminId = `ADM-${Date.now()}`;
     const newAdmin: Admin = {
-        id: `ADM-${Date.now()}`,
+        id: newAdminId,
         name,
         email,
         phone,
@@ -135,17 +154,23 @@ export default function AdminManagementPage() {
         joinDate: new Date().toISOString(),
     };
     
-    setAdmins([...admins, newAdmin]);
-
-    toast({
-        title: "Admin Created",
-        description: `Admin account for ${name} has been created successfully.`
-    });
-    setIsCreateDialogOpen(false);
-    setNewAdminRole('');
+    try {
+        await setDoc(doc(db, "admins", newAdminId), newAdmin);
+        await fetchAdmins();
+        
+        toast({
+            title: "Admin Created",
+            description: `Admin account for ${name} has been created successfully.`
+        });
+        setIsCreateDialogOpen(false);
+        setNewAdminRole('');
+    } catch(error) {
+         console.error("Error creating admin:", error);
+         toast({ variant: 'destructive', title: "Error", description: "Could not create admin."});
+    }
   }
   
-  const handleEditAdmin = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleEditAdmin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!selectedAdmin || !admins) return;
     const form = e.currentTarget;
@@ -159,14 +184,18 @@ export default function AdminManagementPage() {
         return;
     }
     
-    const updatedAdmins = admins.map(admin =>
-        admin.id === selectedAdmin.id ? { ...admin, name, email, phone, role } : admin
-    );
+    const updatedData = { name, email, phone, role };
 
-    setAdmins(updatedAdmins);
-    
-    toast({ title: 'Admin Updated', description: `${name}'s details have been saved.`});
-    setIsEditDialogOpen(false);
+    try {
+        await updateDoc(doc(db, "admins", selectedAdmin.id), updatedData);
+        await fetchAdmins();
+        
+        toast({ title: 'Admin Updated', description: `${name}'s details have been saved.`});
+        setIsEditDialogOpen(false);
+    } catch (error) {
+        console.error("Error updating admin:", error);
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not update admin details.'});
+    }
   }
   
   const handleResetPassword = (e: React.FormEvent<HTMLFormElement>) => {
@@ -186,14 +215,14 @@ export default function AdminManagementPage() {
         return;
     }
     
-    // In a real app, this would make an API call. Here we just show a toast.
+    // In a real app, this would make an API call to Firebase Auth.
     console.log(`Password for ${selectedAdmin.name} reset to: ${newPassword}`);
     
     toast({ title: 'Password Reset', description: `Password for ${selectedAdmin.name} has been changed.` });
     setIsResetPassOpen(false);
   }
 
-  const handleDeleteAdmin = (adminId: string) => {
+  const handleDeleteAdmin = async (adminId: string) => {
     if (!admins) return;
     const adminToDelete = admins.find(admin => admin.id === adminId);
     if (!adminToDelete) return;
@@ -203,13 +232,17 @@ export default function AdminManagementPage() {
         return;
     }
     
-    const updatedAdmins = admins.filter(admin => admin.id !== adminId);
-    setAdmins(updatedAdmins);
-
-    toast({
-        title: "Admin Deleted",
-        description: `Admin account for ${adminToDelete.name} has been deleted.`,
-    })
+    try {
+        await deleteDoc(doc(db, "admins", adminId));
+        await fetchAdmins();
+        toast({
+            title: "Admin Deleted",
+            description: `Admin account for ${adminToDelete.name} has been deleted.`,
+        })
+    } catch(error) {
+        console.error("Error deleting admin:", error);
+        toast({ variant: 'destructive', title: "Error", description: `Could not delete ${adminToDelete.name}.` });
+    }
   }
 
   if (!admins || !requests) {

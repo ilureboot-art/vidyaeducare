@@ -31,6 +31,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { type TestSet, type Question } from "@/lib/question-bank";
 import type { AcademicConfig } from "@/lib/academic-config";
+import { db } from "@/lib/firebase";
+import { collection, getDocs, doc, setDoc, deleteDoc } from "firebase/firestore";
 
 
 const initialQuestionState: Omit<Question, 'id'> = {
@@ -59,8 +61,25 @@ export default function TestSetManagementPage() {
   const [step, setStep] = useState(1);
   const [editingTestSet, setEditingTestSet] = useState<TestSet | null>(null);
   
+  const fetchData = async () => {
+    // Fetch Test Sets
+    const testSetsCollection = collection(db, "testSets");
+    const testSetSnapshot = await getDocs(testSetsCollection);
+    const testSetList = testSetSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TestSet));
+    setLocalTestSets(testSetList);
+
+    // Fetch Academic Config
+    const configDoc = await getDocs(collection(db, "configs"));
+    if (!configDoc.empty) {
+        const academicData = configDoc.docs.find(d => d.id === 'academic');
+        if (academicData) {
+            setAcademicConfig(academicData.data() as AcademicConfig);
+        }
+    }
+  };
+
   useEffect(() => {
-    // In a real app, this data would be fetched from Firestore
+    fetchData();
   }, []);
 
   const resetManualForm = () => {
@@ -85,11 +104,16 @@ export default function TestSetManagementPage() {
     setIsManualCreateOpen(true);
   };
 
-  const handleDelete = (testSetId: string) => {
+  const handleDelete = async (testSetId: string) => {
     if (!testSets) return;
-    const updatedTestSets = testSets.filter(ts => ts.id !== testSetId);
-    setLocalTestSets(updatedTestSets);
-    toast({ title: "Test Set Deleted", description: "The test set has been removed from the bank."});
+    try {
+        await deleteDoc(doc(db, "testSets", testSetId));
+        await fetchData();
+        toast({ title: "Test Set Deleted", description: "The test set has been removed from the bank."});
+    } catch(error) {
+        console.error("Error deleting test set:", error);
+        toast({ variant: 'destructive', title: "Error", description: "Could not delete the test set."});
+    }
   }
   
   const handleSetDetailChange = (field: keyof Omit<TestSet, 'id'|'questions'>, value: string) => {
@@ -140,7 +164,7 @@ export default function TestSetManagementPage() {
 };
 
   
- const handleManualSubmit = () => {
+ const handleManualSubmit = async () => {
     if (!editingTestSet || !testSets) return;
 
     const finalQuestions = editingTestSet.questions
@@ -152,25 +176,27 @@ export default function TestSetManagementPage() {
         return;
     }
     
+    const isEditing = !editingTestSet.id.startsWith("NEW-");
+    const docId = isEditing ? editingTestSet.id : `SET-${Date.now()}`;
+
     const finalTestSetData: TestSet = {
         ...editingTestSet,
+        id: docId,
         questions: finalQuestions,
     };
     
-    const isEditing = !finalTestSetData.id.startsWith("NEW-");
+    try {
+        await setDoc(doc(db, "testSets", docId), finalTestSetData);
+        await fetchData();
 
-    if (isEditing) {
-        const updatedTestSets = testSets.map(ts => ts.id === finalTestSetData.id ? finalTestSetData : ts);
-        setLocalTestSets(updatedTestSets);
-    } else {
-        const newSetWithFinalId = {...finalTestSetData, id: `SET-${Date.now()}`};
-        setLocalTestSets([...testSets, newSetWithFinalId]);
+        toast({ title: isEditing ? 'Test Set Updated!' : 'Test Set Created!', description: `"${finalTestSetData.name}" has been saved.` });
+        
+        setIsManualCreateOpen(false);
+        resetManualForm();
+    } catch(error) {
+        console.error("Error saving test set:", error);
+        toast({ variant: 'destructive', title: "Error", description: 'Could not save the test set.' });
     }
-    
-    toast({ title: isEditing ? 'Test Set Updated!' : 'Test Set Created!', description: `"${finalTestSetData.name}" has been saved.` });
-    
-    setIsManualCreateOpen(false);
-    resetManualForm();
 };
 
   if (!testSets || !academicConfig) {

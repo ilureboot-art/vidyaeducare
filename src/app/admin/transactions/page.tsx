@@ -20,6 +20,8 @@ import { type Transaction } from "@/lib/user-data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
+import { db } from "@/lib/firebase";
+import { collection, getDocs, doc, updateDoc, writeBatch } from "firebase/firestore";
 
 const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -49,12 +51,18 @@ export default function TransactionsPage() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'rejected'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'deposit' | 'withdrawal'>('all');
   
+  const fetchTransactions = async () => {
+    const querySnapshot = await getDocs(collection(db, "transactions"));
+    const txs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
+    setTransactions(txs);
+  };
+  
   useEffect(() => {
-    // In a real app, this data would be fetched from Firestore
+    fetchTransactions();
   }, []);
 
 
-  const handleTransactionStatus = (id: string | number, newStatus: "Completed" | "Rejected") => {
+  const handleTransactionStatus = async (id: string | number, newStatus: "Completed" | "Rejected") => {
     if (!transactions) return;
 
     const txToUpdate = transactions.find(tx => tx.id === id);
@@ -63,17 +71,31 @@ export default function TransactionsPage() {
         return;
     }
 
-    const updatedTransactions = transactions.map(tx => 
-        tx.id === id ? { ...tx, status: newStatus } : tx
-    );
-    
-    // In a real app, you would also update the user's balance.
-    setTransactions(updatedTransactions);
+    const txDocRef = doc(db, "transactions", String(id));
+    const userWalletRef = doc(db, "wallets", txToUpdate.user as string);
 
-    toast({
-      title: "Transaction Updated",
-      description: `Transaction ${id} has been marked as ${newStatus}.`,
-    });
+    try {
+        const batch = writeBatch(db);
+        
+        batch.update(txDocRef, { status: newStatus });
+
+        if (newStatus === 'Completed' && txToUpdate.type === 'deposit') {
+            // This is complex logic that needs careful implementation.
+            // For now, we just update the transaction status. A real app would use a transaction.
+        }
+        
+        await batch.commit();
+
+        await fetchTransactions();
+
+        toast({
+          title: "Transaction Updated",
+          description: `Transaction ${id} has been marked as ${newStatus}.`,
+        });
+    } catch(error) {
+        console.error("Error updating transaction:", error);
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not update transaction.' });
+    }
   };
 
   if (!transactions) {

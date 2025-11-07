@@ -7,10 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Archive, Search, Send, Loader2 } from "lucide-react";
+import { db } from "@/lib/firebase";
+import { collection, getDocs, doc, updateDoc, addDoc, serverTimestamp, query, orderBy } from "firebase/firestore";
 
 type Message = {
     from: 'user' | 'admin';
     text: string;
+    timestamp?: any;
 };
 
 type Chat = {
@@ -22,31 +25,6 @@ type Chat = {
     messages: Message[];
 };
 
-const serverChats: Chat[] = [
-    {
-        id: "CHAT001",
-        user: "Priya Sharma",
-        lastMessage: "I'm having trouble with my withdrawal.",
-        unread: true,
-        avatar: "PS",
-        messages: [
-            { from: 'user', text: "Hello, I requested a withdrawal yesterday and it's still pending." },
-            { from: 'user', text: "Can you please check on it?" },
-        ]
-    },
-    {
-        id: "CHAT002",
-        user: "Rohan Kumar",
-        lastMessage: "Thanks for the help!",
-        unread: false,
-        avatar: "RK",
-        messages: [
-            { from: 'user', text: "My referral bonus wasn't applied." },
-            { from: 'admin', text: "Let me check that for you. It seems there was a slight delay. I've credited it now." },
-            { from: 'user', text: "Great, I see it. Thanks for the help!" },
-        ]
-    },
-];
 
 export default function ChatManagementPage() {
     const [chats, setChats] = useState<Chat[] | null>(null);
@@ -54,31 +32,55 @@ export default function ChatManagementPage() {
     const [reply, setReply] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
 
+    const fetchChats = async () => {
+        const chatsCollection = collection(db, "chats");
+        const chatSnapshot = await getDocs(query(chatsCollection, orderBy("lastMessageTimestamp", "desc")));
+        
+        const chatList = await Promise.all(chatSnapshot.docs.map(async (chatDoc) => {
+            const messagesCollection = collection(db, "chats", chatDoc.id, "messages");
+            const messagesSnapshot = await getDocs(query(messagesCollection, orderBy("timestamp", "asc")));
+            const messages = messagesSnapshot.docs.map(msgDoc => msgDoc.data() as Message);
+            return {
+                id: chatDoc.id,
+                ...chatDoc.data(),
+                messages
+            } as Chat;
+        }));
+
+        setChats(chatList);
+    };
+
     useEffect(() => {
-        setChats(serverChats);
+        fetchChats();
     }, []);
 
-    const handleSelectChat = (chat: Chat) => {
+    const handleSelectChat = async (chat: Chat) => {
         setActiveChat(chat);
-        if (chats) {
-            setChats(chats.map(c => c.id === chat.id ? { ...c, unread: false } : c));
+        if (chat.unread) {
+             const chatDocRef = doc(db, "chats", chat.id);
+             await updateDoc(chatDocRef, { unread: false });
+             await fetchChats();
         }
     };
 
-    const handleSendReply = (e: React.FormEvent) => {
+    const handleSendReply = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!reply.trim() || !activeChat || !chats) return;
 
-        const newMessage: Message = { from: 'admin', text: reply };
+        const newMessage: Message = { from: 'admin', text: reply, timestamp: serverTimestamp() };
         
-        const updatedChat: Chat = {
-            ...activeChat,
-            messages: [...activeChat.messages, newMessage],
-            lastMessage: reply,
-        };
+        const messagesCollectionRef = collection(db, "chats", activeChat.id, "messages");
+        await addDoc(messagesCollectionRef, newMessage);
 
-        setChats(chats.map(c => c.id === activeChat.id ? updatedChat : c));
-        setActiveChat(updatedChat);
+        const chatDocRef = doc(db, "chats", activeChat.id);
+        await updateDoc(chatDocRef, {
+            lastMessage: reply,
+            lastMessageTimestamp: serverTimestamp(),
+        });
+        
+        await fetchChats();
+        // Manually update active chat to show the new message instantly
+        setActiveChat(prev => prev ? ({...prev, messages: [...prev.messages, {...newMessage, timestamp: new Date()}]}) : null);
         setReply("");
     };
     

@@ -22,6 +22,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { format } from "date-fns";
+import { useAuth } from "@/context/AuthContext";
+import { db } from "@/lib/firebase";
+import { collection, query, where, getDocs } from "firebase/firestore";
 
 type ClientStatus = "Active" | "Expired";
 
@@ -39,10 +42,33 @@ type Client = {
 
 export default function StudentAccessPage() {
   const [clients, setClients] = useState<Client[] | null>(null);
+  const { user } = useAuth();
 
   useEffect(() => {
-    // This logic must run on the client side and would be fetched from Firestore
-  }, []);
+    if (user) {
+        const fetchClients = async () => {
+            const q = query(collection(db, "clients"), where("referrerId", "==", user.uid));
+            const querySnapshot = await getDocs(q);
+            const clientList = querySnapshot.docs.map(doc => {
+                const data = doc.data() as Omit<Client, 'id' | 'status' | 'expiresSoon'>;
+                const validityDate = new Date(data.validity);
+                const now = new Date();
+                const status: ClientStatus = validityDate < now ? "Expired" : "Active";
+                const daysUntilExpiry = (validityDate.getTime() - now.getTime()) / (1000 * 3600 * 24);
+                const expiresSoon = status === "Active" && daysUntilExpiry <= 7;
+
+                return {
+                    id: doc.id,
+                    ...data,
+                    status,
+                    expiresSoon
+                } as Client;
+            });
+            setClients(clientList);
+        };
+        fetchClients();
+    }
+  }, [user]);
 
   if (!clients) {
     return (

@@ -17,4 +17,4 @@ export type Admin = {
 export type AdminData = {
     admins: Admin[];
     requests: Admin[];
-}
+};

@@ -42,20 +42,6 @@ export default function StudentAccessPage() {
 
   useEffect(() => {
     // This logic must run on the client side and would be fetched from Firestore
-    // const today = new Date();
-    // const thirtyDaysFromNow = new Date();
-    // thirtyDaysFromNow.setDate(today.getDate() + 30);
-
-    // const updatedClients = initialClients.map(client => {
-    //   const expiryDate = new Date(client.validity);
-    //   const isActive = expiryDate >= today;
-    //   return {
-    //     ...client,
-    //     status: isActive ? "Active" : "Expired",
-    //     expiresSoon: isActive && expiryDate <= thirtyDaysFromNow,
-    //   };
-    // });
-    // setClients(updatedClients);
   }, []);
 
   if (!clients) {

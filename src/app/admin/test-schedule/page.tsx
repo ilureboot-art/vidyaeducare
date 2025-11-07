@@ -39,8 +39,6 @@ export default function TestSchedulePage() {
     
     useEffect(() => {
         // In a real app, this data would be fetched from Firestore
-        // refreshSchedules(defaultScheduledTests);
-        // setTestSets(defaultTestSets);
         setDate(new Date());
     }, []);
     

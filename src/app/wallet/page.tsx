@@ -22,10 +22,10 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { PlusCircle, MinusCircle, Info, History, ArrowUpRight, ArrowDownLeft, Coins, Loader2 } from "lucide-react";
+import { PlusCircle, MinusCircle, History, ArrowUpRight, ArrowDownLeft, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
-import { type Transaction, type WalletData, defaultWalletData } from "@/lib/user-data";
+import { type Transaction, type WalletData } from "@/lib/user-data";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Image from "next/image";
@@ -53,7 +53,25 @@ export default function WalletPage() {
 
   useEffect(() => {
     // In a real app, this data would be fetched from Firestore
-    setWalletData(defaultWalletData);
+    // For now, we will simulate this with an empty state until connected to DB
+    setWalletData({
+        balance: 0,
+        coins: 0,
+        referralCode: "LOADING...",
+        adminPaymentMethods: {
+            accountHolderName: "",
+            accountNumber: "",
+            ifscCode: "",
+            bankName: "",
+            upiId: "",
+            gpayNumber: "",
+            gpayUpiId: "",
+            phonepeNumber: "",
+            phonepeUpiId: "",
+            qrCodeUrl: "",
+        },
+        transactions: []
+    });
   }, []);
 
   const handleAddFunds = (event: React.FormEvent<HTMLFormElement>) => {

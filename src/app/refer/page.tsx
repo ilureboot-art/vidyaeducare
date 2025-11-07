@@ -15,9 +15,8 @@ export default function ReferAndEarnPage() {
     const [referralCode, setReferralCode] = useState<string | null>(null);
 
     useEffect(() => {
+        // In a real app, this data would be fetched from Firestore
         setReferralBonus(defaultStoreConfig.referralBonus);
-        // In a real app, this would be fetched from the logged-in user's data
-        // setReferralCode(defaultWalletData.referralCode);
     }, []);
 
     const handleShare = async () => {

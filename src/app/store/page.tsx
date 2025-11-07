@@ -5,13 +5,12 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { ShoppingCart, Sparkles, Loader2, BookOpen, Ticket, Zap } from "lucide-react";
+import { ShoppingCart, Sparkles, Loader2, BookOpen, Zap } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from 'next/link';
-import type { TicketPackage, ReferboltSubscription, MockTestPackage, StoreConfig } from "@/lib/store-config";
-import { defaultStoreConfig } from "@/lib/store-config";
+import type { StoreConfig } from "@/lib/store-config";
 import type { WalletData } from "@/lib/user-data";
 
 export default function StorePage() {
@@ -28,7 +27,7 @@ export default function StorePage() {
   useEffect(() => {
     // In a real app, this data would be fetched from Firestore
     // setLocalWalletData(defaultWalletData);
-    setLocalStoreConfig(defaultStoreConfig);
+    // setLocalStoreConfig(defaultStoreConfig);
   }, []);
 
   if (!walletData || !storeConfig) {
@@ -148,7 +147,6 @@ export default function StorePage() {
         };
         setLocalWalletData(prev => prev ? ({...prev, balance: newBalance, transactions: [...prev.transactions, newTransaction]}) : null);
 
-        const bonusTickets = storeConfig.referboltSubscription.ticketBonus;
         toast({ 
             title: "Purchase Successful!", 
             description: `You are now subscribed to ReferBolt!`,

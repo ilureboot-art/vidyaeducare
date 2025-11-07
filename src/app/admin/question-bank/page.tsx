@@ -31,7 +31,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { type TestSet, type Question } from "@/lib/question-bank";
 import type { AcademicConfig } from "@/lib/academic-config";
-import { defaultAcademicConfig } from "@/lib/academic-config";
 
 
 const initialQuestionState: Omit<Question, 'id'> = {
@@ -62,8 +61,6 @@ export default function TestSetManagementPage() {
   
   useEffect(() => {
     // In a real app, this data would be fetched from Firestore
-    // setLocalTestSets(defaultTestSets);
-    setAcademicConfig(defaultAcademicConfig);
   }, []);
 
   const resetManualForm = () => {

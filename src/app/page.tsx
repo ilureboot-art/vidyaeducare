@@ -3,7 +3,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { BookOpen, Trophy, Users, LogIn, CheckCircle, GraduationCap, Gamepad2, IndianRupee, Star, Share2, Zap, BrainCircuit, Quote, Loader2 } from "lucide-react";
+import { BookOpen, Trophy, Users, LogIn, Share2, Quote, Loader2 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
@@ -60,7 +60,6 @@ export default function HomePage() {
   useEffect(() => {
     setBonus(defaultStoreConfig.referralBonus);
     // In a real app, this would be fetched from the logged-in user's data
-    // setRefCode(defaultWalletData.referralCode); 
   }, []);
 
   const handleShare = async () => {

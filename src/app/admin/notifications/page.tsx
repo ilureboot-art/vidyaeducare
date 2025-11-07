@@ -27,10 +27,6 @@ export default function AdminNotificationsPage() {
 
     useEffect(() => {
         // In a real app, this data would be fetched from Firestore
-        // const adminNotifications = defaultNotifications
-        //     .filter(n => n.userId === 'admin')
-        //     .sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-        // setNotifications(adminNotifications);
     }, []);
 
     if (!notifications) {

@@ -41,7 +41,6 @@ export default function UserManagementPage() {
 
   useEffect(() => {
     // In a real app, this data would be fetched from Firestore.
-    // setUsers(initialUsers);
   }, []);
 
   const handleStatusChange = (userId: string, newStatus: UserStatus) => {

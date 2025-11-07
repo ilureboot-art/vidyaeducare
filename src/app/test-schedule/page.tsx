@@ -6,12 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Calendar as CalendarIcon, FilePlus, Loader2 } from "lucide-react";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -30,33 +25,11 @@ export default function TestSchedulePage() {
     const { toast } = useToast();
     
     const [allSchedules, setAllSchedules] = useState<ScheduledTestWithStatus[] | null>(null);
-    const [date, setDate] = useState<Date | undefined>(undefined);
-    const [time, setTime] = useState('10:00'); // Default time
-    const [selectedTestSetId, setSelectedTestSetId] = useState('');
 
     useEffect(() => {
         // In a real app, this data would be fetched from Firestore
-        // const now = new Date();
-        // const updatedSchedules = [...defaultScheduledTests]
-        //     .sort((a,b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime())
-        //     .map(test => {
-        //         const testDate = new Date(test.dateTime);
-        //         let status: TestStatus = 'Upcoming';
-        //         if (testDate < now) status = 'Completed';
-        //         if (format(testDate, 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd') && testDate <= now) status = 'Live';
-        //         return { ...test, status };
-        //     });
-        // setAllSchedules(updatedSchedules);
-        setDate(new Date());
+        // For now, we will leave it empty as there's no data source
     }, []);
-
-    const handleScheduleTest = () => {
-        // This is a read-only page for users. The functionality is in the admin panel.
-        toast({
-            title: "Action Not Available",
-            description: "Test scheduling is only available in the admin panel.",
-        });
-    };
     
     if (!allSchedules) {
         return (

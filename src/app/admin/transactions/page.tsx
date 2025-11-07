@@ -51,8 +51,6 @@ export default function TransactionsPage() {
   
   useEffect(() => {
     // In a real app, this data would be fetched from Firestore
-    // const sortedTransactions = [...defaultWalletData.transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    // setTransactions(sortedTransactions);
   }, []);
 
 

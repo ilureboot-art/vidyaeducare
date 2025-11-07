@@ -12,18 +12,6 @@ import Link from "next/link";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 
-// Data for ReferBolt would come from a backend for the logged-in user
-const initialReferboltData = {
-  isSubscribed: false, 
-  autoRenew: false,
-  totalCommissions: 0,
-  totalReferrals: 0,
-  cycleProgress: 0,
-  cycleGoal: 3,
-  referralHistory: [] as any[],
-  referralCode: "USER-ABC-123"
-};
-
 const benefits = [
     { text: "Earn a commission for every referral who subscribes." },
     { text: "Complete a cycle with just 3 referrals." },
@@ -35,12 +23,11 @@ const benefits = [
 export default function ReferBoltPage() {
   const { toast } = useToast();
   
-  const [data, setData] = useState<typeof initialReferboltData | null>(null);
+  const [data, setData] = useState<any | null>(null);
   const [autoRenew, setAutoRenew] = useState(false);
 
   useEffect(() => {
       // In a real app, this data would be fetched from Firestore for the logged-in user
-      setData(initialReferboltData);
   }, []);
 
   const handleShare = async () => {

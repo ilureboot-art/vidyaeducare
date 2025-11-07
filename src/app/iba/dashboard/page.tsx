@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Share2, Copy, Users, IndianRupee, Goal, Percent, ShieldCheck, ChevronRight, BarChart3, TrendingUp, HelpCircle, Zap, Loader2 } from "lucide-react";
+import { Share2, Copy, Users, IndianRupee, Goal, Percent, ShieldCheck, ChevronRight, BarChart3, HelpCircle, Zap, Loader2 } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -24,26 +24,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-const initialReferralData = {
-  referralCode: "ALEX-IBA-5C", // This can be dynamically generated for the user
-  totalReferrals: 12,
-  totalCommission: 450.50,
-  dailySales: 2,
-  monthlySales: 85,
-  recentReferrals: [
-      { id: 1, name: 'Rohan Gurav', date: '2024-07-28', commission: 44.12 },
-      { id: 2, name: 'Priya Sharma', date: '2024-07-27', commission: 44.12 },
-  ],
-  salesHistory: [
-      { month: 'Jan', sales: 15 },
-      { month: 'Feb', sales: 22 },
-      { month: 'Mar', sales: 30 },
-      { month: 'Apr', sales: 25 },
-      { month: 'May', sales: 40 },
-      { month: 'Jun', sales: 55 },
-      { month: 'Jul', sales: 85 },
-  ]
-};
 
 const dailyTarget = 5;
 const monthlyTarget = 150;
@@ -58,13 +38,11 @@ const bonusTiers = [
 
 export default function IBADashboardPage() {
   const { toast } = useToast();
-  const [referralData, setReferralData] = useState<typeof initialReferralData | null>(null);
+  const [referralData, setReferralData] = useState<any | null>(null);
   const [ibaReferralCode, setIbaReferralCode] = useState<string | null>(null);
 
   useEffect(() => {
     // In a real app, this data would be fetched from Firestore
-    // setIbaReferralCode(defaultWalletData.referralCode);
-    setReferralData(initialReferralData);
   }, []);
 
   const handleCopyToClipboard = () => {

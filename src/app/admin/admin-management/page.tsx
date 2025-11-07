@@ -56,8 +56,6 @@ export default function AdminManagementPage() {
   
   useEffect(() => {
     // In a real app, this data would be fetched from Firestore
-    // setAdmins(defaultAdminData.admins);
-    // setRequests(defaultAdminData.requests);
   }, []);
 
   const openWhatsApp = (phone: string, message?: string) => {

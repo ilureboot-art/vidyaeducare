@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { User, Mail, Calendar, Phone, Edit, GraduationCap, Building, Languages, BookCopy, FileClock, Cake, Medal, BarChart2, Trash2, PlusCircle, TrendingUp, BookOpen, Activity, Info, CalendarCheck, Loader2 } from "lucide-react";
+import { User, Mail, Calendar, Phone, Edit, GraduationCap, Trash2, PlusCircle, BookOpen, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,6 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { ResponsiveContainer, BarChart, XAxis, YAxis, Tooltip, Bar, CartesianGrid } from "recharts";
-import { Separator } from "@/components/ui/separator";
 import {
   Tooltip as ShadTooltip,
   TooltipContent,
@@ -23,7 +22,6 @@ import {
 } from "@/components/ui/tooltip";
 import { format } from "date-fns";
 import type { StudentProfile } from "@/lib/student-data";
-import { defaultActivationCodes } from "@/lib/student-data";
 import type { ScheduledTest } from "@/lib/test-schedule";
 
 
@@ -44,9 +42,6 @@ export default function ProfilePage() {
 
     useEffect(() => {
         // In a real app, this data would be fetched from Firestore
-        // setStudents(defaultStudentData);
-        // setAllScheduledTests(defaultScheduledTests);
-        setValidCodes(defaultActivationCodes);
     }, []);
 
     const parentProfile = {
@@ -243,9 +238,7 @@ export default function ProfilePage() {
              </Dialog>
         </div>
 
-       {students.map(student => {
-         const isEligible = student.stats.performance.length > 0 && student.stats.performance.every(p => p.score > 80);
-         return (
+       {students.map(student => (
          <Card key={student.id} className="shadow-lg relative group overflow-hidden">
             <CardHeader className="flex flex-row items-start justify-between gap-4 bg-muted/30 p-4">
                 <div className="flex items-center gap-4">
@@ -258,19 +251,6 @@ export default function ProfilePage() {
                             <span>{student.name}</span>
                         </CardTitle>
                         <CardDescription>ID: {student.id}</CardDescription>
-                         <div className="flex flex-wrap gap-1 mt-2">
-                            <ShadTooltip>
-                                <TooltipTrigger>
-                                    <Badge variant="outline" className={isEligible ? "border-green-500 text-green-600" : "border-muted-foreground"}>
-                                        <Medal className={`mr-1.5 w-4 h-4 ${isEligible ? 'text-green-500' : 'text-muted-foreground'}`}/>
-                                        {isEligible ? 'Prize Eligible' : 'Not Prize Eligible'}
-                                    </Badge>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p className="max-w-xs">To be eligible for cash prizes, student must score above 80% in all subject tests. If any test score falls below 80%, eligibility is lost.</p>
-                                </TooltipContent>
-                            </ShadTooltip>
-                        </div>
                     </div>
                 </div>
                 <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -339,7 +319,7 @@ export default function ProfilePage() {
                 </Button>
             </CardFooter>
         </Card>
-       )})}
+       ))}
 
        {students.length === 0 && (
            <Card>

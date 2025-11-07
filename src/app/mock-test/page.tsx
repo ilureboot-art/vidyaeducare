@@ -49,48 +49,6 @@ function MockTestContent() {
         }
         
         // In a real app, all this data would be fetched from Firestore
-        // const schedTest = defaultScheduledTests.find(t => t.id === testId);
-        // if (!schedTest) {
-        //      toast({ variant: "destructive", title: "Error", description: "Scheduled test not found."});
-        //     router.push('/profile');
-        //     return;
-        // }
-
-        // const now = new Date();
-        // const testDate = new Date(schedTest.dateTime);
-        // const liveStatus = testDate <= now;
-
-        // const student = defaultStudentData.find(s => s.id === studentId);
-        // if (!student) {
-        //      toast({ variant: "destructive", title: "Error", description: "Student profile not found."});
-        //     router.push('/profile');
-        //     return;
-        // }
-        
-        // const testSet = defaultTestSets.find(ts => ts.id === schedTest.testSetId);
-        // if (!testSet || testSet.questions.length === 0) {
-        //     toast({
-        //         variant: "destructive",
-        //         title: "No Questions Available",
-        //         description: `We couldn't find any questions for the test "${schedTest.testSetName}".`,
-        //         duration: 7000
-        //     });
-        //     router.push('/profile');
-        //     return;
-        // }
-
-        // setStudentProfile(student);
-        // setScheduledTest(schedTest);
-        // setActiveQuestions(testSet.questions);
-        // setIsLiveTest(liveStatus);
-
-        // // Reset state for new test
-        // setTimeLeft(MOCK_TEST_DURATION);
-        // setCurrentQuestionIndex(0);
-        // setAnswers({});
-        // setScore(0);
-        // setTestState("in_progress");
-
     }, [searchParams, router, toast]);
 
     useEffect(() => {

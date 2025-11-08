@@ -206,7 +206,7 @@ export default function TransactionsPage() {
                     </div>
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground font-mono">
-                    {tx.id}
+                    {typeof tx.id === 'string' && tx.id.length > 10 ? tx.id.substring(0, 10) + '...' : tx.id}
                     {tx.referenceId && <div className="text-ellipsis overflow-hidden">Ref: {tx.referenceId}</div>}
                   </TableCell>
                   <TableCell>{format(new Date(tx.date), 'P')}</TableCell>

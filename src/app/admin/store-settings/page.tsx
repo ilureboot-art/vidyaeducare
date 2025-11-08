@@ -11,19 +11,29 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { PlusCircle, Trash2, Zap, BookOpen, GraduationCap, Percent, Loader2 } from "lucide-react";
 import type { TicketPackage, ReferboltSubscription, MockTestPackage, ReferboltSettings, GameSettings, StoreConfig } from "@/lib/store-config";
 import type { AcademicConfig } from "@/lib/academic-config";
-import { defaultStoreConfig } from "@/lib/store-config";
-import { defaultAcademicConfig } from "@/lib/academic-config";
 import { Switch } from "@/components/ui/switch";
+import { db } from "@/lib/firebase";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 
 export default function AdminStoreSettingsPage() {
   const { toast } = useToast();
   
-  const [storeConfig, setLocalStoreConfig] = useState<StoreConfig | null>(null);
-  const [academicConfig, setLocalAcademicConfig] = useState<AcademicConfig | null>(null);
+  const [storeConfig, setStoreConfig] = useState<StoreConfig | null>(null);
+  const [academicConfig, setAcademicConfig] = useState<AcademicConfig | null>(null);
 
   useEffect(() => {
-    setLocalStoreConfig(JSON.parse(JSON.stringify(defaultStoreConfig)));
-    setLocalAcademicConfig(JSON.parse(JSON.stringify(defaultAcademicConfig)));
+    const fetchConfigs = async () => {
+        const storeConfigDoc = await getDoc(doc(db, "configs", "store"));
+        if(storeConfigDoc.exists()) {
+            setStoreConfig(storeConfigDoc.data() as StoreConfig);
+        }
+
+        const academicConfigDoc = await getDoc(doc(db, "configs", "academic"));
+        if(academicConfigDoc.exists()){
+            setAcademicConfig(academicConfigDoc.data() as AcademicConfig);
+        }
+    }
+    fetchConfigs();
   }, []);
 
   const handleMockTestPackageChange = (index: number, field: keyof MockTestPackage, value: string | number | boolean) => {
@@ -46,12 +56,12 @@ export default function AdminStoreSettingsPage() {
     }
 
     newPackages[index] = pkg;
-    setLocalStoreConfig(prev => prev ? ({...prev, mockTestPackages: newPackages}) : null);
+    setStoreConfig(prev => prev ? ({...prev, mockTestPackages: newPackages}) : null);
   };
   
   const handleReferboltChange = (field: keyof ReferboltSubscription, value: string | number) => {
     if (!storeConfig) return;
-    setLocalStoreConfig(prev => {
+    setStoreConfig(prev => {
         if (!prev) return null;
         const newSub = { ...prev.referboltSubscription };
         if (field === 'price' || field === 'ticketBonus' || field === 'gstRate') {
@@ -64,25 +74,25 @@ export default function AdminStoreSettingsPage() {
 
   const handleReferboltSettingsChange = (field: keyof ReferboltSettings, value: boolean | number) => {
       if (!storeConfig) return;
-      setLocalStoreConfig(prev => prev ? ({ ...prev, referboltSettings: { ...prev.referboltSettings, [field]: value } }) : null);
+      setStoreConfig(prev => prev ? ({ ...prev, referboltSettings: { ...prev.referboltSettings, [field]: value } }) : null);
   };
 
   const addMockTestPackage = () => {
     if (!storeConfig) return;
     const newPackages = [...storeConfig.mockTestPackages, { name: 'New Subscription', price: 0, months: 1, bestValue: false, gstRate: 18, hsnSacCode: '999294' }];
-    setLocalStoreConfig(prev => prev ? ({...prev, mockTestPackages: newPackages}) : null);
+    setStoreConfig(prev => prev ? ({...prev, mockTestPackages: newPackages}) : null);
   };
   
   const removeMockTestPackage = (index: number) => {
     if (!storeConfig) return;
     const newPackages = storeConfig.mockTestPackages.filter((_, i) => i !== index);
-    setLocalStoreConfig(prev => prev ? ({ ...prev, mockTestPackages: newPackages }) : null);
+    setStoreConfig(prev => prev ? ({ ...prev, mockTestPackages: newPackages }) : null);
   };
 
   const handleDynamicListChange = (setter: React.Dispatch<React.SetStateAction<AcademicConfig | null>>, listName: keyof AcademicConfig, index: number, value: string) => {
       setter(prev => {
           if (!prev) return null;
-          const newList = [...prev[listName]];
+          const newList = [...(prev[listName] as string[])];
           newList[index] = value;
           return { ...prev, [listName]: newList };
       });
@@ -91,7 +101,7 @@ export default function AdminStoreSettingsPage() {
   const addToList = (setter: React.Dispatch<React.SetStateAction<AcademicConfig | null>>, listName: keyof AcademicConfig) => {
       setter(prev => {
           if (!prev) return null;
-          const newList = [...prev[listName], ''];
+          const newList = [...(prev[listName] as string[]), ''];
           return { ...prev, [listName]: newList };
       });
   };
@@ -99,23 +109,26 @@ export default function AdminStoreSettingsPage() {
   const removeFromList = (setter: React.Dispatch<React.SetStateAction<AcademicConfig | null>>, listName: keyof AcademicConfig, index: number) => {
       setter(prev => {
           if (!prev) return null;
-          const newList = prev[listName].filter((_, i) => i !== index);
+          const newList = (prev[listName] as string[]).filter((_, i) => i !== index);
           return { ...prev, [listName]: newList };
       });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!storeConfig || !academicConfig) return;
     
-    // In a real app, you'd save this to a backend.
-    console.log("Saving Store Config:", storeConfig);
-    console.log("Saving Academic Config:", academicConfig);
-
-    toast({
-      title: "Settings Saved!",
-      description: "Your changes have been applied across the application.",
-    });
+    try {
+        await setDoc(doc(db, "configs", "store"), storeConfig);
+        await setDoc(doc(db, "configs", "academic"), academicConfig);
+        toast({
+          title: "Settings Saved!",
+          description: "Your changes have been applied across the application.",
+        });
+    } catch (error) {
+        console.error("Error saving settings:", error);
+        toast({ variant: 'destructive', title: "Save Failed", description: "Could not save settings to the database."})
+    }
   };
 
   const renderDynamicList = (
@@ -123,19 +136,19 @@ export default function AdminStoreSettingsPage() {
       listName: keyof AcademicConfig
   ) => {
       if (!academicConfig) return null;
-      const list = academicConfig[listName];
+      const list = academicConfig[listName] as string[];
       return (
           <div className="space-y-4">
               <Label className="text-lg font-semibold">{title}</Label>
               {list.map((item, index) => (
                   <div key={index} className="flex items-center gap-2">
-                      <Input value={item} onChange={(e) => handleDynamicListChange(setLocalAcademicConfig, listName, index, e.target.value)} />
-                      <Button type="button" variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" onClick={() => removeFromList(setLocalAcademicConfig, listName, index)}>
+                      <Input value={item} onChange={(e) => handleDynamicListChange(setAcademicConfig, listName, index, e.target.value)} />
+                      <Button type="button" variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" onClick={() => removeFromList(setAcademicConfig, listName, index)}>
                           <Trash2 className="h-4 w-4" />
                       </Button>
                   </div>
               ))}
-              <Button type="button" variant="outline" className="w-full" onClick={() => addToList(setLocalAcademicConfig, listName)}>
+              <Button type="button" variant="outline" className="w-full" onClick={() => addToList(setAcademicConfig, listName)}>
                   <PlusCircle className="mr-2 h-4 w-4" />
                   Add {title.slice(0, -1)}
               </Button>
@@ -257,7 +270,7 @@ export default function AdminStoreSettingsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="referralBonus">Referral &amp; Welcome Bonus (₹)</Label>
-                <Input id="referralBonus" type="number" value={storeConfig.referralBonus} onChange={(e) => setLocalStoreConfig(prev => prev ? ({...prev, referralBonus: Number(e.target.value)}) : null)} />
+                <Input id="referralBonus" type="number" value={storeConfig.referralBonus} onChange={(e) => setStoreConfig(prev => prev ? ({...prev, referralBonus: Number(e.target.value)}) : null)} />
                 <p className="text-xs text-muted-foreground">This amount is given to both the referrer and the new user.</p>
               </div>
             </div>
@@ -284,3 +297,5 @@ export default function AdminStoreSettingsPage() {
     </div>
   );
 }
+
+    

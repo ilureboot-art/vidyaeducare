@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -16,8 +17,8 @@ import { Label } from "@/components/ui/label";
 import { Gamepad2, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { defaultStoreConfig } from "@/lib/store-config";
-import { auth } from "@/lib/firebase";
+import { db, auth } from "@/lib/firebase";
+import { doc, setDoc, getDoc, runTransaction } from "firebase/firestore";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 
 export default function SignupPage() {
@@ -34,7 +35,13 @@ export default function SignupPage() {
     if (refCode) {
       setReferralCode(refCode);
     }
-    setReferralBonus(defaultStoreConfig.referralBonus);
+    const fetchConfig = async () => {
+        const storeConfigDoc = await getDoc(doc(db, "configs", "store"));
+        if(storeConfigDoc.exists()) {
+            setReferralBonus(storeConfigDoc.data().referralBonus);
+        }
+    };
+    fetchConfig();
   }, [searchParams]);
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -42,15 +49,66 @@ export default function SignupPage() {
     setIsLoading(true);
     
     const form = e.target as HTMLFormElement;
+    const name = (form.elements.namedItem('name') as HTMLInputElement).value;
     const email = (form.elements.namedItem('email') as HTMLInputElement).value;
+    const phone = (form.elements.namedItem('phone') as HTMLInputElement).value;
     const password = (form.elements.namedItem('password') as HTMLInputElement).value;
 
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
 
+      const newUserRef = doc(db, "users", user.uid);
+      const newWalletRef = doc(db, "wallets", user.uid);
+      
+      let welcomeBonus = 0;
+      
+      // Firestore transaction
+      await runTransaction(db, async (transaction) => {
+        // Create user document
+        transaction.set(newUserRef, {
+            id: user.uid,
+            name: name,
+            email: email,
+            phone: phone,
+            joinDate: new Date().toISOString(),
+            status: "Active",
+        });
+
+        // Handle referral bonus
+        if (referralCode && referralBonus) {
+            const referrerWalletRef = doc(db, "wallets", referralCode); // Assuming referral code is referrer's UID
+            const referrerWalletDoc = await transaction.get(referrerWalletRef);
+            
+            if (referrerWalletDoc.exists()) {
+                const referrerBalance = referrerWalletDoc.data().balance || 0;
+                transaction.update(referrerWalletRef, { balance: referrerBalance + referralBonus });
+
+                // Log transaction for referrer
+                const referrerTx = { user: referralCode, amount: referralBonus, date: new Date().toISOString(), description: `Referral bonus for ${name}`, status: "Completed", type: "Referral Bonus" };
+                transaction.set(doc(collection(db, "transactions")), referrerTx);
+                
+                welcomeBonus = referralBonus;
+            }
+        }
+        
+        // Create wallet for new user
+        transaction.set(newWalletRef, {
+            balance: welcomeBonus,
+            coins: 50, // Welcome coins
+            referralCode: `REF${user.uid.slice(0, 6).toUpperCase()}`,
+        });
+
+        if (welcomeBonus > 0) {
+            // Log transaction for new user
+            const newUserTx = { user: user.uid, amount: welcomeBonus, date: new Date().toISOString(), description: "Welcome bonus from referral", status: "Completed", type: "Welcome Bonus" };
+            transaction.set(doc(collection(db, "transactions")), newUserTx);
+        }
+      });
+      
       toast({
           title: "Account Created Successfully!",
-          description: `Welcome to Vidya EduCare! ${referralCode ? 'Your welcome bonus has been applied.' : ''} Redirecting you to login.`,
+          description: `Welcome to Vidya EduCare! ${referralCode && referralBonus ? `Your ₹${referralBonus} welcome bonus has been applied.` : ''} Redirecting you to login.`,
       });
       router.push("/login");
 
@@ -92,7 +150,7 @@ export default function SignupPage() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Full Name</Label>
-              <Input id="name" placeholder="Alex Doe" required />
+              <Input id="name" name="name" placeholder="Alex Doe" required />
               <p className="text-xs text-muted-foreground">Your full name as it appears on your documents.</p>
             </div>
             <div className="space-y-2">
@@ -102,7 +160,7 @@ export default function SignupPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="phone">WhatsApp Number</Label>
-              <Input id="phone" type="tel" placeholder="+91 12345 67890" required />
+              <Input id="phone" name="phone" type="tel" placeholder="+91 12345 67890" required />
               <p className="text-xs text-muted-foreground">We'll use this for important notifications.</p>
             </div>
             <div className="space-y-2">
@@ -115,6 +173,7 @@ export default function SignupPage() {
               <Label htmlFor="referral">Referral Code (Optional)</Label>
               <Input 
                 id="referral" 
+                name="referral"
                 placeholder="Enter referral code"
                 value={referralCode}
                 onChange={(e) => setReferralCode(e.target.value)}
@@ -140,3 +199,5 @@ export default function SignupPage() {
     </div>
   );
 }
+
+    

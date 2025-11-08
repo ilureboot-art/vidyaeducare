@@ -16,8 +16,10 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import type { StudentProfile } from "@/lib/student-data";
-import type { Question } from "@/lib/question-bank";
+import type { Question, TestSet } from "@/lib/question-bank";
 import type { ScheduledTest } from "@/lib/test-schedule";
+import { db } from "@/lib/firebase";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 
 const MOCK_TEST_DURATION = 30 * 60; // 30 minutes in seconds
 
@@ -43,12 +45,50 @@ function MockTestContent() {
     useEffect(() => {
         const studentId = searchParams.get('studentId');
         const testId = searchParams.get('testId');
+        const live = searchParams.get('isLive') === 'true';
+        setIsLiveTest(live);
         
         if (!studentId || !testId) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Missing student or test ID.' });
+            router.push('/profile');
             return;
         }
         
-        // In a real app, all this data would be fetched from Firestore
+        const fetchData = async () => {
+            try {
+                // Fetch student profile
+                const studentDoc = await getDoc(doc(db, 'students', studentId));
+                if (studentDoc.exists()) {
+                    setStudentProfile(studentDoc.data() as StudentProfile);
+                } else {
+                    throw new Error("Student profile not found");
+                }
+
+                // Fetch scheduled test details
+                const scheduledTestDoc = await getDoc(doc(db, 'scheduledTests', testId));
+                if (scheduledTestDoc.exists()) {
+                    const scheduledTestData = scheduledTestDoc.data() as ScheduledTest;
+                    setScheduledTest(scheduledTestData);
+
+                    // Fetch the actual questions from the test set
+                    const testSetDoc = await getDoc(doc(db, 'testSets', scheduledTestData.testSetId));
+                    if (testSetDoc.exists()) {
+                        const testSetData = testSetDoc.data() as TestSet;
+                        setActiveQuestions(testSetData.questions);
+                        setTestState("in_progress");
+                    } else {
+                        throw new Error("Test set not found");
+                    }
+                } else {
+                    throw new Error("Scheduled test not found");
+                }
+            } catch (error: any) {
+                toast({ variant: 'destructive', title: 'Failed to load test', description: error.message });
+                router.push('/profile');
+            }
+        };
+
+        fetchData();
     }, [searchParams, router, toast]);
 
     useEffect(() => {
@@ -84,7 +124,7 @@ function MockTestContent() {
         }
     };
 
-    const handleSubmitTest = () => {
+    const handleSubmitTest = async () => {
         if (!scheduledTest || !studentProfile) return;
 
         let correctAnswers = 0;
@@ -97,14 +137,42 @@ function MockTestContent() {
         const finalScore = (correctAnswers / activeQuestions.length) * 100;
         setScore(finalScore);
         
-        // In a real app, this data would be saved via an API call.
-        console.log("Saving test results for student:", studentProfile.id, "Score:", finalScore);
+        const timeTaken = MOCK_TEST_DURATION - timeLeft;
+        const minutes = Math.floor(timeTaken / 60);
+        const seconds = timeTaken % 60;
+        const timeString = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 
-        setTestState("completed");
-        toast({
-            title: "Test Submitted!",
-            description: `You scored ${correctAnswers} out of ${activeQuestions.length}.`
-        });
+        try {
+            const resultId = `${studentProfile.id}-${scheduledTest.id}`;
+            await setDoc(doc(db, "testResults", resultId), {
+                studentId: studentProfile.id,
+                studentName: studentProfile.name,
+                testId: scheduledTest.id,
+                testName: scheduledTest.testSetName,
+                score: finalScore,
+                answers: answers,
+                timeTaken: timeString,
+                date: new Date().toISOString(),
+            });
+
+            if (isLiveTest) {
+                await setDoc(doc(db, "leaderboard", resultId), {
+                    name: studentProfile.name,
+                    avatar: studentProfile.name.charAt(0),
+                    score: correctAnswers,
+                    time: timeString
+                });
+            }
+
+            setTestState("completed");
+            toast({
+                title: "Test Submitted!",
+                description: `You scored ${correctAnswers} out of ${activeQuestions.length}.`
+            });
+        } catch (error) {
+            console.error("Failed to save test results:", error);
+            toast({ variant: 'destructive', title: "Error", description: "Could not save your test results." });
+        }
     };
     
     if (testState === "loading" || !studentProfile || !scheduledTest || activeQuestions.length === 0) {
@@ -325,3 +393,5 @@ export default function MockTestPage() {
         </Suspense>
     )
 }
+
+    

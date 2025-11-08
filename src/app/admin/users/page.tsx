@@ -159,7 +159,7 @@ export default function UserManagementPage() {
                     </Badge>
                   </TableCell>
                   <TableCell>{format(new Date(user.joinDate), 'P')}</TableCell>
-                  <TableCell className="text-right font-medium">₹{user.wallet.toFixed(2)}</TableCell>
+                  <TableCell className="text-right font-medium">₹{user.wallet?.toFixed(2) || '0.00'}</TableCell>
                   <TableCell className="text-center">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>

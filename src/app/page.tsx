@@ -11,6 +11,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useState, useEffect } from "react";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { useAuth } from "@/context/AuthContext";
 
 const features = [
   {
@@ -54,6 +55,7 @@ const testimonials = [
 
 export default function HomePage() {
   const { toast } = useToast();
+  const { user } = useAuth();
   
   const [bonus, setBonus] = useState<number | null>(null);
   const [refCode, setRefCode] = useState<string | null>(null);
@@ -64,18 +66,34 @@ export default function HomePage() {
         if(storeConfigDoc.exists()) {
             setBonus(storeConfigDoc.data().referralBonus);
         }
-        // In a real app, this would be fetched from the logged-in user's data
-        setRefCode("DEFAULTREF");
     };
     fetchConfig();
   }, []);
+
+  useEffect(() => {
+      const fetchUserRefCode = async () => {
+          if (user) {
+              const walletDoc = await getDoc(doc(db, "wallets", user.uid));
+              if (walletDoc.exists()) {
+                  setRefCode(walletDoc.data().referralCode);
+              } else {
+                  // Create a referral code if it doesn't exist
+                  setRefCode(`REF${user.uid.slice(0,6).toUpperCase()}`)
+              }
+          } else {
+              setRefCode("DEFAULTREF"); // A default for non-logged-in users
+          }
+      }
+      fetchUserRefCode();
+  }, [user]);
+
 
   const handleShare = async () => {
     if (refCode === null || bonus === null) {
       toast({
         variant: "destructive",
-        title: "Not Logged In",
-        description: "You must be logged in to share a referral code.",
+        title: "Could not get referral code",
+        description: "Please log in to share your referral code.",
       });
       return;
     }

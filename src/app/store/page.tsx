@@ -13,11 +13,13 @@ import Link from 'next/link';
 import type { StoreConfig } from "@/lib/store-config";
 import type { WalletData } from "@/lib/user-data";
 import { db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, runTransaction, addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { useAuth } from "@/context/AuthContext";
 
 export default function StorePage() {
   const { toast } = useToast();
-
+  const { user } = useAuth();
+  
   const [walletData, setWalletData] = useState<WalletData | null>(null);
   const [storeConfig, setStoreConfig] = useState<StoreConfig | null>(null);
 
@@ -27,20 +29,24 @@ export default function StorePage() {
   const [referralCode2, setReferralCode2] = useState("");
 
   useEffect(() => {
-    // In a real app, this data would be fetched from Firestore
-    const fetchData = async () => {
-        const walletDoc = await getDoc(doc(db, "wallets", "user-alex-doe"));
-        if(walletDoc.exists()) {
-            setWalletData(walletDoc.data() as WalletData);
-        }
-        
-        const storeConfigDoc = await getDoc(doc(db, "configs", "store"));
-        if(storeConfigDoc.exists()) {
-            setStoreConfig(storeConfigDoc.data() as StoreConfig);
-        }
-    };
-    fetchData();
-  }, []);
+    if (user) {
+        const fetchData = async () => {
+            const walletDocRef = doc(db, "wallets", user.uid);
+            const walletDoc = await getDoc(walletDocRef);
+            if(walletDoc.exists()) {
+                setWalletData(walletDoc.data() as WalletData);
+            } else {
+                setWalletData({ balance: 0, coins: 0, referralCode: `REF${user.uid.slice(0,6).toUpperCase()}`, transactions: [], adminPaymentMethods: {} as any });
+            }
+            
+            const storeConfigDoc = await getDoc(doc(db, "configs", "store"));
+            if(storeConfigDoc.exists()) {
+                setStoreConfig(storeConfigDoc.data() as StoreConfig);
+            }
+        };
+        fetchData();
+    }
+  }, [user]);
 
   if (!walletData || !storeConfig) {
     return (
@@ -50,104 +56,121 @@ export default function StorePage() {
     )
   }
 
-  const handleSubscriptionPurchase = (index: number) => {
-    setIsPurchasing(index);
-    const product = storeConfig.mockTestPackages[index];
-    
-    const baseDiscount = 0.05; 
-    const hasReferral = referralCode1.trim() !== "";
-    const referralDiscount = hasReferral ? 0.10 : 0; 
-    const totalDiscount = baseDiscount + referralDiscount;
-    const discountedBasePrice = product.price * (1 - totalDiscount);
-    
-    const gstAmount = discountedBasePrice * (product.gstRate / 100);
-    const finalPrice = discountedBasePrice + gstAmount;
+  const handlePurchase = async (type: 'mock' | 'referbolt', index?: number) => {
+    if (!user || !storeConfig || !walletData) return;
 
-    setTimeout(() => {
-      if (walletData.balance < finalPrice) {
-        toast({
-          variant: "destructive",
-          title: "Purchase Failed",
-          description: "Insufficient wallet balance.",
-        });
+    let product, priceDetails;
+    if (type === 'mock' && index !== undefined) {
+        product = storeConfig.mockTestPackages[index];
+        setIsPurchasing(index);
+        const baseDiscount = 0.05;
+        const hasReferral = referralCode1.trim() !== "";
+        const referralDiscount = hasReferral ? 0.10 : 0;
+        const totalDiscount = baseDiscount + referralDiscount;
+        const discountedBasePrice = product.price * (1 - totalDiscount);
+        const gstAmount = discountedBasePrice * (product.gstRate / 100);
+        const finalPrice = discountedBasePrice + gstAmount;
+        priceDetails = { finalPrice, discountedBasePrice, totalDiscount, hasReferral };
+    } else {
+        product = storeConfig.referboltSubscription;
+        setIsPurchasing('referbolt');
+        const gstAmount = product.price * (product.gstRate / 100);
+        const finalPrice = product.price + gstAmount;
+        priceDetails = { finalPrice, discountedBasePrice: product.price, totalDiscount: 0, hasReferral: false };
+    }
+
+    if (walletData.balance < priceDetails.finalPrice) {
+        toast({ variant: "destructive", title: "Purchase Failed", description: "Insufficient wallet balance." });
         setIsPurchasing(null);
         return;
-      }
-      
-      // Simulate backend logic
-      // In a real app, this would be a server-side transaction
-      const newBalance = walletData.balance - finalPrice;
-      setWalletData(prev => prev ? ({...prev, balance: newBalance}) : null);
+    }
+    
+    try {
+        await runTransaction(db, async (transaction) => {
+            const userWalletRef = doc(db, "wallets", user.uid);
+            const userWalletDoc = await transaction.get(userWalletRef);
 
-      if (hasReferral) {
-        const baseCommissionRate = 0.1765;
-        const isIbaReferboltSubscriber = true; 
-        const bonusCommission = isIbaReferboltSubscriber ? (storeConfig.referboltSettings.ibaBonusCommission / 100) : 0;
-        const totalCommissionRate = baseCommissionRate + bonusCommission;
-        const totalCommission = discountedBasePrice * totalCommissionRate;
+            if (!userWalletDoc.exists()) {
+                throw new Error("User wallet does not exist!");
+            }
+            
+            // 1. Deduct from user's balance
+            const newBalance = userWalletDoc.data().balance - priceDetails.finalPrice;
+            transaction.update(userWalletRef, { balance: newBalance });
 
-        let commissionToastDescription = "";
+            // 2. Log the user's purchase transaction
+            const purchaseTx = {
+                user: user.uid,
+                amount: -priceDetails.finalPrice,
+                date: serverTimestamp(),
+                description: `Purchase: ${product.name}`,
+                status: "Completed",
+                type: "Purchase",
+            };
+            transaction.set(doc(collection(db, "transactions")), purchaseTx);
 
-        if (referralCode2.trim() !== "") {
-            const commissionPerIba = totalCommission / 2;
-            commissionToastDescription = `Commission of ₹${commissionPerIba.toFixed(2)} each for IBA codes ${referralCode1} and ${referralCode2} has been logged.`;
-        } else {
-             commissionToastDescription = `A commission of ₹${totalCommission.toFixed(2)} for IBA code ${referralCode1} has been logged for this sale.`;
-        }
-        
-        if (bonusCommission > 0) {
-            commissionToastDescription += ` (Includes a ${storeConfig.referboltSettings.ibaBonusCommission}% ReferBolt bonus!)`;
-        }
-        
-        toast({
-            title: "IBA Commission Logged (Simulation)",
-            description: commissionToastDescription,
-            duration: 9000
+            // 3. Handle IBA commissions
+            if (priceDetails.hasReferral) {
+                const baseCommissionRate = 0.1765; // 17.65%
+                const ibaBonusCommission = storeConfig.referboltSettings.ibaBonusCommission / 100;
+                
+                // Simplified check if IBA is a ReferBolt subscriber
+                const iba1Ref = doc(db, "referbolt", referralCode1); // Assuming ref code is UID
+                const iba1Snap = await transaction.get(iba1Ref);
+                const iba1Bonus = (iba1Snap.exists() && iba1Snap.data().isSubscribed) ? ibaBonusCommission : 0;
+
+                const totalCommissionRate = baseCommissionRate + iba1Bonus;
+                let totalCommission = priceDetails.discountedBasePrice * totalCommissionRate;
+
+                const ibasToPay = [referralCode1];
+                if (referralCode2.trim()) ibasToPay.push(referralCode2.trim());
+
+                const commissionPerIba = totalCommission / ibasToPay.length;
+
+                for (const ibaId of ibasToPay) {
+                    const ibaWalletRef = doc(db, "wallets", ibaId);
+                    const ibaWalletDoc = await transaction.get(ibaWalletRef);
+                    if (ibaWalletDoc.exists()) {
+                        const newIbaBalance = (ibaWalletDoc.data().balance || 0) + commissionPerIba;
+                        transaction.update(ibaWalletRef, { balance: newIbaBalance });
+
+                        const commissionTx = {
+                            user: ibaId,
+                            amount: commissionPerIba,
+                            date: serverTimestamp(),
+                            description: `Commission from ${user.uid.slice(0,5)} sale`,
+                            status: "Completed",
+                            type: "Commission",
+                        };
+                        transaction.set(doc(collection(db, "transactions")), commissionTx);
+                    }
+                }
+            }
+            
+            // 4. Update user subscription status
+            if(type === 'mock') {
+                // Add logic to update user's mock test subscription validity
+            } else if (type === 'referbolt') {
+                transaction.update(userWalletRef, { isReferboltSubscriber: true });
+            }
         });
-      }
-      
-      const activationCode = `PROD-${String(Date.now()).slice(-5)}`;
-      
-      let successDescription = `You've purchased the ${product.name}. Your Activation Code is: ${activationCode}. Use this code in 'My Students' to add a profile.`;
-      
-      if (storeConfig.referboltSettings.freeAccessWithMockTest) {
-        successDescription += " As a bonus, you've been granted free access to the ReferBolt system!"
-      }
 
-      toast({
-        title: "Purchase Successful!",
-        description: successDescription,
-        duration: 10000,
-      });
-
-      setIsPurchasing(null);
-    }, 1500);
-  };
-  
-  const handleReferboltPurchase = () => {
-    setIsPurchasing('referbolt');
-    const cost = storeConfig.referboltSubscription.price;
-    const gstAmount = cost * (storeConfig.referboltSubscription.gstRate / 100);
-    const finalPrice = cost + gstAmount;
-
-    setTimeout(() => {
-        if (walletData.balance < finalPrice) {
-            toast({ variant: 'destructive', title: "Purchase Failed", description: "Insufficient wallet balance." });
-            setIsPurchasing(null);
-            return;
+        const activationCode = `PROD-${String(Date.now()).slice(-5)}`;
+        let successDescription = `You've purchased the ${product.name}. Your Activation Code is: ${activationCode}. Use this code in 'My Students' to add a profile.`;
+        if (storeConfig.referboltSettings.freeAccessWithMockTest && type === 'mock') {
+            successDescription += " As a bonus, you've been granted free access to the ReferBolt system!";
         }
         
-        const newBalance = walletData.balance - finalPrice;
-        setWalletData(prev => prev ? ({...prev, balance: newBalance}) : null);
+        toast({ title: "Purchase Successful!", description: successDescription, duration: 10000 });
 
-        toast({ 
-            title: "Purchase Successful!", 
-            description: `You are now subscribed to ReferBolt!`,
-            duration: 7000
-        });
+    } catch (e) {
+        console.error("Transaction failed: ", e);
+        toast({ variant: "destructive", title: "Purchase Failed", description: "An error occurred during the transaction." });
+    } finally {
         setIsPurchasing(null);
-    }, 1500);
+    }
   };
+
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-6">
@@ -228,7 +251,7 @@ export default function StorePage() {
                         <Button 
                           size="lg" 
                           className="w-full"
-                          onClick={() => handleSubscriptionPurchase(index)}
+                          onClick={() => handlePurchase('mock', index)}
                           disabled={isPurchasing !== null}
                         >
                           {isPurchasing === index ? <Loader2 className="animate-spin" /> : "Buy Now"}
@@ -247,7 +270,7 @@ export default function StorePage() {
                     <CardContent className="space-y-4">
                         <p className="text-4xl font-bold">₹{storeConfig.referboltSubscription.price + (storeConfig.referboltSubscription.price * (storeConfig.referboltSubscription.gstRate / 100))}</p>
                          <p className="text-xs text-muted-foreground">(Incl. GST)</p>
-                        <Button size="lg" className="w-full" onClick={handleReferboltPurchase} disabled={isPurchasing !== null}>
+                        <Button size="lg" className="w-full" onClick={() => handlePurchase('referbolt')} disabled={isPurchasing !== null}>
                             {isPurchasing === 'referbolt' ? <Loader2 className="animate-spin"/> : "Subscribe Now"}
                         </Button>
                     </CardContent>

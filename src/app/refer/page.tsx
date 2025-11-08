@@ -8,9 +8,11 @@ import { Share2, IndianRupee, Gift, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { useAuth } from "@/context/AuthContext";
 
 export default function ReferAndEarnPage() {
     const { toast } = useToast();
+    const { user } = useAuth();
     
     const [referralBonus, setReferralBonus] = useState<number | null>(null);
     const [referralCode, setReferralCode] = useState<string | null>(null);
@@ -21,14 +23,22 @@ export default function ReferAndEarnPage() {
             if(storeConfigDoc.exists()) {
                 setReferralBonus(storeConfigDoc.data().referralBonus);
             }
-            // In a real app, referral code would come from the logged-in user's data
-            const userWalletDoc = await getDoc(doc(db, "wallets", "user-alex-doe"));
-            if(userWalletDoc.exists()){
-                setReferralCode(userWalletDoc.data().referralCode);
-            }
         };
+
+        const fetchUserRefCode = async () => {
+            if (user) {
+                const walletDoc = await getDoc(doc(db, "wallets", user.uid));
+                if (walletDoc.exists()) {
+                    setReferralCode(walletDoc.data().referralCode);
+                } else {
+                    setReferralCode(`REF${user.uid.slice(0,6).toUpperCase()}`);
+                }
+            }
+        }
+        
         fetchConfig();
-    }, []);
+        fetchUserRefCode();
+    }, [user]);
 
     const handleShare = async () => {
         if (referralCode === null || referralBonus === null) return;

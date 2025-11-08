@@ -56,7 +56,7 @@ export default function IBADashboardPage() {
                 setReferralData(data);
                 setIbaReferralCode(data.referralCode);
             } else {
-                // Handle case where user is not an IBA
+                // Handle case where user is not an IBA, provide default empty state
                 setReferralData({
                     totalCommission: 0,
                     totalReferrals: 0,
@@ -65,7 +65,13 @@ export default function IBADashboardPage() {
                     salesHistory: [],
                     recentReferrals: [],
                 });
-                setIbaReferralCode('NOT-AN-IBA');
+                const walletDocRef = doc(db, 'wallets', user.uid);
+                const walletDocSnap = await getDoc(walletDocRef);
+                if (walletDocSnap.exists()) {
+                    setIbaReferralCode(walletDocSnap.data().referralCode);
+                } else {
+                    setIbaReferralCode('NOT-AN-IBA');
+                }
             }
         };
         fetchIbaData();
@@ -307,3 +313,5 @@ Don't miss out on the best way to prepare for your exams and earn rewards!
     </div>
   );
 }
+
+    

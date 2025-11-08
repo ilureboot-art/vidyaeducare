@@ -53,7 +53,7 @@ const initialTestSetState: TestSet = {
 export default function TestSetManagementPage() {
   const { toast } = useToast();
 
-  const [testSets, setLocalTestSets] = useState<TestSet[] | null>(null);
+  const [testSets, setTestSets] = useState<TestSet[] | null>(null);
   const [academicConfig, setAcademicConfig] = useState<AcademicConfig | null>(null);
 
   const [isManualCreateOpen, setIsManualCreateOpen] = useState(false);
@@ -66,7 +66,7 @@ export default function TestSetManagementPage() {
     const testSetsCollection = collection(db, "testSets");
     const testSetSnapshot = await getDocs(testSetsCollection);
     const testSetList = testSetSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TestSet));
-    setLocalTestSets(testSetList);
+    setTestSets(testSetList);
 
     // Fetch Academic Config
     const configDoc = await getDocs(collection(db, "configs"));
@@ -366,3 +366,5 @@ export default function TestSetManagementPage() {
     </div>
   );
 }
+
+    

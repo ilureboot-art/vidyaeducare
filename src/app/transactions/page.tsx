@@ -37,7 +37,7 @@ const getStatusBadgeVariant = (status: string) => {
 }
 
 const getTypeIcon = (type: string, amount: number) => {
-    if (type.includes("withdrawal") || type.includes("Purchase") || amount < 0) {
+    if (type.toLowerCase().includes("withdrawal") || type.toLowerCase().includes("purchase") || amount < 0) {
         return <ArrowUpRight className="w-4 h-4 text-red-500" />;
     }
     return <ArrowDownLeft className="w-4 h-4 text-green-500" />;
@@ -173,3 +173,5 @@ export default function TransactionsPage() {
     </div>
   );
 }
+
+    

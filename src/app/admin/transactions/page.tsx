@@ -21,7 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, doc, updateDoc, writeBatch } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, writeBatch, getDoc, runTransaction } from "firebase/firestore";
 
 const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -54,7 +54,7 @@ export default function TransactionsPage() {
   const fetchTransactions = async () => {
     const querySnapshot = await getDocs(collection(db, "transactions"));
     const txs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
-    setTransactions(txs);
+    setTransactions(txs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
   };
   
   useEffect(() => {
@@ -72,19 +72,32 @@ export default function TransactionsPage() {
     }
 
     const txDocRef = doc(db, "transactions", String(id));
-    const userWalletRef = doc(db, "wallets", txToUpdate.user as string);
+    const userWalletRef = txToUpdate.user ? doc(db, "wallets", txToUpdate.user) : null;
 
     try {
-        const batch = writeBatch(db);
-        
-        batch.update(txDocRef, { status: newStatus });
+        await runTransaction(db, async (transaction) => {
+            if (userWalletRef) {
+                const userWalletDoc = await transaction.get(userWalletRef);
+                if (!userWalletDoc.exists()) {
+                    throw "User wallet not found!";
+                }
 
-        if (newStatus === 'Completed' && txToUpdate.type === 'deposit') {
-            // This is complex logic that needs careful implementation.
-            // For now, we just update the transaction status. A real app would use a transaction.
-        }
-        
-        await batch.commit();
+                if (newStatus === 'Completed') {
+                    if (txToUpdate.type === 'deposit') {
+                        const newBalance = (userWalletDoc.data().balance || 0) + txToUpdate.amount;
+                        transaction.update(userWalletRef, { balance: newBalance });
+                    }
+                    // For withdrawals, the balance is already reduced. Approving just confirms it.
+                } else if (newStatus === 'Rejected') {
+                    // If a withdrawal is rejected, refund the money to the user's wallet
+                    if (txToUpdate.type === 'withdrawal') {
+                        const newBalance = (userWalletDoc.data().balance || 0) - txToUpdate.amount; // amount is negative
+                        transaction.update(userWalletRef, { balance: newBalance });
+                    }
+                }
+            }
+            transaction.update(txDocRef, { status: newStatus });
+        });
 
         await fetchTransactions();
 

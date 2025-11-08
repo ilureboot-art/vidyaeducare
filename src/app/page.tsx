@@ -9,7 +9,8 @@ import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useState, useEffect } from "react";
-import { defaultStoreConfig } from "@/lib/store-config";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 const features = [
   {
@@ -58,8 +59,15 @@ export default function HomePage() {
   const [refCode, setRefCode] = useState<string | null>(null);
 
   useEffect(() => {
-    setBonus(defaultStoreConfig.referralBonus);
-    // In a real app, this would be fetched from the logged-in user's data
+    const fetchConfig = async () => {
+        const storeConfigDoc = await getDoc(doc(db, "configs", "store"));
+        if(storeConfigDoc.exists()) {
+            setBonus(storeConfigDoc.data().referralBonus);
+        }
+        // In a real app, this would be fetched from the logged-in user's data
+        setRefCode("DEFAULTREF");
+    };
+    fetchConfig();
   }, []);
 
   const handleShare = async () => {
@@ -253,3 +261,5 @@ Start your journey to success now: ${url}
     </div>
   );
 }
+
+    

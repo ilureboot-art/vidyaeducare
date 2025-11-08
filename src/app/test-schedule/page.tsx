@@ -17,6 +17,8 @@ import {
 } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
 import type { ScheduledTest } from "@/lib/test-schedule";
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 type TestStatus = 'Live' | 'Upcoming' | 'Completed';
 type ScheduledTestWithStatus = ScheduledTest & { status: TestStatus };
@@ -27,8 +29,35 @@ export default function TestSchedulePage() {
     const [allSchedules, setAllSchedules] = useState<ScheduledTestWithStatus[] | null>(null);
 
     useEffect(() => {
-        // In a real app, this data would be fetched from Firestore
-        // For now, we will leave it empty as there's no data source
+        const fetchSchedules = async () => {
+            const schedulesCollection = collection(db, "scheduledTests");
+            const scheduleSnapshot = await getDocs(schedulesCollection);
+            const scheduleList = scheduleSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ScheduledTest));
+
+            if (scheduleList) {
+                const now = new Date();
+                const updatedSchedules = [...scheduleList]
+                    .sort((a,b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime())
+                    .map(test => {
+                        const testDate = new Date(test.dateTime);
+                        let status: TestStatus = 'Upcoming';
+                        
+                        if (testDate < now) {
+                            status = 'Completed';
+                        }
+    
+                        const isToday = format(testDate, 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd');
+                        if (isToday && testDate.getHours() <= now.getHours()) {
+                           status = 'Live';
+                        }
+                        
+                        return { ...test, status };
+                    });
+    
+                setAllSchedules(updatedSchedules);
+            }
+        };
+        fetchSchedules();
     }, []);
     
     if (!allSchedules) {
@@ -83,3 +112,5 @@ export default function TestSchedulePage() {
         </div>
     );
 }
+
+    

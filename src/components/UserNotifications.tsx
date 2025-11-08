@@ -12,28 +12,34 @@ import { Bell, CheckCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import type { AppNotification } from "@/lib/notifications";
+import { useAuth } from "@/context/AuthContext";
+import { db } from "@/lib/firebase";
+import { collection, query, where, orderBy, onSnapshot } from "firebase/firestore";
 
 
 export function UserNotifications() {
-  const [allNotifications, setAllNotifications] = useState<AppNotification[]>([]);
+  const { user } = useAuth();
   const [userNotifications, setUserNotifications] = useState<AppNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    // In a real app, this data would be fetched from Firestore
-    const currentUserNotifications = allNotifications
-        .filter(n => n.userId === "user-alex-doe")
-        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    if (!user) return;
+
+    const notifsRef = collection(db, "notifications");
+    const q = query(notifsRef, where("userId", "==", user.uid), orderBy("timestamp", "desc"));
     
-    setUserNotifications(currentUserNotifications);
-    setUnreadCount(currentUserNotifications.filter(n => n.status === 'unread').length);
-  }, [allNotifications]);
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const notifications = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppNotification));
+        setUserNotifications(notifications);
+        setUnreadCount(notifications.filter(n => n.status === 'unread').length);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
 
   const markAllAsRead = () => {
     // In a real app, this would be an API call to update Firestore
-    setAllNotifications(prev => prev.map(n => 
-        n.userId === 'user-alex-doe' ? { ...n, status: 'read' as const } : n
-    ));
+    setUserNotifications(prev => prev.map(n => ({ ...n, status: 'read' as const })));
   };
 
   const handleOpenChange = (open: boolean) => {
@@ -97,3 +103,5 @@ export function UserNotifications() {
     </Popover>
   );
 }
+
+    

@@ -13,27 +13,31 @@ import { Bell, CheckCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import type { AppNotification } from "@/lib/notifications";
+import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 export function Notifications() {
-  const [allNotifications, setAllNotifications] = useState<AppNotification[]>([]);
   const [adminNotifications, setAdminNotifications] = useState<AppNotification[] | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    // In a real app, this data would be fetched from Firestore
-    const currentAdminNotifications = allNotifications
-        .filter(n => n.userId === 'admin')
-        .sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-        
-    setAdminNotifications(currentAdminNotifications);
-    setUnreadCount(currentAdminNotifications.filter(n => n.status === 'unread').length);
-  }, [allNotifications]);
+    const notifsRef = collection(db, "notifications");
+    const q = query(notifsRef, where("userId", "==", 'admin'), orderBy("timestamp", "desc"));
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const notifications = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppNotification));
+        setAdminNotifications(notifications);
+        setUnreadCount(notifications.filter(n => n.status === 'unread').length);
+    });
+
+    return () => unsubscribe();
+  }, []);
   
   const markAllAsRead = () => {
-    // In a real app, this would be an API call to update Firestore
-    setAllNotifications(prev => prev.map(n => 
-        n.userId === 'admin' ? { ...n, status: 'read' as const } : n
-    ));
+    // In a real app, this would be an API call to update Firestore docs
+    if (adminNotifications) {
+        setAdminNotifications(adminNotifications.map(n => ({...n, status: 'read' as const})));
+    }
   };
 
   const handleOpenChange = (open: boolean) => {
@@ -105,3 +109,5 @@ export function Notifications() {
     </Popover>
   );
 }
+
+    

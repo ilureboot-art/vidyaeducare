@@ -12,12 +12,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from 'next/link';
 import type { StoreConfig } from "@/lib/store-config";
 import type { WalletData } from "@/lib/user-data";
+import { db } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
 
 export default function StorePage() {
   const { toast } = useToast();
 
-  const [walletData, setLocalWalletData] = useState<WalletData | null>(null);
-  const [storeConfig, setLocalStoreConfig] = useState<StoreConfig | null>(null);
+  const [walletData, setWalletData] = useState<WalletData | null>(null);
+  const [storeConfig, setStoreConfig] = useState<StoreConfig | null>(null);
 
   const [isPurchasing, setIsPurchasing] = useState<number | string | null>(null);
   
@@ -26,8 +28,18 @@ export default function StorePage() {
 
   useEffect(() => {
     // In a real app, this data would be fetched from Firestore
-    // setLocalWalletData(defaultWalletData);
-    // setLocalStoreConfig(defaultStoreConfig);
+    const fetchData = async () => {
+        const walletDoc = await getDoc(doc(db, "wallets", "user-alex-doe"));
+        if(walletDoc.exists()) {
+            setWalletData(walletDoc.data() as WalletData);
+        }
+        
+        const storeConfigDoc = await getDoc(doc(db, "configs", "store"));
+        if(storeConfigDoc.exists()) {
+            setStoreConfig(storeConfigDoc.data() as StoreConfig);
+        }
+    };
+    fetchData();
   }, []);
 
   if (!walletData || !storeConfig) {
@@ -63,17 +75,9 @@ export default function StorePage() {
       }
       
       // Simulate backend logic
+      // In a real app, this would be a server-side transaction
       const newBalance = walletData.balance - finalPrice;
-      const newTransaction = {
-        id: Date.now(),
-        type: 'withdrawal' as 'withdrawal',
-        description: `${product.name} Purchase`,
-        amount: -finalPrice,
-        date: new Date().toISOString(),
-        status: 'Completed' as 'Completed',
-        user: "Alex Doe"
-      };
-      setLocalWalletData(prev => prev ? ({...prev, balance: newBalance, transactions: [...prev.transactions, newTransaction]}) : null);
+      setWalletData(prev => prev ? ({...prev, balance: newBalance}) : null);
 
       if (hasReferral) {
         const baseCommissionRate = 0.1765;
@@ -103,8 +107,6 @@ export default function StorePage() {
       }
       
       const activationCode = `PROD-${String(Date.now()).slice(-5)}`;
-      // In a real app, this would be saved to the user's account
-      console.log("New activation code:", activationCode);
       
       let successDescription = `You've purchased the ${product.name}. Your Activation Code is: ${activationCode}. Use this code in 'My Students' to add a profile.`;
       
@@ -136,16 +138,7 @@ export default function StorePage() {
         }
         
         const newBalance = walletData.balance - finalPrice;
-        const newTransaction = {
-            id: Date.now(),
-            type: 'withdrawal' as 'withdrawal',
-            description: 'ReferBolt Subscription',
-            amount: -finalPrice,
-            date: new Date().toISOString(),
-            status: 'Completed' as 'Completed',
-            user: 'Alex Doe',
-        };
-        setLocalWalletData(prev => prev ? ({...prev, balance: newBalance, transactions: [...prev.transactions, newTransaction]}) : null);
+        setWalletData(prev => prev ? ({...prev, balance: newBalance}) : null);
 
         toast({ 
             title: "Purchase Successful!", 
@@ -271,3 +264,5 @@ export default function StorePage() {
     </div>
   );
 }
+
+    

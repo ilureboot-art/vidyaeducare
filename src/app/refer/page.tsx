@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Share2, IndianRupee, Gift, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { defaultStoreConfig } from "@/lib/store-config";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 export default function ReferAndEarnPage() {
     const { toast } = useToast();
@@ -15,8 +16,18 @@ export default function ReferAndEarnPage() {
     const [referralCode, setReferralCode] = useState<string | null>(null);
 
     useEffect(() => {
-        // In a real app, this data would be fetched from Firestore
-        setReferralBonus(defaultStoreConfig.referralBonus);
+        const fetchConfig = async () => {
+            const storeConfigDoc = await getDoc(doc(db, "configs", "store"));
+            if(storeConfigDoc.exists()) {
+                setReferralBonus(storeConfigDoc.data().referralBonus);
+            }
+            // In a real app, referral code would come from the logged-in user's data
+            const userWalletDoc = await getDoc(doc(db, "wallets", "user-alex-doe"));
+            if(userWalletDoc.exists()){
+                setReferralCode(userWalletDoc.data().referralCode);
+            }
+        };
+        fetchConfig();
     }, []);
 
     const handleShare = async () => {
@@ -110,3 +121,5 @@ Click here to join: ${url}`;
         </div>
     );
 }
+
+    

@@ -29,7 +29,7 @@ export function UserNotifications() {
     const q = query(notifsRef, where("userId", "==", user.uid), orderBy("timestamp", "desc"));
     
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
-        const notifications = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppNotification));
+        const notifications = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), timestamp: doc.data().timestamp.toDate().toISOString() } as AppNotification));
         setUserNotifications(notifications);
         setUnreadCount(notifications.filter(n => n.status === 'unread').length);
     });
@@ -103,5 +103,3 @@ export function UserNotifications() {
     </Popover>
   );
 }
-
-    

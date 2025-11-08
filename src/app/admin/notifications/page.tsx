@@ -32,7 +32,7 @@ export default function AdminNotificationsPage() {
             const notifsRef = collection(db, "notifications");
             const q = query(notifsRef, where("userId", "==", "admin"), orderBy("timestamp", "desc"));
             const querySnapshot = await getDocs(q);
-            const notifs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppNotification));
+            const notifs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), timestamp: doc.data().timestamp.toDate().toISOString() } as AppNotification));
             setNotifications(notifs);
         };
         fetchNotifications();
@@ -87,5 +87,3 @@ export default function AdminNotificationsPage() {
         </div>
     );
 }
-
-    

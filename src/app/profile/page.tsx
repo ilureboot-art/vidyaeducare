@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { User, Mail, Calendar, Phone, Edit, GraduationCap, Trash2, PlusCircle, BookOpen, Loader2 } from "lucide-react";
+import { User, Mail, Calendar, Phone, Edit, GraduationCap, Trash2, PlusCircle, BookOpen, Loader2, BarChart2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -23,11 +23,17 @@ import {
 import { format } from "date-fns";
 import type { StudentProfile } from "@/lib/student-data";
 import type { ScheduledTest } from "@/lib/test-schedule";
+import { useAuth } from "@/context/AuthContext";
+import { db } from "@/lib/firebase";
+import { doc, getDoc, setDoc, collection, getDocs, deleteDoc, updateDoc, query, where } from "firebase/firestore";
 
 
 export default function ProfilePage() {
     const { toast } = useToast();
     const router = useRouter();
+    const { user } = useAuth();
+    
+    const [parentProfile, setParentProfile] = useState<any | null>(null);
     const [students, setStudents] = useState<StudentProfile[] | null>(null);
     const [validCodes, setValidCodes] = useState<string[] | null>(null);
     const [allScheduledTests, setAllScheduledTests] = useState<ScheduledTest[] | null>(null);
@@ -41,15 +47,42 @@ export default function ProfilePage() {
     const [availableTests, setAvailableTests] = useState<ScheduledTest[]>([]);
 
     useEffect(() => {
-        // In a real app, this data would be fetched from Firestore
-    }, []);
+        if (user) {
+            const fetchParentData = async () => {
+                const userDoc = await getDoc(doc(db, "users", user.uid));
+                if (userDoc.exists()) {
+                    setParentProfile(userDoc.data());
+                }
+            };
 
-    const parentProfile = {
-        name: "Alex Doe",
-        email: "alex.doe@example.com",
-        phone: "+91 12345 67890",
-        joinDate: "2024-07-01",
-    };
+            const fetchStudentData = async () => {
+                const q = query(collection(db, "students"), where("parentId", "==", user.uid));
+                const querySnapshot = await getDocs(q);
+                const studentList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentProfile));
+                setStudents(studentList);
+            };
+
+            const fetchCodes = async () => {
+                const codesDoc = await getDoc(doc(db, "activationCodes", user.uid));
+                if (codesDoc.exists()) {
+                    setValidCodes(codesDoc.data().codes);
+                } else {
+                    setValidCodes([]);
+                }
+            };
+            
+            const fetchTests = async () => {
+                const testsSnapshot = await getDocs(collection(db, "scheduledTests"));
+                const testsList = testsSnapshot.docs.map(doc => doc.data() as ScheduledTest);
+                setAllScheduledTests(testsList);
+            };
+
+            fetchParentData();
+            fetchStudentData();
+            fetchCodes();
+            fetchTests();
+        }
+    }, [user]);
 
     const handleVerifyCode = () => {
         if (!validCodes) return;
@@ -61,16 +94,20 @@ export default function ProfilePage() {
         }
     };
     
-    const handleAddStudent = (e: React.FormEvent<HTMLFormElement>) => {
+    const handleAddStudent = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        if (!students || !validCodes) return;
+        if (!students || !validCodes || !user) return;
 
         const formData = new FormData(e.currentTarget);
+        const studentName = formData.get('name') as string;
+        const newStudentId = `STU-${String(Date.now()).slice(-6)}`;
+        
         const newStudent: StudentProfile = {
-            id: `STU-${String(Date.now()).slice(-6)}`,
-            name: formData.get('name') as string,
+            id: newStudentId,
+            parentId: user.uid,
+            name: studentName,
             dob: formData.get('dob') as string,
-            avatarUrl: `https://placehold.co/100x100.png?text=${(formData.get('name') as string).charAt(0)}`,
+            avatarUrl: `https://placehold.co/100x100.png?text=${studentName.charAt(0)}`,
             academic: {
                 standard: formData.get('standard') as string,
                 board: formData.get('board') as "CBSE" | "ICSE" | "SSC",
@@ -89,19 +126,36 @@ export default function ProfilePage() {
             badges: [],
         };
         
-        setStudents(prev => [...(prev || []), newStudent]);
-        setValidCodes(prev => (prev || []).filter(c => c !== activationCode));
+        try {
+            await setDoc(doc(db, "students", newStudentId), newStudent);
 
-        toast({ title: "Student Added!", description: `${newStudent.name}'s profile has been created.`});
-        setIsAddStudentOpen(false);
-        setActivationCode("");
-        setIsCodeVerified(false);
+            const updatedCodes = validCodes.filter(c => c !== activationCode);
+            await updateDoc(doc(db, "activationCodes", user.uid), { codes: updatedCodes });
+
+            setStudents(prev => [...(prev || []), newStudent]);
+            setValidCodes(updatedCodes);
+
+            toast({ title: "Student Added!", description: `${newStudent.name}'s profile has been created.`});
+            setIsAddStudentOpen(false);
+            setActivationCode("");
+            setIsCodeVerified(false);
+
+        } catch (error) {
+            console.error("Error adding student:", error);
+            toast({ variant: 'destructive', title: "Error", description: "Could not create student profile." });
+        }
     }
     
-    const handleDeleteStudent = (studentId: string) => {
-        if (!students) return;
-        setStudents(prev => (prev || []).filter(s => s.id !== studentId));
-        toast({ title: "Student Removed", description: "The student profile has been deleted." });
+    const handleDeleteStudent = async (studentId: string) => {
+        if (!students || !user) return;
+        try {
+            await deleteDoc(doc(db, "students", studentId));
+            setStudents(prev => (prev || []).filter(s => s.id !== studentId));
+            toast({ title: "Student Removed", description: "The student profile has been deleted." });
+        } catch (error) {
+            console.error("Error deleting student:", error);
+            toast({ variant: 'destructive', title: "Error", description: "Could not delete student profile." });
+        }
     }
     
     const openTestDialog = (student: StudentProfile) => {
@@ -121,7 +175,7 @@ export default function ProfilePage() {
         router.push(`/mock-test?studentId=${selectedStudentForTest.id}&testId=${test.id}&isLive=${isLive}`);
     }
 
-  if (!students || !validCodes || !allScheduledTests) {
+  if (!students || !validCodes || !allScheduledTests || !parentProfile) {
     return (
         <div className="w-full max-w-5xl mx-auto flex items-center justify-center h-96">
             <Loader2 className="animate-spin text-primary" size={32} />

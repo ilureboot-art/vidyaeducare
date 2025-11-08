@@ -25,7 +25,7 @@ export function Notifications() {
     const q = query(notifsRef, where("userId", "==", 'admin'), orderBy("timestamp", "desc"));
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
-        const notifications = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppNotification));
+        const notifications = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), timestamp: doc.data().timestamp.toDate().toISOString() } as AppNotification));
         setAdminNotifications(notifications);
         setUnreadCount(notifications.filter(n => n.status === 'unread').length);
     });
@@ -109,5 +109,3 @@ export function Notifications() {
     </Popover>
   );
 }
-
-    

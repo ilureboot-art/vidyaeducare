@@ -56,7 +56,7 @@ export default function TransactionsPage() {
             const txsRef = collection(db, "transactions");
             const q = query(txsRef, where("user", "==", user.uid), orderBy("date", "desc"));
             const querySnapshot = await getDocs(q);
-            const txs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
+            const txs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), date: doc.data().date.toDate().toISOString() } as Transaction));
             setTransactions(txs);
         };
         fetchTransactions();
@@ -173,5 +173,3 @@ export default function TransactionsPage() {
     </div>
   );
 }
-
-    

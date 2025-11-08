@@ -25,7 +25,7 @@ import { Label } from "@/components/ui/label"
 import { PlusCircle, MinusCircle, History, ArrowUpRight, ArrowDownLeft, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
-import { type Transaction, type WalletData } from "@/lib/user-data";
+import { type Transaction, type AdminPaymentMethods } from "@/lib/user-data";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Image from "next/image";
@@ -33,7 +33,7 @@ import { CopyButton } from "@/components/CopyButton";
 import { format } from "date-fns";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, setDoc, collection, addDoc, query, where, orderBy, limit, onSnapshot } from "firebase/firestore";
+import { doc, getDoc, collection, addDoc, query, where, orderBy, limit, onSnapshot, serverTimestamp, runTransaction } from "firebase/firestore";
 
 const getStatusBadgeVariant = (status: string) => {
     switch (status.toLowerCase()) {
@@ -48,10 +48,20 @@ const getStatusBadgeVariant = (status: string) => {
     }
 }
 
+type WalletInfo = {
+  balance: number;
+  coins: number;
+  referralCode: string;
+}
+
 export default function WalletPage() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const [walletData, setWalletData] = useState<WalletData | null>(null);
+  
+  const [walletInfo, setWalletInfo] = useState<WalletInfo | null>(null);
+  const [transactions, setTransactions] = useState<Transaction[] | null>(null);
+  const [adminPaymentMethods, setAdminPaymentMethods] = useState<AdminPaymentMethods | null>(null);
+
   const [addFundsOpen, setAddFundsOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
 
@@ -61,7 +71,7 @@ export default function WalletPage() {
         const paymentMethodsRef = doc(db, "configs", "paymentMethods");
         const unsubPaymentMethods = onSnapshot(paymentMethodsRef, (doc) => {
             if (doc.exists()) {
-                setWalletData(prev => ({ ...prev, adminPaymentMethods: doc.data() } as WalletData));
+                setAdminPaymentMethods(doc.data() as AdminPaymentMethods);
             }
         });
 
@@ -69,14 +79,13 @@ export default function WalletPage() {
         const walletRef = doc(db, "wallets", user.uid);
         const unsubWallet = onSnapshot(walletRef, (doc) => {
             if (doc.exists()) {
-                setWalletData(prev => ({ ...prev, ...doc.data() } as WalletData));
+                setWalletInfo(doc.data() as WalletInfo);
             } else {
-                 setWalletData(prev => ({
-                    ...prev,
+                 setWalletInfo({
                     balance: 0,
                     coins: 0,
                     referralCode: `REF${user.uid.slice(0,6).toUpperCase()}`
-                } as WalletData));
+                });
             }
         });
 
@@ -84,8 +93,8 @@ export default function WalletPage() {
         const txsRef = collection(db, "transactions");
         const q = query(txsRef, where("user", "==", user.uid), orderBy("date", "desc"), limit(5));
         const unsubTransactions = onSnapshot(q, (querySnapshot) => {
-            const transactions = querySnapshot.docs.map(doc => doc.data() as Transaction);
-            setWalletData(prev => ({ ...prev, transactions } as WalletData));
+            const transactionList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
+            setTransactions(transactionList);
         });
 
         return () => {
@@ -98,7 +107,7 @@ export default function WalletPage() {
 
   const handleAddFunds = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!walletData || !user) return;
+    if (!user) return;
 
     const form = event.currentTarget;
     const amount = parseFloat((form.elements.namedItem('amount-add') as HTMLInputElement).value);
@@ -109,11 +118,11 @@ export default function WalletPage() {
         return;
     }
 
-    const newTransaction: Omit<Transaction, 'id'> = {
+    const newTransaction: Omit<Transaction, 'id' | 'date'> & { date: any } = {
         type: 'deposit',
         description: 'Fund Deposit Request',
         amount: amount,
-        date: new Date().toISOString(),
+        date: serverTimestamp(),
         status: 'Pending',
         referenceId: txnId,
         user: user.uid,
@@ -135,7 +144,7 @@ export default function WalletPage() {
   
   const handleWithdraw = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!walletData || !user) return;
+    if (!walletInfo || !user) return;
 
     const form = event.currentTarget;
     const amount = parseFloat((form.elements.namedItem('amount-withdraw') as HTMLInputElement).value);
@@ -146,7 +155,7 @@ export default function WalletPage() {
         return;
     }
 
-    if (amount > walletData.balance) {
+    if (amount > walletInfo.balance) {
         toast({
             variant: "destructive",
             title: "Insufficient Balance",
@@ -164,39 +173,58 @@ export default function WalletPage() {
         return;
     }
     
-    const newTransaction: Omit<Transaction, 'id'> = {
-        type: 'withdrawal',
-        description: 'Withdrawal Request',
-        amount: -amount,
-        date: new Date().toISOString(),
-        status: 'Pending',
-        paymentMethod: upiId,
-        user: user.uid,
-    };
-
     try {
-        await addDoc(collection(db, "transactions"), newTransaction);
+        await runTransaction(db, async (transaction) => {
+            const walletRef = doc(db, "wallets", user.uid);
+            const walletDoc = await transaction.get(walletRef);
+
+            if (!walletDoc.exists()) {
+                throw new Error("Wallet not found.");
+            }
+            
+            const currentBalance = walletDoc.data().balance;
+            if (amount > currentBalance) {
+                throw new Error("Insufficient balance.");
+            }
+
+            // Deduct amount from wallet immediately
+            transaction.update(walletRef, { balance: currentBalance - amount });
+
+            const newWithdrawalRequest: Omit<Transaction, 'id' | 'date'> & { date: any } = {
+                type: 'withdrawal',
+                description: 'Withdrawal Request',
+                amount: -amount,
+                date: serverTimestamp(),
+                status: 'Pending',
+                paymentMethod: upiId,
+                user: user.uid,
+            };
+            
+            // Use a new document reference for the transaction
+            const newTxRef = doc(collection(db, "transactions"));
+            transaction.set(newTxRef, newWithdrawalRequest);
+        });
+
         toast({
           title: "Request Submitted",
           description: `Your withdrawal request for ₹${amount} has been sent for admin approval.`,
         });
         setWithdrawOpen(false);
         form.reset();
-    } catch(error) {
+
+    } catch(error: any) {
         console.error("Error submitting withdrawal request:", error);
-        toast({ variant: 'destructive', title: "Error", description: "Could not submit your request."});
+        toast({ variant: 'destructive', title: "Error", description: error.message || "Could not submit your request."});
     }
   }
 
-  if (!walletData) {
+  if (!walletInfo || !transactions || !adminPaymentMethods) {
     return (
       <div className="w-full max-w-2xl mx-auto space-y-6 flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />
       </div>
     );
   }
-
-  const { adminPaymentMethods, balance, coins, transactions } = walletData;
 
   return (
     <div className="w-full max-w-2xl mx-auto space-y-6">
@@ -209,7 +237,7 @@ export default function WalletPage() {
           <div className="grid grid-cols-1 gap-4">
               <Card className="text-center p-6 bg-primary/10">
                 <p className="text-sm font-medium text-primary">CASH BALANCE</p>
-                <p className="text-5xl font-bold text-primary">₹{balance.toFixed(2)}</p>
+                <p className="text-5xl font-bold text-primary">₹{walletInfo.balance.toFixed(2)}</p>
               </Card>
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -225,7 +253,6 @@ export default function WalletPage() {
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 pt-2">
-                    {adminPaymentMethods ? (
                     <Tabs defaultValue="upi" className="w-full">
                         <TabsList className="grid w-full grid-cols-2">
                             <TabsTrigger value="upi">UPI / QR Code</TabsTrigger>
@@ -272,7 +299,6 @@ export default function WalletPage() {
                             </div>
                         </TabsContent>
                     </Tabs>
-                    ) : ( <p className="text-center text-muted-foreground">Admin payment methods not configured.</p> )}
                     <form onSubmit={handleAddFunds} className="space-y-4 border-t pt-4">
                         <div>
                             <Label htmlFor="amount-add">Amount (INR)</Label>

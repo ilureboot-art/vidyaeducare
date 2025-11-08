@@ -3,6 +3,7 @@
 
 export type StudentProfile = {
   id: string;
+  parentId: string;
   name: string;
   dob: string;
   avatarUrl: string;
@@ -23,5 +24,3 @@ export type StudentProfile = {
   },
   badges: ('Platinum' | 'Gold' | 'Silver' | 'Bronze')[];
 };
-
-export const defaultActivationCodes = ["PROD-A1B2C", "PROD-X9Y8Z", "PROD-M4N5P"];

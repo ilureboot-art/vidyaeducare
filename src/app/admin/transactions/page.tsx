@@ -21,7 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, doc, updateDoc, writeBatch, getDoc, runTransaction } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, writeBatch, getDoc, runTransaction, Timestamp } from "firebase/firestore";
 
 const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -53,7 +53,12 @@ export default function TransactionsPage() {
   
   const fetchTransactions = async () => {
     const querySnapshot = await getDocs(collection(db, "transactions"));
-    const txs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
+    const txs = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        // Ensure date is a string
+        const date = data.date instanceof Timestamp ? data.date.toDate().toISOString() : data.date;
+        return { id: doc.id, ...data, date } as Transaction
+    });
     setTransactions(txs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
   };
   
@@ -62,7 +67,7 @@ export default function TransactionsPage() {
   }, []);
 
 
-  const handleTransactionStatus = async (id: string | number, newStatus: "Completed" | "Rejected") => {
+  const handleTransactionStatus = async (id: string, newStatus: "Completed" | "Rejected") => {
     if (!transactions) return;
 
     const txToUpdate = transactions.find(tx => tx.id === id);
@@ -71,31 +76,41 @@ export default function TransactionsPage() {
         return;
     }
 
-    const txDocRef = doc(db, "transactions", String(id));
-    const userWalletRef = txToUpdate.user ? doc(db, "wallets", txToUpdate.user) : null;
+    const txDocRef = doc(db, "transactions", id);
 
     try {
         await runTransaction(db, async (transaction) => {
+            const userWalletRef = txToUpdate.user ? doc(db, "wallets", txToUpdate.user) : null;
+            let userWalletDoc = null;
+            
             if (userWalletRef) {
-                const userWalletDoc = await transaction.get(userWalletRef);
-                if (!userWalletDoc.exists()) {
-                    throw "User wallet not found!";
-                }
+                userWalletDoc = await transaction.get(userWalletRef);
+            }
 
+            // Only proceed with wallet logic if the wallet exists
+            if (userWalletDoc && userWalletDoc.exists()) {
+                const walletData = userWalletDoc.data();
+                
                 if (newStatus === 'Completed') {
+                    // For a deposit, add the amount to the user's balance
                     if (txToUpdate.type === 'deposit') {
-                        const newBalance = (userWalletDoc.data().balance || 0) + txToUpdate.amount;
-                        transaction.update(userWalletRef, { balance: newBalance });
+                        const newBalance = (walletData.balance || 0) + txToUpdate.amount;
+                        transaction.update(userWalletRef!, { balance: newBalance });
                     }
-                    // For withdrawals, the balance is already reduced. Approving just confirms it.
+                    // For withdrawals, the balance is already reduced when the request is made.
+                    // Approving it just confirms the transaction status.
                 } else if (newStatus === 'Rejected') {
                     // If a withdrawal is rejected, refund the money to the user's wallet
                     if (txToUpdate.type === 'withdrawal') {
-                        const newBalance = (userWalletDoc.data().balance || 0) - txToUpdate.amount; // amount is negative
-                        transaction.update(userWalletRef, { balance: newBalance });
+                        // Withdrawal amounts are negative, so we add it back
+                        const newBalance = (walletData.balance || 0) - txToUpdate.amount; 
+                        transaction.update(userWalletRef!, { balance: newBalance });
                     }
+                    // For deposits, if rejected, no change to balance is needed.
                 }
             }
+            
+            // Always update the transaction status
             transaction.update(txDocRef, { status: newStatus });
         });
 
@@ -219,8 +234,8 @@ export default function TransactionsPage() {
                   <TableCell className="text-center">
                     {tx.status === "Pending" && (
                         <div className="flex gap-2 justify-center">
-                            <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700" onClick={() => handleTransactionStatus(tx.id, "Completed")}>Approve</Button>
-                            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" onClick={() => handleTransactionStatus(tx.id, "Rejected")}>Reject</Button>
+                            <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700" onClick={() => handleTransactionStatus(String(tx.id), "Completed")}>Approve</Button>
+                            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" onClick={() => handleTransactionStatus(String(tx.id), "Rejected")}>Reject</Button>
                         </div>
                     )}
                   </TableCell>

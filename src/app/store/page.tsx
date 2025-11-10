@@ -13,7 +13,7 @@ import Link from 'next/link';
 import type { StoreConfig } from "@/lib/store-config";
 import type { WalletData } from "@/lib/user-data";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, runTransaction, addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, runTransaction, addDoc, collection, serverTimestamp, updateDoc } from "firebase/firestore";
 import { useAuth } from "@/context/AuthContext";
 
 export default function StorePage() {
@@ -70,13 +70,13 @@ export default function StorePage() {
         const discountedBasePrice = product.price * (1 - totalDiscount);
         const gstAmount = discountedBasePrice * (product.gstRate / 100);
         const finalPrice = discountedBasePrice + gstAmount;
-        priceDetails = { finalPrice, discountedBasePrice, totalDiscount, hasReferral };
+        priceDetails = { finalPrice, discountedBasePrice, totalDiscount, hasReferral, basePrice: product.price };
     } else {
         product = storeConfig.referboltSubscription;
         setIsPurchasing('referbolt');
         const gstAmount = product.price * (product.gstRate / 100);
         const finalPrice = product.price + gstAmount;
-        priceDetails = { finalPrice, discountedBasePrice: product.price, totalDiscount: 0, hasReferral: false };
+        priceDetails = { finalPrice, discountedBasePrice: product.price, totalDiscount: 0, hasReferral: false, basePrice: product.price };
     }
 
     if (walletData.balance < priceDetails.finalPrice) {
@@ -99,66 +99,73 @@ export default function StorePage() {
             transaction.update(userWalletRef, { balance: newBalance });
 
             // 2. Log the user's purchase transaction
-            const purchaseTx = {
+            const purchaseTxRef = doc(collection(db, "transactions"));
+            transaction.set(purchaseTxRef, {
                 user: user.uid,
                 amount: -priceDetails.finalPrice,
                 date: serverTimestamp(),
                 description: `Purchase: ${product.name}`,
                 status: "Completed",
                 type: "Purchase",
-            };
-            transaction.set(doc(collection(db, "transactions")), purchaseTx);
+            });
 
             // 3. Handle IBA commissions
-            if (priceDetails.hasReferral) {
+            if (priceDetails.hasReferral && referralCode1.trim() !== "") {
                 const baseCommissionRate = 0.1765; // 17.65%
-                const ibaBonusCommission = storeConfig.referboltSettings.ibaBonusCommission / 100;
+                const ibaBonusCommissionRate = storeConfig.referboltSettings.ibaBonusCommission / 100;
                 
-                // Simplified check if IBA is a ReferBolt subscriber
-                const iba1Ref = doc(db, "referbolt", referralCode1); // Assuming ref code is UID
-                const iba1Snap = await transaction.get(iba1Ref);
-                const iba1Bonus = (iba1Snap.exists() && iba1Snap.data().isSubscribed) ? ibaBonusCommission : 0;
-
-                const totalCommissionRate = baseCommissionRate + iba1Bonus;
-                let totalCommission = priceDetails.discountedBasePrice * totalCommissionRate;
-
-                const ibasToPay = [referralCode1];
-                if (referralCode2.trim()) ibasToPay.push(referralCode2.trim());
-
-                const commissionPerIba = totalCommission / ibasToPay.length;
+                const ibasToPay = [referralCode1.trim()];
+                if (referralCode2.trim() !== "") ibasToPay.push(referralCode2.trim());
 
                 for (const ibaId of ibasToPay) {
                     const ibaWalletRef = doc(db, "wallets", ibaId);
                     const ibaWalletDoc = await transaction.get(ibaWalletRef);
                     if (ibaWalletDoc.exists()) {
-                        const newIbaBalance = (ibaWalletDoc.data().balance || 0) + commissionPerIba;
+                        const isReferboltSubscriber = ibaWalletDoc.data().isReferboltSubscriber || false;
+                        const ibaBonus = isReferboltSubscriber ? (priceDetails.basePrice * ibaBonusCommissionRate) : 0;
+                        let commission = (priceDetails.basePrice * baseCommissionRate) + ibaBonus;
+                        commission = commission / ibasToPay.length;
+
+                        const newIbaBalance = (ibaWalletDoc.data().balance || 0) + commission;
                         transaction.update(ibaWalletRef, { balance: newIbaBalance });
 
-                        const commissionTx = {
+                        const commissionTxRef = doc(collection(db, "transactions"));
+                        transaction.set(commissionTxRef, {
                             user: ibaId,
-                            amount: commissionPerIba,
+                            amount: commission,
                             date: serverTimestamp(),
                             description: `Commission from ${user.uid.slice(0,5)} sale`,
                             status: "Completed",
                             type: "Commission",
-                        };
-                        transaction.set(doc(collection(db, "transactions")), commissionTx);
+                        });
                     }
                 }
             }
             
-            // 4. Update user subscription status
-            if(type === 'mock') {
-                // Add logic to update user's mock test subscription validity
+            // 4. Update user subscription status or give activation codes
+            if (type === 'mock') {
+                const activationCode = `PROD-${Date.now().toString().slice(-6)}`;
+                const activationCodesRef = doc(db, 'activationCodes', user.uid);
+                const codesDoc = await transaction.get(activationCodesRef);
+                const existingCodes = codesDoc.exists() ? codesDoc.data().codes : [];
+                transaction.set(activationCodesRef, { codes: [...existingCodes, activationCode] }, { merge: true });
+
+                if (storeConfig.referboltSettings.freeAccessWithMockTest) {
+                     const referboltRef = doc(db, "referbolt", user.uid);
+                     transaction.set(referboltRef, { isSubscribed: true }, { merge: true });
+                }
             } else if (type === 'referbolt') {
-                transaction.update(userWalletRef, { isReferboltSubscriber: true });
+                 const referboltRef = doc(db, "referbolt", user.uid);
+                 transaction.set(referboltRef, { isSubscribed: true }, { merge: true });
             }
         });
 
-        const activationCode = `PROD-${String(Date.now()).slice(-5)}`;
-        let successDescription = `You've purchased the ${product.name}. Your Activation Code is: ${activationCode}. Use this code in 'My Students' to add a profile.`;
-        if (storeConfig.referboltSettings.freeAccessWithMockTest && type === 'mock') {
-            successDescription += " As a bonus, you've been granted free access to the ReferBolt system!";
+        let successDescription = `You've purchased the ${product.name}.`;
+        if(type === 'mock') {
+            successDescription += " An activation code has been added to your account. Use this code in 'My Students' to add a profile.";
+            if (storeConfig.referboltSettings.freeAccessWithMockTest) {
+                successDescription += " As a bonus, you've been granted free access to the ReferBolt system!";
+            }
         }
         
         toast({ title: "Purchase Successful!", description: successDescription, duration: 10000 });
@@ -287,5 +294,3 @@ export default function StorePage() {
     </div>
   );
 }
-
-    

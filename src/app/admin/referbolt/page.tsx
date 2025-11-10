@@ -7,13 +7,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw, Users, IndianRupee, Repeat, Loader2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-
-// In a real app, this data would be fetched from a database
-const serverStats = {
-  totalCycles: 18,
-  totalCommissions: 2700,
-  activeReferrers: 12,
-};
+import { db } from "@/lib/firebase";
+import { collection, getDocs, query } from "firebase/firestore";
 
 type Cycle = {
   id: string;
@@ -23,27 +18,63 @@ type Cycle = {
   subscriptionType: "Manual" | "Auto-Renewed";
 }
 
-const serverCycles: Cycle[] = [
-    { id: 'CYC001', referrer: 'Rohan Kumar', referrals: 3, status: 'Completed', subscriptionType: 'Auto-Renewed' },
-    { id: 'CYC002', referrer: 'Anika Sharma', referrals: 2, status: 'In Progress', subscriptionType: 'Manual' },
-    { id: 'CYC003', referrer: 'Vikram Reddy', referrals: 1, status: 'In Progress', subscriptionType: 'Auto-Renewed' },
-    { id: 'CYC004', referrer: 'Isha Jain', referrals: 3, status: 'Completed', subscriptionType: 'Manual' },
-];
-
-const serverReferralActivity: any[] = [
-    { id: 'REF001', referrer: 'Rohan Kumar', newUser: 'New User A', date: '2024-07-28', commission: '₹50', status: 'Paid' },
-    { id: 'REF002', referrer: 'Anika Sharma', newUser: 'New User B', date: '2024-07-27', commission: '₹50', status: 'Paid' },
-];
+type Stats = {
+  totalCycles: number;
+  totalCommissions: number;
+  activeReferrers: number;
+}
 
 export default function ReferBoltManagementPage() {
-  const [stats, setStats] = useState<any | null>(null);
+  const [stats, setStats] = useState<Stats | null>(null);
   const [cycles, setCycles] = useState<Cycle[] | null>(null);
   const [referrals, setReferrals] = useState<any[] | null>(null);
 
   useEffect(() => {
-    setStats(serverStats);
-    setCycles(serverCycles);
-    setReferrals(serverReferralActivity);
+    const fetchData = async () => {
+        const referboltSnapshot = await getDocs(collection(db, "referbolt"));
+        let totalCycles = 0;
+        let totalCommissions = 0;
+        const cycleList: Cycle[] = [];
+        const referralList: any[] = [];
+        let activeReferrers = 0;
+
+        referboltSnapshot.forEach(doc => {
+            const data = doc.data();
+            totalCycles += (data.cyclesCompleted || 0);
+            totalCommissions += (data.totalCommissions || 0);
+            if (data.isSubscribed) {
+              activeReferrers++;
+            }
+            cycleList.push({
+              id: doc.id,
+              referrer: data.userName || `User ${doc.id.substring(0, 5)}`,
+              referrals: data.cycleProgress || 0,
+              status: (data.cycleProgress || 0) >= 3 ? 'Completed' : 'In Progress',
+              subscriptionType: data.autoRenew ? 'Auto-Renewed' : 'Manual',
+            });
+        });
+
+        setStats({ totalCycles, totalCommissions, activeReferrers });
+        setCycles(cycleList);
+
+        // Fetch recent referral activities (more complex, simplified for now)
+        const transactionsSnapshot = await getDocs(query(collection(db, 'transactions')));
+        transactionsSnapshot.forEach(doc => {
+            const tx = doc.data();
+            if (tx.type === 'Referral Bonus') {
+                referralList.push({
+                    id: doc.id,
+                    referrer: tx.user,
+                    newUser: tx.description.split(' for ')[1] || 'N/A',
+                    date: new Date(tx.date.seconds * 1000).toISOString(),
+                    commission: `₹${tx.amount}`,
+                    status: tx.status
+                });
+            }
+        });
+        setReferrals(referralList);
+    };
+    fetchData();
   }, []);
 
   if (!stats || !cycles || !referrals) {
@@ -68,7 +99,7 @@ export default function ReferBoltManagementPage() {
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalCycles}</div>
             <p className="text-xs text-muted-foreground">
-              +15% from last month
+              Completed since launch
             </p>
           </CardContent>
         </Card>
@@ -88,7 +119,7 @@ export default function ReferBoltManagementPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Referrers</CardTitle>
+            <CardTitle className="text-sm font-medium">Active Subscribers</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -166,11 +197,11 @@ export default function ReferBoltManagementPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-                {referrals.length > 0 ? referrals.map((ref: any) => (
+                {referrals.length > 0 ? referrals.slice(0, 10).map((ref: any) => (
                      <TableRow key={ref.id}>
                         <TableCell className="font-medium">{ref.referrer}</TableCell>
                         <TableCell>{ref.newUser}</TableCell>
-                        <TableCell>{ref.date}</TableCell>
+                        <TableCell>{new Date(ref.date).toLocaleDateString()}</TableCell>
                         <TableCell>{ref.commission}</TableCell>
                         <TableCell><Badge>{ref.status}</Badge></TableCell>
                     </TableRow>

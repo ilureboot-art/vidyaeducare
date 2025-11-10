@@ -13,7 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, onSnapshot } from "firebase/firestore";
 
 const benefits = [
     { text: "Earn a commission for every referral who subscribes." },
@@ -32,17 +32,17 @@ export default function ReferBoltPage() {
 
   useEffect(() => {
     if (user) {
-        const fetchReferboltData = async () => {
-            const referboltDocRef = doc(db, "referbolt", user.uid);
-            const referboltDocSnap = await getDoc(referboltDocRef);
-
-            if (referboltDocSnap.exists()) {
-                setData(referboltDocSnap.data());
+        const referboltDocRef = doc(db, "referbolt", user.uid);
+        const unsub = onSnapshot(referboltDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const docData = docSnap.data();
+                setData(docData);
+                setAutoRenew(docData.autoRenew || false);
             } else {
                 setData({ isSubscribed: false });
             }
-        };
-        fetchReferboltData();
+        });
+        return () => unsub();
     }
   }, [user]);
 
@@ -198,10 +198,10 @@ Subscribe and start your earning cycle now: ${shareUrl}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {data.referralHistory.length > 0 ? data.referralHistory.map((ref: any) => (
+                            {data.referralHistory && data.referralHistory.length > 0 ? data.referralHistory.map((ref: any) => (
                                 <TableRow key={ref.id}>
                                     <TableCell className="font-medium">{ref.name}</TableCell>
-                                    <TableCell>{ref.date}</TableCell>
+                                    <TableCell>{new Date(ref.date).toLocaleDateString()}</TableCell>
                                     <TableCell className="text-right font-bold text-green-600">₹{ref.commission}</TableCell>
                                 </TableRow>
                             )) : (
@@ -224,5 +224,3 @@ Subscribe and start your earning cycle now: ${shareUrl}
     </div>
   );
 }
-
-    

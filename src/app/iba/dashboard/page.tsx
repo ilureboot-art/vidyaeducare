@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 
 
 const dailyTarget = 5;
@@ -48,31 +48,42 @@ export default function IBADashboardPage() {
   useEffect(() => {
     if (user) {
         const fetchIbaData = async () => {
-            const ibaDocRef = doc(db, "iba", user.uid);
-            const ibaDocSnap = await getDoc(ibaDocRef);
-
-            if (ibaDocSnap.exists()) {
-                const data = ibaDocSnap.data();
-                setReferralData(data);
-                setIbaReferralCode(data.referralCode);
-            } else {
-                // Handle case where user is not an IBA, provide default empty state
-                setReferralData({
-                    totalCommission: 0,
-                    totalReferrals: 0,
-                    dailySales: 0,
-                    monthlySales: 0,
-                    salesHistory: [],
-                    recentReferrals: [],
-                });
-                const walletDocRef = doc(db, 'wallets', user.uid);
-                const walletDocSnap = await getDoc(walletDocRef);
-                if (walletDocSnap.exists()) {
-                    setIbaReferralCode(walletDocSnap.data().referralCode);
-                } else {
-                    setIbaReferralCode('NOT-AN-IBA');
-                }
+            // Assume the IBA-specific data is stored in a subcollection or related doc
+            const userWalletDocRef = doc(db, 'wallets', user.uid);
+            const userWalletSnap = await getDoc(userWalletDocRef);
+            if (userWalletSnap.exists()) {
+                setIbaReferralCode(userWalletSnap.data().referralCode);
             }
+
+            const q = query(collection(db, "transactions"), where("user", "==", user.uid), where("type", "in", ["Commission", "Referral Bonus"]));
+            const querySnapshot = await getDocs(q);
+
+            const recentReferrals = querySnapshot.docs.map(d => {
+                const data = d.data();
+                return {
+                    id: d.id,
+                    name: data.description.split(' from ')[1] || data.description.split(' for ')[1] || 'Unknown User',
+                    date: new Date(data.date.seconds * 1000).toISOString(),
+                    commission: data.amount,
+                };
+            });
+
+            const totalCommission = recentReferrals.reduce((acc, ref) => acc + ref.commission, 0);
+
+            // Mocked sales data for charts
+            const salesHistory = [
+                { month: 'Jan', sales: 12 }, { month: 'Feb', sales: 19 }, { month: 'Mar', sales: 3 }, 
+                { month: 'Apr', sales: 5 }, { month: 'May', sales: 2 }, { month: 'Jun', sales: 3 }
+            ];
+
+            setReferralData({
+                totalCommission,
+                totalReferrals: recentReferrals.length,
+                dailySales: 0, // Needs complex query
+                monthlySales: 0, // Needs complex query
+                salesHistory,
+                recentReferrals,
+            });
         };
         fetchIbaData();
     }
@@ -121,7 +132,6 @@ Don't miss out on the best way to prepare for your exams and earn rewards!
       });
     };
 
-    // Try to open WhatsApp link, and if it fails (e.g. on a desktop without whatsapp installed), copy to clipboard
     try {
         const newWindow = window.open(whatsappUrl, '_blank');
         if(!newWindow || newWindow.closed || typeof newWindow.closed=='undefined') {
@@ -313,5 +323,3 @@ Don't miss out on the best way to prepare for your exams and earn rewards!
     </div>
   );
 }
-
-    

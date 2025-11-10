@@ -5,24 +5,18 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BarChart, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Line, Bar, ResponsiveContainer } from "recharts";
 import { Users, Gamepad2, IndianRupee, Loader2 } from "lucide-react";
+import { db } from "@/lib/firebase";
+import { collection, getDocs, query, where, Timestamp } from "firebase/firestore";
 
-// In a real app, this data would be fetched from a server
-const serverUserActivityData = [
-  { name: 'Jul 22', users: 120 },
-  { name: 'Jul 23', users: 150 },
-  { name: 'Jul 24', users: 175 },
-  { name: 'Jul 25', users: 160 },
-  { name: 'Jul 26', users: 190 },
-  { name: 'Jul 27', users: 210 },
-  { name: 'Jul 28', users: 230 },
-];
-
-const serverRevenueData = [
-  { name: 'Week 1', revenue: 4000 },
-  { name: 'Week 2', revenue: 3000 },
-  { name: 'Week 3', revenue: 5000 },
-  { name: 'Week 4', revenue: 4500 },
-];
+const getLast7Days = () => {
+    const dates = [];
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        dates.push(d);
+    }
+    return dates;
+};
 
 export default function AnalyticsPage() {
   const [activeUsers, setActiveUsers] = useState<number | null>(null);
@@ -32,12 +26,60 @@ export default function AnalyticsPage() {
   const [revenueData, setRevenueData] = useState<any[] | null>(null);
 
   useEffect(() => {
-    // Simulate fetching data on the client side
-    setActiveUsers(230);
-    setGamesPlayed(1450);
-    setTodaysRevenue(5230);
-    setUserActivityData(serverUserActivityData);
-    setRevenueData(serverRevenueData);
+    const fetchData = async () => {
+        try {
+            // Fetch total revenue, active users etc.
+            const transactionsCollection = collection(db, 'transactions');
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const todayTimestamp = Timestamp.fromDate(today);
+
+            const revenueQuery = query(transactionsCollection, where('date', '>=', todayTimestamp), where('type', '==', 'Purchase'));
+            const revenueSnapshot = await getDocs(revenueQuery);
+            let totalRevenue = 0;
+            revenueSnapshot.forEach(doc => {
+                totalRevenue += Math.abs(doc.data().amount);
+            });
+            setTodaysRevenue(totalRevenue);
+
+            const usersCollection = collection(db, 'users');
+            const usersSnapshot = await getDocs(usersCollection);
+            setActiveUsers(usersSnapshot.size); // Just using total users as DAU for now
+            setGamesPlayed(0); // Game feature removed
+
+            // User activity for the last 7 days
+            const activityDates = getLast7Days();
+            const activityPromises = activityDates.map(async (date) => {
+                const start = new Date(date);
+                start.setHours(0,0,0,0);
+                const end = new Date(date);
+                end.setHours(23,59,59,999);
+                const q = query(usersCollection, where('joinDate', '>=', start.toISOString()), where('joinDate', '<=', end.toISOString()));
+                const snapshot = await getDocs(q);
+                return {
+                    name: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric'}),
+                    users: snapshot.size
+                };
+            });
+            const fetchedUserActivity = await Promise.all(activityPromises);
+            setUserActivityData(fetchedUserActivity);
+
+
+            // Weekly revenue (mocked for now as it's more complex)
+            const serverRevenueData = [
+              { name: 'Week 1', revenue: 4000 },
+              { name: 'Week 2', revenue: 3000 },
+              { name: 'Week 3', revenue: 5000 },
+              { name: 'Week 4', revenue: 4500 },
+            ];
+            setRevenueData(serverRevenueData);
+
+
+        } catch (error) {
+            console.error("Error fetching analytics data:", error);
+        }
+    };
+    fetchData();
   }, []);
 
   if (activeUsers === null || gamesPlayed === null || todaysRevenue === null || !userActivityData || !revenueData) {
@@ -67,7 +109,7 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold">{gamesPlayed.toLocaleString()}</p>
-            <p className="text-xs text-muted-foreground">+12% from yesterday</p>
+            <p className="text-xs text-muted-foreground">This feature is removed</p>
           </CardContent>
         </Card>
         <Card>

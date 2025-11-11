@@ -4,20 +4,33 @@
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { AppHeader } from '@/components/AppHeader';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Navbar } from '@/components/Navbar';
 import { ChatWidget } from '@/components/ChatWidget';
 import { ThemeProvider } from "next-themes";
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { Loader2 } from 'lucide-react';
+import { useEffect } from 'react';
 
 function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { user, loading } = useAuth();
   
   const isAdminPage = pathname.startsWith('/admin');
-  const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup') || pathname.startsWith('/forgot-password') || pathname.startsWith('/admin/login');
-  const isPublicPage = isAuthPage || pathname === '/' || pathname === '/how-to-play';
+  const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup') || pathname.startsWith('/forgot-password');
+  const isPublicPage = isAuthPage || pathname === '/' || pathname === '/how-to-play' || pathname.startsWith('/admin/login');
+
+  useEffect(() => {
+    if (!loading) {
+      if (user && isAuthPage) {
+        router.push('/profile');
+      } else if (!user && !isPublicPage) {
+        router.push('/login');
+      }
+    }
+  }, [user, loading, isAuthPage, isPublicPage, router]);
+
 
   if (loading) {
     return (
@@ -28,35 +41,36 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   if (isAdminPage) {
-    if (pathname === '/admin/login') {
-      return (
-        <main className="flex-1 flex flex-col w-full p-4 items-center justify-center min-h-screen bg-muted/40">
-          {children}
-        </main>
-      );
-    }
-    // This assumes an admin is logged in. We can add admin-specific auth later.
     return <>{children}</>;
   }
   
-  if (!user && !isPublicPage) {
-     // Redirecting is better handled by middleware in Next.js, 
-     // but for this component-based approach, we'll just show a loading state
-     // or a redirect message. A simple null will prevent flicker.
-    return null;
+  // If we are on a public page and there's no user, show the page without the main layout
+  if (!user && isPublicPage) {
+      if (isAuthPage || pathname === '/') {
+        return <main className="flex-1 flex flex-col w-full items-center justify-center">{children}</main>;
+      }
+      return <main className="flex-1 flex flex-col w-full p-4 items-center">{children}</main>;
   }
-  
-  const showMainLayout = user && !isPublicPage;
 
+  // If there's a user and we are not on a special page, show the full app layout
+  if (user) {
+    return (
+        <div className='flex flex-col min-h-screen'>
+            <AppHeader />
+            <main className="flex-1 flex flex-col w-full p-4 pb-24 pt-20 items-center">
+                {children}
+            </main>
+            <Navbar />
+            <ChatWidget />
+        </div>
+    );
+  }
+
+  // Fallback for unauthenticated users on non-public pages (will be redirected by useEffect)
   return (
-      <div className='flex flex-col min-h-screen'>
-        {showMainLayout && <AppHeader />}
-        <main className={`flex-1 flex flex-col w-full p-4 ${showMainLayout ? 'pb-24 pt-20 items-center' : ''}`}>
-          {children}
-        </main>
-        {showMainLayout && <Navbar />}
-        {showMainLayout && <ChatWidget />}
-      </div>
+    <div className="flex items-center justify-center min-h-screen bg-background">
+      <Loader2 className="w-12 h-12 animate-spin text-primary" />
+    </div>
   );
 }
 

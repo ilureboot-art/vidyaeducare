@@ -1,8 +1,8 @@
 
 // Import the functions you need from the SDKs you need
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth, initializeAuth, browserLocalPersistence } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { getAuth, initializeAuth, browserLocalPersistence, connectAuthEmulator } from "firebase/auth";
+import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
@@ -17,9 +17,14 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+
+// It's important to use initializeAuth here to ensure persistence is set correctly,
+// especially in a Next.js environment. Using getAuth() directly can sometimes
+// lead to race conditions with persistence.
 const auth = initializeAuth(app, {
   persistence: browserLocalPersistence
 });
+
 const db = getFirestore(app);
 
 export { app, auth, db };

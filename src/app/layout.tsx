@@ -22,17 +22,21 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   const isPublicPage = isAuthPage || pathname === '/' || pathname === '/how-to-play' || pathname.startsWith('/admin/login');
 
   useEffect(() => {
+    // This effect now runs *after* the initial auth state is confirmed (loading is false)
     if (!loading) {
       if (user && isAuthPage) {
+        // If a logged-in user tries to visit login/signup, redirect them.
         router.push('/profile');
       } else if (!user && !isPublicPage) {
+        // If a non-logged-in user tries to visit a protected page, redirect them.
         router.push('/login');
       }
     }
-  }, [user, loading, isAuthPage, isPublicPage, router]);
+  }, [user, loading, isAuthPage, isPublicPage, router, pathname]);
 
-
-  if (loading) {
+  // The main AuthProvider handles the initial global loading state.
+  // We can show another loader here while the router effect is processing the redirect.
+  if (loading || (!user && !isPublicPage)) {
     return (
         <div className="flex items-center justify-center min-h-screen bg-background">
             <Loader2 className="w-12 h-12 animate-spin text-primary" />
@@ -44,15 +48,16 @@ function AppLayout({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
   
-  // If we are on a public page and there's no user, show the page without the main layout
+  // Public pages that can be seen by non-logged in users
   if (!user && isPublicPage) {
       if (isAuthPage || pathname === '/') {
         return <main className="flex-1 flex flex-col w-full items-center justify-center">{children}</main>;
       }
+      // For other public pages like /how-to-play
       return <main className="flex-1 flex flex-col w-full p-4 items-center">{children}</main>;
   }
 
-  // If there's a user and we are not on a special page, show the full app layout
+  // If there's a user, show the full app layout for authenticated pages
   if (user) {
     return (
         <div className='flex flex-col min-h-screen'>
@@ -65,8 +70,8 @@ function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
     );
   }
-
-  // Fallback for unauthenticated users on non-public pages (will be redirected by useEffect)
+  
+  // This should theoretically not be reached due to the redirect logic, but serves as a final fallback.
   return (
     <div className="flex items-center justify-center min-h-screen bg-background">
       <Loader2 className="w-12 h-12 animate-spin text-primary" />

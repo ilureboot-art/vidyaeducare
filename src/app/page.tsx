@@ -62,9 +62,13 @@ export default function HomePage() {
 
   useEffect(() => {
     const fetchConfig = async () => {
-        const storeConfigDoc = await getDoc(doc(db, "configs", "store"));
-        if(storeConfigDoc.exists()) {
-            setBonus(storeConfigDoc.data().referralBonus);
+        try {
+            const storeConfigDoc = await getDoc(doc(db, "configs", "store"));
+            if(storeConfigDoc.exists()) {
+                setBonus(storeConfigDoc.data().referralBonus);
+            }
+        } catch (error) {
+            console.error("Error fetching store config:", error);
         }
     };
     fetchConfig();
@@ -73,12 +77,17 @@ export default function HomePage() {
   useEffect(() => {
       const fetchUserRefCode = async () => {
           if (user) {
-              const walletDoc = await getDoc(doc(db, "wallets", user.uid));
-              if (walletDoc.exists()) {
-                  setRefCode(walletDoc.data().referralCode);
-              } else {
-                  // Create a referral code if it doesn't exist
-                  setRefCode(`REF${user.uid.slice(0,6).toUpperCase()}`)
+              try {
+                const walletDoc = await getDoc(doc(db, "wallets", user.uid));
+                if (walletDoc.exists()) {
+                    setRefCode(walletDoc.data().referralCode);
+                } else {
+                    // Create a referral code if it doesn't exist
+                    setRefCode(`REF${user.uid.slice(0,6).toUpperCase()}`)
+                }
+              } catch (error) {
+                  console.error("Error fetching user referral code:", error);
+                  setRefCode("DEFAULTREF");
               }
           } else {
               setRefCode("DEFAULTREF"); // A default for non-logged-in users
@@ -279,5 +288,3 @@ Start your journey to success now: ${url}
     </div>
   );
 }
-
-    

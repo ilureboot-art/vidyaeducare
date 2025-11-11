@@ -131,5 +131,3 @@ Click here to join: ${url}`;
         </div>
     );
 }
-
-    

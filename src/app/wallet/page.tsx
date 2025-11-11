@@ -348,7 +348,7 @@ export default function WalletPage() {
             <h3 className="font-semibold text-lg text-center">Recent Activity</h3>
             {transactions && transactions.length > 0 ? (
                 <div className="space-y-2">
-                    {transactions.map((tx) => (
+                    {transactions.map((tx: any) => (
                          <div key={tx.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                             <div className="flex items-center gap-3">
                                 <div className={`p-2 rounded-full ${tx.amount >= 0 ? 'bg-green-100 dark:bg-green-900' : 'bg-red-100 dark:bg-red-900'}`}>
@@ -358,7 +358,7 @@ export default function WalletPage() {
                                 </div>
                                 <div>
                                     <p className="font-medium">{tx.description}</p>
-                                    <p className="text-xs text-muted-foreground">{format(new Date(tx.date), 'P')}</p>
+                                    <p className="text-xs text-muted-foreground">{format(tx.date.toDate(), 'P')}</p>
                                 </div>
                             </div>
                             <div className="text-right">

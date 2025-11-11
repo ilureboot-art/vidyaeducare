@@ -18,7 +18,7 @@ import { Gamepad2, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { db, auth } from "@/lib/firebase";
-import { doc, setDoc, getDoc, runTransaction } from "firebase/firestore";
+import { doc, setDoc, getDoc, runTransaction, collection } from "firebase/firestore";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 
 export default function SignupPage() {
@@ -199,5 +199,3 @@ export default function SignupPage() {
     </div>
   );
 }
-
-    

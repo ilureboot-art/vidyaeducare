@@ -18,17 +18,14 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   
   const isAdminPage = pathname.startsWith('/admin');
-  const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup') || pathname.startsWith('/forgot-password');
+  const isAuthPage = pathname === '/login' || pathname === '/signup' || pathname === '/forgot-password';
   const isPublicPage = isAuthPage || pathname === '/' || pathname === '/how-to-play';
 
   useEffect(() => {
-    if (loading) {
-      return; // Wait for the auth state to be confirmed
-    }
+    if (loading) return; // Wait for the auth state to be confirmed
 
-    // Redirect logic
     if (user && isAuthPage) {
-      // Logged-in user trying to access login/signup page
+      // Logged-in user trying to access login/signup, redirect to a default authenticated page
       router.push('/profile');
     } else if (!user && !isPublicPage && !isAdminPage) {
       // Logged-out user trying to access a protected page
@@ -36,13 +33,33 @@ function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [user, loading, isAuthPage, isPublicPage, isAdminPage, router, pathname]);
 
-  // Admin section has its own layout
+  // Admin section has its own specific layout, handle it separately.
   if (isAdminPage) {
     return <>{children}</>;
   }
+
+  // For public pages, render them immediately if auth state is still loading or if there's no user.
+  // This ensures fast initial load for new visitors.
+  if (isPublicPage) {
+     if (user) {
+        // If user is logged in, show the full app layout
+        return (
+            <div className='flex flex-col min-h-screen'>
+                <AppHeader />
+                <main className="flex-1 flex flex-col w-full p-4 pb-24 pt-20 items-center">
+                    {children}
+                </main>
+                <Navbar />
+                <ChatWidget />
+            </div>
+        );
+     }
+     // For logged-out users on public pages, show a simpler layout
+     return <main className="flex-1 flex flex-col w-full items-center justify-center p-4">{children}</main>;
+  }
   
-  // While loading, if the page is not public, show a loader. Public pages render immediately.
-  if (loading && !isPublicPage) {
+  // For protected routes, show a loading spinner until auth state is confirmed.
+  if (loading) {
       return (
         <div className="flex items-center justify-center min-h-screen bg-background">
           <Loader2 className="w-12 h-12 animate-spin text-primary" />
@@ -50,7 +67,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
       );
   }
 
-  // If user is authenticated, show the full app layout
+  // If loading is complete and we have a user on a protected page, show the full app layout.
   if (user) {
     return (
         <div className='flex flex-col min-h-screen'>
@@ -63,18 +80,8 @@ function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
     );
   }
-  
-  // For unauthenticated users, show public pages without the full app layout
-  if (!user && isPublicPage) {
-    if (isAuthPage || pathname === '/') {
-        // Centered layout for auth pages and homepage
-        return <main className="flex-1 flex flex-col w-full items-center justify-center p-4">{children}</main>;
-    }
-    // Standard layout for other public pages like /how-to-play
-    return <main className="flex-1 flex flex-col w-full p-4 items-center">{children}</main>;
-  }
 
-  // Fallback loader for any edge cases (e.g., redirecting a logged-out user)
+  // Fallback for any edge cases (e.g., redirecting a logged-out user)
   return (
     <div className="flex items-center justify-center min-h-screen bg-background">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />

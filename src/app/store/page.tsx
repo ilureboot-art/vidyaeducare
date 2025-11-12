@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -18,7 +19,8 @@ import { useAuth } from "@/context/AuthContext";
 
 export default function StorePage() {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  const router = useRouter();
   
   const [walletData, setWalletData] = useState<WalletData | null>(null);
   const [storeConfig, setStoreConfig] = useState<StoreConfig | null>(null);
@@ -27,6 +29,12 @@ export default function StorePage() {
   
   const [referralCode1, setReferralCode1] = useState("");
   const [referralCode2, setReferralCode2] = useState("");
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [user, loading, router]);
 
   useEffect(() => {
     if (user) {
@@ -48,7 +56,7 @@ export default function StorePage() {
     }
   }, [user]);
 
-  if (!walletData || !storeConfig) {
+  if (loading || !walletData || !storeConfig) {
     return (
         <div className="w-full max-w-4xl mx-auto flex justify-center items-center h-64">
             <Loader2 className="animate-spin text-primary" size={32}/>

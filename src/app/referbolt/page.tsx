@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -25,10 +26,17 @@ const benefits = [
 
 export default function ReferBoltPage() {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  const router = useRouter();
   
   const [data, setData] = useState<any | null>(null);
   const [autoRenew, setAutoRenew] = useState(false);
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [user, loading, router]);
 
   useEffect(() => {
     if (user) {
@@ -85,7 +93,7 @@ Subscribe and start your earning cycle now: ${shareUrl}
     }
   };
   
-  if (!data) {
+  if (loading || !data) {
       return (
           <div className="w-full max-w-2xl mx-auto flex items-center justify-center h-96">
               <Loader2 className="animate-spin text-primary" size={32}/>

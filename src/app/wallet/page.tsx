@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { 
   Card, 
@@ -56,7 +57,8 @@ type WalletInfo = {
 
 export default function WalletPage() {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  const router = useRouter();
   
   const [walletInfo, setWalletInfo] = useState<WalletInfo | null>(null);
   const [transactions, setTransactions] = useState<Transaction[] | null>(null);
@@ -64,6 +66,12 @@ export default function WalletPage() {
 
   const [addFundsOpen, setAddFundsOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [user, loading, router]);
 
   useEffect(() => {
     if (user) {
@@ -218,7 +226,7 @@ export default function WalletPage() {
     }
   }
 
-  if (!walletInfo || !transactions || !adminPaymentMethods) {
+  if (loading || !walletInfo || !transactions || !adminPaymentMethods) {
     return (
       <div className="w-full max-w-2xl mx-auto space-y-6 flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />

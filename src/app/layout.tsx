@@ -10,36 +10,6 @@ import { ChatWidget } from '@/components/ChatWidget';
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from '@/context/AuthContext';
 
-function AppLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const isAdminPage = pathname.startsWith('/admin');
-  const isAuthPage = pathname === '/login' || pathname === '/signup' || pathname === '/forgot-password';
-
-  if (isAdminPage) {
-    return <>{children}</>;
-  }
-
-  if (isAuthPage) {
-    return (
-      <main className="flex-1 flex flex-col w-full items-center justify-center p-4">
-        {children}
-      </main>
-    );
-  }
-
-  return (
-    <div className='flex flex-col min-h-screen'>
-      <AppHeader />
-      <main className="flex-1 flex flex-col w-full p-4 pb-24 pt-20 items-center">
-        {children}
-      </main>
-      <Navbar />
-      <ChatWidget />
-    </div>
-  );
-}
-
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -47,6 +17,9 @@ export default function RootLayout({
 }>) {
   
   const bodyClassName = `font-body antialiased`;
+  const pathname = usePathname();
+  const isAdminPage = pathname.startsWith('/admin');
+  const isAuthPage = pathname === '/login' || pathname === '/signup' || pathname === '/forgot-password';
   
   return (
     <html lang="en" suppressHydrationWarning>
@@ -64,7 +37,16 @@ export default function RootLayout({
             disableTransitionOnChange
         >
           <AuthProvider>
-            <AppLayout>{children}</AppLayout>
+            {!isAdminPage && !isAuthPage && <AppHeader />}
+            <main className={`flex-1 flex flex-col w-full items-center ${!isAdminPage && !isAuthPage ? 'p-4 pb-24 pt-20' : ''} ${isAuthPage ? 'justify-center' : ''}`}>
+              {children}
+            </main>
+            {!isAdminPage && !isAuthPage && (
+              <>
+                <Navbar />
+                <ChatWidget />
+              </>
+            )}
             <Toaster />
           </AuthProvider>
         </ThemeProvider>

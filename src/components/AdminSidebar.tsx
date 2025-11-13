@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -21,7 +22,8 @@ import {
     BookCopy,
     BrainCircuit,
     Calendar,
-    Ban
+    Ban,
+    Puzzle
 } from "lucide-react";
 import {
     Sidebar,
@@ -44,6 +46,7 @@ const adminNavItems = [
   { href: "/admin/chat", label: "Support Chat", icon: MessageSquare },
   { href: "/admin/question-bank", label: "Test Set Management", icon: BookCopy },
   { href: "/admin/test-schedule", label: "Test Schedule", icon: Calendar },
+  { href: "/admin/quiz-clash", label: "Quiz Clash", icon: Puzzle },
   { href: "/admin/store-settings", label: "Store Settings", icon: ShoppingCart },
   { href: "/admin/payment-settings", label: "Payment Settings", icon: Landmark },
   { href: "/admin/referbolt", label: "ReferBolt Mgt.", icon: Zap },

@@ -8,48 +8,90 @@ import { useToast } from "@/hooks/use-toast";
 import { Puzzle, Users, IndianRupee, Loader2 } from "lucide-react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
+import { db } from "@/lib/firebase";
+import { collection, query, where, getDocs, doc, updateDoc, arrayUnion, runTransaction, serverTimestamp } from "firebase/firestore";
+import type { QuizClashTournament } from "@/lib/quiz-clash-data";
 
-// Mock data for upcoming tournaments
-const mockTournaments = [
-    {
-        id: "tourney-1",
-        title: "Daily Evening Challenge",
-        startTime: new Date(new Date().setHours(20, 0, 0, 0)).toISOString(),
-        entryFee: 25,
-        registeredPlayers: 88,
-        questionCount: 15,
-        prizePool: 2200,
-    },
-    {
-        id: "tourney-2",
-        title: "Weekend Bonanza",
-        startTime: new Date(new Date().setDate(new Date().getDate() + 2)).toISOString(),
-        entryFee: 50,
-        registeredPlayers: 42,
-        questionCount: 20,
-        prizePool: 2100,
-    }
-];
 
 function QuizClashPageContent() {
   const { toast } = useToast();
   const router = useRouter();
-  const [tournaments, setTournaments] = useState<typeof mockTournaments | null>(null);
+  const { user } = useAuth();
+  const [tournaments, setTournaments] = useState<QuizClashTournament[] | null>(null);
 
   useEffect(() => {
-    // In a real app, this would fetch data from Firestore
-    setTournaments(mockTournaments);
+    const fetchTournaments = async () => {
+        const q = query(collection(db, "quizClashTournaments"), where("status", "==", "scheduled"));
+        const querySnapshot = await getDocs(q);
+        const tournamentList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as QuizClashTournament));
+        setTournaments(tournamentList);
+    };
+    fetchTournaments();
   }, []);
 
-  const handleRegister = (tournament: typeof mockTournaments[0]) => {
-    toast({
-      title: "Registration Successful!",
-      description: `You have been registered for ${tournament.title}. Your wallet has been debited by ₹${tournament.entryFee}.`,
-    });
-    // Here you would add logic to update Firestore, debit wallet, etc.
+  const handleRegister = async (tournament: QuizClashTournament) => {
+    if (!user) {
+        toast({ variant: "destructive", title: "Not logged in" });
+        return;
+    }
     
-    // For demo, navigate to the play page
-    router.push(`/quiz-clash/play?tournamentId=${tournament.id}`);
+    if (tournament.registeredPlayers.includes(user.uid)) {
+        toast({ title: "Already Registered", description: "You are already registered for this tournament."});
+        return;
+    }
+
+    try {
+        await runTransaction(db, async (transaction) => {
+            const userWalletRef = doc(db, "wallets", user.uid);
+            const tournamentRef = doc(db, "quizClashTournaments", tournament.id);
+
+            const userWalletDoc = await transaction.get(userWalletRef);
+            if (!userWalletDoc.exists() || userWalletDoc.data().balance < tournament.entryFee) {
+                throw new Error("Insufficient wallet balance.");
+            }
+
+            // 1. Deduct fee and update wallet
+            const newBalance = userWalletDoc.data().balance - tournament.entryFee;
+            transaction.update(userWalletRef, { balance: newBalance });
+
+            // 2. Add user to tournament players list and update prize pool
+            transaction.update(tournamentRef, { 
+                registeredPlayers: arrayUnion(user.uid),
+                prizePool: (tournament.prizePool || 0) + tournament.entryFee,
+             });
+
+            // 3. Log user's transaction
+             const purchaseTxRef = doc(collection(db, "transactions"));
+             transaction.set(purchaseTxRef, {
+                user: user.uid,
+                amount: -tournament.entryFee,
+                date: serverTimestamp(),
+                description: `Entry Fee for Quiz Clash: ${tournament.title}`,
+                status: "Completed",
+                type: "Purchase",
+            });
+        });
+
+        toast({
+            title: "Registration Successful!",
+            description: `You have been registered for ${tournament.title}.`,
+        });
+
+        // Optimistically update UI
+        setTournaments(prev => prev!.map(t => 
+            t.id === tournament.id 
+                ? { ...t, registeredPlayers: [...t.registeredPlayers, user.uid], prizePool: t.prizePool + t.entryFee }
+                : t
+        ));
+
+    } catch (error: any) {
+        toast({
+            variant: "destructive",
+            title: "Registration Failed",
+            description: error.message || "Could not complete registration.",
+        });
+    }
   };
   
   if (!tournaments) {
@@ -83,41 +125,64 @@ function QuizClashPageContent() {
 
       <div>
         <h2 className="text-2xl font-bold mb-4">Upcoming Tournaments</h2>
-        <div className="space-y-4">
-          {tournaments.map((tourney) => (
-            <Card key={tourney.id} className="shadow-md">
-              <CardHeader>
-                <CardTitle>{tourney.title}</CardTitle>
-                <CardDescription>
-                  Goes live at {new Date(tourney.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} on {new Date(tourney.startTime).toLocaleDateString()}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                <div className="p-3 bg-muted/50 rounded-lg">
-                    <h4 className="font-bold text-lg text-primary">₹{tourney.entryFee}</h4>
-                    <p className="text-xs text-muted-foreground">Entry Fee</p>
-                </div>
-                <div className="p-3 bg-muted/50 rounded-lg">
-                    <h4 className="font-bold text-lg">{tourney.questionCount}</h4>
-                    <p className="text-xs text-muted-foreground">Questions</p>
-                </div>
-                 <div className="p-3 bg-muted/50 rounded-lg">
-                    <h4 className="font-bold text-lg">{tourney.registeredPlayers}</h4>
-                    <p className="text-xs text-muted-foreground">Contestants</p>
-                </div>
-                 <div className="p-3 bg-green-100 dark:bg-green-900/50 rounded-lg">
-                    <h4 className="font-bold text-lg text-green-700 dark:text-green-300">₹{tourney.prizePool}</h4>
-                    <p className="text-xs text-muted-foreground">Current Prize Pool</p>
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button className="w-full" onClick={() => handleRegister(tourney)}>
-                  Register Now (₹{tourney.entryFee})
-                </Button>
-              </CardFooter>
+        {tournaments.length > 0 ? (
+            <div className="space-y-4">
+            {tournaments.map((tourney) => {
+                const isRegistered = user ? tourney.registeredPlayers.includes(user.uid) : false;
+                const canPlay = new Date(tourney.startTime) <= new Date();
+
+                return (
+                    <Card key={tourney.id} className="shadow-md">
+                    <CardHeader>
+                        <CardTitle>{tourney.title}</CardTitle>
+                        <CardDescription>
+                        Goes live at {new Date(tourney.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} on {new Date(tourney.startTime).toLocaleDateString()}
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                        <div className="p-3 bg-muted/50 rounded-lg">
+                            <h4 className="font-bold text-lg text-primary">₹{tourney.entryFee}</h4>
+                            <p className="text-xs text-muted-foreground">Entry Fee</p>
+                        </div>
+                        <div className="p-3 bg-muted/50 rounded-lg">
+                            <h4 className="font-bold text-lg">{tourney.questionCount}</h4>
+                            <p className="text-xs text-muted-foreground">Questions</p>
+                        </div>
+                        <div className="p-3 bg-muted/50 rounded-lg">
+                            <h4 className="font-bold text-lg">{tourney.registeredPlayers.length}</h4>
+                            <p className="text-xs text-muted-foreground">Contestants</p>
+                        </div>
+                        <div className="p-3 bg-green-100 dark:bg-green-900/50 rounded-lg">
+                            <h4 className="font-bold text-lg text-green-700 dark:text-green-300">₹{tourney.prizePool}</h4>
+                            <p className="text-xs text-muted-foreground">Current Prize Pool</p>
+                        </div>
+                    </CardContent>
+                    <CardFooter>
+                        {isRegistered ? (
+                             canPlay ? (
+                                <Button className="w-full" onClick={() => router.push(`/quiz-clash/play?tournamentId=${tourney.id}`)}>
+                                    Enter Game
+                                </Button>
+                             ) : (
+                                <Button className="w-full" disabled>Registered</Button>
+                             )
+                        ) : (
+                            <Button className="w-full" onClick={() => handleRegister(tourney)}>
+                                Register Now (₹{tourney.entryFee})
+                            </Button>
+                        )}
+                    </CardFooter>
+                    </Card>
+                )
+            })}
+            </div>
+        ) : (
+             <Card>
+                <CardContent className="text-center p-12">
+                    <p className="text-muted-foreground">No upcoming tournaments scheduled. Check back soon!</p>
+                </CardContent>
             </Card>
-          ))}
-        </div>
+        )}
       </div>
     </div>
   );

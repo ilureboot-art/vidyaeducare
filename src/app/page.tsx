@@ -3,15 +3,11 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { BookOpen, Trophy, Users, LogIn, Share2, Quote, Loader2 } from "lucide-react";
+import { BookOpen, Trophy, Users, LogIn, Share2, Quote } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { useState, useEffect } from "react";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import { useAuth } from "@/context/AuthContext";
 
 const features = [
   {
@@ -55,62 +51,11 @@ const testimonials = [
 
 export default function HomePage() {
   const { toast } = useToast();
-  const { user } = useAuth();
-  
-  const [bonus, setBonus] = useState<number | null>(null);
-  const [refCode, setRefCode] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchConfig = async () => {
-        try {
-            const storeConfigDoc = await getDoc(doc(db, "configs", "store"));
-            if(storeConfigDoc.exists()) {
-                setBonus(storeConfigDoc.data().referralBonus);
-            }
-        } catch (error) {
-            console.error("Error fetching store config:", error);
-        }
-    };
-    fetchConfig();
-  }, []);
-
-  useEffect(() => {
-      const fetchUserRefCode = async () => {
-          if (user) {
-              try {
-                const walletDoc = await getDoc(doc(db, "wallets", user.uid));
-                if (walletDoc.exists()) {
-                    setRefCode(walletDoc.data().referralCode);
-                } else {
-                    // Create a referral code if it doesn't exist
-                    setRefCode(`REF${user.uid.slice(0,6).toUpperCase()}`)
-                }
-              } catch (error) {
-                  console.error("Error fetching user referral code:", error);
-                  setRefCode("DEFAULTREF");
-              }
-          } else {
-              setRefCode("DEFAULTREF"); // A default for non-logged-in users
-          }
-      }
-      fetchUserRefCode();
-  }, [user]);
-
 
   const handleShare = async () => {
-    if (refCode === null || bonus === null) {
-      toast({
-        variant: "destructive",
-        title: "Could not get referral code",
-        description: "Please log in to share your referral code.",
-      });
-      return;
-    }
-    const url = `${window.location.origin}/signup?ref=${refCode}`;
+    const url = window.location.origin;
     const message = `🎓 Check out Vidya EduCare! It's an amazing platform for mock tests and earning rewards. 
     
-Use my code ✨ ${refCode} ✨ to get a ₹${bonus} bonus when you join!
-
 Here's what you get:
 - 📚 Access to a huge library of mock tests.
 - 🏆 Win cash prizes on the live leaderboard.
@@ -139,14 +84,6 @@ Start your journey to success now: ${url}
         fallbackCopy();
     }
   };
-
-  if (bonus === null) {
-      return (
-        <div className="w-full max-w-6xl mx-auto flex items-center justify-center h-screen">
-          <Loader2 className="animate-spin text-primary" size={48} />
-        </div>
-      )
-  }
 
   return (
     <div className="w-full max-w-6xl mx-auto space-y-24 p-4">

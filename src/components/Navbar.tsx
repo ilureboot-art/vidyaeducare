@@ -18,8 +18,8 @@ const navItems = [
 export function Navbar() {
   const pathname = usePathname();
   
-  if (pathname.startsWith('/admin') || pathname.startsWith('/mock-test')) {
-    return null; // Don't render the main navbar in the admin section or during a test
+  if (pathname.startsWith('/admin') || pathname.startsWith('/mock-test') || pathname.startsWith('/quiz-bolt/play')) {
+    return null; // Don't render the main navbar in the admin section or during a game/test
   }
 
   return (

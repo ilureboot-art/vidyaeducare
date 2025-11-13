@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Trash2, Edit, BookCopy, FilePlus, ScrollText, ArrowRight, Save, Loader2 } from "lucide-react";
+import { MoreHorizontal, Trash2, Edit, BookCopy, FilePlus, ScrollText, ArrowRight, Save, Loader2, Upload, Wand2, Download } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -33,6 +33,8 @@ import { type TestSet, type Question } from "@/lib/question-bank";
 import type { AcademicConfig } from "@/lib/academic-config";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, doc, setDoc, deleteDoc } from "firebase/firestore";
+import Papa from "papaparse";
+import { generateQuestions, GenerateQuestionsInput } from "@/ai/flows/generate-questions-flow";
 
 
 const initialQuestionState: Omit<Question, 'id'> = {
@@ -50,6 +52,14 @@ const initialTestSetState: TestSet = {
   questions: [],
 };
 
+const initialAiInputState: GenerateQuestionsInput = {
+    topic: '',
+    board: 'SSC',
+    standard: '',
+    subject: '',
+    numQuestions: 10,
+};
+
 export default function TestSetManagementPage() {
   const { toast } = useToast();
 
@@ -57,9 +67,13 @@ export default function TestSetManagementPage() {
   const [academicConfig, setAcademicConfig] = useState<AcademicConfig | null>(null);
 
   const [isManualCreateOpen, setIsManualCreateOpen] = useState(false);
+  const [isAiGenerateOpen, setIsAiGenerateOpen] = useState(false);
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const [step, setStep] = useState(1);
   const [editingTestSet, setEditingTestSet] = useState<TestSet | null>(null);
+  const [aiInput, setAiInput] = useState<GenerateQuestionsInput>(initialAiInputState);
   
   const fetchData = async () => {
     // Fetch Test Sets
@@ -134,42 +148,39 @@ export default function TestSetManagementPage() {
     setEditingTestSet(currentTestSet => {
         if (!currentTestSet) return null;
 
-        const newQuestions = currentTestSet.questions.map((q, index) => {
-            if (index !== qIndex) {
-                return q; 
-            }
+        const newQuestions = [...currentTestSet.questions];
+        const updatedQuestion = { ...newQuestions[qIndex] };
 
-            const updatedQuestion = JSON.parse(JSON.stringify(q));
-
-            if (field === 'text') {
-                updatedQuestion.text[lang] = value;
-            } else if (field === 'option' && optionIndex !== undefined) {
-                updatedQuestion.options[lang][optionIndex] = value;
-            } else if (field === 'answer') {
-                updatedQuestion.correctAnswer[lang] = value;
-                if (lang === 'mr') {
-                    const selectedOptionIndex = updatedQuestion.options.mr.findIndex((opt: string) => opt === value);
-                    if (selectedOptionIndex !== -1) {
-                        updatedQuestion.correctAnswer.en = updatedQuestion.options.en[selectedOptionIndex];
-                    } else {
-                        updatedQuestion.correctAnswer.en = '';
-                    }
+        if (field === 'text') {
+            updatedQuestion.text = { ...updatedQuestion.text, [lang]: value };
+        } else if (field === 'option' && optionIndex !== undefined) {
+            const newOptions = { ...updatedQuestion.options };
+            const newLangOptions = [...newOptions[lang]];
+            newLangOptions[optionIndex] = value;
+            newOptions[lang] = newLangOptions;
+            updatedQuestion.options = newOptions;
+        } else if (field === 'answer') {
+            updatedQuestion.correctAnswer = { ...updatedQuestion.correctAnswer, [lang]: value };
+             if (lang === 'mr') {
+                const selectedOptionIndex = updatedQuestion.options.mr.findIndex((opt: string) => opt === value);
+                if (selectedOptionIndex !== -1) {
+                    updatedQuestion.correctAnswer.en = updatedQuestion.options.en[selectedOptionIndex];
+                } else {
+                    updatedQuestion.correctAnswer.en = '';
                 }
             }
-            return updatedQuestion;
-        });
-        
+        }
+        newQuestions[qIndex] = updatedQuestion;
         return { ...currentTestSet, questions: newQuestions };
     });
 };
 
-  
  const handleManualSubmit = async () => {
     if (!editingTestSet || !testSets) return;
 
     const finalQuestions = editingTestSet.questions
         .filter(q => q.text.en?.trim() !== '' || q.text.mr?.trim() !== '')
-        .map((q, i) => ({ ...q, id: q.id.startsWith('temp-') ? `Q-${editingTestSet.id}-${i}`: q.id }));
+        .map((q, i) => ({ ...q, id: q.id.startsWith('temp-') ? `Q-${editingTestSet.id.replace("NEW-", "")}-${i}`: q.id }));
 
     if (finalQuestions.length === 0) {
         toast({ variant: 'destructive', title: 'No Questions Added', description: 'Please add at least one complete question.' });
@@ -198,6 +209,78 @@ export default function TestSetManagementPage() {
         toast({ variant: 'destructive', title: "Error", description: 'Could not save the test set.' });
     }
 };
+
+const handleAiInputChange = (field: keyof GenerateQuestionsInput, value: string | number) => {
+    setAiInput(prev => ({...prev, [field]: value}));
+};
+
+const handleAiGenerate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!aiInput.subject || !aiInput.standard) {
+        toast({ variant: 'destructive', title: 'Missing Details', description: 'Please select a standard and subject.' });
+        return;
+    }
+    setIsGenerating(true);
+
+    try {
+        const result = await generateQuestions(aiInput);
+        const testSetName = `${aiInput.subject} - ${aiInput.topic}`;
+        setEditingTestSet({
+            id: `NEW-${Date.now()}`,
+            name: testSetName,
+            board: aiInput.board as TestSet['board'],
+            standard: aiInput.standard,
+            subject: aiInput.subject,
+            questions: result.questions
+        });
+        setStep(2); // Go directly to question editing
+        setIsAiGenerateOpen(false);
+        setIsManualCreateOpen(true);
+    } catch (error) {
+        console.error("AI Generation failed:", error);
+        toast({ variant: 'destructive', title: "AI Error", description: "Failed to generate questions. Please try again." });
+    } finally {
+        setIsGenerating(false);
+    }
+};
+
+const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.type === 'text/csv') {
+        Papa.parse(file, {
+            header: true,
+            skipEmptyLines: true,
+            complete: (results) => {
+                const parsedQuestions: Question[] = results.data.map((row: any, index: number) => ({
+                    id: `temp-upload-${index}`,
+                    text: { en: row.question_en || '', mr: row.question_mr || '' },
+                    options: {
+                        en: [row.option1_en || '', row.option2_en || '', row.option3_en || '', row.option4_en || ''],
+                        mr: [row.option1_mr || '', row.option2_mr || '', row.option3_mr || '', row.option4_mr || '']
+                    },
+                    correctAnswer: { en: row.correct_answer_en || '', mr: row.correct_answer_mr || '' }
+                }));
+
+                const newTestSet = { ...initialTestSetState, id: `NEW-UPLOAD-${Date.now()}`, questions: parsedQuestions, name: file.name.replace('.csv','') };
+                setEditingTestSet(newTestSet);
+                setIsUploadOpen(false);
+                setStep(1);
+                setIsManualCreateOpen(true);
+                 toast({ title: 'File Processed', description: `${parsedQuestions.length} questions loaded. Review and save.` });
+            },
+            error: (error) => {
+                 toast({ variant: 'destructive', title: 'CSV Error', description: error.message });
+            }
+        });
+    } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+        toast({ variant: 'destructive', title: 'File type not supported yet', description: 'DOCX file processing is a work in progress.' });
+    } else {
+        toast({ variant: 'destructive', title: 'Unsupported File Type', description: 'Please upload a CSV file.' });
+    }
+};
+
 
   if (!testSets || !academicConfig) {
     return (
@@ -310,7 +393,71 @@ export default function TestSetManagementPage() {
                         )}
                     </DialogContent>
                  </Dialog>
-                 <Button disabled title="AI features are temporarily disabled.">AI Generate (Disabled)</Button>
+
+                 <Dialog open={isAiGenerateOpen} onOpenChange={setIsAiGenerateOpen}>
+                     <DialogTrigger asChild>
+                         <Button><Wand2 className="mr-2 h-4 w-4" /> AI Generate</Button>
+                     </DialogTrigger>
+                     <DialogContent>
+                         <DialogHeader>
+                             <DialogTitle>Generate Questions with AI</DialogTitle>
+                             <DialogDescription>Let AI create a new test set for you based on a topic.</DialogDescription>
+                         </DialogHeader>
+                         <form onSubmit={handleAiGenerate} className="space-y-4">
+                            <div className="grid grid-cols-1 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="ai-topic">Chapter Name / Topic</Label>
+                                    <Input id="ai-topic" value={aiInput.topic} onChange={(e) => handleAiInputChange('topic', e.target.value)} placeholder="e.g., Gravitation" required/>
+                                </div>
+                                <div className="grid grid-cols-3 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="ai-board">Board</Label>
+                                        <Select value={aiInput.board} onValueChange={(val) => handleAiInputChange('board', val)}><SelectTrigger id="ai-board"><SelectValue/></SelectTrigger><SelectContent>{academicConfig.boards.map((b: string) => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent></Select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="ai-standard">Standard</Label>
+                                        <Select value={aiInput.standard} onValueChange={(val) => handleAiInputChange('standard', val)} required><SelectTrigger id="ai-standard"><SelectValue placeholder="Select..."/></SelectTrigger><SelectContent>{academicConfig.standards.map((s: string) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>
+                                    </div>
+                                     <div className="space-y-2">
+                                        <Label htmlFor="ai-subject">Subject</Label>
+                                        <Select value={aiInput.subject} onValueChange={(val) => handleAiInputChange('subject', val)} required><SelectTrigger id="ai-subject"><SelectValue placeholder="Select..."/></SelectTrigger><SelectContent>{academicConfig.subjects.map((s: string) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="ai-numQuestions">Number of Questions</Label>
+                                    <Input id="ai-numQuestions" type="number" value={aiInput.numQuestions} onChange={(e) => handleAiInputChange('numQuestions', Number(e.target.value))} min={1} max={50} required/>
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <Button type="submit" disabled={isGenerating}>
+                                    {isGenerating ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Generating...</> : 'Generate Questions'}
+                                </Button>
+                            </DialogFooter>
+                         </form>
+                     </DialogContent>
+                 </Dialog>
+
+                <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
+                    <DialogTrigger asChild>
+                        <Button variant="outline"><Upload className="mr-2 h-4 w-4"/> Upload File</Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                         <DialogHeader>
+                             <DialogTitle>Upload MCQs from File</DialogTitle>
+                             <DialogDescription>
+                                 Upload a CSV file with your questions. The questions will be loaded into the editor for you to review and save.
+                             </DialogDescription>
+                         </DialogHeader>
+                         <div className="space-y-4 py-4">
+                            <Input id="file-upload" type="file" accept=".csv, .docx" onChange={handleFileUpload} />
+                             <a href="/mcq_template.csv" download>
+                                <Button variant="link" className="p-0 h-auto">
+                                    <Download className="mr-2 h-4 w-4" /> Download CSV Template
+                                </Button>
+                            </a>
+                         </div>
+                    </DialogContent>
+                </Dialog>
               </div>
             </div>
         </CardHeader>

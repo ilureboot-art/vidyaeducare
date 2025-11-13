@@ -8,18 +8,29 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
-import { collection, addDoc, getDocs, doc, setDoc, deleteDoc } from "firebase/firestore";
-import { PlusCircle, Trash2, Puzzle, Loader2 } from "lucide-react";
+import { collection, addDoc, getDocs, doc, setDoc, deleteDoc, getDoc } from "firebase/firestore";
+import { PlusCircle, Trash2, Puzzle, Loader2, Save } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import type { TestSet } from "@/lib/question-bank";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { QuizClashTournament } from "@/lib/quiz-clash-data";
+import type { QuizClashTournament, QuizClashAutoCreateConfig } from "@/lib/quiz-clash-data";
+import { Switch } from "@/components/ui/switch";
+
+const initialAutoConfig: QuizClashAutoCreateConfig = {
+    enabled: false,
+    startTime: "20:00",
+    entryFee: 10,
+    questionCount: 15,
+    titlePrefix: "Daily Evening Clash",
+};
+
 
 export default function AdminQuizClashPage() {
     const { toast } = useToast();
     const [tournaments, setTournaments] = useState<QuizClashTournament[] | null>(null);
     const [testSets, setTestSets] = useState<TestSet[] | null>(null);
+    const [autoConfig, setAutoConfig] = useState<QuizClashAutoCreateConfig | null>(null);
 
     const [newTournament, setNewTournament] = useState({
         title: "",
@@ -29,13 +40,23 @@ export default function AdminQuizClashPage() {
     });
 
     const fetchTournamentsAndTestSets = async () => {
+        // Fetch tournaments
         const tournamentsSnapshot = await getDocs(collection(db, "quizClashTournaments"));
         const tournamentList = tournamentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as QuizClashTournament));
         setTournaments(tournamentList);
 
+        // Fetch test sets for manual creation
         const testSetsSnapshot = await getDocs(collection(db, "testSets"));
         const testSetList = testSetsSnapshot.docs.map(doc => doc.data() as TestSet);
         setTestSets(testSetList);
+        
+        // Fetch auto-create config
+        const configDoc = await getDoc(doc(db, "configs", "quizClash"));
+        if (configDoc.exists()) {
+            setAutoConfig(configDoc.data() as QuizClashAutoCreateConfig);
+        } else {
+            setAutoConfig(initialAutoConfig);
+        }
     };
 
     useEffect(() => {
@@ -49,6 +70,11 @@ export default function AdminQuizClashPage() {
 
     const handleSelectChange = (value: string) => {
         setNewTournament(prev => ({ ...prev, testSetId: value }));
+    };
+    
+    const handleAutoConfigChange = (field: keyof QuizClashAutoCreateConfig, value: any) => {
+        if (!autoConfig) return;
+        setAutoConfig(prev => prev ? ({...prev, [field]: value}) : null);
     };
 
     const handleCreateTournament = async (e: React.FormEvent) => {
@@ -76,7 +102,7 @@ export default function AdminQuizClashPage() {
         };
 
         try {
-            const docRef = await addDoc(collection(db, "quizClashTournaments"), tournamentData);
+            await addDoc(collection(db, "quizClashTournaments"), tournamentData);
             await fetchTournamentsAndTestSets();
             toast({ title: "Tournament Created!", description: `${newTournament.title} has been scheduled.` });
             setNewTournament({ title: "", startTime: "", entryFee: 10, testSetId: "" });
@@ -95,8 +121,19 @@ export default function AdminQuizClashPage() {
              toast({ variant: 'destructive', title: 'Error', description: 'Could not delete the tournament.' });
         }
     }
+    
+    const handleSaveAutoConfig = async () => {
+        if (!autoConfig) return;
+        try {
+            await setDoc(doc(db, "configs", "quizClash"), autoConfig);
+            toast({ title: "Settings Saved", description: "Automatic tournament scheduler settings have been updated." });
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not save the settings.' });
+        }
+    };
 
-    if (!tournaments || !testSets) {
+
+    if (!tournaments || !testSets || !autoConfig) {
         return <div className="flex justify-center items-center h-96"><Loader2 className="animate-spin text-primary" size={32} /></div>;
     }
 
@@ -106,7 +143,43 @@ export default function AdminQuizClashPage() {
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Create New Tournament</CardTitle>
+                    <CardTitle>Automatic Tournament Scheduler</CardTitle>
+                    <CardDescription>Configure settings to automatically create a new tournament every day with random questions.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="flex items-center space-x-2">
+                        <Switch id="scheduler-enabled" checked={autoConfig.enabled} onCheckedChange={(checked) => handleAutoConfigChange('enabled', checked)}/>
+                        <Label htmlFor="scheduler-enabled">Enable Daily Auto-Creation</Label>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t">
+                         <div className="space-y-2">
+                            <Label htmlFor="auto-title">Tournament Title Prefix</Label>
+                            <Input id="auto-title" value={autoConfig.titlePrefix} onChange={(e) => handleAutoConfigChange('titlePrefix', e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="auto-time">Daily Start Time</Label>
+                            <Input id="auto-time" type="time" value={autoConfig.startTime} onChange={(e) => handleAutoConfigChange('startTime', e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="auto-fee">Entry Fee (₹)</Label>
+                            <Input id="auto-fee" type="number" value={autoConfig.entryFee} onChange={(e) => handleAutoConfigChange('entryFee', Number(e.target.value))} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="auto-questions">Number of Questions</Label>
+                            <Input id="auto-questions" type="number" value={autoConfig.questionCount} onChange={(e) => handleAutoConfigChange('questionCount', Number(e.target.value))} />
+                        </div>
+                    </div>
+                </CardContent>
+                <CardContent>
+                     <Button onClick={handleSaveAutoConfig}>
+                        <Save className="mr-2" /> Save Auto-Scheduler Settings
+                    </Button>
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Create New Tournament Manually</CardTitle>
                 </CardHeader>
                 <form onSubmit={handleCreateTournament}>
                     <CardContent className="space-y-4">

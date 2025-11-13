@@ -13,3 +13,11 @@ export type QuizClashTournament = {
     status: 'scheduled' | 'live' | 'completed';
     winners?: { userId: string; rank: number; prize: number }[];
 };
+
+export type QuizClashAutoCreateConfig = {
+    enabled: boolean;
+    startTime: string;
+    entryFee: number;
+    questionCount: number;
+    titlePrefix: string;
+};

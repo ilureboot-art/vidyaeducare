@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { href: "/", label: "Home", icon: Home },
   { href: "/profile", label: "My Students", icon: Users },
-  { href: "/quiz-bolt", label: "Quiz Bolt", icon: Puzzle },
+  { href: "/quiz-clash", label: "Quiz Clash", icon: Puzzle },
   { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
   { href: "/store", label: "Store", icon: Store },
   { href: "/wallet", label: "Wallet", icon: Wallet },
@@ -18,7 +18,7 @@ const navItems = [
 export function Navbar() {
   const pathname = usePathname();
   
-  if (pathname.startsWith('/admin') || pathname.startsWith('/mock-test') || pathname.startsWith('/quiz-bolt/play')) {
+  if (pathname.startsWith('/admin') || pathname.startsWith('/mock-test') || pathname.startsWith('/quiz-clash/play')) {
     return null; // Don't render the main navbar in the admin section or during a game/test
   }
 

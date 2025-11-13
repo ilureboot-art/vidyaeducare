@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -12,6 +13,7 @@ import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
 import { collection, query, where, getDocs, doc, updateDoc, arrayUnion, runTransaction, serverTimestamp } from "firebase/firestore";
 import type { QuizClashTournament } from "@/lib/quiz-clash-data";
+import { Badge } from "@/components/ui/badge";
 
 
 function QuizClashPageContent() {
@@ -42,36 +44,43 @@ function QuizClashPageContent() {
     }
 
     try {
-        await runTransaction(db, async (transaction) => {
-            const userWalletRef = doc(db, "wallets", user.uid);
-            const tournamentRef = doc(db, "quizClashTournaments", tournament.id);
+        if (tournament.type === 'Pro') {
+            await runTransaction(db, async (transaction) => {
+                const userWalletRef = doc(db, "wallets", user.uid);
+                const tournamentRef = doc(db, "quizClashTournaments", tournament.id);
 
-            const userWalletDoc = await transaction.get(userWalletRef);
-            if (!userWalletDoc.exists() || userWalletDoc.data().balance < tournament.entryFee) {
-                throw new Error("Insufficient wallet balance.");
-            }
+                const userWalletDoc = await transaction.get(userWalletRef);
+                if (!userWalletDoc.exists() || userWalletDoc.data().balance < tournament.entryFee) {
+                    throw new Error("Insufficient wallet balance.");
+                }
 
-            // 1. Deduct fee and update wallet
-            const newBalance = userWalletDoc.data().balance - tournament.entryFee;
-            transaction.update(userWalletRef, { balance: newBalance });
+                // 1. Deduct fee and update wallet
+                const newBalance = userWalletDoc.data().balance - tournament.entryFee;
+                transaction.update(userWalletRef, { balance: newBalance });
 
-            // 2. Add user to tournament players list and update prize pool
-            transaction.update(tournamentRef, { 
-                registeredPlayers: arrayUnion(user.uid),
-                prizePool: (tournament.prizePool || 0) + tournament.entryFee,
-             });
+                // 2. Add user to tournament players list and update prize pool
+                transaction.update(tournamentRef, { 
+                    registeredPlayers: arrayUnion(user.uid),
+                    prizePool: (tournament.prizePool || 0) + tournament.entryFee,
+                });
 
-            // 3. Log user's transaction
-             const purchaseTxRef = doc(collection(db, "transactions"));
-             transaction.set(purchaseTxRef, {
-                user: user.uid,
-                amount: -tournament.entryFee,
-                date: serverTimestamp(),
-                description: `Entry Fee for Quiz Clash: ${tournament.title}`,
-                status: "Completed",
-                type: "Purchase",
+                // 3. Log user's transaction
+                const purchaseTxRef = doc(collection(db, "transactions"));
+                transaction.set(purchaseTxRef, {
+                    user: user.uid,
+                    amount: -tournament.entryFee,
+                    date: serverTimestamp(),
+                    description: `Entry Fee for Quiz Clash: ${tournament.title}`,
+                    status: "Completed",
+                    type: "Purchase",
+                });
             });
-        });
+        } else { // For Practice tournaments
+            const tournamentRef = doc(db, "quizClashTournaments", tournament.id);
+            await updateDoc(tournamentRef, {
+                registeredPlayers: arrayUnion(user.uid)
+            });
+        }
 
         toast({
             title: "Registration Successful!",
@@ -81,7 +90,7 @@ function QuizClashPageContent() {
         // Optimistically update UI
         setTournaments(prev => prev!.map(t => 
             t.id === tournament.id 
-                ? { ...t, registeredPlayers: [...t.registeredPlayers, user.uid], prizePool: t.prizePool + t.entryFee }
+                ? { ...t, registeredPlayers: [...t.registeredPlayers, user.uid], prizePool: t.type === 'Pro' ? t.prizePool + t.entryFee : t.prizePool }
                 : t
         ));
 
@@ -116,10 +125,10 @@ function QuizClashPageContent() {
             <CardTitle>How It Works</CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground space-y-2">
-            <p>1. Register for an upcoming tournament by paying the entry fee from your wallet.</p>
+            <p>1. Register for an upcoming tournament. Pro Clashes require an entry fee, Practice Clashes are free.</p>
             <p>2. Join the quiz at the scheduled time. All participants play at the same time.</p>
             <p>3. Answer as many questions correctly and as quickly as possible.</p>
-            <p>4. The top 4 players on the leaderboard win a share of the total prize pool!</p>
+            <p>4. Top players on the leaderboard win a share of the prize pool in Pro Clashes, or bragging rights in Practice Clashes!</p>
         </CardContent>
       </Card>
 
@@ -134,14 +143,19 @@ function QuizClashPageContent() {
                 return (
                     <Card key={tourney.id} className="shadow-md">
                     <CardHeader>
-                        <CardTitle>{tourney.title}</CardTitle>
-                        <CardDescription>
-                        Goes live at {new Date(tourney.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} on {new Date(tourney.startTime).toLocaleDateString()}
-                        </CardDescription>
+                        <div className="flex justify-between items-start">
+                             <div>
+                                <CardTitle>{tourney.title}</CardTitle>
+                                <CardDescription>
+                                Goes live at {new Date(tourney.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} on {new Date(tourney.startTime).toLocaleDateString()}
+                                </CardDescription>
+                            </div>
+                             <Badge variant={tourney.type === 'Pro' ? 'default' : 'secondary'}>{tourney.type} Clash</Badge>
+                        </div>
                     </CardHeader>
                     <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                         <div className="p-3 bg-muted/50 rounded-lg">
-                            <h4 className="font-bold text-lg text-primary">₹{tourney.entryFee}</h4>
+                            <h4 className="font-bold text-lg text-primary">{tourney.type === 'Pro' ? `₹${tourney.entryFee}`: 'FREE'}</h4>
                             <p className="text-xs text-muted-foreground">Entry Fee</p>
                         </div>
                         <div className="p-3 bg-muted/50 rounded-lg">
@@ -152,10 +166,17 @@ function QuizClashPageContent() {
                             <h4 className="font-bold text-lg">{tourney.registeredPlayers.length}</h4>
                             <p className="text-xs text-muted-foreground">Contestants</p>
                         </div>
-                        <div className="p-3 bg-green-100 dark:bg-green-900/50 rounded-lg">
-                            <h4 className="font-bold text-lg text-green-700 dark:text-green-300">₹{tourney.prizePool}</h4>
-                            <p className="text-xs text-muted-foreground">Current Prize Pool</p>
-                        </div>
+                        {tourney.type === 'Pro' ? (
+                            <div className="p-3 bg-green-100 dark:bg-green-900/50 rounded-lg">
+                                <h4 className="font-bold text-lg text-green-700 dark:text-green-300">₹{tourney.prizePool}</h4>
+                                <p className="text-xs text-muted-foreground">Current Prize Pool</p>
+                            </div>
+                        ) : (
+                             <div className="p-3 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
+                                <h4 className="font-bold text-lg text-blue-700 dark:text-blue-300">Practice</h4>
+                                <p className="text-xs text-muted-foreground">For Glory</p>
+                            </div>
+                        )}
                     </CardContent>
                     <CardFooter>
                         {isRegistered ? (
@@ -168,7 +189,7 @@ function QuizClashPageContent() {
                              )
                         ) : (
                             <Button className="w-full" onClick={() => handleRegister(tourney)}>
-                                Register Now (₹{tourney.entryFee})
+                                {tourney.type === 'Pro' ? `Register Now (₹${tourney.entryFee})` : 'Register for Free'}
                             </Button>
                         )}
                     </CardFooter>

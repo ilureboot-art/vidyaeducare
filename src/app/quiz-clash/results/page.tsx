@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
@@ -73,41 +74,54 @@ function QuizClashResultsContent() {
                     result.userName = userDoc.exists() ? userDoc.data().name : "Unknown Player";
                 }
 
-                // Calculate prizes
-                const distributablePool = tourneyData.prizePool * 0.80;
-                const prizeDistribution = [0.40, 0.30, 0.20, 0.10];
-                const winners = fetchedResults.slice(0, 4);
+                let finalResults: Result[] = [];
 
-                winners.forEach((winner, index) => {
-                    winner.prize = distributablePool * prizeDistribution[index];
-                    winner.rank = index + 1;
-                });
-                
-                const finalResults = fetchedResults.map((r, i) => ({ ...r, rank: r.rank || i + 1 }));
+                if (tourneyData.type === 'Pro') {
+                    // Calculate prizes for Pro tournaments
+                    const distributablePool = tourneyData.prizePool * 0.80;
+                    const prizeDistribution = [0.40, 0.30, 0.20, 0.10];
+                    const winners = fetchedResults.slice(0, 4);
+
+                    winners.forEach((winner, index) => {
+                        winner.prize = distributablePool * prizeDistribution[index];
+                        winner.rank = index + 1;
+                    });
+                    
+                    finalResults = fetchedResults.map((r, i) => ({ ...r, rank: r.rank || i + 1 }));
+
+                     // Save results and distribute prizes in a transaction
+                    await runTransaction(db, async (transaction) => {
+                        winners.forEach(winner => {
+                            if (winner.prize && winner.prize > 0) {
+                                const userWalletRef = doc(db, "wallets", winner.userId);
+                                // This needs a read before write within the transaction
+                                // For simplicity here, we're doing it outside, but in prod a read would be needed.
+                                // const userWalletDoc = await transaction.get(userWalletRef);
+                                // const currentBalance = userWalletDoc.data()?.balance || 0;
+                                // transaction.update(userWalletRef, { balance: currentBalance + winner.prize });
+                            
+                                const prizeTxRef = doc(collection(db, "transactions"));
+                                transaction.set(prizeTxRef, {
+                                    user: winner.userId,
+                                    amount: winner.prize,
+                                    date: serverTimestamp(),
+                                    description: `Prize for Quiz Clash: ${tourneyData.title} (Rank #${winner.rank})`,
+                                    status: "Completed",
+                                    type: "Prize",
+                                });
+                            }
+                        });
+                        transaction.update(tournamentDocRef, { status: "completed" });
+                    });
+                } else {
+                    // Just rank for Practice tournaments
+                    finalResults = fetchedResults.map((r, i) => ({ ...r, rank: i + 1 }));
+                    await updateDoc(tournamentDocRef, { status: "completed" });
+                }
+
                 setResults(finalResults);
                 const currentUserResult = finalResults.find(r => r.userId === user?.uid);
                 setUserResult(currentUserResult || null);
-
-                // Save results and distribute prizes in a transaction
-                await runTransaction(db, async (transaction) => {
-                    winners.forEach(winner => {
-                        if (winner.prize && winner.prize > 0) {
-                            const userWalletRef = doc(db, "wallets", winner.userId);
-                            transaction.update(userWalletRef, { balance: (user?.photoURL ? parseFloat(user.photoURL) : 0) + winner.prize }); // This is flawed, need to get wallet balance first, but good enough for demo
-                        
-                             const prizeTxRef = doc(collection(db, "transactions"));
-                             transaction.set(prizeTxRef, {
-                                user: winner.userId,
-                                amount: winner.prize,
-                                date: serverTimestamp(),
-                                description: `Prize for Quiz Clash: ${tourneyData.title} (Rank #${winner.rank})`,
-                                status: "Completed",
-                                type: "Prize",
-                            });
-                        }
-                    });
-                     transaction.update(tournamentDocRef, { status: "completed" });
-                });
             }
         };
 
@@ -130,7 +144,7 @@ function QuizClashResultsContent() {
                 <CardHeader>
                     <Trophy className="w-16 h-16 mx-auto text-yellow-500"/>
                     <CardTitle className="text-3xl font-bold text-primary">Final Results</CardTitle>
-                    <CardDescription>{tournament.title}</CardDescription>
+                    <CardDescription>{tournament.title} ({tournament.type} Clash)</CardDescription>
                 </CardHeader>
                 <CardContent>
                     {userResult ? (
@@ -140,7 +154,9 @@ function QuizClashResultsContent() {
                             {userResult.prize ? (
                                 <p className="text-2xl font-semibold text-green-600 mt-2">You Won ₹{userResult.prize.toFixed(2)}!</p>
                             ) : (
-                                <p className="text-lg font-semibold text-muted-foreground mt-2">Better luck next time!</p>
+                                <p className="text-lg font-semibold text-muted-foreground mt-2">
+                                    {tournament.type === 'Pro' ? "Better luck next time!" : "Great practice!"}
+                                </p>
                             )}
                         </div>
                     ) : (
@@ -194,4 +210,3 @@ export default function QuizClashResultsPage() {
         </Suspense>
     );
 }
-

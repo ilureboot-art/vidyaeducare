@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -16,10 +17,12 @@ import type { TestSet } from "@/lib/question-bank";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { QuizClashTournament, QuizClashAutoCreateConfig } from "@/lib/quiz-clash-data";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 
 const initialAutoConfig: QuizClashAutoCreateConfig = {
     enabled: false,
     startTime: "20:00",
+    type: "Pro",
     entryFee: 10,
     questionCount: 15,
     titlePrefix: "Daily Evening Clash",
@@ -35,6 +38,7 @@ export default function AdminQuizClashPage() {
     const [newTournament, setNewTournament] = useState({
         title: "",
         startTime: "",
+        type: "Pro" as "Pro" | "Practice",
         entryFee: 10,
         testSetId: ""
     });
@@ -68,13 +72,24 @@ export default function AdminQuizClashPage() {
         setNewTournament(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleSelectChange = (value: string) => {
-        setNewTournament(prev => ({ ...prev, testSetId: value }));
+    const handleSelectChange = (name: keyof typeof newTournament, value: string) => {
+        const updatedTournament = { ...newTournament, [name]: value };
+        if (name === 'type' && value === 'Practice') {
+            updatedTournament.entryFee = 0;
+        }
+        setNewTournament(updatedTournament);
     };
     
     const handleAutoConfigChange = (field: keyof QuizClashAutoCreateConfig, value: any) => {
         if (!autoConfig) return;
-        setAutoConfig(prev => prev ? ({...prev, [field]: value}) : null);
+        setAutoConfig(prev => {
+            if (!prev) return null;
+            const updatedConfig = {...prev, [field]: value};
+            if (field === 'type' && value === 'Practice') {
+                updatedConfig.entryFee = 0;
+            }
+            return updatedConfig;
+        });
     };
 
     const handleCreateTournament = async (e: React.FormEvent) => {
@@ -93,7 +108,8 @@ export default function AdminQuizClashPage() {
         const tournamentData: Omit<QuizClashTournament, 'id'> = {
             title: newTournament.title,
             startTime: new Date(newTournament.startTime).toISOString(),
-            entryFee: Number(newTournament.entryFee),
+            type: newTournament.type,
+            entryFee: newTournament.type === 'Practice' ? 0 : Number(newTournament.entryFee),
             testSetId: newTournament.testSetId,
             questionCount: selectedTestSet.questions.length,
             registeredPlayers: [],
@@ -105,7 +121,7 @@ export default function AdminQuizClashPage() {
             await addDoc(collection(db, "quizClashTournaments"), tournamentData);
             await fetchTournamentsAndTestSets();
             toast({ title: "Tournament Created!", description: `${newTournament.title} has been scheduled.` });
-            setNewTournament({ title: "", startTime: "", entryFee: 10, testSetId: "" });
+            setNewTournament({ title: "", startTime: "", type: "Pro", entryFee: 10, testSetId: "" });
         } catch (error) {
             console.error("Error creating tournament:", error);
             toast({ variant: 'destructive', title: 'Error', description: 'Could not create the tournament.' });
@@ -125,7 +141,11 @@ export default function AdminQuizClashPage() {
     const handleSaveAutoConfig = async () => {
         if (!autoConfig) return;
         try {
-            await setDoc(doc(db, "configs", "quizClash"), autoConfig);
+            const configToSave = {
+                ...autoConfig,
+                entryFee: autoConfig.type === 'Practice' ? 0 : autoConfig.entryFee,
+            };
+            await setDoc(doc(db, "configs", "quizClash"), configToSave);
             toast({ title: "Settings Saved", description: "Automatic tournament scheduler settings have been updated." });
         } catch (error) {
             toast({ variant: 'destructive', title: 'Error', description: 'Could not save the settings.' });
@@ -151,10 +171,20 @@ export default function AdminQuizClashPage() {
                         <Switch id="scheduler-enabled" checked={autoConfig.enabled} onCheckedChange={(checked) => handleAutoConfigChange('enabled', checked)}/>
                         <Label htmlFor="scheduler-enabled">Enable Daily Auto-Creation</Label>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 pt-4 border-t">
                          <div className="space-y-2">
                             <Label htmlFor="auto-title">Tournament Title Prefix</Label>
                             <Input id="auto-title" value={autoConfig.titlePrefix} onChange={(e) => handleAutoConfigChange('titlePrefix', e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="auto-type">Type</Label>
+                            <Select value={autoConfig.type} onValueChange={(v) => handleAutoConfigChange('type', v as 'Pro' | 'Practice')}>
+                                <SelectTrigger><SelectValue/></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Pro">Pro (Paid)</SelectItem>
+                                    <SelectItem value="Practice">Practice (Free)</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="auto-time">Daily Start Time</Label>
@@ -162,7 +192,7 @@ export default function AdminQuizClashPage() {
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="auto-fee">Entry Fee (₹)</Label>
-                            <Input id="auto-fee" type="number" value={autoConfig.entryFee} onChange={(e) => handleAutoConfigChange('entryFee', Number(e.target.value))} />
+                            <Input id="auto-fee" type="number" value={autoConfig.entryFee} onChange={(e) => handleAutoConfigChange('entryFee', Number(e.target.value))} disabled={autoConfig.type === 'Practice'}/>
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="auto-questions">Number of Questions</Label>
@@ -182,29 +212,37 @@ export default function AdminQuizClashPage() {
                     <CardTitle>Create New Tournament Manually</CardTitle>
                 </CardHeader>
                 <form onSubmit={handleCreateTournament}>
-                    <CardContent className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="title">Tournament Name</Label>
-                                <Input id="title" name="title" value={newTournament.title} onChange={handleInputChange} required />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="entryFee">Entry Fee (₹)</Label>
-                                <Input id="entryFee" name="entryFee" type="number" value={newTournament.entryFee} onChange={handleInputChange} required />
-                            </div>
-                             <div className="space-y-2">
-                                <Label htmlFor="startTime">Start Time</Label>
-                                <Input id="startTime" name="startTime" type="datetime-local" value={newTournament.startTime} onChange={handleInputChange} required />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="testSetId">Question Set</Label>
-                                <Select name="testSetId" value={newTournament.testSetId} onValueChange={handleSelectChange} required>
-                                    <SelectTrigger><SelectValue placeholder="Select a test set..."/></SelectTrigger>
-                                    <SelectContent>
-                                        {testSets.map(ts => <SelectItem key={ts.id} value={ts.id}>{ts.name} ({ts.questions.length} Qs)</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                            </div>
+                    <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                        <div className="space-y-2 lg:col-span-2">
+                            <Label htmlFor="title">Tournament Name</Label>
+                            <Input id="title" name="title" value={newTournament.title} onChange={handleInputChange} required />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="type">Type</Label>
+                            <Select name="type" value={newTournament.type} onValueChange={(v) => handleSelectChange('type', v as 'Pro' | 'Practice')} required>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Pro">Pro (Paid)</SelectItem>
+                                    <SelectItem value="Practice">Practice (Free)</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="entryFee">Entry Fee (₹)</Label>
+                            <Input id="entryFee" name="entryFee" type="number" value={newTournament.entryFee} onChange={handleInputChange} required disabled={newTournament.type === 'Practice'}/>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="startTime">Start Time</Label>
+                            <Input id="startTime" name="startTime" type="datetime-local" value={newTournament.startTime} onChange={handleInputChange} required />
+                        </div>
+                         <div className="space-y-2 lg:col-span-full">
+                            <Label htmlFor="testSetId">Question Set</Label>
+                            <Select name="testSetId" value={newTournament.testSetId} onValueChange={(v) => handleSelectChange('testSetId', v)} required>
+                                <SelectTrigger><SelectValue placeholder="Select a test set..."/></SelectTrigger>
+                                <SelectContent>
+                                    {testSets.map(ts => <SelectItem key={ts.id} value={ts.id}>{ts.name} ({ts.questions.length} Qs)</SelectItem>)}
+                                </SelectContent>
+                            </Select>
                         </div>
                     </CardContent>
                     <CardContent>
@@ -224,6 +262,7 @@ export default function AdminQuizClashPage() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Name</TableHead>
+                                <TableHead>Type</TableHead>
                                 <TableHead>Start Time</TableHead>
                                 <TableHead>Entry Fee</TableHead>
                                 <TableHead>Players</TableHead>
@@ -234,6 +273,7 @@ export default function AdminQuizClashPage() {
                             {tournaments.map(t => (
                                 <TableRow key={t.id}>
                                     <TableCell>{t.title}</TableCell>
+                                     <TableCell><Badge variant={t.type === 'Pro' ? 'default' : 'secondary'}>{t.type}</Badge></TableCell>
                                     <TableCell>{format(new Date(t.startTime), 'P p')}</TableCell>
                                     <TableCell>₹{t.entryFee}</TableCell>
                                     <TableCell>{t.registeredPlayers.length}</TableCell>

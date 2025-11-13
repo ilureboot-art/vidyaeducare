@@ -5,6 +5,7 @@ export type QuizClashTournament = {
     id: string;
     title: string;
     startTime: string;
+    type: 'Pro' | 'Practice';
     entryFee: number;
     questionCount: number;
     testSetId: string;
@@ -17,6 +18,7 @@ export type QuizClashTournament = {
 export type QuizClashAutoCreateConfig = {
     enabled: boolean;
     startTime: string;
+    type: 'Pro' | 'Practice';
     entryFee: number;
     questionCount: number;
     titlePrefix: string;

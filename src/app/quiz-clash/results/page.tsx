@@ -10,7 +10,7 @@ import { Loader2, Trophy, Award, Users, IndianRupee } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, collection, query, where, getDocs, orderBy, writeBatch, runTransaction, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, getDocs, orderBy, updateDoc, runTransaction, serverTimestamp } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import type { QuizClashTournament } from "@/lib/quiz-clash-data";
 

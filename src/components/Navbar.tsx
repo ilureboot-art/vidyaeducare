@@ -3,15 +3,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, Store, Users, Wallet, Home, BrainCircuit, Gamepad2, Zap, ShieldCheck, LayoutDashboard, User, Trophy } from "lucide-react";
+import { BookOpen, Store, Users, Wallet, Home, BrainCircuit, Gamepad2, Zap, ShieldCheck, LayoutDashboard, User, Trophy, Puzzle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/", label: "Home", icon: Home },
   { href: "/profile", label: "My Students", icon: Users },
+  { href: "/quiz-bolt", label: "Quiz Bolt", icon: Puzzle },
   { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
   { href: "/store", label: "Store", icon: Store },
-  { href: "/referbolt", label: "ReferBolt", icon: Zap },
   { href: "/wallet", label: "Wallet", icon: Wallet },
 ];
 

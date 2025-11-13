@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { RefreshCw, Users, IndianRupee, Repeat, Loader2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, query } from "firebase/firestore";
+import { collection, getDocs, query, Timestamp } from "firebase/firestore";
 
 type Cycle = {
   id: string;
@@ -24,10 +24,19 @@ type Stats = {
   activeReferrers: number;
 }
 
+type Referral = {
+    id: string;
+    referrer: string;
+    newUser: string;
+    date: string;
+    commission: string;
+    status: string;
+}
+
 export default function ReferBoltManagementPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [cycles, setCycles] = useState<Cycle[] | null>(null);
-  const [referrals, setReferrals] = useState<any[] | null>(null);
+  const [referrals, setReferrals] = useState<Referral[] | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -35,7 +44,7 @@ export default function ReferBoltManagementPage() {
         let totalCycles = 0;
         let totalCommissions = 0;
         const cycleList: Cycle[] = [];
-        const referralList: any[] = [];
+        const referralList: Referral[] = [];
         let activeReferrers = 0;
 
         referboltSnapshot.forEach(doc => {
@@ -62,11 +71,12 @@ export default function ReferBoltManagementPage() {
         transactionsSnapshot.forEach(doc => {
             const tx = doc.data();
             if (tx.type === 'Referral Bonus') {
+                const date = tx.date instanceof Timestamp ? tx.date.toDate().toISOString() : tx.date;
                 referralList.push({
                     id: doc.id,
                     referrer: tx.user,
                     newUser: tx.description.split(' for ')[1] || 'N/A',
-                    date: new Date(tx.date.seconds * 1000).toISOString(),
+                    date: date,
                     commission: `₹${tx.amount}`,
                     status: tx.status
                 });
@@ -197,7 +207,7 @@ export default function ReferBoltManagementPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-                {referrals.length > 0 ? referrals.slice(0, 10).map((ref: any) => (
+                {referrals.length > 0 ? referrals.slice(0, 10).map((ref) => (
                      <TableRow key={ref.id}>
                         <TableCell className="font-medium">{ref.referrer}</TableCell>
                         <TableCell>{ref.newUser}</TableCell>

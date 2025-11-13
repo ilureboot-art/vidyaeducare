@@ -8,18 +8,19 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Archive, Search, Send, Loader2 } from "lucide-react";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, doc, updateDoc, addDoc, serverTimestamp, query, orderBy } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, addDoc, serverTimestamp, query, orderBy, Timestamp } from "firebase/firestore";
 
 type Message = {
     from: 'user' | 'admin';
     text: string;
-    timestamp?: any;
+    timestamp?: Timestamp;
 };
 
 type Chat = {
     id: string;
     user: string;
     lastMessage: string;
+    lastMessageTimestamp?: Timestamp;
     unread: boolean;
     avatar: string;
     messages: Message[];
@@ -67,7 +68,7 @@ export default function ChatManagementPage() {
         e.preventDefault();
         if (!reply.trim() || !activeChat || !chats) return;
 
-        const newMessage: Message = { from: 'admin', text: reply, timestamp: serverTimestamp() };
+        const newMessage: Message = { from: 'admin', text: reply, timestamp: serverTimestamp() as Timestamp };
         
         const messagesCollectionRef = collection(db, "chats", activeChat.id, "messages");
         await addDoc(messagesCollectionRef, newMessage);
@@ -80,7 +81,7 @@ export default function ChatManagementPage() {
         
         await fetchChats();
         // Manually update active chat to show the new message instantly
-        setActiveChat(prev => prev ? ({...prev, messages: [...prev.messages, {...newMessage, timestamp: new Date()}]}) : null);
+        setActiveChat(prev => prev ? ({...prev, messages: [...prev.messages, {...newMessage, timestamp: new Date() as any}]}) : null);
         setReply("");
     };
     

@@ -14,7 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, onSnapshot } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, DocumentData } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 const benefits = [
@@ -29,7 +29,7 @@ function ReferBoltPageContent() {
   const { toast } = useToast();
   const { user } = useAuth();
   
-  const [data, setData] = useState<any | null>(null);
+  const [data, setData] = useState<DocumentData | null | { isSubscribed: boolean }>({ isSubscribed: false });
   const [autoRenew, setAutoRenew] = useState(false);
 
   useEffect(() => {
@@ -49,7 +49,7 @@ function ReferBoltPageContent() {
   }, [user]);
 
   const handleShare = async () => {
-    if (!data) return;
+    if (!data || !('referralCode' in data)) return;
     const referralCode = data.referralCode;
     const shareUrl = `${window.location.origin}/signup?ref=${referralCode}`;
     const benefitsText = benefits.map(b => `✅ ${b.text}`).join("\n");

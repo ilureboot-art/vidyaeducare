@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, getDocs, Timestamp } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 
@@ -40,10 +40,19 @@ const bonusTiers = [
     { target: 100, bonus: 5 },
 ];
 
+interface ReferralData {
+    totalCommission: number;
+    totalReferrals: number;
+    dailySales: number;
+    monthlySales: number;
+    salesHistory: { month: string; sales: number }[];
+    recentReferrals: { id: string; name: string; date: string; commission: number }[];
+}
+
 function IBADashboardPageContent() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const [referralData, setReferralData] = useState<any | null>(null);
+  const [referralData, setReferralData] = useState<ReferralData | null>(null);
   const [ibaReferralCode, setIbaReferralCode] = useState<string | null>(null);
 
   useEffect(() => {
@@ -61,10 +70,11 @@ function IBADashboardPageContent() {
 
             const recentReferrals = querySnapshot.docs.map(d => {
                 const data = d.data();
+                const date = data.date instanceof Timestamp ? data.date.toDate().toISOString() : data.date;
                 return {
                     id: d.id,
                     name: data.description.split(' from ')[1] || data.description.split(' for ')[1] || 'Unknown User',
-                    date: new Date(data.date.seconds * 1000).toISOString(),
+                    date: date,
                     commission: data.amount,
                 };
             });
@@ -306,7 +316,7 @@ Don't miss out on the best way to prepare for your exams and earn rewards!
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {referralData.recentReferrals.length > 0 ? referralData.recentReferrals.map((ref: any) => (
+                            {referralData.recentReferrals.length > 0 ? referralData.recentReferrals.map((ref) => (
                                 <TableRow key={ref.id}>
                                     <TableCell>{ref.name}</TableCell>
                                     <TableCell>{new Date(ref.date).toLocaleDateString()}</TableCell>

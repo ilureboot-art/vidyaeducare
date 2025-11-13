@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import type { AppNotification } from "@/lib/notifications";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, query, where, orderBy } from "firebase/firestore";
+import { collection, getDocs, query, where, orderBy, Timestamp } from "firebase/firestore";
 
 const getIconForType = (type: string) => {
     switch(type) {
@@ -32,7 +32,11 @@ export default function AdminNotificationsPage() {
             const notifsRef = collection(db, "notifications");
             const q = query(notifsRef, where("userId", "==", "admin"), orderBy("timestamp", "desc"));
             const querySnapshot = await getDocs(q);
-            const notifs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), timestamp: doc.data().timestamp.toDate().toISOString() } as AppNotification));
+            const notifs = querySnapshot.docs.map(doc => {
+                const data = doc.data();
+                const timestamp = data.timestamp instanceof Timestamp ? data.timestamp.toDate().toISOString() : data.timestamp;
+                return { id: doc.id, ...data, timestamp } as AppNotification
+            });
             setNotifications(notifs);
         };
         fetchNotifications();

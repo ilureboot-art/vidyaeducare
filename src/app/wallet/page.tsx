@@ -34,7 +34,7 @@ import { CopyButton } from "@/components/CopyButton";
 import { format } from "date-fns";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, collection, addDoc, query, where, orderBy, limit, onSnapshot, serverTimestamp, runTransaction } from "firebase/firestore";
+import { doc, getDoc, collection, addDoc, query, where, orderBy, limit, onSnapshot, serverTimestamp, runTransaction, Timestamp } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 const getStatusBadgeVariant = (status: string) => {
@@ -95,7 +95,11 @@ function WalletPageContent() {
         const txsRef = collection(db, "transactions");
         const q = query(txsRef, where("user", "==", user.uid), orderBy("date", "desc"), limit(5));
         const unsubTransactions = onSnapshot(q, (querySnapshot) => {
-            const transactionList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
+            const transactionList: Transaction[] = querySnapshot.docs.map(d => {
+                const data = d.data();
+                const date = data.date instanceof Timestamp ? data.date.toDate().toISOString() : data.date;
+                return { id: d.id, ...data, date } as Transaction;
+            });
             setTransactions(transactionList);
         });
 
@@ -120,7 +124,7 @@ function WalletPageContent() {
         return;
     }
 
-    const newTransaction: Omit<Transaction, 'id' | 'date'> & { date: any } = {
+    const newTransaction = {
         type: 'deposit',
         description: 'Fund Deposit Request',
         amount: amount,
@@ -192,7 +196,7 @@ function WalletPageContent() {
             // Deduct amount from wallet immediately
             transaction.update(walletRef, { balance: currentBalance - amount });
 
-            const newWithdrawalRequest: Omit<Transaction, 'id' | 'date'> & { date: any } = {
+            const newWithdrawalRequest = {
                 type: 'withdrawal',
                 description: 'Withdrawal Request',
                 amount: -amount,
@@ -350,7 +354,7 @@ function WalletPageContent() {
             <h3 className="font-semibold text-lg text-center">Recent Activity</h3>
             {transactions && transactions.length > 0 ? (
                 <div className="space-y-2">
-                    {transactions.map((tx: any) => (
+                    {transactions.map((tx) => (
                          <div key={tx.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                             <div className="flex items-center gap-3">
                                 <div className={`p-2 rounded-full ${tx.amount >= 0 ? 'bg-green-100 dark:bg-green-900' : 'bg-red-100 dark:bg-red-900'}`}>
@@ -360,7 +364,7 @@ function WalletPageContent() {
                                 </div>
                                 <div>
                                     <p className="font-medium">{tx.description}</p>
-                                    <p className="text-xs text-muted-foreground">{format(tx.date.toDate(), 'P')}</p>
+                                    <p className="text-xs text-muted-foreground">{format(new Date(tx.date), 'P')}</p>
                                 </div>
                             </div>
                             <div className="text-right">

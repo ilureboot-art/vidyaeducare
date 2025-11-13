@@ -25,7 +25,7 @@ import type { StudentProfile } from "@/lib/student-data";
 import type { ScheduledTest } from "@/lib/test-schedule";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, setDoc, collection, getDocs, deleteDoc, updateDoc, query, where } from "firebase/firestore";
+import { doc, getDoc, setDoc, collection, getDocs, deleteDoc, updateDoc, query, where, DocumentData } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 
@@ -34,7 +34,7 @@ function ProfilePageContent() {
     const router = useRouter();
     const { user } = useAuth();
     
-    const [parentProfile, setParentProfile] = useState<any | null>(null);
+    const [parentProfile, setParentProfile] = useState<DocumentData | null>(null);
     const [students, setStudents] = useState<StudentProfile[] | null>(null);
     const [validCodes, setValidCodes] = useState<string[] | null>(null);
     const [allScheduledTests, setAllScheduledTests] = useState<ScheduledTest[] | null>(null);

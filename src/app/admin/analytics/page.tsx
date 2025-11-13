@@ -8,6 +8,12 @@ import { Users, Gamepad2, IndianRupee, Loader2 } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, query, where, Timestamp } from "firebase/firestore";
 
+interface ChartData {
+    name: string;
+    users?: number;
+    revenue?: number;
+}
+
 const getLast7Days = () => {
     const dates = [];
     for (let i = 6; i >= 0; i--) {
@@ -22,8 +28,8 @@ export default function AnalyticsPage() {
   const [activeUsers, setActiveUsers] = useState<number | null>(null);
   const [gamesPlayed, setGamesPlayed] = useState<number | null>(null);
   const [todaysRevenue, setTodaysRevenue] = useState<number | null>(null);
-  const [userActivityData, setUserActivityData] = useState<any[] | null>(null);
-  const [revenueData, setRevenueData] = useState<any[] | null>(null);
+  const [userActivityData, setUserActivityData] = useState<ChartData[] | null>(null);
+  const [revenueData, setRevenueData] = useState<ChartData[] | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -61,12 +67,12 @@ export default function AnalyticsPage() {
                     users: snapshot.size
                 };
             });
-            const fetchedUserActivity = await Promise.all(activityPromises);
+            const fetchedUserActivity: ChartData[] = await Promise.all(activityPromises);
             setUserActivityData(fetchedUserActivity);
 
 
             // Weekly revenue (mocked for now as it's more complex)
-            const serverRevenueData = [
+            const serverRevenueData: ChartData[] = [
               { name: 'Week 1', revenue: 4000 },
               { name: 'Week 2', revenue: 3000 },
               { name: 'Week 3', revenue: 5000 },

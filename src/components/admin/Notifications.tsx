@@ -13,7 +13,7 @@ import { Bell, CheckCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import type { AppNotification } from "@/lib/notifications";
-import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
+import { collection, query, where, onSnapshot, orderBy, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 export function Notifications() {
@@ -25,7 +25,11 @@ export function Notifications() {
     const q = query(notifsRef, where("userId", "==", 'admin'), orderBy("timestamp", "desc"));
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
-        const notifications = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), timestamp: doc.data().timestamp.toDate().toISOString() } as AppNotification));
+        const notifications = querySnapshot.docs.map(doc => {
+            const data = doc.data();
+            const timestamp = data.timestamp instanceof Timestamp ? data.timestamp.toDate().toISOString() : data.timestamp;
+            return { id: doc.id, ...data, timestamp } as AppNotification;
+        });
         setAdminNotifications(notifications);
         setUnreadCount(notifications.filter(n => n.status === 'unread').length);
     });

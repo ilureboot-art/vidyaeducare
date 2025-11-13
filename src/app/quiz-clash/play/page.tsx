@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -19,43 +19,71 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, HelpCircle, RefreshCw, Star, Trophy, X, Check, Timer, Coins, ShieldHalf, BrainCircuit, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ProtectedRoute from "@/components/ProtectedRoute";
-
-const prizeLadder = [
-    { q: 1, amount: 100 }, { q: 2, amount: 200 }, { q: 3, amount: 300 }, { q: 4, amount: 500 },
-    { q: 5, amount: 1000, safe: true }, { q: 6, amount: 2000 }, { q: 7, amount: 4000 }, { q: 8, amount: 8000 },
-    { q: 9, amount: 16000 }, { q: 10, amount: 32000, safe: true }, { q: 11, amount: 64000 }, { q: 12, amount: 125000 },
-    { q: 13, amount: 250000 }, { q: 14, amount: 500000 }, { q: 15, amount: 1000000 }
-];
-
-const mockQuestions = prizeLadder.map(p => ({
-    id: `q${p.q}`,
-    text: `This is dummy question number ${p.q}. What is the capital of France?`,
-    options: ["Berlin", "Madrid", "Paris", "Rome"],
-    correctAnswer: "Paris"
-}));
+import { useAuth } from "@/context/AuthContext";
+import { db } from "@/lib/firebase";
+import { doc, getDoc, collection, addDoc, serverTimestamp, runTransaction } from "firebase/firestore";
+import type { QuizClashTournament } from "@/lib/quiz-clash-data";
+import type { TestSet, Question } from "@/lib/question-bank";
 
 type Lifeline = "fiftyFifty" | "switchQuestion" | "aiHint";
+type GameState = "loading" | "playing" | "finished";
 
 function QuizClashGameContent() {
     const { toast } = useToast();
     const router = useRouter();
-
-    const [isLoading, setIsLoading] = useState(true);
-    const [questions, setQuestions] = useState(mockQuestions);
+    const searchParams = useSearchParams();
+    const { user } = useAuth();
+    
+    const [gameState, setGameState] = useState<GameState>("loading");
+    const [tournament, setTournament] = useState<QuizClashTournament | null>(null);
+    const [questions, setQuestions] = useState<Question[]>([]);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [selectedOption, setSelectedOption] = useState<string | null>(null);
     const [isAnswerLocked, setIsAnswerLocked] = useState(false);
     const [timeLeft, setTimeLeft] = useState(30);
     const [usedLifelines, setUsedLifelines] = useState<Lifeline[]>([]);
     const [isQuitConfirmOpen, setIsQuitConfirmOpen] = useState(false);
+    const [finalScore, setFinalScore] = useState(0);
+    const [finalTime, setFinalTime] = useState(0);
     
-    useEffect(() => {
-        // Fetch questions for the tournament from the backend
-        setIsLoading(false);
-    }, []);
+    const tournamentId = searchParams.get('tournamentId');
 
     useEffect(() => {
-        if (isAnswerLocked || isLoading) return;
+        if (!tournamentId || !user) {
+            router.push('/quiz-clash');
+            return;
+        }
+
+        const fetchGameData = async () => {
+            const tournamentDocRef = doc(db, "quizClashTournaments", tournamentId);
+            const tournamentSnap = await getDoc(tournamentDocRef);
+
+            if (!tournamentSnap.exists()) {
+                toast({ variant: 'destructive', title: "Tournament not found." });
+                router.push('/quiz-clash');
+                return;
+            }
+            const tourneyData = tournamentSnap.data() as QuizClashTournament;
+            setTournament(tourneyData);
+
+            const testSetDocRef = doc(db, "testSets", tourneyData.testSetId);
+            const testSetSnap = await getDoc(testSetDocRef);
+
+             if (!testSetSnap.exists()) {
+                toast({ variant: 'destructive', title: "Question set not found." });
+                router.push('/quiz-clash');
+                return;
+            }
+            const testSetData = testSetSnap.data() as TestSet;
+            setQuestions(testSetData.questions);
+            setGameState("playing");
+        };
+
+        fetchGameData();
+    }, [tournamentId, user, router, toast]);
+
+    useEffect(() => {
+        if (gameState !== "playing" || isAnswerLocked) return;
 
         if (timeLeft <= 0) {
             handleGameOver("Time's up!");
@@ -64,10 +92,11 @@ function QuizClashGameContent() {
 
         const timer = setInterval(() => {
             setTimeLeft(prev => prev - 1);
+            setFinalTime(prev => prev + 1);
         }, 1000);
 
         return () => clearInterval(timer);
-    }, [timeLeft, isAnswerLocked, isLoading]);
+    }, [timeLeft, isAnswerLocked, gameState]);
 
     const handleOptionSelect = (option: string) => {
         if (isAnswerLocked) return;
@@ -81,14 +110,15 @@ function QuizClashGameContent() {
         }
         setIsAnswerLocked(true);
         
-        const isCorrect = selectedOption === questions[currentQuestionIndex].correctAnswer;
+        const currentQuestion = questions[currentQuestionIndex];
+        const isCorrect = selectedOption === currentQuestion.correctAnswer.mr || selectedOption === currentQuestion.correctAnswer.en;
         
         setTimeout(() => {
             if (isCorrect) {
+                setFinalScore(prev => prev + 1);
                  if (currentQuestionIndex === questions.length - 1) {
-                    handleGameOver("Congratulations! You've won the grand prize!", true);
+                    handleGameOver("Congratulations! You finished the quiz!");
                 } else {
-                    // Move to next question
                     setCurrentQuestionIndex(prev => prev + 1);
                     setSelectedOption(null);
                     setIsAnswerLocked(false);
@@ -97,38 +127,43 @@ function QuizClashGameContent() {
             } else {
                  handleGameOver("That was the wrong answer.");
             }
-        }, 2000); // Wait 2 seconds to show correct/incorrect status
+        }, 2000);
     };
 
-    const handleGameOver = (reason: string, isGrandPrizeWinner = false) => {
-        let winnings = 0;
-        if(isGrandPrizeWinner) {
-             winnings = prizeLadder[prizeLadder.length - 1].amount;
-        } else {
-            const lastSafePoint = [...prizeLadder]
-                .reverse()
-                .find(p => p.safe && p.q <= currentQuestionIndex);
-            winnings = lastSafePoint?.amount || 0;
+    const handleGameOver = async (reason: string) => {
+        if (gameState === 'finished' || !user || !tournamentId) return;
+
+        setGameState("finished");
+        
+        try {
+            await addDoc(collection(db, "quizClashResults"), {
+                tournamentId: tournamentId,
+                userId: user.uid,
+                score: finalScore,
+                timeTaken: finalTime,
+                timestamp: serverTimestamp(),
+            });
+
+             toast({
+                title: "Quiz Finished!",
+                description: `${reason} Your score is being submitted.`,
+                duration: 5000,
+            });
+
+            // Redirect to a results page after a delay
+            setTimeout(() => {
+                router.push(`/quiz-clash/results?tournamentId=${tournamentId}`);
+            }, 2000);
+
+        } catch (error) {
+             toast({
+                variant: 'destructive',
+                title: "Submission Failed",
+                description: "There was an error submitting your score.",
+            });
+             router.push('/quiz-clash');
         }
-
-        toast({
-            title: "Game Over!",
-            description: `${reason} You've won ₹${winnings}.`,
-            duration: 10000
-        });
-        router.push("/quiz-clash");
     };
-    
-    const handleQuit = () => {
-        const lastQuestionIndex = currentQuestionIndex - 1;
-        const winnings = lastQuestionIndex < 0 ? 0 : prizeLadder[lastQuestionIndex].amount;
-        toast({
-            title: "You Quit!",
-            description: `You've walked away with ₹${winnings}.`,
-            duration: 10000
-        });
-        router.push("/quiz-clash");
-    }
 
     const useLifeline = (lifeline: Lifeline) => {
         if (usedLifelines.includes(lifeline)) return;
@@ -137,18 +172,22 @@ function QuizClashGameContent() {
         
         if (lifeline === 'fiftyFifty') {
             const currentQuestion = questions[currentQuestionIndex];
-            const incorrectOptions = currentQuestion.options.filter(opt => opt !== currentQuestion.correctAnswer);
+            const incorrectOptions = currentQuestion.options.mr.filter(opt => opt !== currentQuestion.correctAnswer.mr);
             const optionsToRemove = incorrectOptions.slice(0, 2);
             
             const newQuestions = [...questions];
             const currentOptions = newQuestions[currentQuestionIndex].options;
-            newQuestions[currentQuestionIndex].options = currentOptions.filter(opt => !optionsToRemove.includes(opt));
+            newQuestions[currentQuestionIndex].options.mr = currentOptions.mr.filter(opt => !optionsToRemove.includes(opt));
+            // Also filter corresponding english options
+            newQuestions[currentQuestionIndex].options.en = currentOptions.en.filter((_, i) => !optionsToRemove.includes(currentOptions.mr[i]));
             setQuestions(newQuestions);
         }
         else if (lifeline === 'switchQuestion') {
-             const newQuestions = [...questions];
-             newQuestions[currentQuestionIndex] = { id: 'switched', text: "This is a new switched question. What is 2+2?", options: ["3", "4", "5", "6"], correctAnswer: "4" };
-             setQuestions(newQuestions);
+             // In a real app, this would fetch another question from the backend.
+             // For now, we'll just show a toast as a placeholder for the logic.
+             toast({ title: 'Lifeline Used: Switch', description: 'Question has been switched.'});
+             const nextIndex = currentQuestionIndex < questions.length - 1 ? currentQuestionIndex + 1 : 0;
+             setCurrentQuestionIndex(nextIndex);
         }
         else if (lifeline === 'aiHint') {
              toast({ title: 'AI Hint', description: "The answer is often the most famous choice among the options."});
@@ -156,12 +195,22 @@ function QuizClashGameContent() {
     };
 
 
-    if (isLoading) {
+    if (gameState === "loading" || !tournament) {
         return <div className="flex justify-center items-center h-screen bg-primary/90 dark:bg-slate-900"><Loader2 className="animate-spin text-white" size={48} /></div>;
     }
     
+    if (gameState === "finished") {
+        return (
+             <div className="flex flex-col gap-4 justify-center items-center h-screen bg-primary/90 dark:bg-slate-900">
+                <Trophy className="w-16 h-16 text-yellow-400"/>
+                <h1 className="text-2xl font-bold text-white">Quiz Complete!</h1>
+                <p className="text-white/80">Calculating results...</p>
+                <Loader2 className="animate-spin text-white" size={32} />
+            </div>
+        )
+    }
+
     const currentQuestion = questions[currentQuestionIndex];
-    const currentPrize = prizeLadder[currentQuestionIndex];
 
     return (
         <div className="bg-primary/90 dark:bg-slate-900 min-h-screen flex flex-col items-center justify-center p-4 font-sans text-white">
@@ -169,7 +218,7 @@ function QuizClashGameContent() {
                 <CardHeader className="text-center">
                     <div className="flex justify-between items-center">
                         <div className="w-24 text-left">
-                             <p className="text-sm flex items-center gap-1"><Users className="w-4 h-4"/> 125</p>
+                             <p className="text-sm flex items-center gap-1"><Users className="w-4 h-4"/> {tournament.registeredPlayers.length}</p>
                         </div>
                          <div className="relative w-24 h-24 flex items-center justify-center">
                             <svg className="absolute w-full h-full" viewBox="0 0 100 100">
@@ -190,33 +239,38 @@ function QuizClashGameContent() {
                         </div>
                         <div className="w-24 text-right">
                             <p className="text-sm">Question {currentQuestionIndex + 1}/{questions.length}</p>
-                            <p className="font-bold text-lg text-yellow-300">₹{currentPrize.amount.toLocaleString()}</p>
+                             <p className="font-bold text-lg text-yellow-300">Score: {finalScore}</p>
                         </div>
                     </div>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                    <div className="p-4 bg-black/20 rounded-lg text-center min-h-[100px] flex items-center justify-center">
-                        <p className="text-xl font-semibold">{currentQuestion.text}</p>
+                    <div className="p-4 bg-black/20 rounded-lg text-center min-h-[100px] flex items-center justify-center flex-col">
+                        <p className="text-xl font-semibold">{currentQuestion.text.mr}</p>
+                        <p className="text-md text-white/70">{currentQuestion.text.en}</p>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {currentQuestion.options.map((option, index) => {
+                        {currentQuestion.options.mr.map((option, index) => {
                             const isSelected = selectedOption === option;
-                            const isCorrect = currentQuestion.correctAnswer === option;
+                            const isCorrect = option === currentQuestion.correctAnswer.mr;
+                            const optionEn = currentQuestion.options.en[index] || '';
                             return (
                                 <Button
                                     key={index}
                                     onClick={() => handleOptionSelect(option)}
                                     disabled={isAnswerLocked}
                                     className={cn(
-                                        "h-auto py-3 text-lg whitespace-normal justify-start transition-all duration-300",
+                                        "h-auto py-3 text-lg whitespace-normal justify-start transition-all duration-300 flex flex-col items-start",
                                         "bg-black/20 hover:bg-black/40 border-2 border-primary-foreground/30",
                                         isSelected && !isAnswerLocked && "border-yellow-400 bg-yellow-900/50",
                                         isAnswerLocked && isCorrect && "bg-green-500 border-green-300 animate-pulse",
                                         isAnswerLocked && isSelected && !isCorrect && "bg-red-500 border-red-300",
                                     )}
                                 >
-                                    <span className="font-bold text-yellow-400 mr-3">{String.fromCharCode(65 + index)}:</span>
-                                    <span>{option}</span>
+                                    <div>
+                                        <span className="font-bold text-yellow-400 mr-3">{String.fromCharCode(65 + index)}:</span>
+                                        <span>{option}</span>
+                                    </div>
+                                    <div className="text-sm text-white/60 pl-8">{optionEn}</div>
                                 </Button>
                             );
                         })}
@@ -250,12 +304,12 @@ function QuizClashGameContent() {
                     <DialogHeader>
                         <DialogTitle>Are you sure you want to quit?</DialogTitle>
                         <DialogDescription>
-                            If you quit now, you will walk away with the prize money from the last question you answered correctly.
+                            If you quit now, your current score will be submitted, but you cannot continue.
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
                         <Button variant="secondary" onClick={() => setIsQuitConfirmOpen(false)}>Cancel</Button>
-                        <Button variant="destructive" onClick={handleQuit}>Yes, Quit Game</Button>
+                        <Button variant="destructive" onClick={() => handleGameOver("You quit the game.")}>Yes, Quit</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -265,8 +319,10 @@ function QuizClashGameContent() {
 
 export default function QuizClashGamePage() {
     return (
-        <ProtectedRoute>
-            <QuizClashGameContent/>
-        </ProtectedRoute>
+        <Suspense fallback={<div className="flex justify-center items-center h-screen bg-primary/90 dark:bg-slate-900"><Loader2 className="animate-spin text-white" size={48} /></div>}>
+            <ProtectedRoute>
+                <QuizClashGameContent/>
+            </ProtectedRoute>
+        </Suspense>
     )
 }

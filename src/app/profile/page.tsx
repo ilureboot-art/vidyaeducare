@@ -26,12 +26,13 @@ import type { ScheduledTest } from "@/lib/test-schedule";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc, collection, getDocs, deleteDoc, updateDoc, query, where } from "firebase/firestore";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 
-export default function ProfilePage() {
+function ProfilePageContent() {
     const { toast } = useToast();
     const router = useRouter();
-    const { user, loading } = useAuth();
+    const { user } = useAuth();
     
     const [parentProfile, setParentProfile] = useState<any | null>(null);
     const [students, setStudents] = useState<StudentProfile[] | null>(null);
@@ -45,12 +46,6 @@ export default function ProfilePage() {
     const [isTestDialogOpen, setIsTestDialogOpen] = useState(false);
     const [selectedStudentForTest, setSelectedStudentForTest] = useState<StudentProfile | null>(null);
     const [availableTests, setAvailableTests] = useState<ScheduledTest[]>([]);
-
-    useEffect(() => {
-        if (!loading && !user) {
-          router.push('/login');
-        }
-    }, [user, loading, router]);
 
     useEffect(() => {
         if (user) {
@@ -181,7 +176,7 @@ export default function ProfilePage() {
         router.push(`/mock-test?studentId=${selectedStudentForTest.id}&testId=${test.id}&isLive=${isLive}`);
     }
 
-  if (loading || !students || !validCodes || !allScheduledTests || !parentProfile) {
+  if (!students || !validCodes || !allScheduledTests || !parentProfile) {
     return (
         <div className="w-full max-w-5xl mx-auto flex items-center justify-center h-96">
             <Loader2 className="animate-spin text-primary" size={32} />
@@ -428,4 +423,12 @@ export default function ProfilePage() {
     </div>
     </TooltipProvider>
   );
+}
+
+export default function ProfilePage() {
+    return (
+        <ProtectedRoute>
+            <ProfilePageContent />
+        </ProtectedRoute>
+    );
 }

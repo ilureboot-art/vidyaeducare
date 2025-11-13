@@ -9,8 +9,9 @@ import { useState, useEffect } from "react";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
-export default function ReferAndEarnPage() {
+function ReferAndEarnPageContent() {
     const { toast } = useToast();
     const { user } = useAuth();
     
@@ -129,5 +130,14 @@ Click here to join: ${url}`;
                 </CardContent>
             </Card>
         </div>
+    );
+}
+
+
+export default function ReferAndEarnPage() {
+    return (
+        <ProtectedRoute>
+            <ReferAndEarnPageContent />
+        </ProtectedRoute>
     );
 }

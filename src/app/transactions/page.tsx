@@ -23,6 +23,7 @@ import { format } from "date-fns";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
 import { collection, query, where, getDocs, orderBy } from "firebase/firestore";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -44,19 +45,12 @@ const getTypeIcon = (type: string, amount: number) => {
     return <ArrowDownLeft className="w-4 h-4 text-green-500" />;
 }
 
-export default function TransactionsPage() {
+function TransactionsPageContent() {
   const { user, loading } = useAuth();
-  const router = useRouter();
   const [transactions, setTransactions] = useState<Transaction[] | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'rejected'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'deposit' | 'withdrawal'>('all');
-  
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
-    }
-  }, [user, loading, router]);
   
   useEffect(() => {
     if (user) {
@@ -71,7 +65,7 @@ export default function TransactionsPage() {
     }
   }, [user]);
 
-  if (loading || !transactions) {
+  if (!transactions) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />
@@ -180,4 +174,12 @@ export default function TransactionsPage() {
       </Card>
     </div>
   );
+}
+
+export default function TransactionsPage() {
+    return (
+        <ProtectedRoute>
+            <TransactionsPageContent />
+        </ProtectedRoute>
+    )
 }

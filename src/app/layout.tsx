@@ -37,17 +37,17 @@ export default function RootLayout({
             disableTransitionOnChange
         >
           <AuthProvider>
-            {!isAdminPage && !isAuthPage && <AppHeader />}
-            <main className={`flex-1 flex flex-col w-full items-center ${!isAdminPage && !isAuthPage ? 'p-4 pb-24 pt-20' : ''} ${isAuthPage ? 'justify-center' : ''}`}>
-              {children}
-            </main>
-            {!isAdminPage && !isAuthPage && (
-              <>
-                <Navbar />
-                <ChatWidget />
-              </>
-            )}
-            <Toaster />
+              {!isAdminPage && !isAuthPage && <AppHeader />}
+              <main className={`flex-1 flex flex-col w-full items-center ${!isAdminPage && !isAuthPage ? 'p-4 pb-24 pt-20' : ''} ${isAuthPage ? 'justify-center min-h-screen' : ''}`}>
+                {children}
+              </main>
+              {!isAdminPage && !isAuthPage && (
+                <>
+                  <Navbar />
+                  <ChatWidget />
+                </>
+              )}
+              <Toaster />
           </AuthProvider>
         </ThemeProvider>
       </body>

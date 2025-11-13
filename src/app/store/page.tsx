@@ -16,11 +16,11 @@ import type { WalletData } from "@/lib/user-data";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, runTransaction, addDoc, collection, serverTimestamp, updateDoc } from "firebase/firestore";
 import { useAuth } from "@/context/AuthContext";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
-export default function StorePage() {
+function StorePageContent() {
   const { toast } = useToast();
-  const { user, loading } = useAuth();
-  const router = useRouter();
+  const { user } = useAuth();
   
   const [walletData, setWalletData] = useState<WalletData | null>(null);
   const [storeConfig, setStoreConfig] = useState<StoreConfig | null>(null);
@@ -29,12 +29,6 @@ export default function StorePage() {
   
   const [referralCode1, setReferralCode1] = useState("");
   const [referralCode2, setReferralCode2] = useState("");
-
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
-    }
-  }, [user, loading, router]);
 
   useEffect(() => {
     if (user) {
@@ -56,7 +50,7 @@ export default function StorePage() {
     }
   }, [user]);
 
-  if (loading || !walletData || !storeConfig) {
+  if (!walletData || !storeConfig) {
     return (
         <div className="w-full max-w-4xl mx-auto flex justify-center items-center h-64">
             <Loader2 className="animate-spin text-primary" size={32}/>
@@ -301,4 +295,12 @@ export default function StorePage() {
       </Card>
     </div>
   );
+}
+
+export default function StorePage() {
+    return (
+        <ProtectedRoute>
+            <StorePageContent />
+        </ProtectedRoute>
+    )
 }

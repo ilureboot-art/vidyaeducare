@@ -35,6 +35,7 @@ import { format } from "date-fns";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, collection, addDoc, query, where, orderBy, limit, onSnapshot, serverTimestamp, runTransaction } from "firebase/firestore";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 const getStatusBadgeVariant = (status: string) => {
     switch (status.toLowerCase()) {
@@ -55,10 +56,9 @@ type WalletInfo = {
   referralCode: string;
 }
 
-export default function WalletPage() {
+function WalletPageContent() {
   const { toast } = useToast();
-  const { user, loading } = useAuth();
-  const router = useRouter();
+  const { user } = useAuth();
   
   const [walletInfo, setWalletInfo] = useState<WalletInfo | null>(null);
   const [transactions, setTransactions] = useState<Transaction[] | null>(null);
@@ -66,12 +66,6 @@ export default function WalletPage() {
 
   const [addFundsOpen, setAddFundsOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
-
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
-    }
-  }, [user, loading, router]);
 
   useEffect(() => {
     if (user) {
@@ -226,7 +220,7 @@ export default function WalletPage() {
     }
   }
 
-  if (loading || !walletInfo || !transactions || !adminPaymentMethods) {
+  if (!walletInfo || !transactions || !adminPaymentMethods) {
     return (
       <div className="w-full max-w-2xl mx-auto space-y-6 flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />
@@ -395,4 +389,12 @@ export default function WalletPage() {
       
     </div>
   );
+}
+
+export default function WalletPage() {
+    return (
+        <ProtectedRoute>
+            <WalletPageContent />
+        </ProtectedRoute>
+    );
 }

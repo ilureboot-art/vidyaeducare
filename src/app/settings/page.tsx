@@ -2,34 +2,35 @@
 "use client";
 
 import Link from 'next/link';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChevronRight, User, Bell, Palette, FileText, Lock, LifeBuoy } from "lucide-react";
+import ProtectedRoute from '@/components/ProtectedRoute';
 
-const settingsGroups = [
-    {
-        title: "Account",
-        items: [
-            { href: "/settings/account", label: "Profile Information", icon: User },
-        ]
-    },
-    {
-        title: "App Settings",
-        items: [
-            { href: "/settings/notifications", label: "Notifications", icon: Bell },
-            { href: "/settings/appearance", label: "Appearance", icon: Palette },
-        ]
-    },
-    {
-        title: "Legal & Support",
-        items: [
-            { href: "/settings/terms", label: "Terms & Conditions", icon: FileText },
-            { href: "/settings/privacy", label: "Privacy Policy", icon: Lock },
-            { href: "/settings/support", label: "Support", icon: LifeBuoy },
-        ]
-    }
-];
+function SettingsPageContent() {
+    const settingsGroups = [
+        {
+            title: "Account",
+            items: [
+                { href: "/settings/account", label: "Profile Information", icon: User },
+            ]
+        },
+        {
+            title: "App Settings",
+            items: [
+                { href: "/settings/notifications", label: "Notifications", icon: Bell },
+                { href: "/settings/appearance", label: "Appearance", icon: Palette },
+            ]
+        },
+        {
+            title: "Legal & Support",
+            items: [
+                { href: "/settings/terms", label: "Terms & Conditions", icon: FileText },
+                { href: "/settings/privacy", label: "Privacy Policy", icon: Lock },
+                { href: "/settings/support", label: "Support", icon: LifeBuoy },
+            ]
+        }
+    ];
 
-export default function SettingsPage() {
     return (
         <div className="w-full max-w-2xl mx-auto space-y-6">
             <div className="text-center">
@@ -65,4 +66,12 @@ export default function SettingsPage() {
             </div>
         </div>
     );
+}
+
+export default function SettingsPage() {
+    return (
+        <ProtectedRoute>
+            <SettingsPageContent />
+        </ProtectedRoute>
+    )
 }

@@ -26,6 +26,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 
 const dailyTarget = 5;
@@ -39,7 +40,7 @@ const bonusTiers = [
     { target: 100, bonus: 5 },
 ];
 
-export default function IBADashboardPage() {
+function IBADashboardPageContent() {
   const { toast } = useToast();
   const { user } = useAuth();
   const [referralData, setReferralData] = useState<any | null>(null);
@@ -322,4 +323,15 @@ Don't miss out on the best way to prepare for your exams and earn rewards!
             </Card>
     </div>
   );
+}
+
+
+export default function IBADashboardPage() {
+    return (
+        <ProtectedRoute>
+            <TooltipProvider>
+                <IBADashboardPageContent />
+            </TooltipProvider>
+        </ProtectedRoute>
+    )
 }

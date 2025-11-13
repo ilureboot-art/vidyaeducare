@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 const benefits = [
     { text: "Earn a commission for every referral who subscribes." },
@@ -24,19 +25,12 @@ const benefits = [
     { text: "Get free access by purchasing any Mock Test subscription." },
 ];
 
-export default function ReferBoltPage() {
+function ReferBoltPageContent() {
   const { toast } = useToast();
-  const { user, loading } = useAuth();
-  const router = useRouter();
+  const { user } = useAuth();
   
   const [data, setData] = useState<any | null>(null);
   const [autoRenew, setAutoRenew] = useState(false);
-
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
-    }
-  }, [user, loading, router]);
 
   useEffect(() => {
     if (user) {
@@ -93,7 +87,7 @@ Subscribe and start your earning cycle now: ${shareUrl}
     }
   };
   
-  if (loading || !data) {
+  if (!data) {
       return (
           <div className="w-full max-w-2xl mx-auto flex items-center justify-center h-96">
               <Loader2 className="animate-spin text-primary" size={32}/>
@@ -231,4 +225,12 @@ Subscribe and start your earning cycle now: ${shareUrl}
       </Card>
     </div>
   );
+}
+
+export default function ReferBoltPage() {
+    return (
+        <ProtectedRoute>
+            <ReferBoltPageContent />
+        </ProtectedRoute>
+    );
 }

@@ -25,6 +25,7 @@ import { format } from "date-fns";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 type ClientStatus = "Active" | "Expired";
 
@@ -39,8 +40,7 @@ type Client = {
   expiresSoon?: boolean;
 };
 
-
-export default function StudentAccessPage() {
+function StudentAccessPageContent() {
   const [clients, setClients] = useState<Client[] | null>(null);
   const { user } = useAuth();
 
@@ -79,7 +79,6 @@ export default function StudentAccessPage() {
   }
 
   return (
-    <TooltipProvider>
       <div className="w-full max-w-4xl mx-auto space-y-6">
         <Link href="/iba/dashboard" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary mb-4">
               <ArrowLeft className="w-4 h-4" />
@@ -146,6 +145,16 @@ export default function StudentAccessPage() {
           </CardContent>
         </Card>
       </div>
-    </TooltipProvider>
   );
+}
+
+
+export default function StudentAccessPage() {
+    return (
+        <ProtectedRoute>
+            <TooltipProvider>
+                <StudentAccessPageContent />
+            </TooltipProvider>
+        </ProtectedRoute>
+    );
 }

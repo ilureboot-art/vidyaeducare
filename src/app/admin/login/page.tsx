@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -12,17 +13,16 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Shield, ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { Shield, ArrowLeft, Eye, EyeOff, Loader2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
-import { auth } from "@/lib/firebase";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth, db } from "@/lib/firebase";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore";
 
 export default function AdminLoginPage() {
-  const [isOtpSent, setIsOtpSent] = useState(false);
-  const [otp, setOtp] = useState("");
   const { toast } = useToast();
   const router = useRouter();
 
@@ -30,6 +30,7 @@ export default function AdminLoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState("login");
 
   useEffect(() => {
     const rememberedAdmin = localStorage.getItem('rememberedAdmin');
@@ -38,15 +39,6 @@ export default function AdminLoginPage() {
       setRememberMe(true);
     }
   }, []);
-
-  const handleSendOtp = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsOtpSent(true);
-    toast({
-      title: "OTP Sent",
-      description: `An OTP has been sent to your WhatsApp.`,
-    });
-  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,31 +64,94 @@ export default function AdminLoginPage() {
        toast({
         variant: "destructive",
         title: "Login Failed",
-        description: error.message,
+        description: "Please check your email and password. Note: Only approved admins can log in.",
       });
     } finally {
         setIsLoading(false);
     }
   };
 
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
      e.preventDefault();
-    // In a real app, verify OTP via backend
-    if (otp) {
+     setIsLoading(true);
+     const form = e.target as HTMLFormElement;
+     const name = (form.elements.namedItem('name-signup') as HTMLInputElement).value;
+     const email = (form.elements.namedItem('email-signup') as HTMLInputElement).value;
+     const phone = (form.elements.namedItem('phone-signup') as HTMLInputElement).value;
+     const password = (form.elements.namedItem('password-signup') as HTMLInputElement).value;
+
+    try {
+        // We create a temporary user account that can't do anything until approved.
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        // Now, add a request to the 'admins' collection with 'Pending' status.
+        const adminRequest: any = {
+            id: user.uid,
+            name,
+            email,
+            phone,
+            role: "Sub-admin",
+            status: "Pending",
+            joinDate: new Date().toISOString(),
+        };
+
+        await setDoc(doc(db, "admins", user.uid), adminRequest);
+
+        // Sign the user out immediately after they've made the request.
+        await auth.signOut();
+
         toast({
             title: "Request Sent!",
-            description: "Your request to become a sub-admin has been sent to the Head Admin for approval.",
+            description: "Your request to become a sub-admin has been sent to the Head Admin for approval. You will be notified once approved.",
+            duration: 7000,
         });
-        // In a real app, this might redirect to a pending page or back to the main site.
-        router.push("/");
-    } else {
+        setActiveTab("login");
+
+    } catch (error: any) {
+        let description = "An unknown error occurred.";
+        if (error.code === 'auth/email-already-in-use') {
+            description = "This email is already registered. If you are an admin, please log in. If you have forgotten your password, use the 'Forgot Password' link.";
+        } else {
+            description = error.message;
+        }
         toast({
             variant: "destructive",
-            title: "Invalid OTP",
-            description: "The OTP you entered is incorrect.",
+            title: "Signup Failed",
+            description: description,
         });
+    } finally {
+        setIsLoading(false);
     }
   }
+
+  const handleForgotPassword = async () => {
+    if (!email) {
+        toast({
+            variant: "destructive",
+            title: "Email Required",
+            description: "Please enter your email address in the login form to reset your password.",
+        });
+        return;
+    }
+    setIsLoading(true);
+    try {
+        await sendPasswordResetEmail(auth, email);
+        toast({
+            title: "Password Reset Email Sent",
+            description: `If an account exists for ${email}, a password reset link has been sent to it.`,
+        });
+    } catch (error: any) {
+        toast({
+            variant: "destructive",
+            title: "Error Sending Email",
+            description: error.message,
+        });
+    } finally {
+        setIsLoading(false);
+    }
+  };
+
 
   return (
     <div className="w-full max-w-md mx-auto flex flex-col items-center justify-center min-h-screen p-4">
@@ -107,7 +162,7 @@ export default function AdminLoginPage() {
         <p className="text-muted-foreground">Vidya EduCare Administration</p>
       </div>
       <Card className="w-full">
-        <Tabs defaultValue="login">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="login">Login</TabsTrigger>
                 <TabsTrigger value="signup">Sign Up</TabsTrigger>
@@ -132,7 +187,12 @@ export default function AdminLoginPage() {
                                 />
                             </div>
                             <div className="space-y-2 relative">
-                                <Label htmlFor="password-login">Password</Label>
+                                <div className="flex items-center justify-between">
+                                  <Label htmlFor="password-login">Password</Label>
+                                  <Button type="button" variant="link" className="px-0 h-auto text-xs" onClick={handleForgotPassword}>
+                                      Forgot Password?
+                                  </Button>
+                                </div>
                                 <Input 
                                   id="password-login" 
                                   type={showPassword ? "text" : "password"} 
@@ -166,45 +226,32 @@ export default function AdminLoginPage() {
                 </form>
             </TabsContent>
             <TabsContent value="signup">
-                 <form onSubmit={isOtpSent ? handleSignup : handleSendOtp}>
+                 <form onSubmit={handleSignup}>
                     <CardHeader>
                         <CardTitle>Request Sub-admin Access</CardTitle>
                         <CardDescription>
-                           {isOtpSent ? "Enter the OTP sent to your WhatsApp to verify your request." : "New admins must be approved by a Head Admin."}
+                           New admins must be approved by a Head Admin.
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                             <div className="space-y-2">
                                 <Label htmlFor="name-signup">Full Name</Label>
-                                <Input id="name-signup" placeholder="Admin Name" required disabled={isOtpSent}/>
+                                <Input id="name-signup" name="name-signup" placeholder="Admin Name" required />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="email-signup">Email Address</Label>
-                                <Input id="email-signup" type="email" placeholder="you@example.com" required disabled={isOtpSent}/>
+                                <Input id="email-signup" name="email-signup" type="email" placeholder="you@example.com" required />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="phone-signup">WhatsApp Number</Label>
-                                <Input id="phone-signup" type="tel" placeholder="+91 12345 67890" required disabled={isOtpSent}/>
+                                <Input id="phone-signup" name="phone-signup" type="tel" placeholder="+91 12345 67890" required />
                             </div>
                              <div className="space-y-2">
                                 <Label htmlFor="password-signup">Password</Label>
-                                <Input id="password-signup" type="password" required disabled={isOtpSent}/>
+                                <Input id="password-signup" name="password-signup" type="password" required />
                             </div>
-                            {isOtpSent && (
-                                <div className="space-y-2">
-                                    <Label htmlFor="otp-signup">Enter WhatsApp OTP</Label>
-                                    <Input 
-                                        id="otp-signup" 
-                                        type="text" 
-                                        placeholder="Enter 6-digit OTP" 
-                                        required 
-                                        value={otp}
-                                        onChange={(e) => setOtp(e.target.value)}
-                                        />
-                                </div>
-                            )}
-                            <Button type="submit" className="w-full">
-                            {isOtpSent ? 'Submit Request' : 'Send Verification OTP'}
+                            <Button type="submit" className="w-full" disabled={isLoading}>
+                                {isLoading ? "Submitting..." : 'Submit Request'}
                             </Button>
                     </CardContent>
                  </form>

@@ -48,7 +48,7 @@ const adminNavItems = [
   { href: "/admin/quiz-clash", label: "Quiz Clash", icon: Puzzle },
   { href: "/admin/store-settings", label: "Store Settings", icon: ShoppingCart },
   { href: "/admin/payment-settings", label: "Payment Settings", icon: Landmark },
-  { href: "/admin/referbolt", label: "ReferBolt Mgt.", icon: Zap },
+  { href: "/admin/referbolt", label: "ReferBolt", icon: Zap },
   { href: "/admin/system-status", label: "System Status", icon: Server },
   { href: "/admin/admin-management", label: "Admin Management", icon: UserCog },
   { href: "/admin/security", label: "Security", icon: Shield },

@@ -14,18 +14,12 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { ResponsiveContainer, BarChart, XAxis, YAxis, Tooltip, Bar, CartesianGrid } from "recharts";
-import {
-  Tooltip as ShadTooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { format } from "date-fns";
 import type { StudentProfile } from "@/lib/student-data";
 import type { ScheduledTest } from "@/lib/test-schedule";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, setDoc, collection, getDocs, deleteDoc, updateDoc, query, where, DocumentData } from "firebase/firestore";
+import { doc, getDoc, setDoc, collection, getDocs, deleteDoc, updateDoc, query, where, DocumentData, onSnapshot } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 
@@ -49,39 +43,31 @@ function ProfilePageContent() {
 
     useEffect(() => {
         if (user) {
-            const fetchParentData = async () => {
-                const userDoc = await getDoc(doc(db, "users", user.uid));
-                if (userDoc.exists()) {
-                    setParentProfile(userDoc.data());
-                }
-            };
+            const unsubParent = onSnapshot(doc(db, "users", user.uid), (doc) => {
+                if (doc.exists()) setParentProfile(doc.data());
+            });
 
-            const fetchStudentData = async () => {
-                const q = query(collection(db, "students"), where("parentId", "==", user.uid));
-                const querySnapshot = await getDocs(q);
-                const studentList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentProfile));
+            const q = query(collection(db, "students"), where("parentId", "==", user.uid));
+            const unsubStudents = onSnapshot(q, (snapshot) => {
+                const studentList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentProfile));
                 setStudents(studentList);
-            };
+            });
 
-            const fetchCodes = async () => {
-                const codesDoc = await getDoc(doc(db, "activationCodes", user.uid));
-                if (codesDoc.exists()) {
-                    setValidCodes(codesDoc.data().codes);
-                } else {
-                    setValidCodes([]);
-                }
-            };
+            const unsubCodes = onSnapshot(doc(db, "activationCodes", user.uid), (doc) => {
+                setValidCodes(doc.exists() ? doc.data().codes : []);
+            });
             
-            const fetchTests = async () => {
-                const testsSnapshot = await getDocs(collection(db, "scheduledTests"));
-                const testsList = testsSnapshot.docs.map(doc => doc.data() as ScheduledTest);
+            const unsubTests = onSnapshot(collection(db, "scheduledTests"), (snapshot) => {
+                const testsList = snapshot.docs.map(doc => doc.data() as ScheduledTest);
                 setAllScheduledTests(testsList);
-            };
+            });
 
-            fetchParentData();
-            fetchStudentData();
-            fetchCodes();
-            fetchTests();
+            return () => {
+                unsubParent();
+                unsubStudents();
+                unsubCodes();
+                unsubTests();
+            };
         }
     }, [user]);
 
@@ -133,9 +119,6 @@ function ProfilePageContent() {
             const updatedCodes = validCodes.filter(c => c !== activationCode);
             await updateDoc(doc(db, "activationCodes", user.uid), { codes: updatedCodes });
 
-            setStudents(prev => [...(prev || []), newStudent]);
-            setValidCodes(updatedCodes);
-
             toast({ title: "Student Added!", description: `${newStudent.name}'s profile has been created.`});
             setIsAddStudentOpen(false);
             setActivationCode("");
@@ -151,7 +134,6 @@ function ProfilePageContent() {
         if (!students || !user) return;
         try {
             await deleteDoc(doc(db, "students", studentId));
-            setStudents(prev => (prev || []).filter(s => s.id !== studentId));
             toast({ title: "Student Removed", description: "The student profile has been deleted." });
         } catch (error) {
             console.error("Error deleting student:", error);
@@ -185,7 +167,6 @@ function ProfilePageContent() {
   }
 
   return (
-    <TooltipProvider>
     <div className="w-full max-w-5xl mx-auto space-y-8">
         <Card>
             <CardHeader>
@@ -258,7 +239,7 @@ function ProfilePageContent() {
                                     placeholder="Enter code from store purchase"
                                 />
                             </div>
-                            <Button className="w-full" onClick={handleVerifyCode}>Verify Code</Button>
+                            <Button className="w-full" onClick={handleVerifyCode} disabled={!activationCode.trim()}>Verify Code</Button>
                         </div>
                     ) : (
                        <form className="space-y-4" onSubmit={handleAddStudent}>
@@ -341,7 +322,7 @@ function ProfilePageContent() {
                         </div>
                     </div>
                      <div className="h-40 pr-0">
-                        {student.stats.performance.length > 0 ? (
+                        {student.stats.performance && student.stats.performance.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={student.stats.performance} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                                 <CartesianGrid strokeDasharray="3 3" />
@@ -391,7 +372,7 @@ function ProfilePageContent() {
                     <DialogTitle>Available Tests for {selectedStudentForTest?.name}</DialogTitle>
                     <DialogDescription>Select a test from the list to begin. Completed tests can be taken for practice.</DialogDescription>
                 </DialogHeader>
-                <div className="space-y-2 pt-4">
+                <div className="space-y-2 pt-4 max-h-[60vh] overflow-y-auto">
                     {availableTests.length > 0 ? (
                         availableTests.map(test => {
                             const now = new Date();
@@ -414,14 +395,13 @@ function ProfilePageContent() {
                             )
                         })
                     ) : (
-                        <p className="text-center text-muted-foreground py-4">No tests available for this student.</p>
+                        <p className="text-center text-muted-foreground py-4">No tests available for this student's board and standard.</p>
                     )}
                 </div>
             </DialogContent>
        </Dialog>
 
     </div>
-    </TooltipProvider>
   );
 }
 

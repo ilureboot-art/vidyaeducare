@@ -76,30 +76,25 @@ export default function AdminLoginPage() {
      setIsLoading(true);
      const form = e.target as HTMLFormElement;
      const name = (form.elements.namedItem('name-signup') as HTMLInputElement).value;
-     const email = (form.elements.namedItem('email-signup') as HTMLInputElement).value;
+     const signupEmail = (form.elements.namedItem('email-signup') as HTMLInputElement).value;
      const phone = (form.elements.namedItem('phone-signup') as HTMLInputElement).value;
      const password = (form.elements.namedItem('password-signup') as HTMLInputElement).value;
 
     try {
         // We create a temporary user account that can't do anything until approved.
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-
-        // Now, add a request to the 'admins' collection with 'Pending' status.
-        const adminRequest: any = {
-            id: user.uid,
+        // This user is not a real Firebase Auth user until an admin approves them.
+        const requestId = `REQ-${Date.now()}`;
+        const adminRequest = {
+            id: requestId,
             name,
-            email,
+            email: signupEmail,
             phone,
             role: "Sub-admin",
             status: "Pending",
             joinDate: new Date().toISOString(),
         };
 
-        await setDoc(doc(db, "admins", user.uid), adminRequest);
-
-        // Sign the user out immediately after they've made the request.
-        await auth.signOut();
+        await setDoc(doc(db, "admins", requestId), adminRequest);
 
         toast({
             title: "Request Sent!",
@@ -107,6 +102,7 @@ export default function AdminLoginPage() {
             duration: 7000,
         });
         setActiveTab("login");
+        form.reset();
 
     } catch (error: any) {
         let description = "An unknown error occurred.";
@@ -220,7 +216,7 @@ export default function AdminLoginPage() {
                               </Label>
                             </div>
                             <Button type="submit" className="w-full !mt-6" disabled={isLoading}>
-                                {isLoading ? 'Logging in...' : 'Login'}
+                                {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Logging in...</> : 'Login'}
                             </Button>
                     </CardContent>
                 </form>
@@ -251,7 +247,7 @@ export default function AdminLoginPage() {
                                 <Input id="password-signup" name="password-signup" type="password" required />
                             </div>
                             <Button type="submit" className="w-full" disabled={isLoading}>
-                                {isLoading ? "Submitting..." : 'Submit Request'}
+                                {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Submitting...</> : 'Submit Request'}
                             </Button>
                     </CardContent>
                  </form>

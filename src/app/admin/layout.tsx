@@ -2,7 +2,7 @@
 "use client";
 
 import { AdminSidebar } from "@/components/AdminSidebar";
-import { SidebarProvider, Sidebar, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { usePathname } from 'next/navigation';
 import { Notifications } from "@/components/admin/Notifications";
 

@@ -29,6 +29,7 @@ export default function AdminLoginPage() {
   const [email, setEmail] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("login");
 
@@ -81,8 +82,6 @@ export default function AdminLoginPage() {
      const password = (form.elements.namedItem('password-signup') as HTMLInputElement).value;
 
     try {
-        // We create a temporary user account that can't do anything until approved.
-        // This user is not a real Firebase Auth user until an admin approves them.
         const requestId = `REQ-${Date.now()}`;
         const adminRequest = {
             id: requestId,
@@ -96,14 +95,11 @@ export default function AdminLoginPage() {
 
         await setDoc(doc(db, "admins", requestId), adminRequest);
 
-        // Note: In a real-world scenario, you might not create a Firebase Auth user here.
-        // You might only create the request document and then the Head Admin would create
-        // the auth user upon approval. But for this app, we'll create it now so they can log in.
         await createUserWithEmailAndPassword(auth, signupEmail, password);
 
         toast({
             title: "Request Sent & Account Created!",
-            description: "Your request to become a sub-admin has been sent. You can now log in with your credentials.",
+            description: "Your request to become a sub-admin has been sent. After approval, you will be able to log in.",
             duration: 7000,
         });
         setActiveTab("login");
@@ -248,9 +244,19 @@ export default function AdminLoginPage() {
                                 <Label htmlFor="phone-signup">WhatsApp Number</Label>
                                 <Input id="phone-signup" name="phone-signup" type="tel" placeholder="+91 12345 67890" required />
                             </div>
-                             <div className="space-y-2">
+                             <div className="space-y-2 relative">
                                 <Label htmlFor="password-signup">Password</Label>
-                                <Input id="password-signup" name="password-signup" type="password" required />
+                                <Input id="password-signup" name="password-signup" type={showSignupPassword ? "text" : "password"} required />
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="absolute right-1 top-6 h-7 w-7"
+                                  onClick={() => setShowSignupPassword(prev => !prev)}
+                                >
+                                  {showSignupPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                  <span className="sr-only">Toggle password visibility</span>
+                                </Button>
                             </div>
                             <Button type="submit" className="w-full" disabled={isLoading}>
                                 {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Submitting...</> : 'Submit Request'}

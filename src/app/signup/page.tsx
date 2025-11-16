@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Gamepad2, Loader2 } from "lucide-react";
+import { Gamepad2, Loader2, Eye, EyeOff } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { db, auth } from "@/lib/firebase";
@@ -29,6 +29,7 @@ export default function SignupPage() {
   const [referralCode, setReferralCode] = useState('');
   const [referralBonus, setReferralBonus] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     const refCode = searchParams.get('ref');
@@ -77,18 +78,23 @@ export default function SignupPage() {
 
         // Handle referral bonus
         if (referralCode && referralBonus) {
-            const referrerWalletRef = doc(db, "wallets", referralCode); // Assuming referral code is referrer's UID
-            const referrerWalletDoc = await transaction.get(referrerWalletRef);
+            const q = query(collection(db, "wallets"), where("referralCode", "==", referralCode));
+            const querySnapshot = await getDocs(q);
             
-            if (referrerWalletDoc.exists()) {
-                const referrerBalance = referrerWalletDoc.data().balance || 0;
-                transaction.update(referrerWalletRef, { balance: referrerBalance + referralBonus });
+            if (!querySnapshot.empty) {
+                const referrerDoc = querySnapshot.docs[0];
+                const referrerWalletRef = doc(db, "wallets", referrerDoc.id);
+                const referrerWalletDoc = await transaction.get(referrerWalletRef);
 
-                // Log transaction for referrer
-                const referrerTx = { user: referralCode, amount: referralBonus, date: new Date().toISOString(), description: `Referral bonus for ${name}`, status: "Completed", type: "Referral Bonus" };
-                transaction.set(doc(collection(db, "transactions")), referrerTx);
-                
-                welcomeBonus = referralBonus;
+                if (referrerWalletDoc.exists()) {
+                    const referrerBalance = referrerWalletDoc.data().balance || 0;
+                    transaction.update(referrerWalletRef, { balance: referrerBalance + referralBonus });
+
+                    const referrerTx = { user: referrerDoc.id, amount: referralBonus, date: new Date().toISOString(), description: `Referral bonus for ${name}`, status: "Completed", type: "Referral Bonus" };
+                    transaction.set(doc(collection(db, "transactions")), referrerTx);
+                    
+                    welcomeBonus = referralBonus;
+                }
             }
         }
         
@@ -100,7 +106,6 @@ export default function SignupPage() {
         });
 
         if (welcomeBonus > 0) {
-            // Log transaction for new user
             const newUserTx = { user: user.uid, amount: welcomeBonus, date: new Date().toISOString(), description: "Welcome bonus from referral", status: "Completed", type: "Welcome Bonus" };
             transaction.set(doc(collection(db, "transactions")), newUserTx);
         }
@@ -163,9 +168,19 @@ export default function SignupPage() {
               <Input id="phone" name="phone" type="tel" placeholder="+91 12345 67890" required />
               <p className="text-xs text-muted-foreground">We'll use this for important notifications.</p>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 relative">
                 <Label htmlFor="password">Password</Label>
-                <Input id="password" name="password" type="password" required />
+                <Input id="password" name="password" type={showPassword ? "text" : "password"} required />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-1 top-6 h-7 w-7"
+                  onClick={() => setShowPassword(prev => !prev)}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  <span className="sr-only">Toggle password visibility</span>
+                </Button>
                 <p className="text-xs text-muted-foreground">Choose a strong password with at least 6 characters.</p>
             </div>
             <Separator />

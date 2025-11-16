@@ -1,8 +1,8 @@
 
 // Import the functions you need from the SDKs you need
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth, initializeAuth, browserLocalPersistence, connectAuthEmulator } from "firebase/auth";
-import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
+import { getAuth, initializeAuth, browserLocalPersistence } from "firebase/auth";
+import { getFirestore, enableIndexedDbPersistence } from "firebase/firestore";
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
@@ -26,5 +26,21 @@ const auth = initializeAuth(app, {
 });
 
 const db = getFirestore(app);
+
+// Enable Firestore offline persistence
+try {
+  enableIndexedDbPersistence(db);
+} catch (error: any) {
+  if (error.code == 'failed-precondition') {
+    // Multiple tabs open, persistence can only be enabled in one.
+    // This is a normal scenario.
+    console.warn("Firestore offline persistence failed: multiple tabs open.");
+  } else if (error.code == 'unimplemented') {
+    // The current browser does not support all of the
+    // features required to enable persistence
+    console.warn("Firestore offline persistence is not supported in this browser.");
+  }
+}
+
 
 export { app, auth, db };

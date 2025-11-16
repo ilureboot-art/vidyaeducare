@@ -1,14 +1,14 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Archive, Search, Send, Loader2 } from "lucide-react";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, doc, updateDoc, addDoc, serverTimestamp, query, orderBy, Timestamp } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, addDoc, serverTimestamp, query, orderBy, Timestamp, onSnapshot } from "firebase/firestore";
 
 type Message = {
     from: 'user' | 'admin';
@@ -32,35 +32,51 @@ export default function ChatManagementPage() {
     const [activeChat, setActiveChat] = useState<Chat | null>(null);
     const [reply, setReply] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
-
-    const fetchChats = async () => {
-        const chatsCollection = collection(db, "chats");
-        const chatSnapshot = await getDocs(query(chatsCollection, orderBy("lastMessageTimestamp", "desc")));
-        
-        const chatList = await Promise.all(chatSnapshot.docs.map(async (chatDoc) => {
-            const messagesCollection = collection(db, "chats", chatDoc.id, "messages");
-            const messagesSnapshot = await getDocs(query(messagesCollection, orderBy("timestamp", "asc")));
-            const messages = messagesSnapshot.docs.map(msgDoc => msgDoc.data() as Message);
-            return {
-                id: chatDoc.id,
-                ...chatDoc.data(),
-                messages
-            } as Chat;
-        }));
-
-        setChats(chatList);
-    };
+    const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
-        fetchChats();
-    }, []);
+        const chatsCollection = collection(db, "chats");
+        const q = query(chatsCollection, orderBy("lastMessageTimestamp", "desc"));
+        
+        const unsubscribe = onSnapshot(q, async (snapshot) => {
+            const chatListPromises = snapshot.docs.map(async (chatDoc) => {
+                const messagesCollection = collection(db, "chats", chatDoc.id, "messages");
+                const messagesSnapshot = await getDocs(query(messagesCollection, orderBy("timestamp", "asc")));
+                const messages = messagesSnapshot.docs.map(msgDoc => {
+                    const data = msgDoc.data();
+                    return {
+                        ...data,
+                        timestamp: data.timestamp instanceof Timestamp ? data.timestamp : serverTimestamp()
+                    } as Message;
+                });
+                return {
+                    id: chatDoc.id,
+                    ...chatDoc.data(),
+                    messages
+                } as Chat;
+            });
+            const chatList = await Promise.all(chatListPromises);
+            setChats(chatList);
+        });
 
-    const handleSelectChat = async (chat: Chat) => {
-        setActiveChat(chat);
-        if (chat.unread) {
-             const chatDocRef = doc(db, "chats", chat.id);
-             await updateDoc(chatDocRef, { unread: false });
-             await fetchChats();
+        return () => unsubscribe();
+    }, []);
+    
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, [activeChat?.messages]);
+
+
+    const handleSelectChat = async (chatId: string) => {
+        if (!chats) return;
+        const selected = chats.find(c => c.id === chatId);
+        if (selected) {
+            setActiveChat(selected);
+            if (selected.unread) {
+                 const chatDocRef = doc(db, "chats", selected.id);
+                 await updateDoc(chatDocRef, { unread: false });
+                 // The real-time listener will handle the UI update
+            }
         }
     };
 
@@ -68,10 +84,10 @@ export default function ChatManagementPage() {
         e.preventDefault();
         if (!reply.trim() || !activeChat || !chats) return;
 
-        const newMessage: Message = { from: 'admin', text: reply, timestamp: serverTimestamp() as Timestamp };
+        const newMessage: Omit<Message, 'timestamp'> = { from: 'admin', text: reply };
         
         const messagesCollectionRef = collection(db, "chats", activeChat.id, "messages");
-        await addDoc(messagesCollectionRef, newMessage);
+        await addDoc(messagesCollectionRef, { ...newMessage, timestamp: serverTimestamp() });
 
         const chatDocRef = doc(db, "chats", activeChat.id);
         await updateDoc(chatDocRef, {
@@ -79,9 +95,6 @@ export default function ChatManagementPage() {
             lastMessageTimestamp: serverTimestamp(),
         });
         
-        await fetchChats();
-        // Manually update active chat to show the new message instantly
-        setActiveChat(prev => prev ? ({...prev, messages: [...prev.messages, {...newMessage, timestamp: new Date() as any}]}) : null);
         setReply("");
     };
     
@@ -117,7 +130,7 @@ export default function ChatManagementPage() {
                 </CardHeader>
                 <CardContent className="flex-1 overflow-y-auto space-y-2">
                     {filteredChats.length > 0 ? filteredChats.map(chat => (
-                        <div key={chat.id} onClick={() => handleSelectChat(chat)} className={`p-3 rounded-lg cursor-pointer transition-colors ${activeChat?.id === chat.id ? 'bg-primary/20' : 'hover:bg-muted/50'} ${chat.unread ? 'border-l-4 border-primary' : ''}`}>
+                        <div key={chat.id} onClick={() => handleSelectChat(chat.id)} className={`p-3 rounded-lg cursor-pointer transition-colors ${activeChat?.id === chat.id ? 'bg-primary/20' : 'hover:bg-muted/50'} ${chat.unread ? 'border-l-4 border-primary' : ''}`}>
                             <div className="flex justify-between">
                                 <p className="font-semibold">{chat.user}</p>
                                 {chat.unread && <span className="w-2.5 h-2.5 bg-primary rounded-full mt-1.5"></span>}
@@ -165,6 +178,7 @@ export default function ChatManagementPage() {
                             )}
                         </div>
                     ))}
+                    <div ref={messagesEndRef} />
                 </CardContent>
                  <CardContent className="py-4 border-t">
                      <form onSubmit={handleSendReply} className="flex items-center gap-2">

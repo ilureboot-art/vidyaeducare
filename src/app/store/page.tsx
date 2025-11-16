@@ -13,7 +13,7 @@ import Link from 'next/link';
 import type { StoreConfig, MockTestPackage, ReferboltSubscription } from "@/lib/store-config";
 import type { WalletData } from "@/lib/user-data";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, runTransaction, collection, serverTimestamp, updateDoc } from "firebase/firestore";
+import { doc, getDoc, runTransaction, collection, serverTimestamp, updateDoc, arrayUnion } from "firebase/firestore";
 import { useAuth } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
@@ -78,7 +78,9 @@ function StorePageContent() {
             const userWalletRef = doc(db, "wallets", user.uid);
             
             // 1. Deduct from user's balance
-            transaction.update(userWalletRef, { balance: walletData.balance - priceDetails.finalPrice });
+            const userWalletDoc = await transaction.get(userWalletRef);
+            const currentBalance = userWalletDoc.exists() ? userWalletDoc.data().balance : 0;
+            transaction.update(userWalletRef, { balance: currentBalance - priceDetails.finalPrice });
 
             // 2. Log the purchase transaction
             const purchaseTxRef = doc(collection(db, "transactions"));
@@ -99,17 +101,25 @@ function StorePageContent() {
                 const baseCommissionRate = 0.1765;
                 const commissionAmount = (priceDetails.basePrice * baseCommissionRate) / ibasToPay.length;
 
-                for (const ibaId of ibasToPay) {
-                    const ibaWalletRef = doc(db, "wallets", ibaId);
-                    const ibaCommissionTxRef = doc(collection(db, "transactions"));
-                    // In a real transaction, you'd get the ibaWalletDoc first to ensure it exists
-                    // and to check for referbolt status for bonus, but this is simplified.
-                    transaction.update(ibaWalletRef, { balance: (await transaction.get(ibaWalletRef)).data()?.balance + commissionAmount });
-                    transaction.set(ibaCommissionTxRef, {
-                        user: ibaId, amount: commissionAmount, date: serverTimestamp(),
-                        description: `Commission from ${user.name || user.uid.slice(0,5)}`,
-                        status: "Completed", type: "Commission",
-                    });
+                for (const ibaCode of ibasToPay) {
+                    const q = query(collection(db, "wallets"), where("referralCode", "==", ibaCode));
+                    const ibaQuerySnapshot = await getDocs(q); // Important: This read happens outside the transaction write phase
+                    if (!ibaQuerySnapshot.empty) {
+                        const ibaUserDoc = ibaQuerySnapshot.docs[0];
+                        const ibaId = ibaUserDoc.id;
+                        const ibaWalletRef = doc(db, "wallets", ibaId);
+                        const ibaCommissionTxRef = doc(collection(db, "transactions"));
+                        
+                        const ibaWalletDoc = await transaction.get(ibaWalletRef);
+                        const ibaCurrentBalance = ibaWalletDoc.exists() ? ibaWalletDoc.data().balance : 0;
+                        transaction.update(ibaWalletRef, { balance: ibaCurrentBalance + commissionAmount });
+                        
+                        transaction.set(ibaCommissionTxRef, {
+                            user: ibaId, amount: commissionAmount, date: serverTimestamp(),
+                            description: `Commission from ${user.displayName || user.uid.slice(0,5)}`,
+                            status: "Completed", type: "Commission",
+                        });
+                    }
                 }
             }
 
@@ -117,15 +127,13 @@ function StorePageContent() {
             if (type === 'mock') {
                 const activationCode = `PROD-${Date.now().toString().slice(-6)}`;
                 const activationCodesRef = doc(db, 'activationCodes', user.uid);
-                const codesDoc = await transaction.get(activationCodesRef);
-                const existingCodes = codesDoc.exists() ? codesDoc.data().codes : [];
-                transaction.set(activationCodesRef, { codes: [...existingCodes, activationCode] }, { merge: true });
+                transaction.set(activationCodesRef, { codes: arrayUnion(activationCode) }, { merge: true });
 
                 if (storeConfig.referboltSettings.freeAccessWithMockTest) {
                      transaction.set(doc(db, "referbolt", user.uid), { isSubscribed: true }, { merge: true });
                 }
             } else if (type === 'referbolt') {
-                 transaction.set(doc(db, "referbolt", user.uid), { isSubscribed: true }, { merge: true });
+                 transaction.set(doc(db, "referbolt", user.uid), { isSubscribed: true, referralCode: walletData.referralCode }, { merge: true });
             }
         });
 

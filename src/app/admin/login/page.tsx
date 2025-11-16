@@ -96,9 +96,14 @@ export default function AdminLoginPage() {
 
         await setDoc(doc(db, "admins", requestId), adminRequest);
 
+        // Note: In a real-world scenario, you might not create a Firebase Auth user here.
+        // You might only create the request document and then the Head Admin would create
+        // the auth user upon approval. But for this app, we'll create it now so they can log in.
+        await createUserWithEmailAndPassword(auth, signupEmail, password);
+
         toast({
-            title: "Request Sent!",
-            description: "Your request to become a sub-admin has been sent to the Head Admin for approval. You will be notified once approved.",
+            title: "Request Sent & Account Created!",
+            description: "Your request to become a sub-admin has been sent. You can now log in with your credentials.",
             duration: 7000,
         });
         setActiveTab("login");
@@ -122,7 +127,8 @@ export default function AdminLoginPage() {
   }
 
   const handleForgotPassword = async () => {
-    if (!email) {
+    const currentEmail = (document.getElementById('email-login') as HTMLInputElement)?.value || email;
+    if (!currentEmail) {
         toast({
             variant: "destructive",
             title: "Email Required",
@@ -132,10 +138,10 @@ export default function AdminLoginPage() {
     }
     setIsLoading(true);
     try {
-        await sendPasswordResetEmail(auth, email);
+        await sendPasswordResetEmail(auth, currentEmail);
         toast({
             title: "Password Reset Email Sent",
-            description: `If an account exists for ${email}, a password reset link has been sent to it.`,
+            description: `If an account exists for ${currentEmail}, a password reset link has been sent to it.`,
         });
     } catch (error: any) {
         toast({

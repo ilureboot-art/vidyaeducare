@@ -9,7 +9,7 @@ import { MessageSquare, X, Send } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/context/AuthContext';
 import { db } from '@/lib/firebase';
-import { doc, setDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, addDoc, collection, serverTimestamp, getDoc } from 'firebase/firestore';
 
 export function ChatWidget() {
     const [isOpen, setIsOpen] = useState(false);
@@ -26,9 +26,12 @@ export function ChatWidget() {
         
         try {
             const chatRef = doc(db, 'chats', user.uid);
+            const userDoc = await getDoc(doc(db, 'users', user.uid));
+            const userName = userDoc.exists() ? userDoc.data().name : user.email;
+
             await setDoc(chatRef, {
-                user: user.displayName || user.email,
-                avatar: (user.displayName || user.email || 'U').charAt(0),
+                user: userName,
+                avatar: (userName || 'U').charAt(0),
                 lastMessage: message,
                 lastMessageTimestamp: serverTimestamp(),
                 unread: true,

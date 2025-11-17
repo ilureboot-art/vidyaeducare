@@ -172,10 +172,10 @@ Don't miss out on the best way to prepare for your exams and earn rewards!
           <div className="text-center p-4 bg-muted rounded-lg">
             <h3 className="text-lg font-semibold">Your Unique IBA Code</h3>
             <div className="flex items-center justify-center gap-2 mt-2">
-              <p className="text-2xl font-mono p-3 bg-background rounded-md w-full max-w-xs text-center tracking-widest">{ibaReferralCode}</p>
+              <p className="text-2xl font-mono p-3 bg-background rounded-md w-full max-w-xs text-center tracking-widest break-all">{ibaReferralCode}</p>
             </div>
           </div>
-           <div className="flex items-center gap-4">
+           <div className="flex flex-col sm:flex-row items-center gap-4">
               <Button variant="outline" className="w-full" onClick={handleCopyToClipboard}><Copy className="mr-2" /> Copy Code</Button>
               <Button className="w-full" onClick={handleShare}><Share2 className="mr-2" /> Share & Promote</Button>
             </div>
@@ -183,13 +183,13 @@ Don't miss out on the best way to prepare for your exams and earn rewards!
             <div className="grid grid-cols-2 gap-4 text-center">
                 <Card>
                     <CardHeader>
-                        <CardTitle className="text-2xl flex items-center justify-center gap-2"><IndianRupee/>{referralData.totalCommission.toFixed(2)}</CardTitle>
+                        <CardTitle className="text-xl md:text-2xl flex items-center justify-center gap-2"><IndianRupee/>{referralData.totalCommission.toFixed(2)}</CardTitle>
                         <CardDescription>Total Commission</CardDescription>
                     </CardHeader>
                 </Card>
                 <Card>
                     <CardHeader>
-                        <CardTitle className="text-2xl flex items-center justify-center gap-2"><Users/>{referralData.totalReferrals}</CardTitle>
+                        <CardTitle className="text-xl md:text-2xl flex items-center justify-center gap-2"><Users/>{referralData.totalReferrals}</CardTitle>
                         <CardDescription>Total Sales</CardDescription>
                     </CardHeader>
                 </Card>
@@ -306,7 +306,7 @@ Don't miss out on the best way to prepare for your exams and earn rewards!
                 <CardHeader>
                     <CardTitle className="text-lg font-semibold">Recent Sales</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="overflow-x-auto">
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -345,3 +345,5 @@ export default function IBADashboardPage() {
         </ProtectedRoute>
     )
 }
+
+    

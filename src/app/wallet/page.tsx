@@ -258,7 +258,7 @@ function WalletPageContent() {
                     Send payment to one of the admin methods below and enter the transaction ID to confirm.
                   </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-4 pt-2">
+                <div className="space-y-4 pt-2 max-h-[70vh] overflow-y-auto pr-2">
                     <Tabs defaultValue="upi" className="w-full">
                         <TabsList className="grid w-full grid-cols-2">
                             <TabsTrigger value="upi">UPI / QR Code</TabsTrigger>
@@ -402,3 +402,5 @@ export default function WalletPage() {
         </ProtectedRoute>
     );
 }
+
+    

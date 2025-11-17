@@ -99,7 +99,7 @@ export default function AnalyticsPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Analytics Dashboard</h1>
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Users className="text-primary"/> Daily Active Users</CardTitle>
@@ -182,3 +182,5 @@ export default function AnalyticsPage() {
     </div>
   );
 }
+
+    

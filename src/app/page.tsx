@@ -89,11 +89,11 @@ Start your journey to success now: ${url}
     <div className="w-full max-w-6xl mx-auto space-y-24 p-4">
       
       {/* Hero Section */}
-      <section className="grid md:grid-cols-2 gap-12 items-center text-center md:text-left pt-16 md:pt-0">
+      <section className="grid md:grid-cols-2 gap-12 items-center text-center md:text-left pt-8 md:pt-0">
         <div>
-            <h1 className="text-5xl lg:text-6xl font-bold text-primary tracking-tighter">Welcome to Vidya Educare</h1>
-            <p className="text-xl text-muted-foreground mt-4">The ultimate platform combining academic excellence with rewarding opportunities to make learning impactful.</p>
-            <div className="mt-8 flex gap-4 justify-center md:justify-start flex-wrap">
+            <h1 className="text-4xl lg:text-6xl font-bold text-primary tracking-tighter">Welcome to Vidya Educare</h1>
+            <p className="text-lg md:text-xl text-muted-foreground mt-4">The ultimate platform combining academic excellence with rewarding opportunities to make learning impactful.</p>
+            <div className="mt-8 flex gap-2 md:gap-4 justify-center md:justify-start flex-wrap">
                 <Button asChild size="lg">
                     <Link href="/signup"><LogIn className="mr-2"/> Join for Free</Link>
                 </Button>
@@ -159,7 +159,7 @@ Start your journey to success now: ${url}
       </section>
 
       {/* Founder's Note Section */}
-      <section className="bg-muted/50 rounded-lg p-8 md:p-12">
+      <section className="bg-muted/50 rounded-lg p-6 md:p-12">
         <div className="grid md:grid-cols-3 gap-8 items-center">
           <div className="md:col-span-1">
               <Image src="https://placehold.co/400x400.png" width={400} height={400} alt="Mr. Sanjay Vidya Vijay Gurav, Founder of Vidya EduCare" className="rounded-lg shadow-xl mx-auto" data-ai-hint="portrait professional" />
@@ -209,10 +209,10 @@ Start your journey to success now: ${url}
       </section>
 
       {/* Final CTA Section */}
-      <section className="bg-primary text-primary-foreground rounded-lg p-12 text-center">
-          <h2 className="text-4xl font-bold">Ready to Get Started?</h2>
+      <section className="bg-primary text-primary-foreground rounded-lg p-8 md:p-12 text-center">
+          <h2 className="text-3xl md:text-4xl font-bold">Ready to Get Started?</h2>
           <p className="mt-4 max-w-2xl mx-auto">Join thousands of users who are acing their exams and winning rewards. Sign up today and get an instant welcome bonus!</p>
-          <div className="mt-8 flex gap-4 justify-center">
+          <div className="mt-8 flex gap-2 md:gap-4 justify-center flex-wrap">
               <Button asChild size="lg" variant="secondary" className="text-primary hover:bg-white/90">
                   <Link href="/signup">Create Your Account</Link>
               </Button>
@@ -225,3 +225,5 @@ Start your journey to success now: ${url}
     </div>
   );
 }
+
+    

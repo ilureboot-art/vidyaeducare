@@ -100,7 +100,7 @@ export default function PaymentSettingsPage() {
             <CardContent className="space-y-6">
                 <div className="space-y-4 p-4 border rounded-lg">
                     <h3 className="font-semibold">Bank Account Details</h3>
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                          <div className="space-y-2">
                             <Label htmlFor="accountHolderName">Account Holder Name</Label>
                             <Input id="accountHolderName" name="accountHolderName" value={methods.accountHolderName} onChange={handleChange} />
@@ -122,7 +122,7 @@ export default function PaymentSettingsPage() {
 
                 <div className="space-y-4 p-4 border rounded-lg">
                     <h3 className="font-semibold">UPI Details</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="upiId">Main UPI ID</Label>
                             <Input id="upiId" name="upiId" value={methods.upiId} onChange={handleChange} />

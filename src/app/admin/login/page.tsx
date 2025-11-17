@@ -82,9 +82,12 @@ export default function AdminLoginPage() {
      const password = (form.elements.namedItem('password-signup') as HTMLInputElement).value;
 
     try {
-        const requestId = `REQ-${Date.now()}`;
+        // Create user in Firebase Auth first, but they can't log in until approved
+        const userCredential = await createUserWithEmailAndPassword(auth, signupEmail, password);
+        const user = userCredential.user;
+
         const adminRequest = {
-            id: requestId,
+            id: user.uid, // Use Firebase Auth UID as the document ID
             name,
             email: signupEmail,
             phone,
@@ -93,9 +96,7 @@ export default function AdminLoginPage() {
             joinDate: new Date().toISOString(),
         };
 
-        await setDoc(doc(db, "admins", requestId), adminRequest);
-
-        await createUserWithEmailAndPassword(auth, signupEmail, password);
+        await setDoc(doc(db, "admins", user.uid), adminRequest);
 
         toast({
             title: "Request Sent & Account Created!",
@@ -276,3 +277,5 @@ export default function AdminLoginPage() {
     </div>
   );
 }
+
+    

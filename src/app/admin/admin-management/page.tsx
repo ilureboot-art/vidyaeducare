@@ -36,8 +36,9 @@ import {
 } from "@/components/ui/select"
 import { format } from 'date-fns';
 import type { Admin, AdminRole } from "@/lib/admin-data";
-import { db } from "@/lib/firebase";
+import { db, auth } from "@/lib/firebase";
 import { collection, getDocs, doc, setDoc, deleteDoc, updateDoc } from "firebase/firestore";
+import { createUserWithEmailAndPassword } from "firebase/auth";
 
 
 const WhatsAppIcon = () => (
@@ -130,32 +131,34 @@ export default function AdminManagementPage() {
 
   const handleCreateAdmin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!admins) return;
-
     const form = e.currentTarget;
     const name = (form.elements.namedItem('name') as HTMLInputElement).value;
     const email = (form.elements.namedItem('email') as HTMLInputElement).value;
     const phone = (form.elements.namedItem('phone') as HTMLInputElement).value;
+    const password = (form.elements.namedItem('password') as HTMLInputElement).value;
     const role = newAdminRole;
 
-    if (!name || !email || !phone || !role) {
+    if (!name || !email || !phone || !role || !password) {
         toast({ variant: 'destructive', title: 'Missing Information', description: 'Please fill out all fields.'});
         return;
     }
-
-    const newAdminId = `ADM-${Date.now()}`;
-    const newAdmin: Admin = {
-        id: newAdminId,
-        name,
-        email,
-        phone,
-        role,
-        status: 'Active',
-        joinDate: new Date().toISOString(),
-    };
     
     try {
-        await setDoc(doc(db, "admins", newAdminId), newAdmin);
+        // Create user in Firebase Auth first
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        const newAdmin: Admin = {
+            id: user.uid, // Use Firebase Auth UID as the document ID
+            name,
+            email,
+            phone,
+            role,
+            status: 'Active',
+            joinDate: new Date().toISOString(),
+        };
+    
+        await setDoc(doc(db, "admins", user.uid), newAdmin);
         await fetchAdmins();
         
         toast({
@@ -164,9 +167,9 @@ export default function AdminManagementPage() {
         });
         setIsCreateDialogOpen(false);
         setNewAdminRole('');
-    } catch(error) {
+    } catch(error: any) {
          console.error("Error creating admin:", error);
-         toast({ variant: 'destructive', title: "Error", description: "Could not create admin."});
+         toast({ variant: 'destructive', title: "Error creating admin", description: error.message || 'An unknown error occurred.'});
     }
   }
   
@@ -339,6 +342,10 @@ export default function AdminManagementPage() {
                          <div className="space-y-2">
                             <Label htmlFor="phone">WhatsApp Number (with country code)</Label>
                             <Input id="phone" name="phone" type="tel" required placeholder="e.g., 919876543210"/>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="password">Password</Label>
+                            <Input id="password" name="password" type="password" required />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="role">Role</Label>

@@ -1,8 +1,8 @@
 
 // Import the functions you need from the SDKs you need
-import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth, initializeAuth, browserLocalPersistence } from "firebase/auth";
-import { getFirestore, enableIndexedDbPersistence } from "firebase/firestore";
+import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
+import { getAuth, initializeAuth, browserLocalPersistence, Auth } from "firebase/auth";
+import { getFirestore, enableIndexedDbPersistence, Firestore } from "firebase/firestore";
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
@@ -16,31 +16,42 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+let app: FirebaseApp;
+let auth: Auth;
+let db: Firestore;
 
-// It's important to use initializeAuth here to ensure persistence is set correctly,
-// especially in a Next.js environment. Using getAuth() directly can sometimes
-// lead to race conditions with persistence.
-const auth = initializeAuth(app, {
-  persistence: browserLocalPersistence
-});
+if (typeof window !== 'undefined') {
+    app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
-const db = getFirestore(app);
-
-// Enable Firestore offline persistence
-try {
-  enableIndexedDbPersistence(db)
-    .then(() => console.log("Firestore offline persistence enabled."))
-    .catch((error) => {
-        if (error.code == 'failed-precondition') {
-            console.warn("Firestore offline persistence failed: multiple tabs open, persistence can only be enabled in one.");
-        } else if (error.code == 'unimplemented') {
-            console.warn("Firestore offline persistence is not supported in this browser.");
-        }
+    // It's important to use initializeAuth here to ensure persistence is set correctly,
+    // especially in a Next.js environment. Using getAuth() directly can sometimes
+    // lead to race conditions with persistence.
+    auth = initializeAuth(app, {
+      persistence: browserLocalPersistence
     });
-} catch (error: any) {
-  console.error("Error enabling Firestore persistence:", error);
-}
 
+    db = getFirestore(app);
+
+    // Enable Firestore offline persistence
+    try {
+        enableIndexedDbPersistence(db)
+            .then(() => console.log("Firestore offline persistence enabled."))
+            .catch((error) => {
+                if (error.code === 'failed-precondition') {
+                    console.warn("Firestore offline persistence failed: can only be enabled in one tab at a time.");
+                } else if (error.code === 'unimplemented') {
+                    console.warn("Firestore offline persistence is not supported in this browser.");
+                }
+            });
+    } catch (error: any) {
+      console.error("Error enabling Firestore persistence:", error);
+    }
+} else {
+    // For server-side rendering, initialize a temporary app instance.
+    // This won't have persistence, but it prevents errors during SSR.
+    app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getFirestore(app);
+}
 
 export { app, auth, db };

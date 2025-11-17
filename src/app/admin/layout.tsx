@@ -11,8 +11,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 function AdminLayoutContent({ children }: { children: React.ReactNode; }) {
   const pathname = usePathname();
   const isLoginPage = pathname === '/admin/login';
-  const isAdminManagementPage = pathname === '/admin/admin-management';
-
+  
   // If it's the login page, show it standalone
   if (isLoginPage) {
     return (
@@ -20,18 +19,6 @@ function AdminLayoutContent({ children }: { children: React.ReactNode; }) {
         {children}
       </div>
     );
-  }
-
-  // If it's the admin management page, show it without the full protected layout initially
-  // This allows the first Head Admin to be created.
-  if (isAdminManagementPage) {
-     return (
-        <div className="flex min-h-screen">
-          <main className="flex-1 p-8 bg-muted/40">
-              {children}
-          </main>
-      </div>
-     )
   }
 
   return (

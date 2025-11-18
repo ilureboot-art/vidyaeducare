@@ -19,8 +19,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
 import { auth, db } from "@/lib/firebase";
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from "firebase/auth";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 
 export default function AdminLoginPage() {
   const { toast } = useToast();
@@ -47,25 +47,35 @@ export default function AdminLoginPage() {
     const password = (e.currentTarget.querySelector('#password-login') as HTMLInputElement).value;
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
 
-      if (rememberMe) {
-        localStorage.setItem('rememberedAdmin', email);
+      // Verify user is an active admin in Firestore
+      const adminDocRef = doc(db, "admins", user.uid);
+      const adminDoc = await getDoc(adminDocRef);
+
+      if (adminDoc.exists() && adminDoc.data().status === "Active") {
+        if (rememberMe) {
+          localStorage.setItem('rememberedAdmin', email);
+        } else {
+          localStorage.removeItem('rememberedAdmin');
+        }
+
+        toast({
+            title: "Login Successful!",
+            description: "Redirecting to admin dashboard...",
+        });
+        router.push("/admin/analytics");
       } else {
-        localStorage.removeItem('rememberedAdmin');
+        await signOut(auth); // Sign out the user if they are not an active admin
+        throw new Error("You do not have permission to access the admin panel. Please contact the Head Admin.");
       }
-
-      toast({
-          title: "Login Successful!",
-          description: "Redirecting to admin dashboard...",
-      });
-      router.push("/admin/analytics");
 
     } catch (error: any) {
        toast({
         variant: "destructive",
         title: "Login Failed",
-        description: "Please check your email and password. Note: Only approved admins can log in.",
+        description: error.message || "Please check your credentials and permissions.",
       });
     } finally {
         setIsLoading(false);
@@ -97,6 +107,9 @@ export default function AdminLoginPage() {
         };
 
         await setDoc(doc(db, "admins", user.uid), adminRequest);
+        
+        // Sign out the user immediately after creating the request
+        await signOut(auth);
 
         toast({
             title: "Request Sent & Account Created!",
@@ -277,5 +290,6 @@ export default function AdminLoginPage() {
     </div>
   );
 }
+
 
     

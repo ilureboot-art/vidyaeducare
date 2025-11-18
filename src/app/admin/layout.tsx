@@ -50,7 +50,11 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
+    // AuthProvider is already in the root layout, no need to wrap again.
+    // The check for which layout to show is handled in AdminLayoutContent.
     return (
         <AdminLayoutContent>{children}</AdminLayoutContent>
     );
 }
+
+    

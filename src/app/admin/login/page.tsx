@@ -20,7 +20,7 @@ import { useRouter } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
 import { auth, db } from "@/lib/firebase";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from "firebase/auth";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { doc, setDoc, getDocs, collection, query, where } from "firebase/firestore";
 
 export default function AdminLoginPage() {
   const { toast } = useToast();
@@ -47,14 +47,24 @@ export default function AdminLoginPage() {
     const password = (e.currentTarget.querySelector('#password-login') as HTMLInputElement).value;
 
     try {
+      // Step 1: Authenticate with Firebase Auth
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Verify user is an active admin in Firestore
-      const adminDocRef = doc(db, "admins", user.uid);
-      const adminDoc = await getDoc(adminDocRef);
+      // Step 2: Query Firestore to find the admin document by email
+      const adminsRef = collection(db, "admins");
+      const q = query(adminsRef, where("email", "==", user.email));
+      const querySnapshot = await getDocs(q);
 
-      if (adminDoc.exists() && adminDoc.data().status === "Active") {
+      if (querySnapshot.empty) {
+        throw new Error("No admin profile found for this email address.");
+      }
+
+      const adminDoc = querySnapshot.docs[0];
+      const adminData = adminDoc.data();
+
+      // Step 3: Check if the admin is "Active"
+      if (adminData.status === "Active") {
         if (rememberMe) {
           localStorage.setItem('rememberedAdmin', email);
         } else {
@@ -67,11 +77,11 @@ export default function AdminLoginPage() {
         });
         router.push("/admin/analytics");
       } else {
-        await signOut(auth); // Sign out the user if they are not an active admin
-        throw new Error("You do not have permission to access the admin panel. Please contact the Head Admin.");
+        throw new Error(`Your account status is '${adminData.status}'. You do not have permission to access the admin panel.`);
       }
 
     } catch (error: any) {
+       await signOut(auth); // Ensure user is signed out on any error during login checks
        toast({
         variant: "destructive",
         title: "Login Failed",
@@ -93,7 +103,8 @@ export default function AdminLoginPage() {
 
     try {
         // Create user in Firebase Auth first, but they can't log in until approved
-        const userCredential = await createUserWithEmailAndPassword(auth, signupEmail, password);
+        const tempAuth = auth; // Use existing auth instance
+        const userCredential = await createUserWithEmailAndPassword(tempAuth, signupEmail, password);
         const user = userCredential.user;
 
         const adminRequest = {
@@ -106,10 +117,11 @@ export default function AdminLoginPage() {
             joinDate: new Date().toISOString(),
         };
 
+        // Use the user's UID as the document ID in the 'admins' collection
         await setDoc(doc(db, "admins", user.uid), adminRequest);
         
         // Sign out the user immediately after creating the request
-        await signOut(auth);
+        await signOut(tempAuth);
 
         toast({
             title: "Request Sent & Account Created!",
@@ -290,6 +302,5 @@ export default function AdminLoginPage() {
     </div>
   );
 }
-
 
     

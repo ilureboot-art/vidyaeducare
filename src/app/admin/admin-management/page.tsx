@@ -151,8 +151,7 @@ export default function AdminManagementPage() {
         const user = userCredential.user;
 
         // Use the UID from auth as the document ID
-        const newAdminData: Omit<Admin, 'id'> & { id: string } = {
-            id: user.uid,
+        const newAdminData: Omit<Admin, 'id'> = {
             name,
             email,
             phone,

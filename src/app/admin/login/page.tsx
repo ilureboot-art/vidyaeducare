@@ -57,7 +57,6 @@ export default function AdminLoginPage() {
 
       // Step 3: Check if an admin profile exists for this user
       if (!adminDocSnap.exists()) {
-        // If no document is found, this is not a valid admin.
         throw new Error("No admin profile found for this user. Access denied.");
       }
 
@@ -78,7 +77,6 @@ export default function AdminLoginPage() {
         router.push("/admin/analytics");
 
       } else {
-        // If status is "Pending" or "Rejected"
         throw new Error(`Your account status is '${adminData.status}'. Access denied.`);
       }
 
@@ -122,13 +120,10 @@ export default function AdminLoginPage() {
      const password = (form.elements.namedItem('password-signup') as HTMLInputElement).value;
 
     try {
-        // This is a temporary auth instance to create the user, who will be signed out immediately.
-        // The main 'auth' instance remains for the login flow.
         const userCredential = await createUserWithEmailAndPassword(auth, signupEmail, password);
         const user = userCredential.user;
 
         const adminRequest = {
-            id: user.uid, // Use Firebase Auth UID as the document ID
             name,
             email: signupEmail,
             phone,
@@ -137,10 +132,8 @@ export default function AdminLoginPage() {
             joinDate: new Date().toISOString(),
         };
 
-        // Use the user's UID as the document ID in the 'admins' collection
         await setDoc(doc(db, "admins", user.uid), adminRequest);
         
-        // Sign out the user immediately after creating the request so they can't access anything yet
         await signOut(auth);
 
         toast({

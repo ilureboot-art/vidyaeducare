@@ -122,7 +122,7 @@ export default function AdminLoginPage() {
         await signOut(tempAuth);
 
         toast({
-            title: "Request Sent & Account Created!",
+            title: "Request Sent!",
             description: "Your request to become a sub-admin has been sent. After approval, you will be able to log in.",
             duration: 7000,
         });
@@ -184,7 +184,7 @@ export default function AdminLoginPage() {
         <p className="text-muted-foreground">Vidya EduCare Administration</p>
       </div>
       <Card className="w-full">
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="login">Login</TabsTrigger>
                 <TabsTrigger value="signup">Sign Up</TabsTrigger>
@@ -300,5 +300,3 @@ export default function AdminLoginPage() {
     </div>
   );
 }
-
-    

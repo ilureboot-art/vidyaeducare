@@ -113,6 +113,8 @@ export default function AdminManagementPage() {
         if (newStatus === "Active") {
             await updateDoc(adminDocRef, { status: "Active" });
         } else {
+            // It's better to mark as rejected than to delete, to keep a record.
+            // But for this app, we'll delete. In a real app, consider just updating status.
             await deleteDoc(adminDocRef);
         }
         
@@ -148,8 +150,9 @@ export default function AdminManagementPage() {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
-        const newAdmin: Admin = {
-            id: user.uid, // Use Firebase Auth UID as the document ID
+        // Use the UID from auth as the document ID
+        const newAdminData: Omit<Admin, 'id'> & { id: string } = {
+            id: user.uid,
             name,
             email,
             phone,
@@ -158,7 +161,7 @@ export default function AdminManagementPage() {
             joinDate: new Date().toISOString(),
         };
     
-        await setDoc(doc(db, "admins", user.uid), newAdmin);
+        await setDoc(doc(db, "admins", user.uid), newAdminData);
         await fetchAdmins();
         
         toast({
@@ -218,7 +221,8 @@ export default function AdminManagementPage() {
         return;
     }
     
-    // In a real app, this would make an API call to Firebase Auth.
+    // In a real app, this would make an API call to Firebase Admin SDK to update the password
+    // This is a client-side placeholder
     console.log(`Password for ${selectedAdmin.name} reset to: ${newPassword}`);
     
     toast({ title: 'Password Reset', description: `Password for ${selectedAdmin.name} has been changed.` });
@@ -236,11 +240,13 @@ export default function AdminManagementPage() {
     }
     
     try {
+        // This only deletes from Firestore, not from Firebase Auth.
+        // A full implementation requires a backend function to delete the auth user.
         await deleteDoc(doc(db, "admins", adminId));
         await fetchAdmins();
         toast({
             title: "Admin Deleted",
-            description: `Admin account for ${adminToDelete.name} has been deleted.`,
+            description: `Admin account for ${adminToDelete.name} has been deleted. Note: Auth user may still exist.`,
         })
     } catch(error) {
         console.error("Error deleting admin:", error);

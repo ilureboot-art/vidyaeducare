@@ -20,7 +20,7 @@ import { useRouter } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
 import { auth, db } from "@/lib/firebase";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from "firebase/auth";
-import { doc, setDoc, getDocs, collection, query, where } from "firebase/firestore";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 
 export default function AdminLoginPage() {
   const { toast } = useToast();
@@ -51,17 +51,15 @@ export default function AdminLoginPage() {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Step 2: Query Firestore to find the admin document by email
-      const adminsRef = collection(db, "admins");
-      const q = query(adminsRef, where("email", "==", user.email));
-      const querySnapshot = await getDocs(q);
+      // Step 2: Directly get the admin document using the UID
+      const adminDocRef = doc(db, "admins", user.uid);
+      const adminDocSnap = await getDoc(adminDocRef);
 
-      if (querySnapshot.empty) {
-        throw new Error("No admin profile found for this email address.");
+      if (!adminDocSnap.exists()) {
+        throw new Error("No admin profile found for this user.");
       }
 
-      const adminDoc = querySnapshot.docs[0];
-      const adminData = adminDoc.data();
+      const adminData = adminDocSnap.data();
 
       // Step 3: Check if the admin is "Active"
       if (adminData.status === "Active") {
@@ -77,7 +75,7 @@ export default function AdminLoginPage() {
         });
         router.push("/admin/analytics");
       } else {
-        throw new Error(`Your account status is '${adminData.status}'. You do not have permission to access the admin panel.`);
+        throw new Error(`Your account status is '${adminData.status}'. Access denied.`);
       }
 
     } catch (error: any) {

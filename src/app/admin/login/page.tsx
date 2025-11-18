@@ -51,17 +51,19 @@ export default function AdminLoginPage() {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Step 2: Directly get the admin document using the UID
+      // Step 2: Directly get the admin document using the UID from Auth
       const adminDocRef = doc(db, "admins", user.uid);
       const adminDocSnap = await getDoc(adminDocRef);
 
+      // Step 3: Check if an admin profile exists for this user
       if (!adminDocSnap.exists()) {
-        throw new Error("No admin profile found for this user.");
+        // If no document is found, this is not a valid admin.
+        throw new Error("No admin profile found for this user. Access denied.");
       }
 
       const adminData = adminDocSnap.data();
 
-      // Step 3: Check if the admin is "Active"
+      // Step 4: Check if the admin's status is "Active"
       if (adminData.status === "Active") {
         if (rememberMe) {
           localStorage.setItem('rememberedAdmin', email);
@@ -74,16 +76,36 @@ export default function AdminLoginPage() {
             description: "Redirecting to admin dashboard...",
         });
         router.push("/admin/analytics");
+
       } else {
+        // If status is "Pending" or "Rejected"
         throw new Error(`Your account status is '${adminData.status}'. Access denied.`);
       }
 
     } catch (error: any) {
-       await signOut(auth); // Ensure user is signed out on any error during login checks
+       // Ensure user is signed out on any error during the login or verification process
+       await signOut(auth).catch(() => {}); // Sign out, ignore errors if already signed out
+       
+       let errorMessage = "An unknown error occurred.";
+       if (error.code) { // Firebase Auth errors have a 'code' property
+          switch(error.code) {
+            case 'auth/user-not-found':
+            case 'auth/wrong-password':
+            case 'auth/invalid-credential':
+                errorMessage = "Invalid email or password.";
+                break;
+            default:
+                errorMessage = error.message;
+                break;
+          }
+       } else { // Custom errors thrown in the try block
+          errorMessage = error.message;
+       }
+
        toast({
         variant: "destructive",
         title: "Login Failed",
-        description: error.message || "Please check your credentials and permissions.",
+        description: errorMessage,
       });
     } finally {
         setIsLoading(false);
@@ -100,9 +122,9 @@ export default function AdminLoginPage() {
      const password = (form.elements.namedItem('password-signup') as HTMLInputElement).value;
 
     try {
-        // Create user in Firebase Auth first, but they can't log in until approved
-        const tempAuth = auth; // Use existing auth instance
-        const userCredential = await createUserWithEmailAndPassword(tempAuth, signupEmail, password);
+        // This is a temporary auth instance to create the user, who will be signed out immediately.
+        // The main 'auth' instance remains for the login flow.
+        const userCredential = await createUserWithEmailAndPassword(auth, signupEmail, password);
         const user = userCredential.user;
 
         const adminRequest = {
@@ -118,8 +140,8 @@ export default function AdminLoginPage() {
         // Use the user's UID as the document ID in the 'admins' collection
         await setDoc(doc(db, "admins", user.uid), adminRequest);
         
-        // Sign out the user immediately after creating the request
-        await signOut(tempAuth);
+        // Sign out the user immediately after creating the request so they can't access anything yet
+        await signOut(auth);
 
         toast({
             title: "Request Sent!",
@@ -300,3 +322,5 @@ export default function AdminLoginPage() {
     </div>
   );
 }
+
+    

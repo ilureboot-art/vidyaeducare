@@ -20,29 +20,21 @@ type FirebaseServices = {
     db: Firestore;
 };
 
-let firebaseServices: FirebaseServices | null = null;
-
-// This function ensures Firebase is initialized only once.
+// This function is designed to be called once on the client side.
 export const initializeFirebase = async (): Promise<FirebaseServices> => {
-    if (firebaseServices) {
-        return firebaseServices;
-    }
-
     const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
     const auth = getAuth(app);
     const db = getFirestore(app);
 
     try {
-        // Await persistence to ensure it's enabled before db is used.
         await enableIndexedDbPersistence(db);
     } catch (err: any) {
         if (err.code === 'failed-precondition') {
-            console.warn('Firestore persistence failed: Multiple tabs open. App will work in online mode.');
+            console.warn('Firestore persistence failed: Multiple tabs open.');
         } else if (err.code === 'unimplemented') {
-            console.warn('Firestore persistence failed: Browser does not support it. App will work in online mode.');
+            console.warn('Firestore persistence failed: Browser does not support it.');
         }
     }
 
-    firebaseServices = { app, auth, db };
-    return firebaseServices;
+    return { app, auth, db };
 };

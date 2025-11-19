@@ -125,7 +125,7 @@ export default function SignupPage() {
       
       toast({
           title: "Account Created Successfully!",
-          description: `Welcome to Vidya EduCare! ${referralCode && referralBonus ? `Your ₹${referralBonus} welcome bonus has been applied.` : ''} Redirecting you to login.`,
+          description: `Welcome to Vidya EduCare! ${referralCode && referralBonus ? `Your ₹${welcomeBonus} welcome bonus has been applied.` : ''} Redirecting you to login.`,
       });
       router.push("/login");
 

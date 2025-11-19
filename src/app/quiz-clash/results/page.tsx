@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
@@ -8,8 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Loader2, Trophy, Award, Users, IndianRupee } from "lucide-react";
 import Link from "next/link";
-import { useAuth } from "@/context/AuthContext";
-import { db as dbPromise } from "@/lib/firebase";
+import { useAuth, useFirebase } from "@/context/FirebaseClientProvider";
 import { doc, getDoc, collection, query, where, getDocs, orderBy, updateDoc, runTransaction, serverTimestamp, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import type { QuizClashTournament } from "@/lib/quiz-clash-data";
@@ -35,23 +33,15 @@ function QuizClashResultsContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const tournamentId = searchParams.get('tournamentId');
-    const [db, setDb] = useState<Firestore | null>(null);
+    const { db, loading } = useFirebase();
 
     const [tournament, setTournament] = useState<QuizClashTournament | null>(null);
     const [results, setResults] = useState<Result[] | null>(null);
     const [userResult, setUserResult] = useState<Result | null>(null);
 
     useEffect(() => {
-        const initDb = async () => {
-          const dbInstance = await dbPromise;
-          setDb(dbInstance);
-        };
-        initDb();
-    }, []);
-
-    useEffect(() => {
-        if (!tournamentId || !db) {
-            if (!tournamentId) router.push('/quiz-clash');
+        if (loading || !tournamentId || !db) {
+            if (!loading && !tournamentId) router.push('/quiz-clash');
             return;
         }
 
@@ -100,14 +90,12 @@ function QuizClashResultsContent() {
 
                      // Save results and distribute prizes in a transaction
                     await runTransaction(db, async (transaction) => {
-                        winners.forEach(winner => {
+                        for (const winner of winners) {
                             if (winner.prize && winner.prize > 0) {
                                 const userWalletRef = doc(db, "wallets", winner.userId);
-                                // This needs a read before write within the transaction
-                                // For simplicity here, we're doing it outside, but in prod a read would be needed.
-                                // const userWalletDoc = await transaction.get(userWalletRef);
-                                // const currentBalance = userWalletDoc.data()?.balance || 0;
-                                // transaction.update(userWalletRef, { balance: currentBalance + winner.prize });
+                                const userWalletDoc = await transaction.get(userWalletRef);
+                                const currentBalance = userWalletDoc.exists() ? userWalletDoc.data()?.balance || 0 : 0;
+                                transaction.update(userWalletRef, { balance: currentBalance + winner.prize });
                             
                                 const prizeTxRef = doc(collection(db, "transactions"));
                                 transaction.set(prizeTxRef, {
@@ -119,7 +107,7 @@ function QuizClashResultsContent() {
                                     type: "Prize",
                                 });
                             }
-                        });
+                        }
                         transaction.update(tournamentDocRef, { status: "completed" });
                     });
                 } else {
@@ -135,7 +123,7 @@ function QuizClashResultsContent() {
         };
 
         processResults();
-    }, [tournamentId, router, user, db]);
+    }, [tournamentId, router, user, db, loading]);
 
     if (!results || !tournament) {
         return (

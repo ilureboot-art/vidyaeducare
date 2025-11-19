@@ -25,7 +25,7 @@ import { useFirebase } from "@/context/FirebaseClientProvider";
 export default function AdminLoginPage() {
   const { toast } = useToast();
   const router = useRouter();
-  const { db, auth } = useFirebase();
+  const { db, auth, loading } = useFirebase();
 
   const [email, setEmail] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
@@ -84,7 +84,9 @@ export default function AdminLoginPage() {
 
     } catch (error: any) {
        // Ensure user is signed out on any error during the login or verification process
-       await signOut(auth).catch(() => {}); // Sign out, ignore errors if already signed out
+       if (auth.currentUser) {
+         await signOut(auth).catch(() => {}); // Sign out, ignore errors if already signed out
+       }
        
        let errorMessage = "An unknown error occurred.";
        if (error.code) { // Firebase Auth errors have a 'code' property
@@ -193,6 +195,14 @@ export default function AdminLoginPage() {
     }
   };
 
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <Loader2 className="animate-spin text-primary" size={32} />
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-md mx-auto flex flex-col items-center justify-center min-h-screen p-4">

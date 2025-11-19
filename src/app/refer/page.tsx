@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Share2, IndianRupee, Gift, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { doc, getDoc, type Firestore } from "firebase/firestore";
+import { db as dbPromise } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
@@ -17,9 +17,19 @@ function ReferAndEarnPageContent() {
     
     const [referralBonus, setReferralBonus] = useState<number | null>(null);
     const [referralCode, setReferralCode] = useState<string | null>(null);
+    const [db, setDb] = useState<Firestore | null>(null);
+
+    useEffect(() => {
+        const initDb = async () => {
+          const dbInstance = await dbPromise;
+          setDb(dbInstance);
+        };
+        initDb();
+    }, []);
 
     useEffect(() => {
         const fetchConfig = async () => {
+            if (!db) return;
             const storeConfigDoc = await getDoc(doc(db, "configs", "store"));
             if(storeConfigDoc.exists()) {
                 setReferralBonus(storeConfigDoc.data().referralBonus);
@@ -27,7 +37,7 @@ function ReferAndEarnPageContent() {
         };
 
         const fetchUserRefCode = async () => {
-            if (user) {
+            if (user && db) {
                 const walletDoc = await getDoc(doc(db, "wallets", user.uid));
                 if (walletDoc.exists()) {
                     setReferralCode(walletDoc.data().referralCode);
@@ -39,7 +49,7 @@ function ReferAndEarnPageContent() {
         
         fetchConfig();
         fetchUserRefCode();
-    }, [user]);
+    }, [user, db]);
 
     const handleShare = async () => {
         if (referralCode === null || referralBonus === null) return;
@@ -141,3 +151,5 @@ export default function ReferAndEarnPage() {
         </ProtectedRoute>
     );
 }
+
+    

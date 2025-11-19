@@ -23,8 +23,8 @@ import {
 } from "@/components/ui/tooltip"
 import { format } from "date-fns";
 import { useAuth } from "@/context/AuthContext";
-import { db } from "@/lib/firebase";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { db as dbPromise } from "@/lib/firebase";
+import { collection, query, where, getDocs, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 type ClientStatus = "Active" | "Expired";
@@ -43,9 +43,18 @@ type Client = {
 function StudentAccessPageContent() {
   const [clients, setClients] = useState<Client[] | null>(null);
   const { user } = useAuth();
+  const [db, setDb] = useState<Firestore | null>(null);
 
   useEffect(() => {
-    if (user) {
+    const initDb = async () => {
+      const dbInstance = await dbPromise;
+      setDb(dbInstance);
+    };
+    initDb();
+  }, []);
+
+  useEffect(() => {
+    if (user && db) {
         const fetchClients = async () => {
             const q = query(collection(db, "clients"), where("referrerId", "==", user.uid));
             const querySnapshot = await getDocs(q);
@@ -68,7 +77,7 @@ function StudentAccessPageContent() {
         };
         fetchClients();
     }
-  }, [user]);
+  }, [user, db]);
 
   if (!clients) {
     return (
@@ -158,3 +167,5 @@ export default function StudentAccessPage() {
         </ProtectedRoute>
     );
 }
+
+    

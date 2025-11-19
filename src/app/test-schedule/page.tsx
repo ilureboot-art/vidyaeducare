@@ -17,8 +17,8 @@ import {
 } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
 import type { ScheduledTest } from "@/lib/test-schedule";
-import { collection, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { collection, getDocs, type Firestore } from 'firebase/firestore';
+import { db as dbPromise } from '@/lib/firebase';
 
 type TestStatus = 'Live' | 'Upcoming' | 'Completed';
 type ScheduledTestWithStatus = ScheduledTest & { status: TestStatus };
@@ -27,9 +27,19 @@ export default function TestSchedulePage() {
     const { toast } = useToast();
     
     const [allSchedules, setAllSchedules] = useState<ScheduledTestWithStatus[] | null>(null);
+    const [db, setDb] = useState<Firestore | null>(null);
+
+    useEffect(() => {
+        const initDb = async () => {
+          const dbInstance = await dbPromise;
+          setDb(dbInstance);
+        };
+        initDb();
+    }, []);
 
     useEffect(() => {
         const fetchSchedules = async () => {
+            if (!db) return;
             const schedulesCollection = collection(db, "scheduledTests");
             const scheduleSnapshot = await getDocs(schedulesCollection);
             const scheduleList = scheduleSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ScheduledTest));
@@ -57,8 +67,8 @@ export default function TestSchedulePage() {
                 setAllSchedules(updatedSchedules);
             }
         };
-        fetchSchedules();
-    }, []);
+        if(db) fetchSchedules();
+    }, [db]);
     
     if (!allSchedules) {
         return (
@@ -112,3 +122,5 @@ export default function TestSchedulePage() {
         </div>
     );
 }
+
+    

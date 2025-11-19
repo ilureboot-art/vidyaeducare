@@ -24,8 +24,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useAuth } from "@/context/AuthContext";
-import { db } from "@/lib/firebase";
-import { doc, getDoc, collection, query, where, getDocs, Timestamp } from "firebase/firestore";
+import { db as dbPromise } from "@/lib/firebase";
+import { doc, getDoc, collection, query, where, getDocs, Timestamp, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 
@@ -54,9 +54,18 @@ function IBADashboardPageContent() {
   const { user } = useAuth();
   const [referralData, setReferralData] = useState<ReferralData | null>(null);
   const [ibaReferralCode, setIbaReferralCode] = useState<string | null>(null);
+  const [db, setDb] = useState<Firestore | null>(null);
 
   useEffect(() => {
-    if (user) {
+    const initDb = async () => {
+      const dbInstance = await dbPromise;
+      setDb(dbInstance);
+    };
+    initDb();
+  }, []);
+
+  useEffect(() => {
+    if (user && db) {
         const fetchIbaData = async () => {
             // Assume the IBA-specific data is stored in a subcollection or related doc
             const userWalletDocRef = doc(db, 'wallets', user.uid);
@@ -98,7 +107,7 @@ function IBADashboardPageContent() {
         };
         fetchIbaData();
     }
-  }, [user]);
+  }, [user, db]);
 
   const handleCopyToClipboard = () => {
     if (!ibaReferralCode) return;

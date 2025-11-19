@@ -7,8 +7,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw, Users, IndianRupee, Repeat, Loader2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import { db } from "@/lib/firebase";
-import { collection, getDocs, query, Timestamp } from "firebase/firestore";
+import { db as dbPromise } from "@/lib/firebase";
+import { collection, getDocs, query, Timestamp, type Firestore } from "firebase/firestore";
 
 type Cycle = {
   id: string;
@@ -37,9 +37,19 @@ export default function ReferBoltManagementPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [cycles, setCycles] = useState<Cycle[] | null>(null);
   const [referrals, setReferrals] = useState<Referral[] | null>(null);
+  const [db, setDb] = useState<Firestore | null>(null);
+
+  useEffect(() => {
+    const initDb = async () => {
+      const dbInstance = await dbPromise;
+      setDb(dbInstance);
+    };
+    initDb();
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
+        if (!db) return;
         const referboltSnapshot = await getDocs(collection(db, "referbolt"));
         let totalCycles = 0;
         let totalCommissions = 0;
@@ -84,8 +94,10 @@ export default function ReferBoltManagementPage() {
         });
         setReferrals(referralList);
     };
-    fetchData();
-  }, []);
+    if (db) {
+        fetchData();
+    }
+  }, [db]);
 
   if (!stats || !cycles || !referrals) {
     return (
@@ -227,3 +239,5 @@ export default function ReferBoltManagementPage() {
     </div>
   );
 }
+
+    

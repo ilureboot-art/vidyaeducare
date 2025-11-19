@@ -8,8 +8,8 @@ import { Bell, UserPlus, ArrowDown, ArrowUp, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import type { AppNotification } from "@/lib/notifications";
-import { db } from "@/lib/firebase";
-import { collection, getDocs, query, where, orderBy, Timestamp } from "firebase/firestore";
+import { db as dbPromise } from "@/lib/firebase";
+import { collection, getDocs, query, where, orderBy, Timestamp, type Firestore } from "firebase/firestore";
 
 const getIconForType = (type: string) => {
     switch(type) {
@@ -26,9 +26,19 @@ const getIconForType = (type: string) => {
 
 export default function AdminNotificationsPage() {
     const [notifications, setNotifications] = useState<AppNotification[] | null>(null);
+    const [db, setDb] = useState<Firestore | null>(null);
+
+    useEffect(() => {
+        const initDb = async () => {
+          const dbInstance = await dbPromise;
+          setDb(dbInstance);
+        };
+        initDb();
+    }, []);
 
     useEffect(() => {
         const fetchNotifications = async () => {
+            if (!db) return;
             const notifsRef = collection(db, "notifications");
             const q = query(notifsRef, where("userId", "==", "admin"), orderBy("timestamp", "desc"));
             const querySnapshot = await getDocs(q);
@@ -40,7 +50,7 @@ export default function AdminNotificationsPage() {
             setNotifications(notifs);
         };
         fetchNotifications();
-    }, []);
+    }, [db]);
 
     if (!notifications) {
         return (
@@ -91,3 +101,5 @@ export default function AdminNotificationsPage() {
         </div>
     );
 }
+
+    

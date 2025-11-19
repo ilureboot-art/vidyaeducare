@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Archive, Search, Send, Loader2 } from "lucide-react";
-import { db } from "@/lib/firebase";
-import { collection, getDocs, doc, updateDoc, addDoc, serverTimestamp, query, orderBy, Timestamp, onSnapshot } from "firebase/firestore";
+import { db as dbPromise } from "@/lib/firebase";
+import { collection, getDocs, doc, updateDoc, addDoc, serverTimestamp, query, orderBy, Timestamp, onSnapshot, type Firestore } from "firebase/firestore";
 
 type Message = {
     from: 'user' | 'admin';
@@ -33,8 +33,18 @@ export default function ChatManagementPage() {
     const [reply, setReply] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
     const messagesEndRef = useRef<HTMLDivElement | null>(null);
+    const [db, setDb] = useState<Firestore | null>(null);
 
     useEffect(() => {
+        const initDb = async () => {
+          const dbInstance = await dbPromise;
+          setDb(dbInstance);
+        };
+        initDb();
+    }, []);
+
+    useEffect(() => {
+        if (!db) return;
         const chatsCollection = collection(db, "chats");
         const q = query(chatsCollection, orderBy("lastMessageTimestamp", "desc"));
         
@@ -60,7 +70,7 @@ export default function ChatManagementPage() {
         });
 
         return () => unsubscribe();
-    }, []);
+    }, [db]);
     
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -68,7 +78,7 @@ export default function ChatManagementPage() {
 
 
     const handleSelectChat = async (chatId: string) => {
-        if (!chats) return;
+        if (!chats || !db) return;
         const selected = chats.find(c => c.id === chatId);
         if (selected) {
             setActiveChat(selected);
@@ -82,7 +92,7 @@ export default function ChatManagementPage() {
 
     const handleSendReply = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!reply.trim() || !activeChat || !chats) return;
+        if (!reply.trim() || !activeChat || !chats || !db) return;
 
         const newMessage: Omit<Message, 'timestamp'> = { from: 'admin', text: reply };
         
@@ -203,3 +213,5 @@ export default function ChatManagementPage() {
     </div>
   );
 }
+
+    

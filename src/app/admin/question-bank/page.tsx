@@ -31,8 +31,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { type TestSet, type Question } from "@/lib/question-bank";
 import type { AcademicConfig } from "@/lib/academic-config";
-import { db } from "@/lib/firebase";
-import { collection, getDocs, doc, setDoc, deleteDoc } from "firebase/firestore";
+import { db as dbPromise } from "@/lib/firebase";
+import { collection, getDocs, doc, setDoc, deleteDoc, type Firestore } from "firebase/firestore";
 import Papa from "papaparse";
 import { generateQuestions, GenerateQuestionsInput } from "@/ai/flows/generate-questions-flow";
 
@@ -74,8 +74,17 @@ export default function TestSetManagementPage() {
   const [step, setStep] = useState(1);
   const [editingTestSet, setEditingTestSet] = useState<TestSet | null>(null);
   const [aiInput, setAiInput] = useState<GenerateQuestionsInput>(initialAiInputState);
+  const [db, setDb] = useState<Firestore | null>(null);
+
+  useEffect(() => {
+    const initDb = async () => {
+      const dbInstance = await dbPromise;
+      setDb(dbInstance);
+    };
+    initDb();
+  }, []);
   
-  const fetchData = async () => {
+  const fetchData = async (db: Firestore) => {
     // Fetch Test Sets
     const testSetsCollection = collection(db, "testSets");
     const testSetSnapshot = await getDocs(testSetsCollection);
@@ -93,8 +102,10 @@ export default function TestSetManagementPage() {
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (db) {
+        fetchData(db);
+    }
+  }, [db]);
 
   const resetManualForm = () => {
       setStep(1);
@@ -119,10 +130,10 @@ export default function TestSetManagementPage() {
   };
 
   const handleDelete = async (testSetId: string) => {
-    if (!testSets) return;
+    if (!testSets || !db) return;
     try {
         await deleteDoc(doc(db, "testSets", testSetId));
-        await fetchData();
+        await fetchData(db);
         toast({ title: "Test Set Deleted", description: "The test set has been removed from the bank."});
     } catch(error) {
         console.error("Error deleting test set:", error);
@@ -176,7 +187,7 @@ export default function TestSetManagementPage() {
 };
 
  const handleManualSubmit = async () => {
-    if (!editingTestSet || !testSets) return;
+    if (!editingTestSet || !testSets || !db) return;
 
     const finalQuestions = editingTestSet.questions
         .filter(q => q.text.en?.trim() !== '' || q.text.mr?.trim() !== '')
@@ -198,7 +209,7 @@ export default function TestSetManagementPage() {
     
     try {
         await setDoc(doc(db, "testSets", docId), finalTestSetData);
-        await fetchData();
+        await fetchData(db);
 
         toast({ title: isEditing ? 'Test Set Updated!' : 'Test Set Created!', description: `"${finalTestSetData.name}" has been saved.` });
         

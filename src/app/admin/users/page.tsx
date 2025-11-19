@@ -19,8 +19,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { format } from 'date-fns';
-import { db } from "@/lib/firebase";
-import { collection, getDocs, doc, updateDoc, deleteDoc } from "firebase/firestore";
+import { db as dbPromise } from "@/lib/firebase";
+import { collection, getDocs, doc, updateDoc, deleteDoc, type Firestore } from "firebase/firestore";
 
 type UserStatus = "Active" | "Banned" | "Inactive";
 type User = {
@@ -40,8 +40,17 @@ export default function UserManagementPage() {
   const [users, setUsers] = useState<User[] | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
+  const [db, setDb] = useState<Firestore | null>(null);
 
-  const fetchUsers = async () => {
+  useEffect(() => {
+    const initDb = async () => {
+      const dbInstance = await dbPromise;
+      setDb(dbInstance);
+    };
+    initDb();
+  }, []);
+
+  const fetchUsers = async (db: Firestore) => {
       const usersCollection = collection(db, "users");
       const userSnapshot = await getDocs(usersCollection);
       const userList = userSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
@@ -49,16 +58,18 @@ export default function UserManagementPage() {
   };
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
+    if (db) {
+        fetchUsers(db);
+    }
+  }, [db]);
 
   const handleStatusChange = async (userId: string, newStatus: UserStatus) => {
-    if (!users) return;
+    if (!users || !db) return;
     
     try {
         const userDocRef = doc(db, "users", userId);
         await updateDoc(userDocRef, { status: newStatus });
-        await fetchUsers(); // Refresh data
+        await fetchUsers(db); // Refresh data
         
         toast({
           title: `User ${newStatus}`,
@@ -71,13 +82,13 @@ export default function UserManagementPage() {
   };
 
   const handleDeleteUser = async (userId: string) => {
-    if (!users) return;
+    if (!users || !db) return;
     const userToDelete = users.find(user => user.id === userId);
     if (!userToDelete) return;
 
     try {
         await deleteDoc(doc(db, "users", userId));
-        await fetchUsers(); // Refresh data
+        await fetchUsers(db); // Refresh data
         toast({
             title: "User Deleted",
             description: `User account for ${userToDelete.name} has been deleted.`

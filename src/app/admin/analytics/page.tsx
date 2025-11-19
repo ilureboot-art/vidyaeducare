@@ -5,8 +5,8 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BarChart, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Line, Bar, ResponsiveContainer } from "recharts";
 import { Users, Gamepad2, IndianRupee, Loader2 } from "lucide-react";
-import { db } from "@/lib/firebase";
-import { collection, getDocs, query, where, Timestamp } from "firebase/firestore";
+import { db as dbPromise } from "@/lib/firebase";
+import { collection, getDocs, query, where, Timestamp, type Firestore } from "firebase/firestore";
 
 interface ChartData {
     name: string;
@@ -30,9 +30,19 @@ export default function AnalyticsPage() {
   const [todaysRevenue, setTodaysRevenue] = useState<number | null>(null);
   const [userActivityData, setUserActivityData] = useState<ChartData[] | null>(null);
   const [revenueData, setRevenueData] = useState<ChartData[] | null>(null);
+  const [db, setDb] = useState<Firestore | null>(null);
+
+  useEffect(() => {
+    const initDb = async () => {
+      const dbInstance = await dbPromise;
+      setDb(dbInstance);
+    };
+    initDb();
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
+        if (!db) return;
         try {
             // Fetch total revenue, active users etc.
             const transactionsCollection = collection(db, 'transactions');
@@ -86,7 +96,7 @@ export default function AnalyticsPage() {
         }
     };
     fetchData();
-  }, []);
+  }, [db]);
 
   if (activeUsers === null || gamesPlayed === null || todaysRevenue === null || !userActivityData || !revenueData) {
     return (

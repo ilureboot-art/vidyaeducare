@@ -36,8 +36,8 @@ import {
 } from "@/components/ui/select"
 import { format } from 'date-fns';
 import type { Admin, AdminRole } from "@/lib/admin-data";
-import { db, auth } from "@/lib/firebase";
-import { collection, getDocs, doc, setDoc, deleteDoc, updateDoc, query, where, getDoc } from "firebase/firestore";
+import { auth, db as dbPromise } from "@/lib/firebase";
+import { collection, getDocs, doc, setDoc, deleteDoc, updateDoc, query, where, getDoc, type Firestore } from "firebase/firestore";
 import { createUserWithEmailAndPassword, updatePassword } from "firebase/auth";
 
 
@@ -56,11 +56,19 @@ export default function AdminManagementPage() {
   const [selectedAdmin, setSelectedAdmin] = useState<Admin | null>(null);
   const [newAdminRole, setNewAdminRole] = useState<AdminRole | ''>('');
   const { toast } = useToast();
+  const [db, setDb] = useState<Firestore | null>(null);
+
+  useEffect(() => {
+    const initDb = async () => {
+      const dbInstance = await dbPromise;
+      setDb(dbInstance);
+    };
+    initDb();
+  }, []);
   
-  const fetchAdmins = async () => {
+  const fetchAdmins = async (db: Firestore) => {
     if (!auth.currentUser) return;
     
-    // Check if the current user is a Head Admin
     const currentUserAdminDoc = await getDoc(doc(db, "admins", auth.currentUser.uid));
     if (!currentUserAdminDoc.exists() || currentUserAdminDoc.data()?.role !== 'Head Admin') {
         toast({ variant: 'destructive', title: "Access Denied", description: "You don't have permission to manage admins."});
@@ -81,10 +89,10 @@ export default function AdminManagementPage() {
   };
   
   useEffect(() => {
-    if (auth.currentUser) {
-        fetchAdmins();
+    if (auth.currentUser && db) {
+        fetchAdmins(db);
     }
-  }, []);
+  }, [db]);
 
   const openWhatsApp = (phone: string, message?: string) => {
     const cleanedPhone = phone.replace(/\D/g, '');
@@ -117,7 +125,7 @@ export default function AdminManagementPage() {
   }
 
   const handleRequest = async (requestId: string, newStatus: "Active" | "Rejected") => {
-    if (!requests || !admins) return;
+    if (!requests || !admins || !db) return;
     const requestToProcess = requests.find(req => req.id === requestId);
     if (!requestToProcess) return;
 
@@ -129,7 +137,7 @@ export default function AdminManagementPage() {
             await deleteDoc(adminDocRef);
         }
         
-        await fetchAdmins(); // Re-fetch data to update UI
+        await fetchAdmins(db); // Re-fetch data to update UI
 
         toast({
           title: `Request ${newStatus === 'Active' ? 'Approved' : 'Rejected'}`,
@@ -144,6 +152,7 @@ export default function AdminManagementPage() {
 
   const handleCreateAdmin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!db) return;
     const form = e.currentTarget;
     const name = (form.elements.namedItem('name') as HTMLInputElement).value;
     const email = (form.elements.namedItem('email') as HTMLInputElement).value;
@@ -157,9 +166,6 @@ export default function AdminManagementPage() {
     }
     
     try {
-        // We can't create a user directly here on the client side with a specified UID
-        // And then log in as another user. This flow requires a backend function.
-        // For the purpose of this client-side app, we'll show an alert.
         toast({
             variant: "destructive",
             title: "Action Not Supported",
@@ -175,7 +181,7 @@ export default function AdminManagementPage() {
   
   const handleEditAdmin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!selectedAdmin || !admins) return;
+    if (!selectedAdmin || !admins || !db) return;
     const form = e.currentTarget;
     const name = (form.elements.namedItem('name-edit') as HTMLInputElement).value;
     const email = (form.elements.namedItem('email-edit') as HTMLInputElement).value;
@@ -191,7 +197,7 @@ export default function AdminManagementPage() {
 
     try {
         await updateDoc(doc(db, "admins", selectedAdmin.id), updatedData);
-        await fetchAdmins();
+        await fetchAdmins(db);
         
         toast({ title: 'Admin Updated', description: `${name}'s details have been saved.`});
         setIsEditDialogOpen(false);
@@ -214,7 +220,7 @@ export default function AdminManagementPage() {
   }
 
   const handleDeleteAdmin = async (adminId: string) => {
-    if (!admins) return;
+    if (!admins || !db) return;
     const adminToDelete = admins.find(admin => admin.id === adminId);
     if (!adminToDelete) return;
 
@@ -224,10 +230,8 @@ export default function AdminManagementPage() {
     }
     
     try {
-        // This only deletes from Firestore, not from Firebase Auth.
-        // A full implementation requires a backend function to delete the auth user.
         await deleteDoc(doc(db, "admins", adminId));
-        await fetchAdmins();
+        await fetchAdmins(db);
         toast({
             title: "Admin Deleted",
             description: `Admin account for ${adminToDelete.name} has been deleted. Note: Auth user may still exist.`,

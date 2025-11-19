@@ -10,17 +10,27 @@ import { useToast } from "@/hooks/use-toast";
 import { Landmark, Loader2 } from "lucide-react";
 import type { AdminPaymentMethods } from "@/lib/user-data";
 import Image from "next/image";
-import { db } from "@/lib/firebase";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { db as dbPromise } from "@/lib/firebase";
+import { doc, getDoc, setDoc, type Firestore } from "firebase/firestore";
 
 export default function PaymentSettingsPage() {
     const { toast } = useToast();
     
     const [methods, setMethods] = useState<AdminPaymentMethods | null>(null);
     const [qrFile, setQrFile] = useState<File | null>(null);
+    const [db, setDb] = useState<Firestore | null>(null);
+
+    useEffect(() => {
+        const initDb = async () => {
+          const dbInstance = await dbPromise;
+          setDb(dbInstance);
+        };
+        initDb();
+    }, []);
 
     useEffect(() => {
         const fetchPaymentMethods = async () => {
+            if (!db) return;
             const docRef = doc(db, "configs", "paymentMethods");
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
@@ -34,7 +44,7 @@ export default function PaymentSettingsPage() {
             }
         };
         fetchPaymentMethods();
-    }, [])
+    }, [db])
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -50,7 +60,7 @@ export default function PaymentSettingsPage() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!methods) return;
+        if (!methods || !db) return;
         
         const updateConfig = async (finalMethods: AdminPaymentMethods) => {
             try {

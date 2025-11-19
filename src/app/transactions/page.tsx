@@ -21,8 +21,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
 import { useAuth } from "@/context/AuthContext";
-import { db } from "@/lib/firebase";
-import { collection, query, where, getDocs, orderBy } from "firebase/firestore";
+import { db as dbPromise } from "@/lib/firebase";
+import { collection, query, where, getDocs, orderBy, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 const getStatusBadgeVariant = (status: string) => {
@@ -51,9 +51,18 @@ function TransactionsPageContent() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'rejected'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'deposit' | 'withdrawal'>('all');
+  const [db, setDb] = useState<Firestore | null>(null);
   
   useEffect(() => {
-    if (user) {
+    const initDb = async () => {
+      const dbInstance = await dbPromise;
+      setDb(dbInstance);
+    };
+    initDb();
+  }, []);
+
+  useEffect(() => {
+    if (user && db) {
         const fetchTransactions = async () => {
             const txsRef = collection(db, "transactions");
             const q = query(txsRef, where("user", "==", user.uid), orderBy("date", "desc"));
@@ -63,7 +72,7 @@ function TransactionsPageContent() {
         };
         fetchTransactions();
     }
-  }, [user]);
+  }, [user, db]);
 
   if (!transactions) {
     return (
@@ -183,3 +192,5 @@ export default function TransactionsPage() {
         </ProtectedRoute>
     )
 }
+
+    

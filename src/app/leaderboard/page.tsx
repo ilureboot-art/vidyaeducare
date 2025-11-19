@@ -13,8 +13,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Trophy, Award, Loader2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { db } from "@/lib/firebase";
-import { collection, getDocs, query, orderBy, limit } from "firebase/firestore";
+import { db as dbPromise } from "@/lib/firebase";
+import { collection, getDocs, query, orderBy, limit, type Firestore } from "firebase/firestore";
 
 type Player = {
   rank: number;
@@ -34,9 +34,19 @@ const getRankColor = (rank: number) => {
 
 export default function LeaderboardPage() {
   const [leaderboardData, setLeaderboardData] = useState<Player[] | null>(null);
+  const [db, setDb] = useState<Firestore | null>(null);
+
+  useEffect(() => {
+    const initDb = async () => {
+      const dbInstance = await dbPromise;
+      setDb(dbInstance);
+    };
+    initDb();
+  }, []);
 
   useEffect(() => {
     const fetchLeaderboard = async () => {
+        if (!db) return;
         const leaderboardRef = collection(db, "leaderboard");
         // Fetch top 50, ordered by score descending, then time ascending.
         const q = query(leaderboardRef, orderBy("score", "desc"), orderBy("time", "asc"), limit(50));
@@ -47,8 +57,10 @@ export default function LeaderboardPage() {
         } as Player));
         setLeaderboardData(leaderboard);
     };
-    fetchLeaderboard();
-  }, []);
+    if (db) {
+        fetchLeaderboard();
+    }
+  }, [db]);
 
   if (!leaderboardData) {
     return (
@@ -125,3 +137,5 @@ export default function LeaderboardPage() {
     </div>
   );
 }
+
+    

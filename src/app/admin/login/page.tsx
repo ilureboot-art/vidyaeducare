@@ -25,7 +25,7 @@ import { useFirebase } from "@/context/FirebaseClientProvider";
 export default function AdminLoginPage() {
   const { toast } = useToast();
   const router = useRouter();
-  const { db, auth, loading } = useFirebase();
+  const { db, auth } = useFirebase();
 
   const [email, setEmail] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
@@ -44,6 +44,7 @@ export default function AdminLoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    // The parent layout now ensures `auth` and `db` are ready before this page renders.
     if (!auth || !db) {
         toast({
             variant: "destructive",
@@ -217,14 +218,8 @@ export default function AdminLoginPage() {
   };
 
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <Loader2 className="animate-spin text-primary" size={32} />
-      </div>
-    );
-  }
-
+  // The parent layout now handles the main loading state.
+  // This component will not render until Firebase is ready.
   return (
     <div className="w-full max-w-md mx-auto flex flex-col items-center justify-center min-h-screen p-4">
       <div className="text-center space-y-2 mb-4">
@@ -261,7 +256,7 @@ export default function AdminLoginPage() {
                             <div className="space-y-2 relative">
                                 <div className="flex items-center justify-between">
                                   <Label htmlFor="password-login">Password</Label>
-                                  <Button type="button" variant="link" className="px-0 h-auto text-xs" onClick={handleForgotPassword} disabled={isLoading || loading}>
+                                  <Button type="button" variant="link" className="px-0 h-auto text-xs" onClick={handleForgotPassword} disabled={isLoading}>
                                       Forgot Password?
                                   </Button>
                                 </div>
@@ -291,7 +286,7 @@ export default function AdminLoginPage() {
                                 Remember me
                               </Label>
                             </div>
-                            <Button type="submit" className="w-full !mt-6" disabled={isLoading || loading}>
+                            <Button type="submit" className="w-full !mt-6" disabled={isLoading}>
                                 {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Logging in...</> : 'Login'}
                             </Button>
                     </CardContent>
@@ -332,7 +327,7 @@ export default function AdminLoginPage() {
                                   <span className="sr-only">Toggle password visibility</span>
                                 </Button>
                             </div>
-                            <Button type="submit" className="w-full" disabled={isLoading || loading}>
+                            <Button type="submit" className="w-full" disabled={isLoading}>
                                 {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Submitting...</> : 'Submit Request'}
                             </Button>
                     </CardContent>

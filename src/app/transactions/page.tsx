@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -21,7 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
 import { useAuth, useFirebase } from "@/context/FirebaseClientProvider";
-import { collection, query, where, getDocs, orderBy, type Firestore } from "firebase/firestore";
+import { collection, query, where, getDocs, orderBy, onSnapshot, Timestamp, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 const getStatusBadgeVariant = (status: string) => {
@@ -54,14 +55,17 @@ function TransactionsPageContent() {
   
   useEffect(() => {
     if (user && !firebaseLoading && db) {
-        const fetchTransactions = async () => {
-            const txsRef = collection(db, "transactions");
-            const q = query(txsRef, where("user", "==", user.uid), orderBy("date", "desc"));
-            const querySnapshot = await getDocs(q);
-            const txs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), date: doc.data().date.toDate().toISOString() } as Transaction));
+        const txsRef = collection(db, "transactions");
+        const q = query(txsRef, where("user", "==", user.uid), orderBy("date", "desc"));
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+            const txs = querySnapshot.docs.map(doc => {
+                const data = doc.data();
+                const date = data.date instanceof Timestamp ? data.date.toDate().toISOString() : data.date;
+                return { id: doc.id, ...data, date } as Transaction
+            });
             setTransactions(txs);
-        };
-        fetchTransactions();
+        });
+        return () => unsubscribe();
     }
   }, [user, db, firebaseLoading]);
 

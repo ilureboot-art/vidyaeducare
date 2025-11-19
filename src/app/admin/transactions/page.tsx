@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -20,8 +21,8 @@ import { type Transaction } from "@/lib/user-data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
-import { db as dbPromise } from "@/lib/firebase";
-import { collection, getDocs, doc, updateDoc, writeBatch, getDoc, runTransaction, Timestamp, type Firestore } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, writeBatch, getDoc, runTransaction, Timestamp, type Firestore, onSnapshot } from "firebase/firestore";
+import { useFirebase } from "@/context/FirebaseClientProvider";
 
 const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -45,41 +46,35 @@ const getTypeIcon = (type: string, amount: number) => {
 
 export default function TransactionsPage() {
   const { toast } = useToast();
+  const { db, loading } = useFirebase();
 
   const [transactions, setTransactions] = useState<Transaction[] | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'rejected'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'deposit' | 'withdrawal'>('all');
-  const [dbInstance, setDbInstance] = useState<Firestore | null>(null);
   
-  useEffect(() => {
-    const initDb = async () => {
-        const db = await dbPromise;
-        setDbInstance(db);
-    }
-    initDb();
-  }, []);
-
-  const fetchTransactions = async (db: Firestore) => {
-    const querySnapshot = await getDocs(collection(db, "transactions"));
-    const txs = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        // Ensure date is a string
-        const date = data.date instanceof Timestamp ? data.date.toDate().toISOString() : data.date;
-        return { id: doc.id, ...data, date } as Transaction
+  const fetchTransactions = (db: Firestore) => {
+    const unsubscribe = onSnapshot(collection(db, "transactions"), (querySnapshot) => {
+        const txs = querySnapshot.docs.map(doc => {
+            const data = doc.data();
+            const date = data.date instanceof Timestamp ? data.date.toDate().toISOString() : data.date;
+            return { id: doc.id, ...data, date } as Transaction
+        });
+        setTransactions(txs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
     });
-    setTransactions(txs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+    return unsubscribe;
   };
   
   useEffect(() => {
-    if (dbInstance) {
-        fetchTransactions(dbInstance);
+    if (!loading && db) {
+        const unsubscribe = fetchTransactions(db);
+        return () => unsubscribe();
     }
-  }, [dbInstance]);
+  }, [db, loading]);
 
 
   const handleTransactionStatus = async (id: string, newStatus: "Completed" | "Rejected") => {
-    if (!transactions || !dbInstance) return;
+    if (!transactions || !db) return;
 
     const txToUpdate = transactions.find(tx => tx.id === id);
     if (!txToUpdate || txToUpdate.status !== "Pending") {
@@ -87,11 +82,11 @@ export default function TransactionsPage() {
         return;
     }
 
-    const txDocRef = doc(dbInstance, "transactions", id);
+    const txDocRef = doc(db, "transactions", id);
 
     try {
-        await runTransaction(dbInstance, async (transaction) => {
-            const userWalletRef = txToUpdate.user ? doc(dbInstance, "wallets", txToUpdate.user) : null;
+        await runTransaction(db, async (transaction) => {
+            const userWalletRef = txToUpdate.user ? doc(db, "wallets", txToUpdate.user) : null;
             let userWalletDoc = null;
             
             if (userWalletRef) {
@@ -125,8 +120,6 @@ export default function TransactionsPage() {
             transaction.update(txDocRef, { status: newStatus });
         });
 
-        await fetchTransactions(dbInstance);
-
         toast({
           title: "Transaction Updated",
           description: `Transaction ${id} has been marked as ${newStatus}.`,
@@ -137,7 +130,7 @@ export default function TransactionsPage() {
     }
   };
 
-  if (!transactions || !dbInstance) {
+  if (loading || !transactions) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />

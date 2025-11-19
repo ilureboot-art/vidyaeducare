@@ -19,9 +19,9 @@ import { cn } from "@/lib/utils";
 import type { StudentProfile } from "@/lib/student-data";
 import type { Question, TestSet } from "@/lib/question-bank";
 import type { ScheduledTest } from "@/lib/test-schedule";
-import { db as dbPromise } from "@/lib/firebase";
 import { doc, getDoc, setDoc, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import { useFirebase } from "@/context/FirebaseClientProvider";
 
 const MOCK_TEST_DURATION = 30 * 60; // 30 minutes in seconds
 
@@ -31,11 +31,11 @@ function MockTestContent() {
     const { toast } = useToast();
     const router = useRouter();
     const searchParams = useSearchParams();
+    const { db, loading } = useFirebase();
 
     const [testState, setTestState] = useState<TestState>("loading");
     const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(null);
     const [scheduledTest, setScheduledTest] = useState<ScheduledTest | null>(null);
-    const [db, setDb] = useState<Firestore | null>(null);
 
     const [activeQuestions, setActiveQuestions] = useState<Question[]>([]);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -46,15 +46,7 @@ function MockTestContent() {
     const [isPrizeEligible, setIsPrizeEligible] = useState(false);
     
     useEffect(() => {
-        const initDb = async () => {
-          const dbInstance = await dbPromise;
-          setDb(dbInstance);
-        };
-        initDb();
-    }, []);
-
-    useEffect(() => {
-        if (!db) return;
+        if (loading || !db) return;
 
         const studentId = searchParams.get('studentId');
         const testId = searchParams.get('testId');
@@ -102,7 +94,7 @@ function MockTestContent() {
         };
 
         fetchData();
-    }, [searchParams, router, toast, db]);
+    }, [searchParams, router, toast, db, loading]);
 
     useEffect(() => {
         if (testState !== "in_progress") return;

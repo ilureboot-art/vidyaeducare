@@ -24,8 +24,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import type { TestSet } from "@/lib/question-bank";
 import type { ScheduledTest } from "@/lib/test-schedule";
-import { db as dbPromise } from "@/lib/firebase";
 import { collection, getDocs, doc, setDoc, type Firestore } from "firebase/firestore";
+import { useFirebase } from '@/context/FirebaseClientProvider';
 
 type TestStatus = 'Live' | 'Upcoming' | 'Completed';
 
@@ -33,22 +33,14 @@ type ScheduledTestWithStatus = ScheduledTest & { status: TestStatus };
 
 export default function TestSchedulePage() {
     const { toast } = useToast();
+    const { db, loading } = useFirebase();
 
     const [allSchedules, setAllSchedules] = useState<ScheduledTestWithStatus[] | null>(null);
     const [testSets, setTestSets] = useState<TestSet[] | null>(null);
     const [date, setDate] = useState<Date | undefined>(new Date());
     const [time, setTime] = useState('10:00'); // Default time
     const [selectedTestSetId, setSelectedTestSetId] = useState('');
-    const [db, setDb] = useState<Firestore | null>(null);
 
-    useEffect(() => {
-        const initDb = async () => {
-          const dbInstance = await dbPromise;
-          setDb(dbInstance);
-        };
-        initDb();
-    }, []);
-    
     const fetchData = async (db: Firestore) => {
         const testSetsCollection = collection(db, "testSets");
         const testSetSnapshot = await getDocs(testSetsCollection);
@@ -62,10 +54,10 @@ export default function TestSchedulePage() {
     };
 
     useEffect(() => {
-        if (db) {
+        if (!loading && db) {
             fetchData(db);
         }
-    }, [db]);
+    }, [db, loading]);
     
     const refreshSchedules = (schedules: ScheduledTest[]) => {
          if (schedules) {
@@ -144,7 +136,7 @@ export default function TestSchedulePage() {
         }
     };
     
-    if (!allSchedules || !testSets) {
+    if (loading || !allSchedules || !testSets) {
         return (
           <div className="flex justify-center items-center h-96">
             <Loader2 className="animate-spin text-primary" size={32} />

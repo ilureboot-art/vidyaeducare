@@ -14,53 +14,38 @@ const firebaseConfig = {
   "messagingSenderId": "759861893307"
 };
 
-class FirebaseService {
-  private static instance: FirebaseService;
-  public readonly app: FirebaseApp;
-  public readonly auth: Auth;
-  public readonly db: Firestore;
+let app: FirebaseApp;
+let auth: Auth;
+let db: Firestore;
 
-  private constructor() {
-    if (!getApps().length) {
-      this.app = initializeApp(firebaseConfig);
-    } else {
-      this.app = getApp();
-    }
-    this.auth = getAuth(this.app);
-    this.db = this.initializeFirestoreWithPersistence();
-  }
-
-  private initializeFirestoreWithPersistence(): Firestore {
-    const firestoreDb = getFirestore(this.app);
-    if (typeof window !== 'undefined') {
-        enableIndexedDbPersistence(firestoreDb, {
-            cacheSizeBytes: CACHE_SIZE_UNLIMITED
-        }).catch((err) => {
-            if (err.code === 'failed-precondition') {
-                console.warn(
-                    'Firestore persistence failed: Multiple tabs open, persistence can only be enabled in one tab at a time.'
-                );
-            } else if (err.code === 'unimplemented') {
-                console.warn(
-                    'Firestore persistence failed: The current browser does not support all of the features required to enable persistence.'
-                );
-            }
-        });
-    }
-    return firestoreDb;
-  }
-
-  public static getInstance(): FirebaseService {
-    if (!FirebaseService.instance) {
-      FirebaseService.instance = new FirebaseService();
-    }
-    return FirebaseService.instance;
-  }
+// Initialize Firebase
+if (getApps().length === 0) {
+    app = initializeApp(firebaseConfig);
+} else {
+    app = getApp();
 }
 
-const firebaseInstance = FirebaseService.getInstance();
-const app = firebaseInstance.app;
-const auth = firebaseInstance.auth;
-const db = firebaseInstance.db;
+auth = getAuth(app);
+db = getFirestore(app);
+
+// Enable persistence
+if (typeof window !== 'undefined') {
+    enableIndexedDbPersistence(db, {
+        cacheSizeBytes: CACHE_SIZE_UNLIMITED
+    }).catch((err) => {
+        if (err.code === 'failed-precondition') {
+            console.warn(
+                'Firestore persistence failed: Multiple tabs open, persistence can only be enabled in one tab at a time.'
+            );
+        } else if (err.code === 'unimplemented') {
+            console.warn(
+                'Firestore persistence failed: The current browser does not support all of the features required to enable persistence.'
+            );
+        } else {
+            console.error("Firebase persistence error", err);
+        }
+    });
+}
+
 
 export { app, auth, db };

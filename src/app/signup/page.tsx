@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -17,8 +18,8 @@ import { Label } from "@/components/ui/label";
 import { Gamepad2, Loader2, Eye, EyeOff } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { db, auth } from "@/lib/firebase";
-import { doc, setDoc, getDoc, runTransaction, collection } from "firebase/firestore";
+import { db as dbPromise, auth } from "@/lib/firebase";
+import { doc, setDoc, getDoc, runTransaction, collection, query, where, getDocs, type Firestore } from "firebase/firestore";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 
 export default function SignupPage() {
@@ -30,6 +31,15 @@ export default function SignupPage() {
   const [referralBonus, setReferralBonus] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [db, setDb] = useState<Firestore | null>(null);
+
+    useEffect(() => {
+        const initDb = async () => {
+          const dbInstance = await dbPromise;
+          setDb(dbInstance);
+        };
+        initDb();
+    }, []);
 
   useEffect(() => {
     const refCode = searchParams.get('ref');
@@ -37,16 +47,18 @@ export default function SignupPage() {
       setReferralCode(refCode);
     }
     const fetchConfig = async () => {
+        if (!db) return;
         const storeConfigDoc = await getDoc(doc(db, "configs", "store"));
         if(storeConfigDoc.exists()) {
             setReferralBonus(storeConfigDoc.data().referralBonus);
         }
     };
-    fetchConfig();
-  }, [searchParams]);
+    if (db) fetchConfig();
+  }, [searchParams, db]);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!db) return;
     setIsLoading(true);
     
     const form = e.target as HTMLFormElement;

@@ -8,8 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { db } from "@/lib/firebase";
-import { collection, addDoc, getDocs, doc, setDoc, deleteDoc, getDoc } from "firebase/firestore";
+import { db as dbPromise } from "@/lib/firebase";
+import { collection, addDoc, getDocs, doc, setDoc, deleteDoc, getDoc, type Firestore } from "firebase/firestore";
 import { PlusCircle, Trash2, Puzzle, Loader2, Save } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
@@ -34,6 +34,7 @@ export default function AdminQuizClashPage() {
     const [tournaments, setTournaments] = useState<QuizClashTournament[] | null>(null);
     const [testSets, setTestSets] = useState<TestSet[] | null>(null);
     const [autoConfig, setAutoConfig] = useState<QuizClashAutoCreateConfig | null>(null);
+    const [db, setDb] = useState<Firestore | null>(null);
 
     const [newTournament, setNewTournament] = useState({
         title: "",
@@ -43,7 +44,15 @@ export default function AdminQuizClashPage() {
         testSetId: ""
     });
 
-    const fetchTournamentsAndTestSets = async () => {
+    useEffect(() => {
+        const initDb = async () => {
+          const dbInstance = await dbPromise;
+          setDb(dbInstance);
+        };
+        initDb();
+    }, []);
+
+    const fetchTournamentsAndTestSets = async (db: Firestore) => {
         // Fetch tournaments
         const tournamentsSnapshot = await getDocs(collection(db, "quizClashTournaments"));
         const tournamentList = tournamentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as QuizClashTournament));
@@ -64,8 +73,10 @@ export default function AdminQuizClashPage() {
     };
 
     useEffect(() => {
-        fetchTournamentsAndTestSets();
-    }, []);
+        if(db) {
+            fetchTournamentsAndTestSets(db);
+        }
+    }, [db]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -94,7 +105,7 @@ export default function AdminQuizClashPage() {
 
     const handleCreateTournament = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newTournament.title || !newTournament.startTime || !newTournament.testSetId) {
+        if (!db || !newTournament.title || !newTournament.startTime || !newTournament.testSetId) {
             toast({ variant: 'destructive', title: 'Missing fields', description: 'Please fill out all tournament details.' });
             return;
         }
@@ -119,7 +130,7 @@ export default function AdminQuizClashPage() {
 
         try {
             await addDoc(collection(db, "quizClashTournaments"), tournamentData);
-            await fetchTournamentsAndTestSets();
+            await fetchTournamentsAndTestSets(db);
             toast({ title: "Tournament Created!", description: `${newTournament.title} has been scheduled.` });
             setNewTournament({ title: "", startTime: "", type: "Pro", entryFee: 10, testSetId: "" });
         } catch (error) {
@@ -129,9 +140,10 @@ export default function AdminQuizClashPage() {
     };
     
     const handleDeleteTournament = async (id: string) => {
+        if (!db) return;
         try {
             await deleteDoc(doc(db, "quizClashTournaments", id));
-            await fetchTournamentsAndTestSets();
+            await fetchTournamentsAndTestSets(db);
             toast({ title: "Tournament Deleted" });
         } catch (error) {
              toast({ variant: 'destructive', title: 'Error', description: 'Could not delete the tournament.' });
@@ -139,7 +151,7 @@ export default function AdminQuizClashPage() {
     }
     
     const handleSaveAutoConfig = async () => {
-        if (!autoConfig) return;
+        if (!autoConfig || !db) return;
         try {
             const configToSave = {
                 ...autoConfig,

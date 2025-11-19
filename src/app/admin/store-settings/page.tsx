@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -12,16 +13,26 @@ import { PlusCircle, Trash2, Zap, BookOpen, GraduationCap, Percent, Loader2 } fr
 import type { TicketPackage, ReferboltSubscription, MockTestPackage, ReferboltSettings, GameSettings, StoreConfig } from "@/lib/store-config";
 import type { AcademicConfig } from "@/lib/academic-config";
 import { Switch } from "@/components/ui/switch";
-import { db } from "@/lib/firebase";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { db as dbPromise } from "@/lib/firebase";
+import { doc, getDoc, setDoc, type Firestore } from "firebase/firestore";
 
 export default function AdminStoreSettingsPage() {
   const { toast } = useToast();
   
   const [storeConfig, setStoreConfig] = useState<StoreConfig | null>(null);
   const [academicConfig, setAcademicConfig] = useState<AcademicConfig | null>(null);
+  const [db, setDb] = useState<Firestore | null>(null);
 
   useEffect(() => {
+    const initDb = async () => {
+      const dbInstance = await dbPromise;
+      setDb(dbInstance);
+    };
+    initDb();
+  }, []);
+
+  useEffect(() => {
+    if (!db) return;
     const fetchConfigs = async () => {
         const storeConfigDoc = await getDoc(doc(db, "configs", "store"));
         if(storeConfigDoc.exists()) {
@@ -34,7 +45,7 @@ export default function AdminStoreSettingsPage() {
         }
     }
     fetchConfigs();
-  }, []);
+  }, [db]);
 
   const handleMockTestPackageChange = (index: number, field: keyof MockTestPackage, value: string | number | boolean) => {
     if (!storeConfig) return;
@@ -116,7 +127,7 @@ export default function AdminStoreSettingsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!storeConfig || !academicConfig) return;
+    if (!storeConfig || !academicConfig || !db) return;
     
     try {
         await setDoc(doc(db, "configs", "store"), storeConfig);
@@ -297,5 +308,3 @@ export default function AdminStoreSettingsPage() {
     </div>
   );
 }
-
-    

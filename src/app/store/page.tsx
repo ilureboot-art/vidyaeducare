@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -12,8 +13,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from 'next/link';
 import type { StoreConfig, MockTestPackage, ReferboltSubscription } from "@/lib/store-config";
 import type { WalletData } from "@/lib/user-data";
-import { db } from "@/lib/firebase";
-import { doc, getDoc, runTransaction, collection, serverTimestamp, updateDoc, arrayUnion } from "firebase/firestore";
+import { db as dbPromise } from "@/lib/firebase";
+import { doc, getDoc, runTransaction, collection, serverTimestamp, updateDoc, arrayUnion, query, where, getDocs, type Firestore } from "firebase/firestore";
 import { useAuth } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
@@ -24,12 +25,21 @@ function StorePageContent() {
   const [walletData, setWalletData] = useState<WalletData | null>(null);
   const [storeConfig, setStoreConfig] = useState<StoreConfig | null>(null);
   const [isPurchasing, setIsPurchasing] = useState<string | null>(null);
+  const [db, setDb] = useState<Firestore | null>(null);
   
   const [referralCode1, setReferralCode1] = useState("");
   const [referralCode2, setReferralCode2] = useState("");
 
   useEffect(() => {
-    if (user) {
+    const initDb = async () => {
+      const dbInstance = await dbPromise;
+      setDb(dbInstance);
+    };
+    initDb();
+  }, []);
+
+  useEffect(() => {
+    if (user && db) {
         const fetchData = async () => {
             const walletDocRef = doc(db, "wallets", user.uid);
             const walletDoc = await getDoc(walletDocRef);
@@ -44,10 +54,10 @@ function StorePageContent() {
         };
         fetchData();
     }
-  }, [user]);
+  }, [user, db]);
 
   const handlePurchase = async (item: MockTestPackage | ReferboltSubscription, type: 'mock' | 'referbolt') => {
-    if (!user || !storeConfig || !walletData) return;
+    if (!user || !storeConfig || !walletData || !db) return;
 
     setIsPurchasing(item.name);
 

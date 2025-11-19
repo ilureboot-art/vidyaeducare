@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -13,8 +14,8 @@ import Link from "next/link";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/AuthContext";
-import { db } from "@/lib/firebase";
-import { doc, getDoc, onSnapshot, DocumentData } from "firebase/firestore";
+import { db as dbPromise } from "@/lib/firebase";
+import { doc, getDoc, onSnapshot, DocumentData, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 const benefits = [
@@ -31,9 +32,18 @@ function ReferBoltPageContent() {
   
   const [data, setData] = useState<DocumentData | null | { isSubscribed: boolean }>({ isSubscribed: false });
   const [autoRenew, setAutoRenew] = useState(false);
+  const [db, setDb] = useState<Firestore | null>(null);
 
   useEffect(() => {
-    if (user) {
+    const initDb = async () => {
+      const dbInstance = await dbPromise;
+      setDb(dbInstance);
+    };
+    initDb();
+  }, []);
+
+  useEffect(() => {
+    if (user && db) {
         const referboltDocRef = doc(db, "referbolt", user.uid);
         const unsub = onSnapshot(referboltDocRef, (docSnap) => {
             if (docSnap.exists()) {
@@ -46,7 +56,7 @@ function ReferBoltPageContent() {
         });
         return () => unsub();
     }
-  }, [user]);
+  }, [user, db]);
 
   const handleShare = async () => {
     if (!data || !('referralCode' in data)) return;

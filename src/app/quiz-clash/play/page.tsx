@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
@@ -20,8 +21,8 @@ import { Loader2, HelpCircle, RefreshCw, Star, Trophy, X, Check, Timer, Coins, S
 import { cn } from "@/lib/utils";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/context/AuthContext";
-import { db } from "@/lib/firebase";
-import { doc, getDoc, collection, addDoc, serverTimestamp, runTransaction } from "firebase/firestore";
+import { db as dbPromise } from "@/lib/firebase";
+import { doc, getDoc, collection, addDoc, serverTimestamp, runTransaction, type Firestore } from "firebase/firestore";
 import type { QuizClashTournament } from "@/lib/quiz-clash-data";
 import type { TestSet, Question } from "@/lib/question-bank";
 
@@ -45,12 +46,21 @@ function QuizClashGameContent() {
     const [isQuitConfirmOpen, setIsQuitConfirmOpen] = useState(false);
     const [finalScore, setFinalScore] = useState(0);
     const [finalTime, setFinalTime] = useState(0);
+    const [db, setDb] = useState<Firestore | null>(null);
     
     const tournamentId = searchParams.get('tournamentId');
 
     useEffect(() => {
-        if (!tournamentId || !user) {
-            router.push('/quiz-clash');
+        const initDb = async () => {
+          const dbInstance = await dbPromise;
+          setDb(dbInstance);
+        };
+        initDb();
+    }, []);
+
+    useEffect(() => {
+        if (!tournamentId || !user || !db) {
+            if(!tournamentId || !user) router.push('/quiz-clash');
             return;
         }
 
@@ -80,7 +90,7 @@ function QuizClashGameContent() {
         };
 
         fetchGameData();
-    }, [tournamentId, user, router, toast]);
+    }, [tournamentId, user, router, toast, db]);
 
     useEffect(() => {
         if (gameState !== "playing" || isAnswerLocked) return;
@@ -131,7 +141,7 @@ function QuizClashGameContent() {
     };
 
     const handleGameOver = async (reason: string) => {
-        if (gameState === 'finished' || !user || !tournamentId) return;
+        if (gameState === 'finished' || !user || !tournamentId || !db) return;
 
         setGameState("finished");
         

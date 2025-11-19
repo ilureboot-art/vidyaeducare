@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
@@ -18,8 +19,8 @@ import { cn } from "@/lib/utils";
 import type { StudentProfile } from "@/lib/student-data";
 import type { Question, TestSet } from "@/lib/question-bank";
 import type { ScheduledTest } from "@/lib/test-schedule";
-import { db } from "@/lib/firebase";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { db as dbPromise } from "@/lib/firebase";
+import { doc, getDoc, setDoc, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 const MOCK_TEST_DURATION = 30 * 60; // 30 minutes in seconds
@@ -34,6 +35,7 @@ function MockTestContent() {
     const [testState, setTestState] = useState<TestState>("loading");
     const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(null);
     const [scheduledTest, setScheduledTest] = useState<ScheduledTest | null>(null);
+    const [db, setDb] = useState<Firestore | null>(null);
 
     const [activeQuestions, setActiveQuestions] = useState<Question[]>([]);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -42,8 +44,18 @@ function MockTestContent() {
     const [score, setScore] = useState(0);
     const [isLiveTest, setIsLiveTest] = useState(false);
     const [isPrizeEligible, setIsPrizeEligible] = useState(false);
+    
+    useEffect(() => {
+        const initDb = async () => {
+          const dbInstance = await dbPromise;
+          setDb(dbInstance);
+        };
+        initDb();
+    }, []);
 
     useEffect(() => {
+        if (!db) return;
+
         const studentId = searchParams.get('studentId');
         const testId = searchParams.get('testId');
         const live = searchParams.get('isLive') === 'true';
@@ -90,7 +102,7 @@ function MockTestContent() {
         };
 
         fetchData();
-    }, [searchParams, router, toast]);
+    }, [searchParams, router, toast, db]);
 
     useEffect(() => {
         if (testState !== "in_progress") return;
@@ -126,7 +138,7 @@ function MockTestContent() {
     };
 
     const handleSubmitTest = async () => {
-        if (!scheduledTest || !studentProfile) return;
+        if (!scheduledTest || !studentProfile || !db) return;
 
         let correctAnswers = 0;
         activeQuestions.forEach(q => {

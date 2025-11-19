@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -23,8 +24,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import type { TestSet } from "@/lib/question-bank";
 import type { ScheduledTest } from "@/lib/test-schedule";
-import { db } from "@/lib/firebase";
-import { collection, getDocs, doc, setDoc } from "firebase/firestore";
+import { db as dbPromise } from "@/lib/firebase";
+import { collection, getDocs, doc, setDoc, type Firestore } from "firebase/firestore";
 
 type TestStatus = 'Live' | 'Upcoming' | 'Completed';
 
@@ -38,8 +39,17 @@ export default function TestSchedulePage() {
     const [date, setDate] = useState<Date | undefined>(new Date());
     const [time, setTime] = useState('10:00'); // Default time
     const [selectedTestSetId, setSelectedTestSetId] = useState('');
+    const [db, setDb] = useState<Firestore | null>(null);
+
+    useEffect(() => {
+        const initDb = async () => {
+          const dbInstance = await dbPromise;
+          setDb(dbInstance);
+        };
+        initDb();
+    }, []);
     
-    const fetchData = async () => {
+    const fetchData = async (db: Firestore) => {
         const testSetsCollection = collection(db, "testSets");
         const testSetSnapshot = await getDocs(testSetsCollection);
         const testSetList = testSetSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TestSet));
@@ -52,8 +62,10 @@ export default function TestSchedulePage() {
     };
 
     useEffect(() => {
-        fetchData();
-    }, []);
+        if (db) {
+            fetchData(db);
+        }
+    }, [db]);
     
     const refreshSchedules = (schedules: ScheduledTest[]) => {
          if (schedules) {
@@ -83,7 +95,7 @@ export default function TestSchedulePage() {
 
 
     const handleScheduleTest = async () => {
-        if (!date || !selectedTestSetId || !time || !testSets || !allSchedules) {
+        if (!date || !selectedTestSetId || !time || !testSets || !allSchedules || !db) {
             toast({
                 variant: 'destructive',
                 title: "Missing Information",
@@ -115,7 +127,7 @@ export default function TestSchedulePage() {
 
         try {
             await setDoc(doc(db, "scheduledTests", newTestId), newTest);
-            await fetchData(); // Re-fetch all data to update the UI
+            await fetchData(db); // Re-fetch all data to update the UI
             
             toast({
                 title: "Test Scheduled!",
@@ -238,5 +250,3 @@ export default function TestSchedulePage() {
         </div>
     );
 }
-
-    

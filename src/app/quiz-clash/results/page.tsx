@@ -9,8 +9,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Loader2, Trophy, Award, Users, IndianRupee } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
-import { db } from "@/lib/firebase";
-import { doc, getDoc, collection, query, where, getDocs, orderBy, updateDoc, runTransaction, serverTimestamp } from "firebase/firestore";
+import { db as dbPromise } from "@/lib/firebase";
+import { doc, getDoc, collection, query, where, getDocs, orderBy, updateDoc, runTransaction, serverTimestamp, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import type { QuizClashTournament } from "@/lib/quiz-clash-data";
 
@@ -35,14 +35,23 @@ function QuizClashResultsContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const tournamentId = searchParams.get('tournamentId');
+    const [db, setDb] = useState<Firestore | null>(null);
 
     const [tournament, setTournament] = useState<QuizClashTournament | null>(null);
     const [results, setResults] = useState<Result[] | null>(null);
     const [userResult, setUserResult] = useState<Result | null>(null);
 
     useEffect(() => {
-        if (!tournamentId) {
-            router.push('/quiz-clash');
+        const initDb = async () => {
+          const dbInstance = await dbPromise;
+          setDb(dbInstance);
+        };
+        initDb();
+    }, []);
+
+    useEffect(() => {
+        if (!tournamentId || !db) {
+            if (!tournamentId) router.push('/quiz-clash');
             return;
         }
 
@@ -126,7 +135,7 @@ function QuizClashResultsContent() {
         };
 
         processResults();
-    }, [tournamentId, router, user]);
+    }, [tournamentId, router, user, db]);
 
     if (!results || !tournament) {
         return (

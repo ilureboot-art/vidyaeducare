@@ -20,8 +20,8 @@ import { type Transaction } from "@/lib/user-data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
-import { db } from "@/lib/firebase";
-import { collection, getDocs, doc, updateDoc, writeBatch, getDoc, runTransaction, Timestamp } from "firebase/firestore";
+import { db as dbPromise } from "@/lib/firebase";
+import { collection, getDocs, doc, updateDoc, writeBatch, getDoc, runTransaction, Timestamp, type Firestore } from "firebase/firestore";
 
 const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -50,8 +50,17 @@ export default function TransactionsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'rejected'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'deposit' | 'withdrawal'>('all');
+  const [dbInstance, setDbInstance] = useState<Firestore | null>(null);
   
-  const fetchTransactions = async () => {
+  useEffect(() => {
+    const initDb = async () => {
+        const db = await dbPromise;
+        setDbInstance(db);
+    }
+    initDb();
+  }, []);
+
+  const fetchTransactions = async (db: Firestore) => {
     const querySnapshot = await getDocs(collection(db, "transactions"));
     const txs = querySnapshot.docs.map(doc => {
         const data = doc.data();
@@ -63,12 +72,14 @@ export default function TransactionsPage() {
   };
   
   useEffect(() => {
-    fetchTransactions();
-  }, []);
+    if (dbInstance) {
+        fetchTransactions(dbInstance);
+    }
+  }, [dbInstance]);
 
 
   const handleTransactionStatus = async (id: string, newStatus: "Completed" | "Rejected") => {
-    if (!transactions) return;
+    if (!transactions || !dbInstance) return;
 
     const txToUpdate = transactions.find(tx => tx.id === id);
     if (!txToUpdate || txToUpdate.status !== "Pending") {
@@ -76,11 +87,11 @@ export default function TransactionsPage() {
         return;
     }
 
-    const txDocRef = doc(db, "transactions", id);
+    const txDocRef = doc(dbInstance, "transactions", id);
 
     try {
-        await runTransaction(db, async (transaction) => {
-            const userWalletRef = txToUpdate.user ? doc(db, "wallets", txToUpdate.user) : null;
+        await runTransaction(dbInstance, async (transaction) => {
+            const userWalletRef = txToUpdate.user ? doc(dbInstance, "wallets", txToUpdate.user) : null;
             let userWalletDoc = null;
             
             if (userWalletRef) {
@@ -114,7 +125,7 @@ export default function TransactionsPage() {
             transaction.update(txDocRef, { status: newStatus });
         });
 
-        await fetchTransactions();
+        await fetchTransactions(dbInstance);
 
         toast({
           title: "Transaction Updated",
@@ -126,7 +137,7 @@ export default function TransactionsPage() {
     }
   };
 
-  if (!transactions) {
+  if (!transactions || !dbInstance) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />
@@ -248,5 +259,3 @@ export default function TransactionsPage() {
     </div>
   );
 }
-
-    

@@ -14,11 +14,13 @@ const firebaseConfig = {
   "messagingSenderId": "759861893307"
 };
 
+// Singleton instances
 let app: FirebaseApp;
 let auth: Auth;
 let db: Firestore;
+let persistenceEnabled = false;
 
-// Initialize Firebase
+// Initialize Firebase App and Auth
 if (getApps().length === 0) {
     app = initializeApp(firebaseConfig);
 } else {
@@ -26,26 +28,39 @@ if (getApps().length === 0) {
 }
 
 auth = getAuth(app);
-db = getFirestore(app);
 
-// Enable persistence
-if (typeof window !== 'undefined') {
-    enableIndexedDbPersistence(db, {
-        cacheSizeBytes: CACHE_SIZE_UNLIMITED
-    }).catch((err) => {
-        if (err.code === 'failed-precondition') {
-            console.warn(
-                'Firestore persistence failed: Multiple tabs open, persistence can only be enabled in one tab at a time.'
-            );
-        } else if (err.code === 'unimplemented') {
-            console.warn(
-                'Firestore persistence failed: The current browser does not support all of the features required to enable persistence.'
-            );
-        } else {
-            console.error("Firebase persistence error", err);
+// Asynchronously initialize Firestore with persistence
+const initializeFirestore = async (): Promise<Firestore> => {
+    if (db && persistenceEnabled) {
+        return db;
+    }
+
+    const firestoreInstance = getFirestore(app);
+
+    if (typeof window !== 'undefined' && !persistenceEnabled) {
+        try {
+            await enableIndexedDbPersistence(firestoreInstance, {
+                cacheSizeBytes: CACHE_SIZE_UNLIMITED
+            });
+            persistenceEnabled = true;
+            console.log("Firestore persistence enabled.");
+        } catch (err: any) {
+            if (err.code === 'failed-precondition') {
+                console.warn('Firestore persistence failed: Multiple tabs open. App will work in online-only mode.');
+            } else if (err.code === 'unimplemented') {
+                console.warn('Firestore persistence failed: Browser does not support persistence.');
+            } else {
+                console.error("Firebase persistence error", err);
+            }
         }
-    });
-}
+    }
+    db = firestoreInstance;
+    return db;
+};
 
+// Export the initialized app and auth, and a function to get the initialized db
+export { app, auth };
 
-export { app, auth, db };
+// Use a promise to ensure db is not used before persistence is set up.
+const dbPromise = initializeFirestore();
+export { dbPromise as db };

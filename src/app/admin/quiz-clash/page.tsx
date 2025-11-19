@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { db as dbPromise } from "@/lib/firebase";
+import { getFirebase } from "@/lib/firebase";
 import { collection, addDoc, getDocs, doc, setDoc, deleteDoc, getDoc, type Firestore } from "firebase/firestore";
 import { PlusCircle, Trash2, Puzzle, Loader2, Save } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -45,11 +45,11 @@ export default function AdminQuizClashPage() {
     });
 
     useEffect(() => {
-        const initDb = async () => {
-          const dbInstance = await dbPromise;
-          setDb(dbInstance);
+        const initFirebase = async () => {
+          const { db } = await getFirebase();
+          setDb(db);
         };
-        initDb();
+        initFirebase();
     }, []);
 
     const fetchTournamentsAndTestSets = async (db: Firestore) => {

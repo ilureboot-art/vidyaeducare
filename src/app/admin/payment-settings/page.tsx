@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Landmark, Loader2 } from "lucide-react";
 import type { AdminPaymentMethods } from "@/lib/user-data";
 import Image from "next/image";
-import { db as dbPromise } from "@/lib/firebase";
+import { getFirebase } from "@/lib/firebase";
 import { doc, getDoc, setDoc, type Firestore } from "firebase/firestore";
 
 export default function PaymentSettingsPage() {
@@ -21,11 +21,11 @@ export default function PaymentSettingsPage() {
     const [db, setDb] = useState<Firestore | null>(null);
 
     useEffect(() => {
-        const initDb = async () => {
-          const dbInstance = await dbPromise;
-          setDb(dbInstance);
+        const initFirebase = async () => {
+          const { db } = await getFirebase();
+          setDb(db);
         };
-        initDb();
+        initFirebase();
     }, []);
 
     useEffect(() => {
@@ -43,7 +43,9 @@ export default function PaymentSettingsPage() {
                 });
             }
         };
-        fetchPaymentMethods();
+        if (db) {
+            fetchPaymentMethods();
+        }
     }, [db])
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -170,5 +172,3 @@ export default function PaymentSettingsPage() {
     </div>
   );
 }
-
-    

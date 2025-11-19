@@ -18,8 +18,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Gamepad2, Shield, Eye, EyeOff, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { auth } from "@/lib/firebase";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { getFirebase } from "@/lib/firebase";
+import { signInWithEmailAndPassword, type Auth } from "firebase/auth";
 
 export default function LoginPage() {
   const { toast } = useToast();
@@ -29,6 +29,15 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [auth, setAuth] = useState<Auth | null>(null);
+
+  useEffect(() => {
+    const initFirebase = async () => {
+      const { auth } = await getFirebase();
+      setAuth(auth);
+    };
+    initFirebase();
+  }, []);
 
   useEffect(() => {
     const rememberedEmail = localStorage.getItem('rememberedUser');
@@ -40,6 +49,7 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!auth) return;
     setIsLoading(true);
     const password = (e.currentTarget.querySelector('#password') as HTMLInputElement).value;
 
@@ -132,7 +142,7 @@ export default function LoginPage() {
             </div>
           </CardContent>
           <CardFooter className="flex-col gap-4">
-            <Button className="w-full" type="submit" disabled={isLoading}>
+            <Button className="w-full" type="submit" disabled={isLoading || !auth}>
               {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Logging in...</> : "Login"}
             </Button>
           </CardFooter>

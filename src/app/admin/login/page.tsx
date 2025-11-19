@@ -18,9 +18,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
-import { auth, db } from "@/lib/firebase";
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from "firebase/auth";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { getFirebase } from "@/lib/firebase";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut, type Auth } from "firebase/auth";
+import { doc, setDoc, getDoc, type Firestore } from "firebase/firestore";
 
 export default function AdminLoginPage() {
   const { toast } = useToast();
@@ -32,6 +32,17 @@ export default function AdminLoginPage() {
   const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("login");
+  const [db, setDb] = useState<Firestore | null>(null);
+  const [auth, setAuth] = useState<Auth | null>(null);
+
+  useEffect(() => {
+    const initFirebase = async () => {
+      const { db, auth } = await getFirebase();
+      setDb(db);
+      setAuth(auth);
+    };
+    initFirebase();
+  }, []);
 
   useEffect(() => {
     const rememberedAdmin = localStorage.getItem('rememberedAdmin');
@@ -43,6 +54,7 @@ export default function AdminLoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!auth || !db) return;
     setIsLoading(true);
     const password = (e.currentTarget.querySelector('#password-login') as HTMLInputElement).value;
 
@@ -112,6 +124,7 @@ export default function AdminLoginPage() {
 
   const handleSignup = async (e: React.FormEvent) => {
      e.preventDefault();
+     if (!auth || !db) return;
      setIsLoading(true);
      const form = e.target as HTMLFormElement;
      const name = (form.elements.namedItem('name-signup') as HTMLInputElement).value;
@@ -162,6 +175,7 @@ export default function AdminLoginPage() {
   }
 
   const handleForgotPassword = async () => {
+    if (!auth) return;
     const currentEmail = (document.getElementById('email-login') as HTMLInputElement)?.value || email;
     if (!currentEmail) {
         toast({
@@ -315,5 +329,3 @@ export default function AdminLoginPage() {
     </div>
   );
 }
-
-    

@@ -8,7 +8,7 @@ import { Bell, UserPlus, ArrowDown, ArrowUp, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import type { AppNotification } from "@/lib/notifications";
-import { db as dbPromise } from "@/lib/firebase";
+import { getFirebase } from "@/lib/firebase";
 import { collection, getDocs, query, where, orderBy, Timestamp, type Firestore } from "firebase/firestore";
 
 const getIconForType = (type: string) => {
@@ -29,11 +29,11 @@ export default function AdminNotificationsPage() {
     const [db, setDb] = useState<Firestore | null>(null);
 
     useEffect(() => {
-        const initDb = async () => {
-          const dbInstance = await dbPromise;
-          setDb(dbInstance);
+        const initFirebase = async () => {
+          const { db } = await getFirebase();
+          setDb(db);
         };
-        initDb();
+        initFirebase();
     }, []);
 
     useEffect(() => {
@@ -49,7 +49,9 @@ export default function AdminNotificationsPage() {
             });
             setNotifications(notifs);
         };
-        fetchNotifications();
+        if (db) {
+            fetchNotifications();
+        }
     }, [db]);
 
     if (!notifications) {
@@ -101,5 +103,3 @@ export default function AdminNotificationsPage() {
         </div>
     );
 }
-
-    

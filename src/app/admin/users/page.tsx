@@ -19,7 +19,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { format } from 'date-fns';
-import { db as dbPromise } from "@/lib/firebase";
+import { getFirebase } from "@/lib/firebase";
 import { collection, getDocs, doc, updateDoc, deleteDoc, type Firestore } from "firebase/firestore";
 
 type UserStatus = "Active" | "Banned" | "Inactive";
@@ -43,11 +43,11 @@ export default function UserManagementPage() {
   const [db, setDb] = useState<Firestore | null>(null);
 
   useEffect(() => {
-    const initDb = async () => {
-      const dbInstance = await dbPromise;
-      setDb(dbInstance);
+    const initFirebase = async () => {
+      const { db } = await getFirebase();
+      setDb(db);
     };
-    initDb();
+    initFirebase();
   }, []);
 
   const fetchUsers = async (db: Firestore) => {
@@ -213,5 +213,3 @@ export default function UserManagementPage() {
     </div>
   );
 }
-
-    

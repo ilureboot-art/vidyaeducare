@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import type { AppNotification } from "@/lib/notifications";
 import { collection, query, where, onSnapshot, orderBy, Timestamp, type Firestore } from "firebase/firestore";
-import { db as dbPromise } from "@/lib/firebase";
+import { getFirebase } from "@/lib/firebase";
 
 export function Notifications() {
   const [adminNotifications, setAdminNotifications] = useState<AppNotification[] | null>(null);
@@ -22,11 +22,11 @@ export function Notifications() {
   const [db, setDb] = useState<Firestore | null>(null);
 
   useEffect(() => {
-    const initDb = async () => {
-      const dbInstance = await dbPromise;
-      setDb(dbInstance);
+    const initFirebase = async () => {
+      const { db } = await getFirebase();
+      setDb(db);
     };
-    initDb();
+    initFirebase();
   }, []);
 
   useEffect(() => {
@@ -123,5 +123,3 @@ export function Notifications() {
     </Popover>
   );
 }
-
-    

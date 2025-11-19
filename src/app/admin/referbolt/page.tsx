@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw, Users, IndianRupee, Repeat, Loader2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import { db as dbPromise } from "@/lib/firebase";
+import { getFirebase } from "@/lib/firebase";
 import { collection, getDocs, query, Timestamp, type Firestore } from "firebase/firestore";
 
 type Cycle = {
@@ -40,11 +40,11 @@ export default function ReferBoltManagementPage() {
   const [db, setDb] = useState<Firestore | null>(null);
 
   useEffect(() => {
-    const initDb = async () => {
-      const dbInstance = await dbPromise;
-      setDb(dbInstance);
+    const initFirebase = async () => {
+      const { db } = await getFirebase();
+      setDb(db);
     };
-    initDb();
+    initFirebase();
   }, []);
 
   useEffect(() => {
@@ -239,5 +239,3 @@ export default function ReferBoltManagementPage() {
     </div>
   );
 }
-
-    

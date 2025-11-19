@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BarChart, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Line, Bar, ResponsiveContainer } from "recharts";
 import { Users, Gamepad2, IndianRupee, Loader2 } from "lucide-react";
-import { db as dbPromise } from "@/lib/firebase";
+import { getFirebase } from "@/lib/firebase";
 import { collection, getDocs, query, where, Timestamp, type Firestore } from "firebase/firestore";
 
 interface ChartData {
@@ -33,11 +33,11 @@ export default function AnalyticsPage() {
   const [db, setDb] = useState<Firestore | null>(null);
 
   useEffect(() => {
-    const initDb = async () => {
-      const dbInstance = await dbPromise;
-      setDb(dbInstance);
+    const initFirebase = async () => {
+      const { db } = await getFirebase();
+      setDb(db);
     };
-    initDb();
+    initFirebase();
   }, []);
 
   useEffect(() => {
@@ -95,7 +95,9 @@ export default function AnalyticsPage() {
             console.error("Error fetching analytics data:", error);
         }
     };
-    fetchData();
+    if (db) {
+        fetchData();
+    }
   }, [db]);
 
   if (activeUsers === null || gamesPlayed === null || todaysRevenue === null || !userActivityData || !revenueData) {
@@ -192,5 +194,3 @@ export default function AnalyticsPage() {
     </div>
   );
 }
-
-    

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Archive, Search, Send, Loader2 } from "lucide-react";
-import { db as dbPromise } from "@/lib/firebase";
+import { getFirebase } from "@/lib/firebase";
 import { collection, getDocs, doc, updateDoc, addDoc, serverTimestamp, query, orderBy, Timestamp, onSnapshot, type Firestore } from "firebase/firestore";
 
 type Message = {
@@ -36,11 +36,11 @@ export default function ChatManagementPage() {
     const [db, setDb] = useState<Firestore | null>(null);
 
     useEffect(() => {
-        const initDb = async () => {
-          const dbInstance = await dbPromise;
-          setDb(dbInstance);
+        const initFirebase = async () => {
+          const { db } = await getFirebase();
+          setDb(db);
         };
-        initDb();
+        initFirebase();
     }, []);
 
     useEffect(() => {
@@ -213,5 +213,3 @@ export default function ChatManagementPage() {
     </div>
   );
 }
-
-    

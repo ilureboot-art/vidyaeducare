@@ -14,7 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Loader2, UserCog } from "lucide-react";
 import type { Admin } from "@/lib/admin-data";
-import { db as dbPromise } from "@/lib/firebase";
+import { getFirebase } from "@/lib/firebase";
 import { collection, getDocs, type Firestore } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -24,11 +24,11 @@ export default function TempAdminViewPage() {
   const [db, setDb] = useState<Firestore | null>(null);
 
   useEffect(() => {
-    const initDb = async () => {
-      const dbInstance = await dbPromise;
-      setDb(dbInstance);
+    const initFirebase = async () => {
+      const { db } = await getFirebase();
+      setDb(db);
     };
-    initDb();
+    initFirebase();
   }, []);
 
   useEffect(() => {
@@ -43,7 +43,9 @@ export default function TempAdminViewPage() {
         console.error("Error fetching admins:", error);
       }
     };
-    fetchAdmins();
+    if (db) {
+        fetchAdmins();
+    }
   }, [db]);
 
   if (!admins) {
@@ -108,5 +110,3 @@ export default function TempAdminViewPage() {
     </div>
   );
 }
-
-    

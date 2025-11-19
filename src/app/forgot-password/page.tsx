@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,8 +16,8 @@ import { Label } from "@/components/ui/label";
 import { Gamepad2, ArrowLeft, Mail, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { auth } from "@/lib/firebase";
-import { sendPasswordResetEmail } from "firebase/auth";
+import { getFirebase } from "@/lib/firebase";
+import { sendPasswordResetEmail, type Auth } from "firebase/auth";
 
 
 export default function ForgotPasswordPage() {
@@ -25,9 +25,19 @@ export default function ForgotPasswordPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [auth, setAuth] = useState<Auth | null>(null);
+
+  useEffect(() => {
+    const initFirebase = async () => {
+      const { auth } = await getFirebase();
+      setAuth(auth);
+    };
+    initFirebase();
+  }, []);
 
   const handleResetRequest = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!auth) return;
     setIsLoading(true);
     try {
       await sendPasswordResetEmail(auth, email);
@@ -75,7 +85,7 @@ export default function ForgotPasswordPage() {
                       onChange={(e) => setEmail(e.target.value)}
                     />
                 </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
+                <Button type="submit" className="w-full" disabled={isLoading || !auth}>
                     {isLoading ? <><Loader2 className="animate-spin mr-2"/> Sending...</> : <><Mail className="mr-2"/> Send Reset Link</>}
                 </Button>
             </form>

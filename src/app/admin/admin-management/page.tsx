@@ -36,8 +36,8 @@ import {
 } from "@/components/ui/select"
 import { format } from 'date-fns';
 import type { Admin, AdminRole } from "@/lib/admin-data";
-import { auth, db as dbPromise } from "@/lib/firebase";
-import { collection, getDocs, doc, setDoc, deleteDoc, updateDoc, query, where, getDoc, type Firestore } from "firebase/firestore";
+import { getFirebase } from "@/lib/firebase";
+import { collection, getDocs, doc, setDoc, deleteDoc, updateDoc, query, where, getDoc, type Firestore, type Auth } from "firebase/firestore";
 import { createUserWithEmailAndPassword, updatePassword } from "firebase/auth";
 
 
@@ -57,17 +57,19 @@ export default function AdminManagementPage() {
   const [newAdminRole, setNewAdminRole] = useState<AdminRole | ''>('');
   const { toast } = useToast();
   const [db, setDb] = useState<Firestore | null>(null);
+  const [auth, setAuth] = useState<Auth | null>(null);
 
   useEffect(() => {
-    const initDb = async () => {
-      const dbInstance = await dbPromise;
-      setDb(dbInstance);
+    const initFirebase = async () => {
+      const { db, auth } = await getFirebase();
+      setDb(db);
+      setAuth(auth);
     };
-    initDb();
+    initFirebase();
   }, []);
   
   const fetchAdmins = async (db: Firestore) => {
-    if (!auth.currentUser) return;
+    if (!auth?.currentUser) return;
     
     const currentUserAdminDoc = await getDoc(doc(db, "admins", auth.currentUser.uid));
     if (!currentUserAdminDoc.exists() || currentUserAdminDoc.data()?.role !== 'Head Admin') {
@@ -89,10 +91,10 @@ export default function AdminManagementPage() {
   };
   
   useEffect(() => {
-    if (auth.currentUser && db) {
+    if (auth?.currentUser && db) {
         fetchAdmins(db);
     }
-  }, [db]);
+  }, [auth, db]);
 
   const openWhatsApp = (phone: string, message?: string) => {
     const cleanedPhone = phone.replace(/\D/g, '');
@@ -152,7 +154,7 @@ export default function AdminManagementPage() {
 
   const handleCreateAdmin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!db) return;
+    if (!db || !auth) return;
     const form = e.currentTarget;
     const name = (form.elements.namedItem('name') as HTMLInputElement).value;
     const email = (form.elements.namedItem('email') as HTMLInputElement).value;
@@ -166,12 +168,23 @@ export default function AdminManagementPage() {
     }
     
     try {
-        toast({
-            variant: "destructive",
-            title: "Action Not Supported",
-            description: "Creating admins requires a secure backend function. This UI is for demonstration.",
-            duration: 7000
-        });
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        const newAdminData = {
+            name,
+            email,
+            phone,
+            role,
+            status: 'Active',
+            joinDate: new Date().toISOString(),
+        };
+
+        await setDoc(doc(db, "admins", user.uid), newAdminData);
+
+        await fetchAdmins(db);
+        toast({ title: 'Admin Created!', description: `${name} has been added.`});
+        setIsCreateDialogOpen(false);
 
     } catch(error: any) {
          console.error("Error creating admin:", error);
@@ -320,9 +333,6 @@ export default function AdminManagementPage() {
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Create New Admin</DialogTitle>
-                        <DialogDescription>
-                            Creating new admins directly from the client is not secure. This requires a backend function. This form is for demonstration purposes only.
-                        </DialogDescription>
                     </DialogHeader>
                     <form onSubmit={handleCreateAdmin} className="space-y-4">
                         <div className="space-y-2">
@@ -354,7 +364,7 @@ export default function AdminManagementPage() {
                             </Select>
                         </div>
                         <DialogFooter>
-                            <Button type="submit">Create Admin (Disabled)</Button>
+                            <Button type="submit">Create Admin</Button>
                         </DialogFooter>
                     </form>
                 </DialogContent>
@@ -498,5 +508,3 @@ export default function AdminManagementPage() {
     </div>
   );
 }
-
-    

@@ -5,7 +5,6 @@ import { AdminSidebar } from "@/components/AdminSidebar";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { usePathname } from 'next/navigation';
 import { Notifications } from "@/components/admin/Notifications";
-import { AuthProvider, useAuth } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 function AdminLayoutContent({ children }: { children: React.ReactNode; }) {
@@ -50,8 +49,8 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-    // AuthProvider is already in the root layout, no need to wrap again.
-    // The check for which layout to show is handled in AdminLayoutContent.
+    // The FirebaseClientProvider in the root layout handles auth state.
+    // No extra provider is needed here.
     return (
         <AdminLayoutContent>{children}</AdminLayoutContent>
     );

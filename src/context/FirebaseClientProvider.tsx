@@ -21,27 +21,30 @@ const FirebaseContext = createContext<FirebaseContextType>({ app: null, auth: nu
 export function FirebaseClientProvider({ children }: { children: ReactNode }) {
   const [services, setServices] = useState<Omit<FirebaseContextType, 'loading' | 'user'>>({ app: null, auth: null, db: null });
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [servicesLoading, setServicesLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(true);
 
   useEffect(() => {
     const init = async () => {
       const { app, auth, db } = await initializeFirebase();
       setServices({ app, auth, db });
-
-      if (auth) {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
-          setUser(user);
-          setLoading(false);
-        });
-        // Cleanup subscription on unmount
-        return () => unsubscribe();
-      } else {
-        setLoading(false);
-      }
+      setServicesLoading(false);
     };
-
     init();
   }, []);
+
+  useEffect(() => {
+    if (servicesLoading || !services.auth) return;
+
+    const unsubscribe = onAuthStateChanged(services.auth, (user) => {
+      setUser(user);
+      setAuthLoading(false);
+    });
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
+  }, [servicesLoading, services.auth]);
+
+  const loading = servicesLoading || authLoading;
 
   if (loading) {
     return (

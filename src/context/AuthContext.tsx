@@ -1,14 +1,12 @@
 
 "use client";
 
-// This file is deprecated and its logic has been merged into FirebaseClientProvider.
-// It is kept here to prevent breaking imports, but it should not be used directly.
+// This file is deprecated. All its logic has been merged into FirebaseClientProvider.
+// It is kept here only to prevent breaking any legacy imports, but it should not be used.
 // useAuth should now be imported from '@/context/FirebaseClientProvider'
-import { useAuth as useCombinedAuth } from '@/context/FirebaseClientProvider';
 
-export const useAuth = useCombinedAuth;
+export { useAuth } from '@/context/FirebaseClientProvider';
 
-// The AuthProvider is no longer needed as FirebaseClientProvider handles auth state.
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }

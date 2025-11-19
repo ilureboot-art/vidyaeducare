@@ -18,9 +18,9 @@ import { Label } from "@/components/ui/label";
 import { Gamepad2, Loader2, Eye, EyeOff } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { db as dbPromise, auth } from "@/lib/firebase";
-import { doc, setDoc, getDoc, runTransaction, collection, query, where, getDocs, type Firestore } from "firebase/firestore";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { getFirebase } from "@/lib/firebase";
+import { doc, setDoc, getDoc, runTransaction, collection, query, where, getDocs, type Firestore, serverTimestamp } from "firebase/firestore";
+import { createUserWithEmailAndPassword, type Auth } from "firebase/auth";
 
 export default function SignupPage() {
   const searchParams = useSearchParams();
@@ -32,13 +32,15 @@ export default function SignupPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [db, setDb] = useState<Firestore | null>(null);
+  const [auth, setAuth] = useState<Auth | null>(null);
 
     useEffect(() => {
-        const initDb = async () => {
-          const dbInstance = await dbPromise;
-          setDb(dbInstance);
+        const initFirebase = async () => {
+          const { db, auth } = await getFirebase();
+          setDb(db);
+          setAuth(auth);
         };
-        initDb();
+        initFirebase();
     }, []);
 
   useEffect(() => {
@@ -58,7 +60,7 @@ export default function SignupPage() {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!db) return;
+    if (!db || !auth) return;
     setIsLoading(true);
     
     const form = e.target as HTMLFormElement;
@@ -68,6 +70,7 @@ export default function SignupPage() {
     const password = (form.elements.namedItem('password') as HTMLInputElement).value;
 
     try {
+      // Step 1: Create the user with Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
@@ -75,8 +78,23 @@ export default function SignupPage() {
       const newWalletRef = doc(db, "wallets", user.uid);
       
       let welcomeBonus = 0;
+      let referrerWalletRef = null;
+      let referrerId: string | null = null;
       
-      // Firestore transaction
+      // Step 2: Perform reads *before* the transaction
+      if (referralCode && referralBonus && referralBonus > 0) {
+        const q = query(collection(db, "wallets"), where("referralCode", "==", referralCode));
+        const querySnapshot = await getDocs(q);
+        
+        if (!querySnapshot.empty) {
+          const referrerDoc = querySnapshot.docs[0];
+          referrerId = referrerDoc.id;
+          referrerWalletRef = doc(db, "wallets", referrerId);
+          welcomeBonus = referralBonus;
+        }
+      }
+
+      // Step 3: Execute all writes within a single transaction
       await runTransaction(db, async (transaction) => {
         // Create user document
         transaction.set(newUserRef, {
@@ -88,28 +106,6 @@ export default function SignupPage() {
             status: "Active",
         });
 
-        // Handle referral bonus
-        if (referralCode && referralBonus) {
-            const q = query(collection(db, "wallets"), where("referralCode", "==", referralCode));
-            const querySnapshot = await getDocs(q);
-            
-            if (!querySnapshot.empty) {
-                const referrerDoc = querySnapshot.docs[0];
-                const referrerWalletRef = doc(db, "wallets", referrerDoc.id);
-                const referrerWalletDoc = await transaction.get(referrerWalletRef);
-
-                if (referrerWalletDoc.exists()) {
-                    const referrerBalance = referrerWalletDoc.data().balance || 0;
-                    transaction.update(referrerWalletRef, { balance: referrerBalance + referralBonus });
-
-                    const referrerTx = { user: referrerDoc.id, amount: referralBonus, date: new Date().toISOString(), description: `Referral bonus for ${name}`, status: "Completed", type: "Referral Bonus" };
-                    transaction.set(doc(collection(db, "transactions")), referrerTx);
-                    
-                    welcomeBonus = referralBonus;
-                }
-            }
-        }
-        
         // Create wallet for new user
         transaction.set(newWalletRef, {
             balance: welcomeBonus,
@@ -117,15 +113,43 @@ export default function SignupPage() {
             referralCode: `REF${user.uid.slice(0, 6).toUpperCase()}`,
         });
 
-        if (welcomeBonus > 0) {
-            const newUserTx = { user: user.uid, amount: welcomeBonus, date: new Date().toISOString(), description: "Welcome bonus from referral", status: "Completed", type: "Welcome Bonus" };
-            transaction.set(doc(collection(db, "transactions")), newUserTx);
+        // If there's a referrer, update their wallet and log transactions
+        if (referrerWalletRef && referrerId && referralBonus) {
+            const referrerWalletDoc = await transaction.get(referrerWalletRef);
+            if (referrerWalletDoc.exists()) {
+                const referrerBalance = referrerWalletDoc.data().balance || 0;
+                transaction.update(referrerWalletRef, { balance: referrerBalance + referralBonus });
+
+                // Log referrer's bonus transaction
+                const referrerTxRef = doc(collection(db, "transactions"));
+                transaction.set(referrerTxRef, { 
+                    user: referrerId, 
+                    amount: referralBonus, 
+                    date: serverTimestamp(), 
+                    description: `Referral bonus for ${name}`, 
+                    status: "Completed", 
+                    type: "Referral Bonus" 
+                });
+                
+                // Log new user's welcome bonus transaction
+                if (welcomeBonus > 0) {
+                    const newUserTxRef = doc(collection(db, "transactions"));
+                    transaction.set(newUserTxRef, { 
+                        user: user.uid, 
+                        amount: welcomeBonus, 
+                        date: serverTimestamp(), 
+                        description: "Welcome bonus from referral", 
+                        status: "Completed", 
+                        type: "Welcome Bonus" 
+                    });
+                }
+            }
         }
       });
       
       toast({
           title: "Account Created Successfully!",
-          description: `Welcome to Vidya EduCare! ${referralCode && referralBonus ? `Your ₹${welcomeBonus} welcome bonus has been applied.` : ''} Redirecting you to login.`,
+          description: `Welcome to Vidya EduCare! ${welcomeBonus > 0 ? `Your ₹${welcomeBonus} welcome bonus has been applied.` : ''} Redirecting you to login.`,
       });
       router.push("/login");
 
@@ -226,3 +250,5 @@ export default function SignupPage() {
     </div>
   );
 }
+
+    

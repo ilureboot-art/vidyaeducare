@@ -31,7 +31,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { type TestSet, type Question } from "@/lib/question-bank";
 import type { AcademicConfig } from "@/lib/academic-config";
-import { getFirebase } from "@/lib/firebase";
+import { useFirebase } from "@/context/FirebaseClientProvider";
 import { collection, getDocs, doc, setDoc, deleteDoc, type Firestore } from "firebase/firestore";
 import Papa from "papaparse";
 import { generateQuestions, GenerateQuestionsInput } from "@/ai/flows/generate-questions-flow";
@@ -62,7 +62,7 @@ const initialAiInputState: GenerateQuestionsInput = {
 
 export default function TestSetManagementPage() {
   const { toast } = useToast();
-
+  const { db, loading } = useFirebase();
   const [testSets, setTestSets] = useState<TestSet[] | null>(null);
   const [academicConfig, setAcademicConfig] = useState<AcademicConfig | null>(null);
 
@@ -74,15 +74,6 @@ export default function TestSetManagementPage() {
   const [step, setStep] = useState(1);
   const [editingTestSet, setEditingTestSet] = useState<TestSet | null>(null);
   const [aiInput, setAiInput] = useState<GenerateQuestionsInput>(initialAiInputState);
-  const [db, setDb] = useState<Firestore | null>(null);
-
-  useEffect(() => {
-    const initFirebase = async () => {
-      const { db } = await getFirebase();
-      setDb(db);
-    };
-    initFirebase();
-  }, []);
   
   const fetchData = async (db: Firestore) => {
     // Fetch Test Sets
@@ -102,10 +93,10 @@ export default function TestSetManagementPage() {
   };
 
   useEffect(() => {
-    if (db) {
+    if (!loading && db) {
         fetchData(db);
     }
-  }, [db]);
+  }, [db, loading]);
 
   const resetManualForm = () => {
       setStep(1);
@@ -293,7 +284,7 @@ const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
 };
 
 
-  if (!testSets || !academicConfig) {
+  if (loading || !testSets || !academicConfig) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />

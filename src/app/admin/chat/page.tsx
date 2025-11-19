@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Archive, Search, Send, Loader2 } from "lucide-react";
-import { getFirebase } from "@/lib/firebase";
+import { useFirebase } from "@/context/FirebaseClientProvider";
 import { collection, getDocs, doc, updateDoc, addDoc, serverTimestamp, query, orderBy, Timestamp, onSnapshot, type Firestore } from "firebase/firestore";
 
 type Message = {
@@ -28,23 +28,15 @@ type Chat = {
 
 
 export default function ChatManagementPage() {
+    const { db, loading } = useFirebase();
     const [chats, setChats] = useState<Chat[] | null>(null);
     const [activeChat, setActiveChat] = useState<Chat | null>(null);
     const [reply, setReply] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
     const messagesEndRef = useRef<HTMLDivElement | null>(null);
-    const [db, setDb] = useState<Firestore | null>(null);
-
+    
     useEffect(() => {
-        const initFirebase = async () => {
-          const { db } = await getFirebase();
-          setDb(db);
-        };
-        initFirebase();
-    }, []);
-
-    useEffect(() => {
-        if (!db) return;
+        if (loading || !db) return;
         const chatsCollection = collection(db, "chats");
         const q = query(chatsCollection, orderBy("lastMessageTimestamp", "desc"));
         
@@ -70,7 +62,7 @@ export default function ChatManagementPage() {
         });
 
         return () => unsubscribe();
-    }, [db]);
+    }, [db, loading]);
     
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -108,7 +100,7 @@ export default function ChatManagementPage() {
         setReply("");
     };
     
-  if (!chats) {
+  if (loading || !chats) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />

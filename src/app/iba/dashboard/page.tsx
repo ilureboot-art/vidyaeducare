@@ -24,7 +24,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useAuth } from "@/context/AuthContext";
-import { db as dbPromise } from "@/lib/firebase";
+import { useFirebase } from "@/context/FirebaseClientProvider";
 import { doc, getDoc, collection, query, where, getDocs, Timestamp, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
@@ -52,20 +52,12 @@ interface ReferralData {
 function IBADashboardPageContent() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const { db, loading } = useFirebase();
   const [referralData, setReferralData] = useState<ReferralData | null>(null);
   const [ibaReferralCode, setIbaReferralCode] = useState<string | null>(null);
-  const [db, setDb] = useState<Firestore | null>(null);
-
+  
   useEffect(() => {
-    const initDb = async () => {
-      const dbInstance = await dbPromise;
-      setDb(dbInstance);
-    };
-    initDb();
-  }, []);
-
-  useEffect(() => {
-    if (user && db) {
+    if (user && !loading && db) {
         const fetchIbaData = async () => {
             // Assume the IBA-specific data is stored in a subcollection or related doc
             const userWalletDocRef = doc(db, 'wallets', user.uid);
@@ -107,7 +99,7 @@ function IBADashboardPageContent() {
         };
         fetchIbaData();
     }
-  }, [user, db]);
+  }, [user, db, loading]);
 
   const handleCopyToClipboard = () => {
     if (!ibaReferralCode) return;
@@ -162,7 +154,7 @@ Don't miss out on the best way to prepare for your exams and earn rewards!
     }
   };
   
-  if (!ibaReferralCode || !referralData) {
+  if (loading || !ibaReferralCode || !referralData) {
     return (
       <div className="w-full max-w-4xl mx-auto flex items-center justify-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />
@@ -354,5 +346,3 @@ export default function IBADashboardPage() {
         </ProtectedRoute>
     )
 }
-
-    

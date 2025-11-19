@@ -18,21 +18,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // If Firebase is still loading, the auth state is also loading.
     if (firebaseLoading) {
       setLoading(true);
       return;
     }
 
+    // If there's no auth service, we're not loading auth state.
     if (!auth) {
-      setLoading(false); // No auth service, so not loading auth state.
+      setLoading(false);
       return;
     }
 
+    // Firebase is ready, so set up the auth state listener.
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setLoading(false);
     });
 
+    // Cleanup subscription on unmount
     return () => unsubscribe();
   }, [auth, firebaseLoading]);
 

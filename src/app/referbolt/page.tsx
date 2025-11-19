@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -14,7 +13,7 @@ import Link from "next/link";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/AuthContext";
-import { db as dbPromise } from "@/lib/firebase";
+import { useFirebase } from "@/context/FirebaseClientProvider";
 import { doc, getDoc, onSnapshot, DocumentData, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
@@ -29,21 +28,13 @@ const benefits = [
 function ReferBoltPageContent() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const { db, loading } = useFirebase();
   
   const [data, setData] = useState<DocumentData | null | { isSubscribed: boolean }>({ isSubscribed: false });
   const [autoRenew, setAutoRenew] = useState(false);
-  const [db, setDb] = useState<Firestore | null>(null);
-
+  
   useEffect(() => {
-    const initDb = async () => {
-      const dbInstance = await dbPromise;
-      setDb(dbInstance);
-    };
-    initDb();
-  }, []);
-
-  useEffect(() => {
-    if (user && db) {
+    if (user && !loading && db) {
         const referboltDocRef = doc(db, "referbolt", user.uid);
         const unsub = onSnapshot(referboltDocRef, (docSnap) => {
             if (docSnap.exists()) {
@@ -56,7 +47,7 @@ function ReferBoltPageContent() {
         });
         return () => unsub();
     }
-  }, [user, db]);
+  }, [user, db, loading]);
 
   const handleShare = async () => {
     if (!data || !('referralCode' in data)) return;
@@ -97,7 +88,7 @@ Subscribe and start your earning cycle now: ${shareUrl}
     }
   };
   
-  if (!data) {
+  if (loading || !data) {
       return (
           <div className="w-full max-w-2xl mx-auto flex items-center justify-center h-96">
               <Loader2 className="animate-spin text-primary" size={32}/>

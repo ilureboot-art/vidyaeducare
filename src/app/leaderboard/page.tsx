@@ -13,7 +13,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Trophy, Award, Loader2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { db as dbPromise } from "@/lib/firebase";
+import { useFirebase } from "@/context/FirebaseClientProvider";
 import { collection, getDocs, query, orderBy, limit, type Firestore } from "firebase/firestore";
 
 type Player = {
@@ -33,17 +33,9 @@ const getRankColor = (rank: number) => {
 }
 
 export default function LeaderboardPage() {
+  const { db, loading } = useFirebase();
   const [leaderboardData, setLeaderboardData] = useState<Player[] | null>(null);
-  const [db, setDb] = useState<Firestore | null>(null);
-
-  useEffect(() => {
-    const initDb = async () => {
-      const dbInstance = await dbPromise;
-      setDb(dbInstance);
-    };
-    initDb();
-  }, []);
-
+  
   useEffect(() => {
     const fetchLeaderboard = async () => {
         if (!db) return;
@@ -57,12 +49,12 @@ export default function LeaderboardPage() {
         } as Player));
         setLeaderboardData(leaderboard);
     };
-    if (db) {
+    if (!loading && db) {
         fetchLeaderboard();
     }
-  }, [db]);
+  }, [db, loading]);
 
-  if (!leaderboardData) {
+  if (loading || !leaderboardData) {
     return (
       <div className="w-full max-w-3xl mx-auto flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />
@@ -137,5 +129,3 @@ export default function LeaderboardPage() {
     </div>
   );
 }
-
-    

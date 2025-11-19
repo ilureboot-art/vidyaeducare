@@ -21,7 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
 import { useAuth } from "@/context/AuthContext";
-import { db as dbPromise } from "@/lib/firebase";
+import { useFirebase } from "@/context/FirebaseClientProvider";
 import { collection, query, where, getDocs, orderBy, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
@@ -46,23 +46,15 @@ const getTypeIcon = (type: string, amount: number) => {
 }
 
 function TransactionsPageContent() {
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const { db, loading: firebaseLoading } = useFirebase();
   const [transactions, setTransactions] = useState<Transaction[] | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'rejected'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'deposit' | 'withdrawal'>('all');
-  const [db, setDb] = useState<Firestore | null>(null);
   
   useEffect(() => {
-    const initDb = async () => {
-      const dbInstance = await dbPromise;
-      setDb(dbInstance);
-    };
-    initDb();
-  }, []);
-
-  useEffect(() => {
-    if (user && db) {
+    if (user && !firebaseLoading && db) {
         const fetchTransactions = async () => {
             const txsRef = collection(db, "transactions");
             const q = query(txsRef, where("user", "==", user.uid), orderBy("date", "desc"));
@@ -72,9 +64,9 @@ function TransactionsPageContent() {
         };
         fetchTransactions();
     }
-  }, [user, db]);
+  }, [user, db, firebaseLoading]);
 
-  if (!transactions) {
+  if (authLoading || firebaseLoading || !transactions) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />
@@ -192,5 +184,3 @@ export default function TransactionsPage() {
         </ProtectedRoute>
     )
 }
-
-    

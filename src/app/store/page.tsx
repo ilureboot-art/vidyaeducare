@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -13,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from 'next/link';
 import type { StoreConfig, MockTestPackage, ReferboltSubscription } from "@/lib/store-config";
 import type { WalletData } from "@/lib/user-data";
-import { db as dbPromise } from "@/lib/firebase";
+import { useFirebase } from "@/context/FirebaseClientProvider";
 import { doc, getDoc, runTransaction, collection, serverTimestamp, updateDoc, arrayUnion, query, where, getDocs, type Firestore } from "firebase/firestore";
 import { useAuth } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -21,25 +20,17 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 function StorePageContent() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const { db, loading } = useFirebase();
   
   const [walletData, setWalletData] = useState<WalletData | null>(null);
   const [storeConfig, setStoreConfig] = useState<StoreConfig | null>(null);
   const [isPurchasing, setIsPurchasing] = useState<string | null>(null);
-  const [db, setDb] = useState<Firestore | null>(null);
   
   const [referralCode1, setReferralCode1] = useState("");
   const [referralCode2, setReferralCode2] = useState("");
 
   useEffect(() => {
-    const initDb = async () => {
-      const dbInstance = await dbPromise;
-      setDb(dbInstance);
-    };
-    initDb();
-  }, []);
-
-  useEffect(() => {
-    if (user && db) {
+    if (user && !loading && db) {
         const fetchData = async () => {
             const walletDocRef = doc(db, "wallets", user.uid);
             const walletDoc = await getDoc(walletDocRef);
@@ -54,7 +45,7 @@ function StorePageContent() {
         };
         fetchData();
     }
-  }, [user, db]);
+  }, [user, db, loading]);
 
   const handlePurchase = async (item: MockTestPackage | ReferboltSubscription, type: 'mock' | 'referbolt') => {
     if (!user || !storeConfig || !walletData || !db) return;
@@ -155,7 +146,7 @@ function StorePageContent() {
     }
   };
 
-  if (!walletData || !storeConfig) {
+  if (loading || !walletData || !storeConfig) {
     return (
         <div className="w-full max-w-4xl mx-auto flex justify-center items-center h-64">
             <Loader2 className="animate-spin text-primary" size={32}/>

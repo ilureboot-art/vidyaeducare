@@ -29,6 +29,7 @@ export function FirebaseClientProvider({ children }: { children: ReactNode }) {
     init();
   }, []);
 
+  // While firebase services are loading, we show a spinner.
   if (firebaseServices.loading) {
     return (
       <div className="flex justify-center items-center h-screen">

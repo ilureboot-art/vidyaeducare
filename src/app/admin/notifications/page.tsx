@@ -8,7 +8,7 @@ import { Bell, UserPlus, ArrowDown, ArrowUp, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import type { AppNotification } from "@/lib/notifications";
-import { getFirebase } from "@/lib/firebase";
+import { useFirebase } from "@/context/FirebaseClientProvider";
 import { collection, getDocs, query, where, orderBy, Timestamp, type Firestore } from "firebase/firestore";
 
 const getIconForType = (type: string) => {
@@ -25,17 +25,9 @@ const getIconForType = (type: string) => {
 }
 
 export default function AdminNotificationsPage() {
+    const { db, loading } = useFirebase();
     const [notifications, setNotifications] = useState<AppNotification[] | null>(null);
-    const [db, setDb] = useState<Firestore | null>(null);
-
-    useEffect(() => {
-        const initFirebase = async () => {
-          const { db } = await getFirebase();
-          setDb(db);
-        };
-        initFirebase();
-    }, []);
-
+    
     useEffect(() => {
         const fetchNotifications = async () => {
             if (!db) return;
@@ -49,12 +41,12 @@ export default function AdminNotificationsPage() {
             });
             setNotifications(notifs);
         };
-        if (db) {
+        if (!loading && db) {
             fetchNotifications();
         }
-    }, [db]);
+    }, [db, loading]);
 
-    if (!notifications) {
+    if (loading || !notifications) {
         return (
           <div className="flex justify-center items-center h-96">
             <Loader2 className="animate-spin text-primary" size={32} />

@@ -19,7 +19,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { format } from 'date-fns';
-import { getFirebase } from "@/lib/firebase";
+import { useFirebase } from "@/context/FirebaseClientProvider";
 import { collection, getDocs, doc, updateDoc, deleteDoc, type Firestore } from "firebase/firestore";
 
 type UserStatus = "Active" | "Banned" | "Inactive";
@@ -37,19 +37,11 @@ const getStatusBadgeVariant = (status: string) => {
 }
 
 export default function UserManagementPage() {
+  const { db, loading } = useFirebase();
   const [users, setUsers] = useState<User[] | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
-  const [db, setDb] = useState<Firestore | null>(null);
-
-  useEffect(() => {
-    const initFirebase = async () => {
-      const { db } = await getFirebase();
-      setDb(db);
-    };
-    initFirebase();
-  }, []);
-
+  
   const fetchUsers = async (db: Firestore) => {
       const usersCollection = collection(db, "users");
       const userSnapshot = await getDocs(usersCollection);
@@ -58,10 +50,10 @@ export default function UserManagementPage() {
   };
 
   useEffect(() => {
-    if (db) {
+    if (!loading && db) {
         fetchUsers(db);
     }
-  }, [db]);
+  }, [db, loading]);
 
   const handleStatusChange = async (userId: string, newStatus: UserStatus) => {
     if (!users || !db) return;
@@ -99,7 +91,7 @@ export default function UserManagementPage() {
     }
   }
 
-  if (!users) {
+  if (loading || !users) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />

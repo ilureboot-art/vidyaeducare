@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -8,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { getFirebase } from "@/lib/firebase";
+import { useFirebase } from "@/context/FirebaseClientProvider";
 import { collection, addDoc, getDocs, doc, setDoc, deleteDoc, getDoc, type Firestore } from "firebase/firestore";
 import { PlusCircle, Trash2, Puzzle, Loader2, Save } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -31,11 +30,11 @@ const initialAutoConfig: QuizClashAutoCreateConfig = {
 
 export default function AdminQuizClashPage() {
     const { toast } = useToast();
+    const { db, loading } = useFirebase();
     const [tournaments, setTournaments] = useState<QuizClashTournament[] | null>(null);
     const [testSets, setTestSets] = useState<TestSet[] | null>(null);
     const [autoConfig, setAutoConfig] = useState<QuizClashAutoCreateConfig | null>(null);
-    const [db, setDb] = useState<Firestore | null>(null);
-
+    
     const [newTournament, setNewTournament] = useState({
         title: "",
         startTime: "",
@@ -43,14 +42,6 @@ export default function AdminQuizClashPage() {
         entryFee: 10,
         testSetId: ""
     });
-
-    useEffect(() => {
-        const initFirebase = async () => {
-          const { db } = await getFirebase();
-          setDb(db);
-        };
-        initFirebase();
-    }, []);
 
     const fetchTournamentsAndTestSets = async (db: Firestore) => {
         // Fetch tournaments
@@ -73,10 +64,10 @@ export default function AdminQuizClashPage() {
     };
 
     useEffect(() => {
-        if(db) {
+        if(!loading && db) {
             fetchTournamentsAndTestSets(db);
         }
-    }, [db]);
+    }, [db, loading]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -165,7 +156,7 @@ export default function AdminQuizClashPage() {
     };
 
 
-    if (!tournaments || !testSets || !autoConfig) {
+    if (loading || !tournaments || !testSets || !autoConfig) {
         return <div className="flex justify-center items-center h-96"><Loader2 className="animate-spin text-primary" size={32} /></div>;
     }
 

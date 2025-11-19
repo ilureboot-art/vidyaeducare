@@ -7,26 +7,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Share2, IndianRupee, Gift, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { doc, getDoc, type Firestore } from "firebase/firestore";
-import { db as dbPromise } from "@/lib/firebase";
+import { useFirebase } from "@/context/FirebaseClientProvider";
 import { useAuth } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 function ReferAndEarnPageContent() {
     const { toast } = useToast();
     const { user } = useAuth();
+    const { db, loading } = useFirebase();
     
     const [referralBonus, setReferralBonus] = useState<number | null>(null);
     const [referralCode, setReferralCode] = useState<string | null>(null);
-    const [db, setDb] = useState<Firestore | null>(null);
-
-    useEffect(() => {
-        const initDb = async () => {
-          const dbInstance = await dbPromise;
-          setDb(dbInstance);
-        };
-        initDb();
-    }, []);
-
+    
     useEffect(() => {
         const fetchConfig = async () => {
             if (!db) return;
@@ -47,9 +39,11 @@ function ReferAndEarnPageContent() {
             }
         }
         
-        fetchConfig();
-        fetchUserRefCode();
-    }, [user, db]);
+        if (!loading && db) {
+            fetchConfig();
+            fetchUserRefCode();
+        }
+    }, [user, db, loading]);
 
     const handleShare = async () => {
         if (referralCode === null || referralBonus === null) return;
@@ -85,7 +79,7 @@ Click here to join: ${url}`;
         }
     };
     
-    if (referralCode === null || referralBonus === null) {
+    if (loading || referralCode === null || referralBonus === null) {
         return (
           <div className="w-full max-w-2xl mx-auto flex items-center justify-center h-96">
             <Loader2 className="animate-spin text-primary" size={32} />
@@ -151,5 +145,3 @@ export default function ReferAndEarnPage() {
         </ProtectedRoute>
     );
 }
-
-    

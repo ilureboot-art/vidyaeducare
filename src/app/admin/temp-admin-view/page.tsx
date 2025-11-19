@@ -14,23 +14,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Loader2, UserCog } from "lucide-react";
 import type { Admin } from "@/lib/admin-data";
-import { getFirebase } from "@/lib/firebase";
+import { useFirebase } from "@/context/FirebaseClientProvider";
 import { collection, getDocs, type Firestore } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
 export default function TempAdminViewPage() {
+  const { db, loading } = useFirebase();
   const [admins, setAdmins] = useState<Admin[] | null>(null);
-  const [db, setDb] = useState<Firestore | null>(null);
-
-  useEffect(() => {
-    const initFirebase = async () => {
-      const { db } = await getFirebase();
-      setDb(db);
-    };
-    initFirebase();
-  }, []);
-
+  
   useEffect(() => {
     const fetchAdmins = async () => {
       if (!db) return;
@@ -43,12 +35,12 @@ export default function TempAdminViewPage() {
         console.error("Error fetching admins:", error);
       }
     };
-    if (db) {
+    if (!loading && db) {
         fetchAdmins();
     }
-  }, [db]);
+  }, [db, loading]);
 
-  if (!admins) {
+  if (loading || !admins) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />

@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw, Users, IndianRupee, Repeat, Loader2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import { getFirebase } from "@/lib/firebase";
+import { useFirebase } from "@/context/FirebaseClientProvider";
 import { collection, getDocs, query, Timestamp, type Firestore } from "firebase/firestore";
 
 type Cycle = {
@@ -34,19 +34,11 @@ type Referral = {
 }
 
 export default function ReferBoltManagementPage() {
+  const { db, loading } = useFirebase();
   const [stats, setStats] = useState<Stats | null>(null);
   const [cycles, setCycles] = useState<Cycle[] | null>(null);
   const [referrals, setReferrals] = useState<Referral[] | null>(null);
-  const [db, setDb] = useState<Firestore | null>(null);
-
-  useEffect(() => {
-    const initFirebase = async () => {
-      const { db } = await getFirebase();
-      setDb(db);
-    };
-    initFirebase();
-  }, []);
-
+  
   useEffect(() => {
     const fetchData = async () => {
         if (!db) return;
@@ -94,12 +86,12 @@ export default function ReferBoltManagementPage() {
         });
         setReferrals(referralList);
     };
-    if (db) {
+    if (!loading && db) {
         fetchData();
     }
-  }, [db]);
+  }, [db, loading]);
 
-  if (!stats || !cycles || !referrals) {
+  if (loading || !stats || !cycles || !referrals) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />

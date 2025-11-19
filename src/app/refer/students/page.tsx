@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/tooltip"
 import { format } from "date-fns";
 import { useAuth } from "@/context/AuthContext";
-import { db as dbPromise } from "@/lib/firebase";
+import { useFirebase } from "@/context/FirebaseClientProvider";
 import { collection, query, where, getDocs, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
@@ -41,20 +41,12 @@ type Client = {
 };
 
 function StudentAccessPageContent() {
+  const { db, loading } = useFirebase();
   const [clients, setClients] = useState<Client[] | null>(null);
   const { user } = useAuth();
-  const [db, setDb] = useState<Firestore | null>(null);
-
+  
   useEffect(() => {
-    const initDb = async () => {
-      const dbInstance = await dbPromise;
-      setDb(dbInstance);
-    };
-    initDb();
-  }, []);
-
-  useEffect(() => {
-    if (user && db) {
+    if (user && !loading && db) {
         const fetchClients = async () => {
             const q = query(collection(db, "clients"), where("referrerId", "==", user.uid));
             const querySnapshot = await getDocs(q);
@@ -77,9 +69,9 @@ function StudentAccessPageContent() {
         };
         fetchClients();
     }
-  }, [user, db]);
+  }, [user, db, loading]);
 
-  if (!clients) {
+  if (loading || !clients) {
     return (
       <div className="w-full max-w-4xl mx-auto flex items-center justify-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />
@@ -167,5 +159,3 @@ export default function StudentAccessPage() {
         </ProtectedRoute>
     );
 }
-
-    

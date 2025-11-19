@@ -10,24 +10,15 @@ import { useToast } from "@/hooks/use-toast";
 import { Landmark, Loader2 } from "lucide-react";
 import type { AdminPaymentMethods } from "@/lib/user-data";
 import Image from "next/image";
-import { getFirebase } from "@/lib/firebase";
+import { useFirebase } from "@/context/FirebaseClientProvider";
 import { doc, getDoc, setDoc, type Firestore } from "firebase/firestore";
 
 export default function PaymentSettingsPage() {
     const { toast } = useToast();
-    
+    const { db, loading } = useFirebase();
     const [methods, setMethods] = useState<AdminPaymentMethods | null>(null);
     const [qrFile, setQrFile] = useState<File | null>(null);
-    const [db, setDb] = useState<Firestore | null>(null);
-
-    useEffect(() => {
-        const initFirebase = async () => {
-          const { db } = await getFirebase();
-          setDb(db);
-        };
-        initFirebase();
-    }, []);
-
+    
     useEffect(() => {
         const fetchPaymentMethods = async () => {
             if (!db) return;
@@ -43,10 +34,10 @@ export default function PaymentSettingsPage() {
                 });
             }
         };
-        if (db) {
+        if (!loading && db) {
             fetchPaymentMethods();
         }
-    }, [db])
+    }, [db, loading])
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -92,7 +83,7 @@ export default function PaymentSettingsPage() {
 
     }
 
-    if (!methods) {
+    if (loading || !methods) {
         return (
           <div className="flex justify-center items-center h-96">
             <Loader2 className="animate-spin text-primary" size={32} />

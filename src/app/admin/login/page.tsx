@@ -44,7 +44,14 @@ export default function AdminLoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!auth || !db) return;
+    if (!auth || !db) {
+        toast({
+            variant: "destructive",
+            title: "Login Failed",
+            description: "Auth configuration not found. Please try again in a moment.",
+        });
+        return;
+    }
     setIsLoading(true);
     const password = (e.currentTarget.querySelector('#password-login') as HTMLInputElement).value;
 
@@ -116,7 +123,14 @@ export default function AdminLoginPage() {
 
   const handleSignup = async (e: React.FormEvent) => {
      e.preventDefault();
-     if (!auth || !db) return;
+     if (!auth || !db) {
+        toast({
+            variant: "destructive",
+            title: "Signup Failed",
+            description: "Auth configuration not found. Please try again in a moment.",
+        });
+        return;
+     }
      setIsLoading(true);
      const form = e.target as HTMLFormElement;
      const name = (form.elements.namedItem('name-signup') as HTMLInputElement).value;
@@ -167,7 +181,14 @@ export default function AdminLoginPage() {
   }
 
   const handleForgotPassword = async () => {
-    if (!auth) return;
+    if (!auth) {
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Auth service not available. Please try again in a moment.",
+        });
+        return;
+    }
     const currentEmail = (document.getElementById('email-login') as HTMLInputElement)?.value || email;
     if (!currentEmail) {
         toast({
@@ -240,7 +261,7 @@ export default function AdminLoginPage() {
                             <div className="space-y-2 relative">
                                 <div className="flex items-center justify-between">
                                   <Label htmlFor="password-login">Password</Label>
-                                  <Button type="button" variant="link" className="px-0 h-auto text-xs" onClick={handleForgotPassword}>
+                                  <Button type="button" variant="link" className="px-0 h-auto text-xs" onClick={handleForgotPassword} disabled={isLoading || loading}>
                                       Forgot Password?
                                   </Button>
                                 </div>
@@ -270,7 +291,7 @@ export default function AdminLoginPage() {
                                 Remember me
                               </Label>
                             </div>
-                            <Button type="submit" className="w-full !mt-6" disabled={isLoading}>
+                            <Button type="submit" className="w-full !mt-6" disabled={isLoading || loading}>
                                 {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Logging in...</> : 'Login'}
                             </Button>
                     </CardContent>
@@ -311,7 +332,7 @@ export default function AdminLoginPage() {
                                   <span className="sr-only">Toggle password visibility</span>
                                 </Button>
                             </div>
-                            <Button type="submit" className="w-full" disabled={isLoading}>
+                            <Button type="submit" className="w-full" disabled={isLoading || loading}>
                                 {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Submitting...</> : 'Submit Request'}
                             </Button>
                     </CardContent>

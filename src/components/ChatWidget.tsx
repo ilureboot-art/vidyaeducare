@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { MessageSquare, X, Send } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/context/AuthContext';
-import { db } from '@/lib/firebase';
+import { useFirebase } from '@/context/FirebaseClientProvider';
 import { doc, setDoc, addDoc, collection, serverTimestamp, getDoc } from 'firebase/firestore';
 
 export function ChatWidget() {
@@ -16,10 +16,11 @@ export function ChatWidget() {
     const [message, setMessage] = useState('');
     const { toast } = useToast();
     const { user } = useAuth();
+    const { db } = useFirebase();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (message.trim() === '' || !user) {
+        if (message.trim() === '' || !user || !db) {
             if(!user) toast({ variant: 'destructive', title: 'You must be logged in to chat.'});
             return;
         }

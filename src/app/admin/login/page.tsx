@@ -18,13 +18,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
-import { getFirebase } from "@/lib/firebase";
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut, type Auth } from "firebase/auth";
-import { doc, setDoc, getDoc, type Firestore } from "firebase/firestore";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from "firebase/auth";
+import { doc, setDoc, getDoc } from "firebase/firestore";
+import { useFirebase } from "@/context/FirebaseClientProvider";
 
 export default function AdminLoginPage() {
   const { toast } = useToast();
   const router = useRouter();
+  const { db, auth } = useFirebase();
 
   const [email, setEmail] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
@@ -32,17 +33,6 @@ export default function AdminLoginPage() {
   const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("login");
-  const [db, setDb] = useState<Firestore | null>(null);
-  const [auth, setAuth] = useState<Auth | null>(null);
-
-  useEffect(() => {
-    const initFirebase = async () => {
-      const { db, auth } = await getFirebase();
-      setDb(db);
-      setAuth(auth);
-    };
-    initFirebase();
-  }, []);
 
   useEffect(() => {
     const rememberedAdmin = localStorage.getItem('rememberedAdmin');

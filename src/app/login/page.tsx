@@ -18,26 +18,18 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Gamepad2, Shield, Eye, EyeOff, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { getFirebase } from "@/lib/firebase";
-import { signInWithEmailAndPassword, type Auth } from "firebase/auth";
+import { useFirebase } from "@/context/FirebaseClientProvider";
+import { signInWithEmailAndPassword } from "firebase/auth";
 
 export default function LoginPage() {
   const { toast } = useToast();
   const router = useRouter();
+  const { auth } = useFirebase();
 
   const [email, setEmail] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [auth, setAuth] = useState<Auth | null>(null);
-
-  useEffect(() => {
-    const initFirebase = async () => {
-      const { auth } = await getFirebase();
-      setAuth(auth);
-    };
-    initFirebase();
-  }, []);
 
   useEffect(() => {
     const rememberedEmail = localStorage.getItem('rememberedUser');

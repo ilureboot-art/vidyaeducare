@@ -36,9 +36,9 @@ import {
 } from "@/components/ui/select"
 import { format } from 'date-fns';
 import type { Admin, AdminRole } from "@/lib/admin-data";
-import { getFirebase } from "@/lib/firebase";
 import { collection, getDocs, doc, setDoc, deleteDoc, updateDoc, query, where, getDoc, type Firestore, type Auth } from "firebase/firestore";
 import { createUserWithEmailAndPassword, updatePassword } from "firebase/auth";
+import { useFirebase } from "@/context/FirebaseClientProvider";
 
 
 const WhatsAppIcon = () => (
@@ -48,6 +48,7 @@ const WhatsAppIcon = () => (
 )
 
 export default function AdminManagementPage() {
+  const { db, auth } = useFirebase();
   const [admins, setAdmins] = useState<Admin[] | null>(null);
   const [requests, setRequests] = useState<Admin[] | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -56,17 +57,6 @@ export default function AdminManagementPage() {
   const [selectedAdmin, setSelectedAdmin] = useState<Admin | null>(null);
   const [newAdminRole, setNewAdminRole] = useState<AdminRole | ''>('');
   const { toast } = useToast();
-  const [db, setDb] = useState<Firestore | null>(null);
-  const [auth, setAuth] = useState<Auth | null>(null);
-
-  useEffect(() => {
-    const initFirebase = async () => {
-      const { db, auth } = await getFirebase();
-      setDb(db);
-      setAuth(auth);
-    };
-    initFirebase();
-  }, []);
   
   const fetchAdmins = async (db: Firestore) => {
     if (!auth?.currentUser) return;

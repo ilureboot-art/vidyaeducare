@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,24 +16,16 @@ import { Label } from "@/components/ui/label";
 import { Gamepad2, ArrowLeft, Mail, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { getFirebase } from "@/lib/firebase";
-import { sendPasswordResetEmail, type Auth } from "firebase/auth";
+import { useFirebase } from "@/context/FirebaseClientProvider";
+import { sendPasswordResetEmail } from "firebase/auth";
 
 
 export default function ForgotPasswordPage() {
   const { toast } = useToast();
   const router = useRouter();
+  const { auth } = useFirebase();
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [auth, setAuth] = useState<Auth | null>(null);
-
-  useEffect(() => {
-    const initFirebase = async () => {
-      const { auth } = await getFirebase();
-      setAuth(auth);
-    };
-    initFirebase();
-  }, []);
 
   const handleResetRequest = async (e: React.FormEvent) => {
     e.preventDefault();

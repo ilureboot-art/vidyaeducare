@@ -14,20 +14,12 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import type { AppNotification } from "@/lib/notifications";
 import { collection, query, where, onSnapshot, orderBy, Timestamp, type Firestore } from "firebase/firestore";
-import { getFirebase } from "@/lib/firebase";
+import { useFirebase } from "@/context/FirebaseClientProvider";
 
 export function Notifications() {
+  const { db } = useFirebase();
   const [adminNotifications, setAdminNotifications] = useState<AppNotification[] | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [db, setDb] = useState<Firestore | null>(null);
-
-  useEffect(() => {
-    const initFirebase = async () => {
-      const { db } = await getFirebase();
-      setDb(db);
-    };
-    initFirebase();
-  }, []);
 
   useEffect(() => {
     if (!db) return;

@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -18,30 +17,20 @@ import { Label } from "@/components/ui/label";
 import { Gamepad2, Loader2, Eye, EyeOff } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { getFirebase } from "@/lib/firebase";
-import { doc, setDoc, getDoc, runTransaction, collection, query, where, getDocs, type Firestore, serverTimestamp } from "firebase/firestore";
-import { createUserWithEmailAndPassword, type Auth } from "firebase/auth";
+import { doc, setDoc, getDoc, runTransaction, collection, query, where, getDocs, serverTimestamp } from "firebase/firestore";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { useFirebase } from "@/context/FirebaseClientProvider";
 
 export default function SignupPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { toast } = useToast();
+  const { db, auth } = useFirebase();
   
   const [referralCode, setReferralCode] = useState('');
   const [referralBonus, setReferralBonus] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [db, setDb] = useState<Firestore | null>(null);
-  const [auth, setAuth] = useState<Auth | null>(null);
-
-    useEffect(() => {
-        const initFirebase = async () => {
-          const { db, auth } = await getFirebase();
-          setDb(db);
-          setAuth(auth);
-        };
-        initFirebase();
-    }, []);
 
   useEffect(() => {
     const refCode = searchParams.get('ref');
@@ -70,18 +59,11 @@ export default function SignupPage() {
     const password = (form.elements.namedItem('password') as HTMLInputElement).value;
 
     try {
-      // Step 1: Create the user with Firebase Auth
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-
-      const newUserRef = doc(db, "users", user.uid);
-      const newWalletRef = doc(db, "wallets", user.uid);
-      
+      // Step 1: Perform reads *before* the transaction
       let welcomeBonus = 0;
-      let referrerWalletRef = null;
       let referrerId: string | null = null;
+      let referrerWalletRef = null;
       
-      // Step 2: Perform reads *before* the transaction
       if (referralCode && referralBonus && referralBonus > 0) {
         const q = query(collection(db, "wallets"), where("referralCode", "==", referralCode));
         const querySnapshot = await getDocs(q);
@@ -94,6 +76,13 @@ export default function SignupPage() {
         }
       }
 
+      // Step 2: Create the user with Firebase Auth
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      const newUserRef = doc(db, "users", user.uid);
+      const newWalletRef = doc(db, "wallets", user.uid);
+      
       // Step 3: Execute all writes within a single transaction
       await runTransaction(db, async (transaction) => {
         // Create user document
@@ -164,7 +153,7 @@ export default function SignupPage() {
     }
   };
 
-  if (referralBonus === null) {
+  if (referralBonus === null && db) {
       return (
           <div className="w-full max-w-md mx-auto flex items-center justify-center h-screen">
               <Loader2 className="animate-spin text-primary" size={32} />
@@ -250,5 +239,3 @@ export default function SignupPage() {
     </div>
   );
 }
-
-    

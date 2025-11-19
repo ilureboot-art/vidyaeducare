@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { UserNotifications } from "@/components/UserNotifications";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/context/AuthContext";
-import { auth } from "@/lib/firebase";
+import { useFirebase } from "@/context/FirebaseClientProvider";
 import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
 
@@ -28,9 +28,11 @@ const navItems = [
 export function AppHeader() {
   const [isOpen, setIsOpen] = useState(false);
   const { user } = useAuth();
+  const { auth } = useFirebase();
   const router = useRouter();
 
   const handleSignOut = async () => {
+      if (!auth) return;
       await signOut(auth);
       setIsOpen(false);
       router.push('/login');

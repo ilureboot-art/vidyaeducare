@@ -2,7 +2,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { getFirebase } from '@/lib/firebase';
+import { useFirebase } from '@/context/FirebaseClientProvider';
 import { onAuthStateChanged, User, type Auth } from 'firebase/auth';
 
 interface AuthContextType {
@@ -13,31 +13,28 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({ user: null, loading: true });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const { auth, loading: firebaseLoading } = useFirebase();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [auth, setAuth] = useState<Auth | null>(null);
 
   useEffect(() => {
-    const initAuth = async () => {
-      const { auth: firebaseAuth } = await getFirebase();
-      setAuth(firebaseAuth);
-    };
-    initAuth();
-  }, []);
-
-  useEffect(() => {
-    if (auth) {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
-          setUser(user);
-          setLoading(false);
-        });
-
-        return () => unsubscribe();
-    } else {
-        // If auth is not ready, keep loading.
-        setLoading(true);
+    if (firebaseLoading) {
+      setLoading(true);
+      return;
     }
-  }, [auth]);
+
+    if (!auth) {
+      setLoading(false); // No auth service, so not loading auth state.
+      return;
+    }
+
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [auth, firebaseLoading]);
 
   const value = { user, loading };
 

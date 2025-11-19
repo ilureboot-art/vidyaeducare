@@ -20,33 +20,21 @@ type FirebaseServices = {
     db: Firestore;
 };
 
-let firebaseServices: FirebaseServices | null = null;
-let persistenceEnabled = false;
-
-const initializeFirebase = async (): Promise<FirebaseServices> => {
+// This function should be called only on the client side.
+export const initializeFirebase = async (): Promise<FirebaseServices> => {
     const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    if (typeof window !== 'undefined' && !persistenceEnabled) {
-        try {
-            await enableIndexedDbPersistence(db, { cacheSizeBytes: CACHE_SIZE_UNLIMITED });
-            persistenceEnabled = true;
-        } catch (err: any) {
-            if (err.code === 'failed-precondition') {
-                console.warn('Firestore persistence failed: Multiple tabs open.');
-            } else if (err.code === 'unimplemented') {
-                console.warn('Firestore persistence failed: Browser does not support it.');
-            }
+    try {
+        await enableIndexedDbPersistence(db);
+    } catch (err: any) {
+        if (err.code === 'failed-precondition') {
+            console.warn('Firestore persistence failed: Multiple tabs open.');
+        } else if (err.code === 'unimplemented') {
+            console.warn('Firestore persistence failed: Browser does not support it.');
         }
     }
 
     return { app, auth, db };
-};
-
-export const getFirebase = async (): Promise<FirebaseServices> => {
-    if (!firebaseServices) {
-        firebaseServices = await initializeFirebase();
-    }
-    return firebaseServices;
 };

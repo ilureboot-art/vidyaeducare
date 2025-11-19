@@ -3,7 +3,7 @@
 
 import { initializeApp, getApp, getApps, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
-import { getFirestore, type Firestore, enableIndexedDbPersistence, CACHE_SIZE_UNLIMITED } from "firebase/firestore";
+import { getFirestore, type Firestore, enableIndexedDbPersistence } from "firebase/firestore";
 
 const firebaseConfig = {
   "projectId": "vidyaeducare",
@@ -20,21 +20,29 @@ type FirebaseServices = {
     db: Firestore;
 };
 
-// This function should be called only on the client side.
+let firebaseServices: FirebaseServices | null = null;
+
+// This function ensures Firebase is initialized only once.
 export const initializeFirebase = async (): Promise<FirebaseServices> => {
+    if (firebaseServices) {
+        return firebaseServices;
+    }
+
     const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
     const auth = getAuth(app);
     const db = getFirestore(app);
 
     try {
+        // Await persistence to ensure it's enabled before db is used.
         await enableIndexedDbPersistence(db);
     } catch (err: any) {
         if (err.code === 'failed-precondition') {
-            console.warn('Firestore persistence failed: Multiple tabs open.');
+            console.warn('Firestore persistence failed: Multiple tabs open. App will work in online mode.');
         } else if (err.code === 'unimplemented') {
-            console.warn('Firestore persistence failed: Browser does not support it.');
+            console.warn('Firestore persistence failed: Browser does not support it. App will work in online mode.');
         }
     }
 
-    return { app, auth, db };
+    firebaseServices = { app, auth, db };
+    return firebaseServices;
 };

@@ -18,19 +18,21 @@ interface FirebaseContextType {
 const FirebaseContext = createContext<FirebaseContextType>({ app: null, auth: null, db: null, loading: true });
 
 export function FirebaseClientProvider({ children }: { children: ReactNode }) {
-  const [firebaseServices, setFirebaseServices] = useState<FirebaseContextType>({ app: null, auth: null, db: null, loading: true });
+  const [firebaseServices, setFirebaseServices] = useState<Omit<FirebaseContextType, 'loading'>>({ app: null, auth: null, db: null });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const init = async () => {
       const { app, auth, db } = await initializeFirebase();
-      setFirebaseServices({ app, auth, db, loading: false });
+      setFirebaseServices({ app, auth, db });
+      setLoading(false);
     };
 
     init();
   }, []);
 
   // While firebase services are loading, we show a spinner.
-  if (firebaseServices.loading) {
+  if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="animate-spin text-primary" size={32} />
@@ -39,7 +41,7 @@ export function FirebaseClientProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <FirebaseContext.Provider value={firebaseServices}>
+    <FirebaseContext.Provider value={{ ...firebaseServices, loading }}>
       {children}
     </FirebaseContext.Provider>
   );

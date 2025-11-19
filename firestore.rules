@@ -4,12 +4,17 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Allow admins to read their own profile to check status
+    // Function to check if the user is a Head Admin
+    function isHeadAdmin(userId) {
+      return get(/databases/$(database)/documents/admins/$(userId)).data.role == 'Head Admin';
+    }
+
     match /admins/{userId} {
+      // Any authenticated user can read their own admin doc to verify their role/status
       allow read: if request.auth != null && request.auth.uid == userId;
-      // Writing to the admins collection should be more restricted,
-      // e.g., only by other head admins. For now, we'll keep it locked down.
-      allow write: if false; 
+      
+      // Only Head Admins can list, create, update, or delete other admin docs
+      allow list, write: if request.auth != null && isHeadAdmin(request.auth.uid);
     }
 
     match /users/{userId} {
@@ -31,7 +36,7 @@ service cloud.firestore {
         // Creating transactions is handled by secure logic (e.g. backend functions or specific client actions)
         allow create: if request.auth != null;
         // Admins can update status, but users cannot
-        allow update: if false;
+        allow update: if request.auth != null && isHeadAdmin(request.auth.uid);
     }
 
     match /chats/{userId} {
@@ -43,7 +48,7 @@ service cloud.firestore {
 
     match /configs/{configId} {
       allow read: if true;
-      allow write: if false; // Only admins from a backend should write
+      allow write: if request.auth != null && isHeadAdmin(request.auth.uid);
     }
 
     match /activationCodes/{userId} {
@@ -52,12 +57,12 @@ service cloud.firestore {
 
     match /testSets/{testSetId} {
         allow read: if true; // Test questions are public
-        allow write: if false;
+        allow write: if request.auth != null && isHeadAdmin(request.auth.uid);
     }
 
     match /scheduledTests/{testId} {
         allow read: if true;
-        allow write: if false;
+        allow write: if request.auth != null && isHeadAdmin(request.auth.uid);
     }
 
     match /testResults/{resultId} {
@@ -71,7 +76,7 @@ service cloud.firestore {
 
     match /quizClashTournaments/{tournamentId} {
         allow read: if true;
-        allow write: if request.auth != null; // Allow logged in users to register (updates players array)
+        allow write: if request.auth != null;
     }
 
     match /quizClashResults/{resultId} {
@@ -80,3 +85,5 @@ service cloud.firestore {
     }
   }
 }
+
+    

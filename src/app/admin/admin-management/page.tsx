@@ -37,8 +37,8 @@ import {
 import { format } from 'date-fns';
 import type { Admin, AdminRole } from "@/lib/admin-data";
 import { db, auth } from "@/lib/firebase";
-import { collection, getDocs, doc, setDoc, deleteDoc, updateDoc } from "firebase/firestore";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { collection, getDocs, doc, setDoc, deleteDoc, updateDoc, query, where, getDoc } from "firebase/firestore";
+import { createUserWithEmailAndPassword, updatePassword } from "firebase/auth";
 
 
 const WhatsAppIcon = () => (
@@ -58,6 +58,17 @@ export default function AdminManagementPage() {
   const { toast } = useToast();
   
   const fetchAdmins = async () => {
+    if (!auth.currentUser) return;
+    
+    // Check if the current user is a Head Admin
+    const currentUserAdminDoc = await getDoc(doc(db, "admins", auth.currentUser.uid));
+    if (!currentUserAdminDoc.exists() || currentUserAdminDoc.data()?.role !== 'Head Admin') {
+        toast({ variant: 'destructive', title: "Access Denied", description: "You don't have permission to manage admins."});
+        setAdmins([]);
+        setRequests([]);
+        return;
+    }
+
     const adminsCollection = collection(db, "admins");
     const adminSnapshot = await getDocs(adminsCollection);
     const adminList = adminSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Admin));
@@ -70,7 +81,9 @@ export default function AdminManagementPage() {
   };
   
   useEffect(() => {
-    fetchAdmins();
+    if (auth.currentUser) {
+        fetchAdmins();
+    }
   }, []);
 
   const openWhatsApp = (phone: string, message?: string) => {
@@ -113,8 +126,6 @@ export default function AdminManagementPage() {
         if (newStatus === "Active") {
             await updateDoc(adminDocRef, { status: "Active" });
         } else {
-            // It's better to mark as rejected than to delete, to keep a record.
-            // But for this app, we'll delete. In a real app, consider just updating status.
             await deleteDoc(adminDocRef);
         }
         
@@ -146,29 +157,16 @@ export default function AdminManagementPage() {
     }
     
     try {
-        // Create user in Firebase Auth first
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-
-        // Use the UID from auth as the document ID
-        const newAdminData: Omit<Admin, 'id'> = {
-            name,
-            email,
-            phone,
-            role,
-            status: 'Active',
-            joinDate: new Date().toISOString(),
-        };
-    
-        await setDoc(doc(db, "admins", user.uid), newAdminData);
-        await fetchAdmins();
-        
+        // We can't create a user directly here on the client side with a specified UID
+        // And then log in as another user. This flow requires a backend function.
+        // For the purpose of this client-side app, we'll show an alert.
         toast({
-            title: "Admin Created",
-            description: `Admin account for ${name} has been created successfully.`
+            variant: "destructive",
+            title: "Action Not Supported",
+            description: "Creating admins requires a secure backend function. This UI is for demonstration.",
+            duration: 7000
         });
-        setIsCreateDialogOpen(false);
-        setNewAdminRole('');
+
     } catch(error: any) {
          console.error("Error creating admin:", error);
          toast({ variant: 'destructive', title: "Error creating admin", description: error.message || 'An unknown error occurred.'});
@@ -206,25 +204,12 @@ export default function AdminManagementPage() {
   const handleResetPassword = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!selectedAdmin) return;
-    const form = e.currentTarget;
-    const newPassword = (form.elements.namedItem('new-password') as HTMLInputElement).value;
-    const confirmPassword = (form.elements.namedItem('confirm-password') as HTMLInputElement).value;
     
-    if (newPassword !== confirmPassword) {
-        toast({ variant: 'destructive', title: 'Passwords do not match' });
-        return;
-    }
-    
-    if (newPassword.length < 6) {
-        toast({ variant: 'destructive', title: 'Password too short', description: 'Password must be at least 6 characters.' });
-        return;
-    }
-    
-    // In a real app, this would make an API call to Firebase Admin SDK to update the password
-    // This is a client-side placeholder
-    console.log(`Password for ${selectedAdmin.name} reset to: ${newPassword}`);
-    
-    toast({ title: 'Password Reset', description: `Password for ${selectedAdmin.name} has been changed.` });
+    toast({
+        variant: "destructive",
+        title: 'Action Not Supported',
+        description: 'Resetting another user\'s password requires a backend function for security reasons.'
+    });
     setIsResetPassOpen(false);
   }
 
@@ -332,7 +317,7 @@ export default function AdminManagementPage() {
                     <DialogHeader>
                         <DialogTitle>Create New Admin</DialogTitle>
                         <DialogDescription>
-                            Fill in the details to create a new administrator account. The password should be shared securely.
+                            Creating new admins directly from the client is not secure. This requires a backend function. This form is for demonstration purposes only.
                         </DialogDescription>
                     </DialogHeader>
                     <form onSubmit={handleCreateAdmin} className="space-y-4">
@@ -365,7 +350,7 @@ export default function AdminManagementPage() {
                             </Select>
                         </div>
                         <DialogFooter>
-                            <Button type="submit">Create Admin</Button>
+                            <Button type="submit">Create Admin (Disabled)</Button>
                         </DialogFooter>
                     </form>
                 </DialogContent>

@@ -20,8 +20,14 @@ type FirebaseServices = {
     db: Firestore;
 };
 
+let firebaseServices: FirebaseServices | null = null;
+
 // This function is designed to be called once on the client side.
 export const initializeFirebase = async (): Promise<FirebaseServices> => {
+    if (firebaseServices) {
+        return firebaseServices;
+    }
+
     const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
     const auth = getAuth(app);
     const db = getFirestore(app);
@@ -35,6 +41,12 @@ export const initializeFirebase = async (): Promise<FirebaseServices> => {
             console.warn('Firestore persistence failed: Browser does not support it.');
         }
     }
-
-    return { app, auth, db };
+    
+    firebaseServices = { app, auth, db };
+    return firebaseServices;
 };
+
+// Also export a non-async version for components that can't easily await it,
+// though this is less safe and relies on initializeFirebase being called first.
+// The provider pattern is generally better.
+export const db = firebaseServices?.db || getFirestore(getApps().length === 0 ? initializeApp(firebaseConfig) : getApp());

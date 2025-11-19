@@ -22,8 +22,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { format } from "date-fns";
-import { useAuth } from "@/context/AuthContext";
-import { useFirebase } from "@/context/FirebaseClientProvider";
+import { useAuth, useFirebase } from "@/context/FirebaseClientProvider";
 import { collection, query, where, getDocs, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 

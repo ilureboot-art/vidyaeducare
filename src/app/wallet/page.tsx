@@ -32,8 +32,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Image from "next/image";
 import { CopyButton } from "@/components/CopyButton";
 import { format } from "date-fns";
-import { useAuth } from "@/context/AuthContext";
-import { db } from "@/lib/firebase";
+import { useAuth, useFirebase } from "@/context/FirebaseClientProvider";
 import { doc, getDoc, collection, addDoc, query, where, orderBy, limit, onSnapshot, serverTimestamp, runTransaction, Timestamp } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
@@ -59,6 +58,7 @@ type WalletInfo = {
 function WalletPageContent() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const { db } = useFirebase();
   
   const [walletInfo, setWalletInfo] = useState<WalletInfo | null>(null);
   const [transactions, setTransactions] = useState<Transaction[] | null>(null);
@@ -68,7 +68,7 @@ function WalletPageContent() {
   const [withdrawOpen, setWithdrawOpen] = useState(false);
 
   useEffect(() => {
-    if (user) {
+    if (user && db) {
         // Fetch admin payment methods
         const paymentMethodsRef = doc(db, "configs", "paymentMethods");
         const unsubPaymentMethods = onSnapshot(paymentMethodsRef, (doc) => {
@@ -109,11 +109,11 @@ function WalletPageContent() {
             unsubTransactions();
         };
     }
-  }, [user]);
+  }, [user, db]);
 
   const handleAddFunds = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!user) return;
+    if (!user || !db) return;
 
     const form = event.currentTarget;
     const amount = parseFloat((form.elements.namedItem('amount-add') as HTMLInputElement).value);
@@ -150,7 +150,7 @@ function WalletPageContent() {
   
   const handleWithdraw = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!walletInfo || !user) return;
+    if (!walletInfo || !user || !db) return;
 
     const form = event.currentTarget;
     const amount = parseFloat((form.elements.namedItem('amount-withdraw') as HTMLInputElement).value);
@@ -402,5 +402,3 @@ export default function WalletPage() {
         </ProtectedRoute>
     );
 }
-
-    

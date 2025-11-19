@@ -12,7 +12,7 @@ import { Bell, CheckCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import type { AppNotification } from "@/lib/notifications";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context/FirebaseClientProvider";
 import { db } from "@/lib/firebase";
 import { collection, query, where, orderBy, onSnapshot, Timestamp } from "firebase/firestore";
 
@@ -23,7 +23,7 @@ export function UserNotifications() {
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !db) return;
 
     const notifsRef = collection(db, "notifications");
     const q = query(notifsRef, where("userId", "==", user.uid), orderBy("timestamp", "desc"));
@@ -39,7 +39,7 @@ export function UserNotifications() {
     });
 
     return () => unsubscribe();
-  }, [user]);
+  }, [user, db]);
 
   const markAllAsRead = () => {
     // In a real app, this would be an API call to update Firestore

@@ -20,33 +20,31 @@ type FirebaseServices = {
     db: Firestore;
 };
 
-let firebaseServices: FirebaseServices | null = null;
+let firebasePromise: Promise<FirebaseServices> | null = null;
 
 // This function is designed to be called once on the client side.
-export const initializeFirebase = async (): Promise<FirebaseServices> => {
-    if (firebaseServices) {
-        return firebaseServices;
+export const initializeFirebase = (): Promise<FirebaseServices> => {
+    if (firebasePromise) {
+        return firebasePromise;
     }
 
-    const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-    const auth = getAuth(app);
-    const db = getFirestore(app);
+    firebasePromise = new Promise(async (resolve) => {
+        const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+        const auth = getAuth(app);
+        const db = getFirestore(app);
 
-    try {
-        await enableIndexedDbPersistence(db);
-    } catch (err: any) {
-        if (err.code === 'failed-precondition') {
-            console.warn('Firestore persistence failed: Multiple tabs open.');
-        } else if (err.code === 'unimplemented') {
-            console.warn('Firestore persistence failed: Browser does not support it.');
+        try {
+            await enableIndexedDbPersistence(db);
+        } catch (err: any) {
+            if (err.code === 'failed-precondition') {
+                console.warn('Firestore persistence failed: Multiple tabs open.');
+            } else if (err.code === 'unimplemented') {
+                console.warn('Firestore persistence failed: Browser does not support it.');
+            }
         }
-    }
+        
+        resolve({ app, auth, db });
+    });
     
-    firebaseServices = { app, auth, db };
-    return firebaseServices;
+    return firebasePromise;
 };
-
-// Also export a non-async version for components that can't easily await it,
-// though this is less safe and relies on initializeFirebase being called first.
-// The provider pattern is generally better.
-export const db = firebaseServices?.db || getFirestore(getApps().length === 0 ? initializeApp(firebaseConfig) : getApp());

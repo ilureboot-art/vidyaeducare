@@ -12,13 +12,13 @@ import { Bell, CheckCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import type { AppNotification } from "@/lib/notifications";
-import { useAuth } from "@/context/FirebaseClientProvider";
-import { db } from "@/lib/firebase";
+import { useAuth, useFirebase } from "@/context/FirebaseClientProvider";
 import { collection, query, where, orderBy, onSnapshot, Timestamp } from "firebase/firestore";
 
 
 export function UserNotifications() {
   const { user } = useAuth();
+  const { db } = useFirebase();
   const [userNotifications, setUserNotifications] = useState<AppNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 

@@ -48,7 +48,7 @@ const WhatsAppIcon = () => (
 )
 
 export default function AdminManagementPage() {
-  const { db, auth } = useFirebase();
+  const { db, auth, loading } = useFirebase();
   const [admins, setAdmins] = useState<Admin[] | null>(null);
   const [requests, setRequests] = useState<Admin[] | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -245,7 +245,7 @@ export default function AdminManagementPage() {
     }
   }
 
-  if (!admins || !requests) {
+  if (loading || !admins || !requests) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />

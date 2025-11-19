@@ -1,10 +1,10 @@
 
-// Import the functions you need from the SDKs you need
-import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
-import { getAuth, Auth } from "firebase/auth";
-import { getFirestore, enableIndexedDbPersistence, Firestore } from "firebase/firestore";
+'use client';
 
-// Your web app's Firebase configuration
+import { initializeApp, getApp, getApps, FirebaseApp } from "firebase/app";
+import { getAuth, Auth } from "firebase/auth";
+import { getFirestore, Firestore, enableIndexedDbPersistence, CACHE_SIZE_UNLIMITED } from "firebase/firestore";
+
 const firebaseConfig = {
   "projectId": "vidyaeducare",
   "appId": "1:759861893307:web:9c8d51835795392bc6b19e",
@@ -14,42 +14,53 @@ const firebaseConfig = {
   "messagingSenderId": "759861893307"
 };
 
-// Singleton instances for the services
-let app: FirebaseApp;
-let auth: Auth;
-let db: Firestore;
+class FirebaseService {
+  private static instance: FirebaseService;
+  public readonly app: FirebaseApp;
+  public readonly auth: Auth;
+  public readonly db: Firestore;
 
-// Flag to track if persistence has been enabled
-let persistenceEnabled = false;
-
-function initializeFirebase() {
+  private constructor() {
     if (!getApps().length) {
-        app = initializeApp(firebaseConfig);
+      this.app = initializeApp(firebaseConfig);
     } else {
-        app = getApp();
+      this.app = getApp();
     }
-    
-    auth = getAuth(app);
-    db = getFirestore(app);
+    this.auth = getAuth(this.app);
+    this.db = this.initializeFirestoreWithPersistence();
+  }
 
-    // Try to enable offline persistence only on the client and only once
-    if (typeof window !== 'undefined' && !persistenceEnabled) {
-        enableIndexedDbPersistence(db)
-            .then(() => {
-                persistenceEnabled = true;
-            })
-            .catch((err) => {
-                if (err.code === 'failed-precondition') {
-                    console.warn("Firestore offline persistence failed: Multiple tabs open.");
-                } else if (err.code === 'unimplemented') {
-                    console.warn("Firestore offline persistence not supported in this browser.");
-                }
-            });
+  private initializeFirestoreWithPersistence(): Firestore {
+    const firestoreDb = getFirestore(this.app);
+    if (typeof window !== 'undefined') {
+        enableIndexedDbPersistence(firestoreDb, {
+            cacheSizeBytes: CACHE_SIZE_UNLIMITED
+        }).catch((err) => {
+            if (err.code === 'failed-precondition') {
+                console.warn(
+                    'Firestore persistence failed: Multiple tabs open, persistence can only be enabled in one tab at a time.'
+                );
+            } else if (err.code === 'unimplemented') {
+                console.warn(
+                    'Firestore persistence failed: The current browser does not support all of the features required to enable persistence.'
+                );
+            }
+        });
     }
+    return firestoreDb;
+  }
+
+  public static getInstance(): FirebaseService {
+    if (!FirebaseService.instance) {
+      FirebaseService.instance = new FirebaseService();
+    }
+    return FirebaseService.instance;
+  }
 }
 
-// Initialize Firebase immediately on module load
-initializeFirebase();
+const firebaseInstance = FirebaseService.getInstance();
+const app = firebaseInstance.app;
+const auth = firebaseInstance.auth;
+const db = firebaseInstance.db;
 
-// Export the singleton instances
 export { app, auth, db };

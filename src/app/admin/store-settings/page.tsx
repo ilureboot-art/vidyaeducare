@@ -13,39 +13,37 @@ import { PlusCircle, Trash2, Zap, BookOpen, GraduationCap, Percent, Loader2 } fr
 import type { TicketPackage, ReferboltSubscription, MockTestPackage, ReferboltSettings, GameSettings, StoreConfig } from "@/lib/store-config";
 import type { AcademicConfig } from "@/lib/academic-config";
 import { Switch } from "@/components/ui/switch";
-import { db as dbPromise } from "@/lib/firebase";
+import { useFirebase } from "@/context/FirebaseClientProvider";
 import { doc, getDoc, setDoc, type Firestore } from "firebase/firestore";
 
 export default function AdminStoreSettingsPage() {
   const { toast } = useToast();
+  const { db, loading } = useFirebase();
   
   const [storeConfig, setStoreConfig] = useState<StoreConfig | null>(null);
   const [academicConfig, setAcademicConfig] = useState<AcademicConfig | null>(null);
-  const [db, setDb] = useState<Firestore | null>(null);
 
   useEffect(() => {
-    const initDb = async () => {
-      const dbInstance = await dbPromise;
-      setDb(dbInstance);
-    };
-    initDb();
-  }, []);
-
-  useEffect(() => {
-    if (!db) return;
+    if (loading || !db) return;
+    
     const fetchConfigs = async () => {
-        const storeConfigDoc = await getDoc(doc(db, "configs", "store"));
-        if(storeConfigDoc.exists()) {
-            setStoreConfig(storeConfigDoc.data() as StoreConfig);
-        }
+        try {
+            const storeConfigDoc = await getDoc(doc(db, "configs", "store"));
+            if(storeConfigDoc.exists()) {
+                setStoreConfig(storeConfigDoc.data() as StoreConfig);
+            }
 
-        const academicConfigDoc = await getDoc(doc(db, "configs", "academic"));
-        if(academicConfigDoc.exists()){
-            setAcademicConfig(academicConfigDoc.data() as AcademicConfig);
+            const academicConfigDoc = await getDoc(doc(db, "configs", "academic"));
+            if(academicConfigDoc.exists()){
+                setAcademicConfig(academicConfigDoc.data() as AcademicConfig);
+            }
+        } catch (error) {
+            console.error("Error fetching configs:", error);
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not load configuration data.' });
         }
     }
     fetchConfigs();
-  }, [db]);
+  }, [db, loading, toast]);
 
   const handleMockTestPackageChange = (index: number, field: keyof MockTestPackage, value: string | number | boolean) => {
     if (!storeConfig) return;
@@ -167,7 +165,7 @@ export default function AdminStoreSettingsPage() {
       );
   };
 
-  if (!storeConfig || !academicConfig) {
+  if (loading || !storeConfig || !academicConfig) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />

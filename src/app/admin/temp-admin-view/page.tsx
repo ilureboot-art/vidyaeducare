@@ -24,10 +24,9 @@ export default function TempAdminViewPage() {
   const [admins, setAdmins] = useState<Admin[] | null>(null);
   
   useEffect(() => {
-    const fetchAdmins = async () => {
-      if (!db) return;
+    const fetchAdmins = async (firestore: Firestore) => {
       try {
-        const adminsCollection = collection(db, "admins");
+        const adminsCollection = collection(firestore, "admins");
         const adminSnapshot = await getDocs(adminsCollection);
         const adminList = adminSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Admin));
         setAdmins(adminList);
@@ -36,7 +35,7 @@ export default function TempAdminViewPage() {
       }
     };
     if (!loading && db) {
-        fetchAdmins();
+        fetchAdmins(db);
     }
   }, [db, loading]);
 

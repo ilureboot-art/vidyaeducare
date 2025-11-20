@@ -57,7 +57,7 @@ function IBADashboardPageContent() {
   
   useEffect(() => {
     if (user && !loading && db) {
-        const fetchIbaData = async () => {
+        const fetchIbaData = async (db: Firestore) => {
             // Assume the IBA-specific data is stored in a subcollection or related doc
             const userWalletDocRef = doc(db, 'wallets', user.uid);
             const userWalletSnap = await getDoc(userWalletDocRef);
@@ -96,7 +96,7 @@ function IBADashboardPageContent() {
                 recentReferrals,
             });
         };
-        fetchIbaData();
+        fetchIbaData(db);
     }
   }, [user, db, loading]);
 
@@ -205,7 +205,7 @@ Don't miss out on the best way to prepare for your exams and earn rewards!
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={referralData.salesHistory}>
                                 <XAxis dataKey="month" stroke="#888888" fontSize={12} tickLine={false} axisLine={false}/>
-                                <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`}/>
+                                <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${'${value}'}`}/>
                                 <Tooltip
                                   contentStyle={{
                                     background: "hsl(var(--background))",

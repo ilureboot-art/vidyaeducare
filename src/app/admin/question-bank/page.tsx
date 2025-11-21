@@ -514,5 +514,3 @@ const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     </div>
   );
 }
-
-    

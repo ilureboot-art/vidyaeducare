@@ -80,7 +80,7 @@ export default function ForgotPasswordPage() {
                     />
                 </div>
                 <Button type="submit" className="w-full" disabled={isLoading || !isFirebaseReady}>
-                    {isLoading ? <Loader2 className="animate-spin mr-2"/> : !isFirebaseReady ? <Loader2 className="animate-spin mr-2"/> : <Mail className="mr-2"/>}
+                    {isLoading || !isFirebaseReady ? <Loader2 className="animate-spin mr-2"/> : <Mail className="mr-2"/>}
                     {isFirebaseReady ? 'Send Reset Link' : 'Loading...'}
                 </Button>
             </form>

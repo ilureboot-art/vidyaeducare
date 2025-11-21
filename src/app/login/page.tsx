@@ -113,7 +113,7 @@ export default function LoginPage() {
               <Input 
                 id="password" 
                 type={showPassword ? "text" : "password"}
-                required
+                required 
               />
                <Button
                 type="button"

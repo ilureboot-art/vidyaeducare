@@ -277,8 +277,8 @@ export default function AdminLoginPage() {
                               </Label>
                             </div>
                             <Button type="submit" className="w-full !mt-6" disabled={isLoading || !isFirebaseReady}>
-                                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                                {!isFirebaseReady ? 'Loading...' : 'Login'}
+                                {isLoading || !isFirebaseReady ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                                {isFirebaseReady ? 'Login' : 'Loading...'}
                             </Button>
                     </CardContent>
                 </form>
@@ -319,8 +319,8 @@ export default function AdminLoginPage() {
                                 </Button>
                             </div>
                             <Button type="submit" className="w-full" disabled={isLoading || !isFirebaseReady}>
-                                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                                {!isFirebaseReady ? 'Loading...' : 'Submit Request'}
+                                {isLoading || !isFirebaseReady ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                                {isFirebaseReady ? 'Submit Request' : 'Loading...'}
                             </Button>
                     </CardContent>
                  </form>

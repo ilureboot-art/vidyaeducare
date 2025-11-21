@@ -224,8 +224,8 @@ export default function SignupPage() {
           </CardContent>
           <CardContent>
             <Button className="w-full" type="submit" disabled={isLoading || !isFirebaseReady}>
-                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                {!isFirebaseReady ? 'Loading...' : 'Create Account'}
+                {isLoading || !isFirebaseReady ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                {isFirebaseReady ? 'Create Account' : 'Loading...'}
             </Button>
           </CardContent>
         </form>

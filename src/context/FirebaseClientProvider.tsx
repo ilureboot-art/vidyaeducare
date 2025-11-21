@@ -11,11 +11,15 @@ interface FirebaseContextType {
   app: FirebaseApp;
   auth: Auth;
   db: Firestore;
+}
+
+interface AuthContextType {
   user: User | null;
   loading: boolean;
 }
 
 const FirebaseContext = createContext<FirebaseContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function FirebaseClientProvider({ 
   children,
@@ -24,12 +28,13 @@ export function FirebaseClientProvider({
   children: ReactNode,
   loadingFallback: ReactNode 
 }) {
-  const [services, setServices] = useState<{ app: FirebaseApp; auth: Auth; db: Firestore; } | null>(null);
+  // Manage services and user state within the provider
+  const [services, setServices] = useState<FirebaseContextType | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
   useEffect(() => {
-    // This effect runs once on mount to initialize Firebase and auth state.
+    // This effect runs once on mount to initialize Firebase and set up auth state listener.
     const initializedServices = getFirebaseServices();
     setServices(initializedServices);
     
@@ -47,13 +52,17 @@ export function FirebaseClientProvider({
     return <>{loadingFallback}</>;
   }
 
+  // Once loading is complete, provide both contexts to children
   return (
-    <FirebaseContext.Provider value={{ ...services, user, loading: false }}>
-      {children}
+    <FirebaseContext.Provider value={services}>
+      <AuthContext.Provider value={{ user, loading: authLoading }}>
+        {children}
+      </AuthContext.Provider>
     </FirebaseContext.Provider>
   );
 }
 
+// Hook to access Firebase services (app, auth, db)
 export function useFirebase() {
   const context = useContext(FirebaseContext);
   if (context === undefined) {
@@ -62,10 +71,11 @@ export function useFirebase() {
   return context;
 }
 
+// Hook to access authentication state (user, loading)
 export function useAuth() {
-    const context = useContext(FirebaseContext);
+    const context = useContext(AuthContext);
     if (context === undefined) {
         throw new Error("useAuth must be used within a FirebaseClientProvider");
     }
-    return { user: context.user, loading: context.loading };
+    return context;
 }

@@ -48,8 +48,8 @@ const WhatsAppIcon = () => (
 )
 
 export default function AdminManagementPage() {
-  const { db, auth, loading: firebaseLoading } = useFirebase();
-  const { user, loading: authLoading } = useAuth();
+  const { db, auth } = useFirebase();
+  const { user, loading } = useAuth();
   const [admins, setAdmins] = useState<Admin[] | null>(null);
   const [requests, setRequests] = useState<Admin[] | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -60,7 +60,7 @@ export default function AdminManagementPage() {
   const { toast } = useToast();
   
   useEffect(() => {
-    if (firebaseLoading || authLoading || !db || !user) return;
+    if (loading || !user || !db) return;
 
     const checkPermissionsAndFetch = async () => {
         const currentUserAdminDoc = await getDoc(doc(db, "admins", user.uid));
@@ -95,7 +95,7 @@ export default function AdminManagementPage() {
             unsubscribe();
         }
     }
-  }, [user, db, toast, firebaseLoading, authLoading]);
+  }, [user, db, toast, loading]);
 
   const openWhatsApp = (phone: string, message?: string) => {
     const cleanedPhone = phone.replace(/\D/g, '');
@@ -251,7 +251,7 @@ export default function AdminManagementPage() {
     }
   }
 
-  if (firebaseLoading || authLoading || !admins || !requests) {
+  if (loading || !admins || !requests) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />

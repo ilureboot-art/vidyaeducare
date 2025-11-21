@@ -58,47 +58,56 @@ function IBADashboardPageContent() {
   useEffect(() => {
     if (user && !loading && db) {
         const fetchIbaData = async (db: Firestore) => {
-            // Assume the IBA-specific data is stored in a subcollection or related doc
-            const userWalletDocRef = doc(db, 'wallets', user.uid);
-            const userWalletSnap = await getDoc(userWalletDocRef);
-            if (userWalletSnap.exists()) {
-                setIbaReferralCode(userWalletSnap.data().referralCode);
+            try {
+                // Assume the IBA-specific data is stored in a subcollection or related doc
+                const userWalletDocRef = doc(db, 'wallets', user.uid);
+                const userWalletSnap = await getDoc(userWalletDocRef);
+                if (userWalletSnap.exists()) {
+                    setIbaReferralCode(userWalletSnap.data().referralCode);
+                }
+
+                const q = query(collection(db, "transactions"), where("user", "==", user.uid), where("type", "in", ["Commission", "Referral Bonus"]));
+                const querySnapshot = await getDocs(q);
+
+                const recentReferrals = querySnapshot.docs.map(d => {
+                    const data = d.data();
+                    const date = data.date instanceof Timestamp ? data.date.toDate().toISOString() : data.date;
+                    return {
+                        id: d.id,
+                        name: data.description.split(' from ')[1] || data.description.split(' for ')[1] || 'Unknown User',
+                        date: date,
+                        commission: data.amount,
+                    };
+                });
+
+                const totalCommission = recentReferrals.reduce((acc, ref) => acc + ref.commission, 0);
+
+                // Mocked sales data for charts
+                const salesHistory = [
+                    { month: 'Jan', sales: 12 }, { month: 'Feb', sales: 19 }, { month: 'Mar', sales: 3 }, 
+                    { month: 'Apr', sales: 5 }, { month: 'May', sales: 2 }, { month: 'Jun', sales: 3 }
+                ];
+
+                setReferralData({
+                    totalCommission,
+                    totalReferrals: recentReferrals.length,
+                    dailySales: 0, // Needs complex query
+                    monthlySales: 0, // Needs complex query
+                    salesHistory,
+                    recentReferrals,
+                });
+            } catch (error) {
+                console.error("Error fetching IBA data:", error);
+                toast({
+                    variant: "destructive",
+                    title: "Error",
+                    description: "Could not load your IBA dashboard data."
+                });
             }
-
-            const q = query(collection(db, "transactions"), where("user", "==", user.uid), where("type", "in", ["Commission", "Referral Bonus"]));
-            const querySnapshot = await getDocs(q);
-
-            const recentReferrals = querySnapshot.docs.map(d => {
-                const data = d.data();
-                const date = data.date instanceof Timestamp ? data.date.toDate().toISOString() : data.date;
-                return {
-                    id: d.id,
-                    name: data.description.split(' from ')[1] || data.description.split(' for ')[1] || 'Unknown User',
-                    date: date,
-                    commission: data.amount,
-                };
-            });
-
-            const totalCommission = recentReferrals.reduce((acc, ref) => acc + ref.commission, 0);
-
-            // Mocked sales data for charts
-            const salesHistory = [
-                { month: 'Jan', sales: 12 }, { month: 'Feb', sales: 19 }, { month: 'Mar', sales: 3 }, 
-                { month: 'Apr', sales: 5 }, { month: 'May', sales: 2 }, { month: 'Jun', sales: 3 }
-            ];
-
-            setReferralData({
-                totalCommission,
-                totalReferrals: recentReferrals.length,
-                dailySales: 0, // Needs complex query
-                monthlySales: 0, // Needs complex query
-                salesHistory,
-                recentReferrals,
-            });
         };
         fetchIbaData(db);
     }
-  }, [user, db, loading]);
+  }, [user, db, loading, toast]);
 
   const handleCopyToClipboard = () => {
     if (!ibaReferralCode) return;

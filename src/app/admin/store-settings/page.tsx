@@ -94,7 +94,7 @@ export default function AdminStoreSettingsPage() {
   const removeMockTestPackage = (index: number) => {
     if (!storeConfig) return;
     const newPackages = storeConfig.mockTestPackages.filter((_, i) => i !== index);
-    setStoreConfig(prev => prev ? ({ ...prev, mockTestPackages: newPackages }) : null);
+    setStoreConfig(prev => prev ? ({...prev, mockTestPackages: newPackages }) : null);
   };
 
   const handleDynamicListChange = (setter: React.Dispatch<React.SetStateAction<AcademicConfig | null>>, listName: keyof AcademicConfig, index: number, value: string) => {
@@ -305,3 +305,5 @@ export default function AdminStoreSettingsPage() {
     </div>
   );
 }
+
+    

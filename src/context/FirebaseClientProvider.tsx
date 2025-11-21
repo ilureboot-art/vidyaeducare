@@ -2,7 +2,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { initializeFirebase } from '@/lib/firebase';
+import { getFirebaseServices } from '@/lib/firebase';
 import { type FirebaseApp } from "firebase/app";
 import { type Auth, onAuthStateChanged, type User } from "firebase/auth";
 import { type Firestore } from "firebase/firestore";
@@ -19,34 +19,25 @@ interface FirebaseContextType {
 const FirebaseContext = createContext<FirebaseContextType>({ app: null, auth: null, db: null, user: null, loading: true });
 
 export function FirebaseClientProvider({ children }: { children: ReactNode }) {
-  const [services, setServices] = useState<Omit<FirebaseContextType, 'loading' | 'user'>>({ app: null, auth: null, db: null });
+  // Use a state to hold the services, but initialize it synchronously.
+  const [services, setServices] = useState(() => getFirebaseServices());
   const [user, setUser] = useState<User | null>(null);
-  const [servicesLoading, setServicesLoading] = useState(true);
   const [authLoading, setAuthLoading] = useState(true);
 
   useEffect(() => {
-    const init = async () => {
-      const { app, auth, db } = await initializeFirebase();
-      setServices({ app, auth, db });
-      setServicesLoading(false);
-    };
-    init();
-  }, []);
-
-  useEffect(() => {
-    if (servicesLoading || !services.auth) return;
-
-    const unsubscribe = onAuthStateChanged(services.auth, (user) => {
+    // getFirebaseServices() is synchronous and safe to call here.
+    const { auth } = getFirebaseServices();
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setAuthLoading(false);
     });
     // Cleanup subscription on unmount
     return () => unsubscribe();
-  }, [servicesLoading, services.auth]);
+  }, []);
 
-  const loading = servicesLoading || authLoading;
+  const loading = authLoading;
 
-  // This is the gatekeeper. Nothing renders until all Firebase services are ready.
+  // The gatekeeper logic remains. It now only waits for auth state.
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen bg-background">

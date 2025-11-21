@@ -20,31 +20,34 @@ type FirebaseServices = {
     db: Firestore;
 };
 
-let firebasePromise: Promise<FirebaseServices> | null = null;
+// A simple, non-promise-based initialization.
+const initializeFirebase = (): FirebaseServices => {
+    const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+    const auth = getAuth(app);
+    const db = getFirestore(app);
 
-// This function is designed to be called once on the client side.
-export const initializeFirebase = (): Promise<FirebaseServices> => {
-    if (firebasePromise) {
-        return firebasePromise;
-    }
-
-    firebasePromise = new Promise(async (resolve) => {
-        const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-
-        try {
-            await enableIndexedDbPersistence(db);
-        } catch (err: any) {
-            if (err.code === 'failed-precondition') {
-                console.warn('Firestore persistence failed: Multiple tabs open.');
-            } else if (err.code === 'unimplemented') {
-                console.warn('Firestore persistence failed: Browser does not support it.');
-            }
+    // This is the crucial part for offline persistence.
+    // In a client-side only context, we can call it directly.
+    // The provider will ensure this only runs once.
+    try {
+        enableIndexedDbPersistence(db);
+    } catch (err: any) {
+        if (err.code === 'failed-precondition') {
+            console.warn('Firestore persistence failed: Multiple tabs open.');
+        } else if (err.code === 'unimplemented') {
+            console.warn('Firestore persistence failed: Browser does not support it.');
         }
-        
-        resolve({ app, auth, db });
-    });
+    }
     
-    return firebasePromise;
+    return { app, auth, db };
+};
+
+let firebaseServices: FirebaseServices | null = null;
+
+// Export a function that ensures initialization is only called once.
+export const getFirebaseServices = (): FirebaseServices => {
+    if (!firebaseServices) {
+        firebaseServices = initializeFirebase();
+    }
+    return firebaseServices;
 };

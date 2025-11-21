@@ -31,6 +31,8 @@ export default function SignupPage() {
   const [referralBonus, setReferralBonus] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  
+  const isFirebaseReady = !!auth && !!db && referralBonus !== null;
 
   useEffect(() => {
     const refCode = searchParams.get('ref');
@@ -39,9 +41,15 @@ export default function SignupPage() {
     }
     const fetchConfig = async () => {
         if (!db) return;
-        const storeConfigDoc = await getDoc(doc(db, "configs", "store"));
-        if(storeConfigDoc.exists()) {
-            setReferralBonus(storeConfigDoc.data().referralBonus);
+        try {
+            const storeConfigDoc = await getDoc(doc(db, "configs", "store"));
+            if(storeConfigDoc.exists()) {
+                setReferralBonus(storeConfigDoc.data().referralBonus);
+            } else {
+                setReferralBonus(0); // Set to 0 if config doesn't exist
+            }
+        } catch (e) {
+            setReferralBonus(0);
         }
     };
     if (db) fetchConfig();
@@ -49,7 +57,7 @@ export default function SignupPage() {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!db || !auth) return;
+    if (!isFirebaseReady) return;
     setIsLoading(true);
     
     const form = e.target as HTMLFormElement;
@@ -62,7 +70,6 @@ export default function SignupPage() {
       // Step 1: Perform reads *before* the transaction
       let welcomeBonus = 0;
       let referrerId: string | null = null;
-      let referrerWalletRef = null;
       
       if (referralCode && referralBonus && referralBonus > 0) {
         const q = query(collection(db, "wallets"), where("referralCode", "==", referralCode));
@@ -71,7 +78,6 @@ export default function SignupPage() {
         if (!querySnapshot.empty) {
           const referrerDoc = querySnapshot.docs[0];
           referrerId = referrerDoc.id;
-          referrerWalletRef = doc(db, "wallets", referrerId);
           welcomeBonus = referralBonus;
         }
       }
@@ -79,12 +85,12 @@ export default function SignupPage() {
       // Step 2: Create the user with Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-
-      const newUserRef = doc(db, "users", user.uid);
-      const newWalletRef = doc(db, "wallets", user.uid);
       
       // Step 3: Execute all writes within a single transaction
       await runTransaction(db, async (transaction) => {
+        const newUserRef = doc(db, "users", user.uid);
+        const newWalletRef = doc(db, "wallets", user.uid);
+
         // Create user document
         transaction.set(newUserRef, {
             id: user.uid,
@@ -103,7 +109,8 @@ export default function SignupPage() {
         });
 
         // If there's a referrer, update their wallet and log transactions
-        if (referrerWalletRef && referrerId && referralBonus) {
+        if (referrerId && referralBonus && referralBonus > 0) {
+            const referrerWalletRef = doc(db, "wallets", referrerId);
             const referrerWalletDoc = await transaction.get(referrerWalletRef);
             if (referrerWalletDoc.exists()) {
                 const referrerBalance = referrerWalletDoc.data().balance || 0;
@@ -152,16 +159,6 @@ export default function SignupPage() {
         setIsLoading(false);
     }
   };
-
-  const isFirebaseReady = !!auth && !!db;
-
-  if (referralBonus === null && isFirebaseReady) {
-      return (
-          <div className="w-full max-w-md mx-auto flex items-center justify-center h-screen">
-              <Loader2 className="animate-spin text-primary" size={32} />
-          </div>
-      );
-  }
 
   return (
     <div className="w-full max-w-md mx-auto flex flex-col items-center justify-center min-h-screen space-y-4 p-4">
@@ -227,9 +224,8 @@ export default function SignupPage() {
           </CardContent>
           <CardContent>
             <Button className="w-full" type="submit" disabled={isLoading || !isFirebaseReady}>
-                {isLoading && <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Creating Account...</>}
-                {!isLoading && isFirebaseReady && 'Create Account'}
-                {!isLoading && !isFirebaseReady && <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Loading...</>}
+                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                {!isFirebaseReady ? 'Loading...' : 'Create Account'}
             </Button>
           </CardContent>
         </form>
@@ -243,3 +239,5 @@ export default function SignupPage() {
     </div>
   );
 }
+
+    

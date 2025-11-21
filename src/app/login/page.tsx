@@ -30,6 +30,8 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  
+  const isFirebaseReady = !!auth;
 
   useEffect(() => {
     const rememberedEmail = localStorage.getItem('rememberedUser');
@@ -41,7 +43,7 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!auth) {
+    if (!isFirebaseReady) {
         toast({
             variant: "destructive",
             title: "Login Failed",
@@ -77,8 +79,6 @@ export default function LoginPage() {
         setIsLoading(false);
     }
   };
-  
-  const isFirebaseReady = !!auth;
 
   return (
     <div className="w-full max-w-md mx-auto flex flex-col items-center justify-center min-h-screen space-y-4 p-4">
@@ -144,9 +144,8 @@ export default function LoginPage() {
           </CardContent>
           <CardFooter className="flex-col gap-4">
             <Button className="w-full" type="submit" disabled={isLoading || !isFirebaseReady}>
-                {isLoading && <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Logging in...</>}
-                {!isLoading && isFirebaseReady && 'Login'}
-                {!isLoading && !isFirebaseReady && <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Loading...</>}
+                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                {!isFirebaseReady ? 'Loading...' : 'Login'}
             </Button>
           </CardFooter>
         </form>
@@ -167,3 +166,5 @@ export default function LoginPage() {
     </div>
   );
 }
+
+    

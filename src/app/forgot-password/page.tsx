@@ -27,9 +27,11 @@ export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
+  const isFirebaseReady = !!auth;
+
   const handleResetRequest = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!auth) return;
+    if (!isFirebaseReady) return;
     setIsLoading(true);
     try {
       await sendPasswordResetEmail(auth, email);
@@ -48,8 +50,6 @@ export default function ForgotPasswordPage() {
       setIsLoading(false);
     }
   };
-
-  const isFirebaseReady = !!auth;
 
   return (
     <div className="w-full max-w-md mx-auto flex flex-col items-center justify-center min-h-screen space-y-4 p-4">
@@ -80,9 +80,8 @@ export default function ForgotPasswordPage() {
                     />
                 </div>
                 <Button type="submit" className="w-full" disabled={isLoading || !isFirebaseReady}>
-                    {isLoading && <><Loader2 className="animate-spin mr-2"/> Sending...</>}
-                    {!isLoading && isFirebaseReady && <><Mail className="mr-2"/> Send Reset Link</>}
-                    {!isLoading && !isFirebaseReady && <><Loader2 className="animate-spin mr-2"/>Loading...</>}
+                    {isLoading ? <Loader2 className="animate-spin mr-2"/> : !isFirebaseReady ? <Loader2 className="animate-spin mr-2"/> : <Mail className="mr-2"/>}
+                    {isFirebaseReady ? 'Send Reset Link' : 'Loading...'}
                 </Button>
             </form>
         </CardContent>
@@ -97,3 +96,5 @@ export default function ForgotPasswordPage() {
     </div>
   );
 }
+
+    

@@ -34,9 +34,11 @@ export default function AdminLoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("login");
 
+  const isFirebaseReady = !!auth && !!db;
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!auth || !db) {
+    if (!isFirebaseReady) {
         toast({
             variant: "destructive",
             title: "Login Failed",
@@ -115,7 +117,7 @@ export default function AdminLoginPage() {
 
   const handleSignup = async (e: React.FormEvent) => {
      e.preventDefault();
-     if (!auth || !db) {
+     if (!isFirebaseReady) {
         toast({
             variant: "destructive",
             title: "Signup Failed",
@@ -173,7 +175,7 @@ export default function AdminLoginPage() {
   }
 
   const handleForgotPassword = async () => {
-    if (!auth) {
+    if (!isFirebaseReady) {
         toast({
             variant: "destructive",
             title: "Error",
@@ -207,8 +209,6 @@ export default function AdminLoginPage() {
         setIsLoading(false);
     }
   };
-
-  const isFirebaseReady = !!auth && !!db;
 
   return (
     <div className="w-full max-w-md mx-auto flex flex-col items-center justify-center min-h-screen p-4">
@@ -277,9 +277,8 @@ export default function AdminLoginPage() {
                               </Label>
                             </div>
                             <Button type="submit" className="w-full !mt-6" disabled={isLoading || !isFirebaseReady}>
-                                {isLoading && <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Logging in...</>}
-                                {!isLoading && isFirebaseReady && 'Login'}
-                                {!isLoading && !isFirebaseReady && <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Loading...</>}
+                                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                                {!isFirebaseReady ? 'Loading...' : 'Login'}
                             </Button>
                     </CardContent>
                 </form>
@@ -320,9 +319,8 @@ export default function AdminLoginPage() {
                                 </Button>
                             </div>
                             <Button type="submit" className="w-full" disabled={isLoading || !isFirebaseReady}>
-                                {isLoading && <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Submitting...</>}
-                                {!isLoading && isFirebaseReady && 'Submit Request'}
-                                {!isLoading && !isFirebaseReady && <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Loading...</>}
+                                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                                {!isFirebaseReady ? 'Loading...' : 'Submit Request'}
                             </Button>
                     </CardContent>
                  </form>
@@ -339,3 +337,5 @@ export default function AdminLoginPage() {
     </div>
   );
 }
+
+    

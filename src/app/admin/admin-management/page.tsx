@@ -38,7 +38,7 @@ import { format } from 'date-fns';
 import type { Admin, AdminRole } from "@/lib/admin-data";
 import { collection, onSnapshot, doc, setDoc, deleteDoc, updateDoc, query, where, getDoc, type Firestore, type Auth } from "firebase/firestore";
 import { createUserWithEmailAndPassword, updatePassword } from "firebase/auth";
-import { useFirebase } from "@/context/FirebaseClientProvider";
+import { useFirebase, useAuth } from "@/context/FirebaseClientProvider";
 
 
 const WhatsAppIcon = () => (
@@ -48,7 +48,8 @@ const WhatsAppIcon = () => (
 )
 
 export default function AdminManagementPage() {
-  const { db, auth } = useFirebase();
+  const { db, auth, loading: firebaseLoading } = useFirebase();
+  const { user, loading: authLoading } = useAuth();
   const [admins, setAdmins] = useState<Admin[] | null>(null);
   const [requests, setRequests] = useState<Admin[] | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -59,10 +60,10 @@ export default function AdminManagementPage() {
   const { toast } = useToast();
   
   useEffect(() => {
-    if (!db || !auth?.currentUser) return;
+    if (firebaseLoading || authLoading || !db || !user) return;
 
     const checkPermissionsAndFetch = async () => {
-        const currentUserAdminDoc = await getDoc(doc(db, "admins", auth.currentUser!.uid));
+        const currentUserAdminDoc = await getDoc(doc(db, "admins", user.uid));
         if (!currentUserAdminDoc.exists() || currentUserAdminDoc.data()?.role !== 'Head Admin') {
             toast({ variant: 'destructive', title: "Access Denied", description: "You don't have permission to manage admins."});
             setAdmins([]);
@@ -84,8 +85,17 @@ export default function AdminManagementPage() {
         return unsubscribe;
     };
 
-    checkPermissionsAndFetch();
-  }, [auth, db, toast]);
+    let unsubscribe: (() => void) | undefined;
+    checkPermissionsAndFetch().then(unsub => {
+        if (unsub) unsubscribe = unsub;
+    });
+
+    return () => {
+        if (unsubscribe) {
+            unsubscribe();
+        }
+    }
+  }, [user, db, toast, firebaseLoading, authLoading]);
 
   const openWhatsApp = (phone: string, message?: string) => {
     const cleanedPhone = phone.replace(/\D/g, '');
@@ -241,7 +251,7 @@ export default function AdminManagementPage() {
     }
   }
 
-  if (!admins || !requests) {
+  if (firebaseLoading || authLoading || !admins || !requests) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />

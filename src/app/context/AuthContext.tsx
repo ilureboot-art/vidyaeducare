@@ -1,46 +1,12 @@
 
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { getFirebase } from '@/lib/firebase';
-import { onAuthStateChanged, User, type Auth } from 'firebase/auth';
+// This file is deprecated. All its logic has been merged into FirebaseClientProvider.
+// It is kept here only to prevent breaking any legacy imports, but it should not be used.
+// useAuth should now be imported from '@/context/FirebaseClientProvider'
 
-interface AuthContextType {
-  user: User | null;
-  loading: boolean;
-}
+export { useAuth } from '@/context/FirebaseClientProvider';
 
-const AuthContext = createContext<AuthContextType>({ user: null, loading: true });
-
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [auth, setAuth] = useState<Auth | null>(null);
-
-  useEffect(() => {
-    const initAuth = async () => {
-      const { auth: firebaseAuth } = await getFirebase();
-      setAuth(firebaseAuth);
-    };
-    initAuth();
-  }, []);
-
-  useEffect(() => {
-    if (!auth) return;
-
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [auth]);
-
-  const value = { user, loading };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-export function useAuth() {
-  return useContext(AuthContext);
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  return <>{children}</>;
 }

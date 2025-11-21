@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -61,7 +60,7 @@ function TransactionsPageContent() {
             const txs = querySnapshot.docs.map(doc => {
                 const data = doc.data();
                 const date = data.date instanceof Timestamp ? data.date.toDate().toISOString() : data.date;
-                return { id: doc.id, ...data, date } as Transaction
+                return { id: doc.id, ...data, date } as Transaction;
             });
             setTransactions(txs);
         });

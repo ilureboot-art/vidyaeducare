@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useFirebase } from "@/context/FirebaseClientProvider";
-import { collection, addDoc, getDocs, doc, setDoc, deleteDoc, getDoc, type Firestore } from "firebase/firestore";
+import { collection, addDoc, getDocs, doc, setDoc, deleteDoc, getDoc } from "firebase/firestore";
 import { PlusCircle, Trash2, Puzzle, Loader2, Save } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
@@ -43,7 +43,7 @@ export default function AdminQuizClashPage() {
         testSetId: ""
     });
 
-    const fetchTournamentsAndTestSets = async (db: Firestore) => {
+    const fetchTournamentsAndTestSets = async (db: any) => {
         // Fetch tournaments
         const tournamentsSnapshot = await getDocs(collection(db, "quizClashTournaments"));
         const tournamentList = tournamentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as QuizClashTournament));

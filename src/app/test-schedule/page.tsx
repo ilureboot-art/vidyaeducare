@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
 import type { ScheduledTest } from "@/lib/test-schedule";
-import { collection, getDocs, type Firestore } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import { useFirebase } from '@/context/FirebaseClientProvider';
 
 type TestStatus = 'Live' | 'Upcoming' | 'Completed';

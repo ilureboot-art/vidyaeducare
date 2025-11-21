@@ -23,7 +23,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import type { TestSet } from "@/lib/question-bank";
 import type { ScheduledTest } from "@/lib/test-schedule";
-import { collection, getDocs, doc, setDoc, type Firestore, onSnapshot } from "firebase/firestore";
+import { collection, getDocs, doc, setDoc, onSnapshot } from "firebase/firestore";
 import { useFirebase } from '@/context/FirebaseClientProvider';
 
 type TestStatus = 'Live' | 'Upcoming' | 'Completed';

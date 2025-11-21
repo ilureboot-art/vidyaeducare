@@ -32,7 +32,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { type TestSet, type Question } from "@/lib/question-bank";
 import type { AcademicConfig } from "@/lib/academic-config";
 import { useFirebase } from "@/context/FirebaseClientProvider";
-import { collection, getDocs, doc, setDoc, deleteDoc, type Firestore, onSnapshot } from "firebase/firestore";
+import { collection, getDocs, doc, setDoc, deleteDoc, onSnapshot } from "firebase/firestore";
 import Papa from "papaparse";
 import { generateQuestions, GenerateQuestionsInput } from "@/ai/flows/generate-questions-flow";
 

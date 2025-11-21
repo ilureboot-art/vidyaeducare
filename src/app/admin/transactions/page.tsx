@@ -20,7 +20,7 @@ import { type Transaction } from "@/lib/user-data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
-import { collection, getDocs, doc, updateDoc, writeBatch, getDoc, runTransaction, Timestamp, type Firestore, onSnapshot, orderBy } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, writeBatch, getDoc, runTransaction, Timestamp, onSnapshot, orderBy, query } from "firebase/firestore";
 import { useFirebase } from "@/context/FirebaseClientProvider";
 
 const getStatusBadgeVariant = (status: string) => {

@@ -13,7 +13,7 @@ import type { TicketPackage, ReferboltSubscription, MockTestPackage, ReferboltSe
 import type { AcademicConfig } from "@/lib/academic-config";
 import { Switch } from "@/components/ui/switch";
 import { useFirebase } from "@/context/FirebaseClientProvider";
-import { doc, getDoc, setDoc, type Firestore } from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 
 export default function AdminStoreSettingsPage() {
   const { toast } = useToast();

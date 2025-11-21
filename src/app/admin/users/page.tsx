@@ -20,7 +20,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { format } from 'date-fns';
 import { useFirebase } from "@/context/FirebaseClientProvider";
-import { collection, getDocs, doc, updateDoc, deleteDoc, type Firestore, onSnapshot } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, deleteDoc, onSnapshot } from "firebase/firestore";
 
 type UserStatus = "Active" | "Banned" | "Inactive";
 type User = {

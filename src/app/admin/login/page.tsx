@@ -27,20 +27,12 @@ export default function AdminLoginPage() {
   const router = useRouter();
   const { db, auth } = useFirebase();
 
-  const [email, setEmail] = useState("");
-  const [rememberMe, setRememberMe] = useState(false);
+  const [email, setEmail] = useState(localStorage.getItem('rememberedAdmin') || "");
+  const [rememberMe, setRememberMe] = useState(!!localStorage.getItem('rememberedAdmin'));
   const [showPassword, setShowPassword] = useState(false);
   const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("login");
-
-  useEffect(() => {
-    const rememberedAdmin = localStorage.getItem('rememberedAdmin');
-    if (rememberedAdmin) {
-      setEmail(rememberedAdmin);
-      setRememberMe(true);
-    }
-  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

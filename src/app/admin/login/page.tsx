@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -277,8 +277,9 @@ export default function AdminLoginPage() {
                               </Label>
                             </div>
                             <Button type="submit" className="w-full !mt-6" disabled={isLoading || !isFirebaseReady}>
-                                {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Logging in...</> : 'Login'}
-                                {!isFirebaseReady && !isLoading && <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Loading...</>}
+                                {isLoading && <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Logging in...</>}
+                                {!isLoading && isFirebaseReady && 'Login'}
+                                {!isLoading && !isFirebaseReady && <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Loading...</>}
                             </Button>
                     </CardContent>
                 </form>

@@ -49,6 +49,8 @@ export default function ForgotPasswordPage() {
     }
   };
 
+  const isFirebaseReady = !!auth;
+
   return (
     <div className="w-full max-w-md mx-auto flex flex-col items-center justify-center min-h-screen space-y-4 p-4">
       <div className="text-center space-y-2">
@@ -77,8 +79,10 @@ export default function ForgotPasswordPage() {
                       onChange={(e) => setEmail(e.target.value)}
                     />
                 </div>
-                <Button type="submit" className="w-full" disabled={isLoading || !auth}>
-                    {isLoading ? <><Loader2 className="animate-spin mr-2"/> Sending...</> : <><Mail className="mr-2"/> Send Reset Link</>}
+                <Button type="submit" className="w-full" disabled={isLoading || !isFirebaseReady}>
+                    {isLoading && <><Loader2 className="animate-spin mr-2"/> Sending...</>}
+                    {!isLoading && isFirebaseReady && <><Mail className="mr-2"/> Send Reset Link</>}
+                    {!isLoading && !isFirebaseReady && <><Loader2 className="animate-spin mr-2"/>Loading...</>}
                 </Button>
             </form>
         </CardContent>

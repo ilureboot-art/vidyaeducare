@@ -153,7 +153,9 @@ export default function SignupPage() {
     }
   };
 
-  if (referralBonus === null && db) {
+  const isFirebaseReady = !!auth && !!db;
+
+  if (referralBonus === null && isFirebaseReady) {
       return (
           <div className="w-full max-w-md mx-auto flex items-center justify-center h-screen">
               <Loader2 className="animate-spin text-primary" size={32} />
@@ -224,8 +226,10 @@ export default function SignupPage() {
             </div>
           </CardContent>
           <CardContent>
-            <Button className="w-full" type="submit" disabled={isLoading}>
-              {isLoading ? "Creating Account..." : "Create Account"}
+            <Button className="w-full" type="submit" disabled={isLoading || !isFirebaseReady}>
+                {isLoading && <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Creating Account...</>}
+                {!isLoading && isFirebaseReady && 'Create Account'}
+                {!isLoading && !isFirebaseReady && <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Loading...</>}
             </Button>
           </CardContent>
         </form>

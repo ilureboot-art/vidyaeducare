@@ -77,6 +77,8 @@ export default function LoginPage() {
         setIsLoading(false);
     }
   };
+  
+  const isFirebaseReady = !!auth;
 
   return (
     <div className="w-full max-w-md mx-auto flex flex-col items-center justify-center min-h-screen space-y-4 p-4">
@@ -136,13 +138,15 @@ export default function LoginPage() {
                 </Label>
               </div>
               <Link href="/forgot-password" passHref>
-                  <Button variant="link" className="px-1 text-sm h-auto py-0">Forgot Password?</Button>
+                  <Button variant="link" className="px-1 text-sm h-auto py-0" disabled={!isFirebaseReady}>Forgot Password?</Button>
               </Link>
             </div>
           </CardContent>
           <CardFooter className="flex-col gap-4">
-            <Button className="w-full" type="submit" disabled={isLoading || !auth}>
-              {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Logging in...</> : "Login"}
+            <Button className="w-full" type="submit" disabled={isLoading || !isFirebaseReady}>
+                {isLoading && <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Logging in...</>}
+                {!isLoading && isFirebaseReady && 'Login'}
+                {!isLoading && !isFirebaseReady && <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Loading...</>}
             </Button>
           </CardFooter>
         </form>

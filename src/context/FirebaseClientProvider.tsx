@@ -28,22 +28,36 @@ export function FirebaseClientProvider({
   children: ReactNode,
   loadingFallback: ReactNode 
 }) {
-  // Manage services and user state within the provider
   const [services, setServices] = useState<FirebaseContextType | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
   useEffect(() => {
-    // This effect runs once on mount to initialize Firebase and set up auth state listener.
-    const initializedServices = getFirebaseServices();
-    setServices(initializedServices);
+    // This effect now correctly handles the async initialization.
+    const initialize = async () => {
+        const initializedServices = await getFirebaseServices();
+        setServices(initializedServices);
+        
+        const unsubscribe = onAuthStateChanged(initializedServices.auth, (user) => {
+          setUser(user);
+          setAuthLoading(false);
+        });
+        
+        return unsubscribe;
+    };
     
-    const unsubscribe = onAuthStateChanged(initializedServices.auth, (user) => {
-      setUser(user);
-      setAuthLoading(false);
+    let unsubscribe: (() => void) | undefined;
+    initialize().then(unsub => {
+        if (unsub) {
+            unsubscribe = unsub;
+        }
     });
     
-    return () => unsubscribe();
+    return () => {
+        if (unsubscribe) {
+            unsubscribe();
+        }
+    }
   }, []);
 
   const loading = authLoading || !services;
@@ -52,7 +66,6 @@ export function FirebaseClientProvider({
     return <>{loadingFallback}</>;
   }
 
-  // Once loading is complete, provide both contexts to children
   return (
     <FirebaseContext.Provider value={services}>
       <AuthContext.Provider value={{ user, loading: authLoading }}>

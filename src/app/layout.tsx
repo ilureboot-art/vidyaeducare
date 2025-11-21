@@ -9,6 +9,30 @@ import { Navbar } from '@/components/Navbar';
 import { ChatWidget } from '@/components/ChatWidget';
 import { ThemeProvider } from "next-themes";
 import { FirebaseClientProvider } from '@/context/FirebaseClientProvider';
+import { Loader2 } from 'lucide-react';
+
+function AppContent({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const isAdminPage = pathname.startsWith('/admin');
+  const isAuthPage = pathname === '/login' || pathname === '/signup' || pathname === '/forgot-password';
+
+  return (
+    <>
+      {!isAdminPage && !isAuthPage && <AppHeader />}
+      <main className={`flex-1 flex flex-col w-full items-center ${!isAdminPage && !isAuthPage ? 'p-4 pb-24 pt-20' : ''} ${isAuthPage ? 'justify-center min-h-screen' : ''}`}>
+        {children}
+      </main>
+      {!isAdminPage && !isAuthPage && (
+        <>
+          <Navbar />
+          <ChatWidget />
+        </>
+      )}
+      <Toaster />
+    </>
+  );
+}
+
 
 export default function RootLayout({
   children,
@@ -17,9 +41,6 @@ export default function RootLayout({
 }>) {
   
   const bodyClassName = `font-body antialiased`;
-  const pathname = usePathname();
-  const isAdminPage = pathname.startsWith('/admin');
-  const isAuthPage = pathname === '/login' || pathname === '/signup' || pathname === '/forgot-password';
   
   return (
     <html lang="en" suppressHydrationWarning>
@@ -37,18 +58,14 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
         >
-          <FirebaseClientProvider>
-            {!isAdminPage && !isAuthPage && <AppHeader />}
-            <main className={`flex-1 flex flex-col w-full items-center ${!isAdminPage && !isAuthPage ? 'p-4 pb-24 pt-20' : ''} ${isAuthPage ? 'justify-center min-h-screen' : ''}`}>
-              {children}
-            </main>
-            {!isAdminPage && !isAuthPage && (
-              <>
-                <Navbar />
-                <ChatWidget />
-              </>
-            )}
-            <Toaster />
+          <FirebaseClientProvider
+             loadingFallback={
+              <div className="flex justify-center items-center h-screen bg-background">
+                <Loader2 className="animate-spin text-primary" size={32} />
+              </div>
+            }
+          >
+            <AppContent>{children}</AppContent>
           </FirebaseClientProvider>
         </ThemeProvider>
       </body>

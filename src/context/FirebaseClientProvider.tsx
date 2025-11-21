@@ -6,48 +6,49 @@ import { getFirebaseServices } from '@/lib/firebase';
 import { type FirebaseApp } from "firebase/app";
 import { type Auth, onAuthStateChanged, type User } from "firebase/auth";
 import { type Firestore } from "firebase/firestore";
-import { Loader2 } from 'lucide-react';
 
 interface FirebaseContextType {
-  app: FirebaseApp | null;
-  auth: Auth | null;
-  db: Firestore | null;
+  app: FirebaseApp;
+  auth: Auth;
+  db: Firestore;
   user: User | null;
   loading: boolean;
 }
 
-const FirebaseContext = createContext<FirebaseContextType>({ app: null, auth: null, db: null, user: null, loading: true });
+const FirebaseContext = createContext<FirebaseContextType | undefined>(undefined);
 
-export function FirebaseClientProvider({ children }: { children: ReactNode }) {
-  // Use a state to hold the services, but initialize it synchronously.
-  const [services, setServices] = useState(() => getFirebaseServices());
+export function FirebaseClientProvider({ 
+  children,
+  loadingFallback
+}: { 
+  children: ReactNode,
+  loadingFallback: ReactNode 
+}) {
+  const [services, setServices] = useState<{ app: FirebaseApp; auth: Auth; db: Firestore; } | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
   useEffect(() => {
-    // getFirebaseServices() is synchronous and safe to call here.
-    const { auth } = getFirebaseServices();
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    // This effect runs once on mount to initialize Firebase and auth state.
+    const initializedServices = getFirebaseServices();
+    setServices(initializedServices);
+    
+    const unsubscribe = onAuthStateChanged(initializedServices.auth, (user) => {
       setUser(user);
       setAuthLoading(false);
     });
-    // Cleanup subscription on unmount
+    
     return () => unsubscribe();
   }, []);
 
-  const loading = authLoading;
+  const loading = authLoading || !services;
 
-  // The gatekeeper logic remains. It now only waits for auth state.
   if (loading) {
-    return (
-      <div className="flex justify-center items-center h-screen bg-background">
-        <Loader2 className="animate-spin text-primary" size={32} />
-      </div>
-    );
+    return <>{loadingFallback}</>;
   }
 
   return (
-    <FirebaseContext.Provider value={{ ...services, user, loading }}>
+    <FirebaseContext.Provider value={{ ...services, user, loading: false }}>
       {children}
     </FirebaseContext.Provider>
   );

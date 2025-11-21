@@ -6,15 +6,16 @@ import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/s
 import { usePathname } from 'next/navigation';
 import { Notifications } from "@/components/admin/Notifications";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import { useFirebase } from "@/context/FirebaseClientProvider";
 
-function AdminLayoutContent({ children }: { children: React.ReactNode; }) {
+
+export default function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const pathname = usePathname();
   const isLoginPage = pathname === '/admin/login';
   
-  // No need for a loading spinner here anymore, the root provider handles it.
-  
-  // If it's the login page, show it standalone without the sidebar/header.
   if (isLoginPage) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-muted/40">
@@ -45,17 +46,4 @@ function AdminLayoutContent({ children }: { children: React.ReactNode; }) {
         </SidebarProvider>
     </ProtectedRoute>
   );
-}
-
-
-export default function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-    // The FirebaseClientProvider in the root layout handles the actual auth state and service loading.
-    // We just consume its `loading` state in AdminLayoutContent.
-    return (
-        <AdminLayoutContent>{children}</AdminLayoutContent>
-    );
 }

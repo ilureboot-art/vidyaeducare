@@ -36,7 +36,6 @@ export default function AdminLoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // The parent layout now ensures `auth` and `db` are ready before this page renders.
     if (!auth || !db) {
         toast({
             variant: "destructive",
@@ -209,9 +208,6 @@ export default function AdminLoginPage() {
     }
   };
 
-
-  // The parent layout now handles the main loading state.
-  // This component will not render until Firebase is ready.
   return (
     <div className="w-full max-w-md mx-auto flex flex-col items-center justify-center min-h-screen p-4">
       <div className="text-center space-y-2 mb-4">

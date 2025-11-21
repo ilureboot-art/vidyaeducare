@@ -25,11 +25,11 @@ const getIconForType = (type: string) => {
 }
 
 export default function AdminNotificationsPage() {
-    const { db, loading } = useFirebase();
+    const { db } = useFirebase();
     const [notifications, setNotifications] = useState<AppNotification[] | null>(null);
     
     useEffect(() => {
-        if (loading || !db) return;
+        if (!db) return;
 
         const notifsRef = collection(db, "notifications");
         const q = query(notifsRef, where("userId", "==", "admin"), orderBy("timestamp", "desc"));
@@ -44,9 +44,9 @@ export default function AdminNotificationsPage() {
         });
 
         return () => unsubscribe();
-    }, [db, loading]);
+    }, [db]);
 
-    if (loading || !notifications) {
+    if (!notifications) {
         return (
           <div className="flex justify-center items-center h-96">
             <Loader2 className="animate-spin text-primary" size={32} />

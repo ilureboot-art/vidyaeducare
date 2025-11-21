@@ -45,7 +45,7 @@ const getTypeIcon = (type: string, amount: number) => {
 
 export default function TransactionsPage() {
   const { toast } = useToast();
-  const { db, loading } = useFirebase();
+  const { db } = useFirebase();
 
   const [transactions, setTransactions] = useState<Transaction[] | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -53,7 +53,7 @@ export default function TransactionsPage() {
   const [typeFilter, setTypeFilter] = useState<'all' | 'deposit' | 'withdrawal'>('all');
   
   useEffect(() => {
-    if (loading || !db) return;
+    if (!db) return;
 
     const txsCollectionRef = collection(db, "transactions");
     const q = query(txsCollectionRef, orderBy("date", "desc"));
@@ -67,7 +67,7 @@ export default function TransactionsPage() {
         setTransactions(txs);
     });
     return () => unsubscribe();
-  }, [db, loading]);
+  }, [db]);
 
 
   const handleTransactionStatus = async (id: string, newStatus: "Completed" | "Rejected") => {
@@ -127,7 +127,7 @@ export default function TransactionsPage() {
     }
   };
 
-  if (loading || !transactions) {
+  if (!transactions) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />

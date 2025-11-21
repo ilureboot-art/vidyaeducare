@@ -28,7 +28,7 @@ type Chat = {
 
 
 export default function ChatManagementPage() {
-    const { db, loading } = useFirebase();
+    const { db } = useFirebase();
     const [chats, setChats] = useState<Chat[] | null>(null);
     const [activeChat, setActiveChat] = useState<Chat | null>(null);
     const [reply, setReply] = useState("");
@@ -36,7 +36,7 @@ export default function ChatManagementPage() {
     const messagesEndRef = useRef<HTMLDivElement | null>(null);
     
     useEffect(() => {
-        if (loading || !db) return;
+        if (!db) return;
         const chatsCollection = collection(db, "chats");
         const q = query(chatsCollection, orderBy("lastMessageTimestamp", "desc"));
         
@@ -62,7 +62,7 @@ export default function ChatManagementPage() {
         });
 
         return () => unsubscribe();
-    }, [db, loading]);
+    }, [db]);
     
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -100,7 +100,7 @@ export default function ChatManagementPage() {
         setReply("");
     };
     
-  if (loading || !chats) {
+  if (!chats) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />

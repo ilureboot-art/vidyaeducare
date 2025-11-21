@@ -51,12 +51,12 @@ interface ReferralData {
 function IBADashboardPageContent() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const { db, loading } = useFirebase();
+  const { db } = useFirebase();
   const [referralData, setReferralData] = useState<ReferralData | null>(null);
   const [ibaReferralCode, setIbaReferralCode] = useState<string | null>(null);
   
   useEffect(() => {
-    if (user && !loading && db) {
+    if (user && db) {
         const fetchIbaData = async (db: Firestore) => {
             try {
                 // Assume the IBA-specific data is stored in a subcollection or related doc
@@ -107,7 +107,7 @@ function IBADashboardPageContent() {
         };
         fetchIbaData(db);
     }
-  }, [user, db, loading, toast]);
+  }, [user, db, toast]);
 
   const handleCopyToClipboard = () => {
     if (!ibaReferralCode) return;
@@ -162,7 +162,7 @@ Don't miss out on the best way to prepare for your exams and earn rewards!
     }
   };
   
-  if (loading || !ibaReferralCode || !referralData) {
+  if (!ibaReferralCode || !referralData) {
     return (
       <div className="w-full max-w-4xl mx-auto flex items-center justify-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />

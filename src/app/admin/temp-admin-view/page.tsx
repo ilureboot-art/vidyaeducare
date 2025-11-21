@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
 export default function TempAdminViewPage() {
-  const { db, loading } = useFirebase();
+  const { db } = useFirebase();
   const [admins, setAdmins] = useState<Admin[] | null>(null);
   
   useEffect(() => {
@@ -34,12 +34,12 @@ export default function TempAdminViewPage() {
         console.error("Error fetching admins:", error);
       }
     };
-    if (!loading && db) {
+    if (db) {
         fetchAdmins(db);
     }
-  }, [db, loading]);
+  }, [db]);
 
-  if (loading || !admins) {
+  if (!admins) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />

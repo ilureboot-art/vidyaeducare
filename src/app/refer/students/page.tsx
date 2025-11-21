@@ -40,12 +40,12 @@ type Client = {
 };
 
 function StudentAccessPageContent() {
-  const { db, loading } = useFirebase();
+  const { db } = useFirebase();
   const [clients, setClients] = useState<Client[] | null>(null);
   const { user } = useAuth();
   
   useEffect(() => {
-    if (user && !loading && db) {
+    if (user && db) {
         const fetchClients = async () => {
             const q = query(collection(db, "clients"), where("referrerId", "==", user.uid));
             const querySnapshot = await getDocs(q);
@@ -68,9 +68,9 @@ function StudentAccessPageContent() {
         };
         fetchClients();
     }
-  }, [user, db, loading]);
+  }, [user, db]);
 
-  if (loading || !clients) {
+  if (!clients) {
     return (
       <div className="w-full max-w-4xl mx-auto flex items-center justify-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />

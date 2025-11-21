@@ -15,7 +15,7 @@ import { doc, getDoc, setDoc, type Firestore } from "firebase/firestore";
 
 export default function PaymentSettingsPage() {
     const { toast } = useToast();
-    const { db, loading } = useFirebase();
+    const { db } = useFirebase();
     const [methods, setMethods] = useState<AdminPaymentMethods | null>(null);
     const [qrFile, setQrFile] = useState<File | null>(null);
     
@@ -34,10 +34,10 @@ export default function PaymentSettingsPage() {
                 });
             }
         };
-        if (!loading && db) {
+        if (db) {
             fetchPaymentMethods();
         }
-    }, [db, loading])
+    }, [db])
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -83,7 +83,7 @@ export default function PaymentSettingsPage() {
 
     }
 
-    if (loading || !methods) {
+    if (!methods) {
         return (
           <div className="flex justify-center items-center h-96">
             <Loader2 className="animate-spin text-primary" size={32} />

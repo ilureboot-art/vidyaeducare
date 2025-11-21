@@ -37,13 +37,13 @@ const getStatusBadgeVariant = (status: string) => {
 }
 
 export default function UserManagementPage() {
-  const { db, loading } = useFirebase();
+  const { db } = useFirebase();
   const [users, setUsers] = useState<User[] | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
   
   useEffect(() => {
-    if (loading || !db) return;
+    if (!db) return;
 
     const usersCollection = collection(db, "users");
     const unsubscribe = onSnapshot(usersCollection, (userSnapshot) => {
@@ -52,7 +52,7 @@ export default function UserManagementPage() {
     });
 
     return () => unsubscribe();
-  }, [db, loading]);
+  }, [db]);
 
   const handleStatusChange = async (userId: string, newStatus: UserStatus) => {
     if (!users || !db) return;
@@ -88,7 +88,7 @@ export default function UserManagementPage() {
     }
   }
 
-  if (loading || !users) {
+  if (!users) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />

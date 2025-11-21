@@ -46,9 +46,10 @@ export function FirebaseClientProvider({ children }: { children: ReactNode }) {
 
   const loading = servicesLoading || authLoading;
 
+  // This is the gatekeeper. Nothing renders until all Firebase services are ready.
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen">
+      <div className="flex justify-center items-center h-screen bg-background">
         <Loader2 className="animate-spin text-primary" size={32} />
       </div>
     );

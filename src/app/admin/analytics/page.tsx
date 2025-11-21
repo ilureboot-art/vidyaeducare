@@ -1,4 +1,5 @@
-"use client"
+
+"use client";
 
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -24,7 +25,7 @@ const getLast7Days = () => {
 };
 
 export default function AnalyticsPage() {
-  const { db, loading } = useFirebase();
+  const { db } = useFirebase();
   const [activeUsers, setActiveUsers] = useState<number | null>(null);
   const [gamesPlayed, setGamesPlayed] = useState<number | null>(null);
   const [todaysRevenue, setTodaysRevenue] = useState<number | null>(null);
@@ -86,12 +87,12 @@ export default function AnalyticsPage() {
             console.error("Error fetching analytics data:", error);
         }
     };
-    if (!loading && db) {
+    if (db) {
         fetchData();
     }
-  }, [db, loading]);
+  }, [db]);
 
-  if (loading || activeUsers === null || gamesPlayed === null || todaysRevenue === null || !userActivityData || !revenueData) {
+  if (activeUsers === null || gamesPlayed === null || todaysRevenue === null || !userActivityData || !revenueData) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />

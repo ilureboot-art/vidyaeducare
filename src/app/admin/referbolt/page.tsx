@@ -34,7 +34,7 @@ type Referral = {
 }
 
 export default function ReferBoltManagementPage() {
-  const { db, loading } = useFirebase();
+  const { db } = useFirebase();
   const [stats, setStats] = useState<Stats | null>(null);
   const [cycles, setCycles] = useState<Cycle[] | null>(null);
   const [referrals, setReferrals] = useState<Referral[] | null>(null);
@@ -86,12 +86,12 @@ export default function ReferBoltManagementPage() {
         });
         setReferrals(referralList);
     };
-    if (!loading && db) {
+    if (db) {
         fetchData();
     }
-  }, [db, loading]);
+  }, [db]);
 
-  if (loading || !stats || !cycles || !referrals) {
+  if (!stats || !cycles || !referrals) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />

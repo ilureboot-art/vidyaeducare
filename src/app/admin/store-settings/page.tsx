@@ -17,13 +17,13 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 
 export default function AdminStoreSettingsPage() {
   const { toast } = useToast();
-  const { db, loading } = useFirebase();
+  const { db } = useFirebase();
   
   const [storeConfig, setStoreConfig] = useState<StoreConfig | null>(null);
   const [academicConfig, setAcademicConfig] = useState<AcademicConfig | null>(null);
 
   useEffect(() => {
-    if (loading || !db) return;
+    if (!db) return;
     
     const fetchConfigs = async () => {
         try {
@@ -42,7 +42,7 @@ export default function AdminStoreSettingsPage() {
         }
     }
     fetchConfigs();
-  }, [db, loading, toast]);
+  }, [db, toast]);
 
   const handleMockTestPackageChange = (index: number, field: keyof MockTestPackage, value: string | number | boolean) => {
     if (!storeConfig) return;
@@ -164,7 +164,7 @@ export default function AdminStoreSettingsPage() {
       );
   };
 
-  if (loading || !storeConfig || !academicConfig) {
+  if (!storeConfig || !academicConfig) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />
@@ -305,5 +305,3 @@ export default function AdminStoreSettingsPage() {
     </div>
   );
 }
-
-    

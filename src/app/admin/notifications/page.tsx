@@ -29,7 +29,7 @@ export default function AdminNotificationsPage() {
     const [notifications, setNotifications] = useState<AppNotification[] | null>(null);
     
     useEffect(() => {
-        const fetchNotifications = async () => {
+        const fetchNotifications = async (db: Firestore) => {
             if (!db) return;
             const notifsRef = collection(db, "notifications");
             const q = query(notifsRef, where("userId", "==", "admin"), orderBy("timestamp", "desc"));
@@ -42,7 +42,7 @@ export default function AdminNotificationsPage() {
             setNotifications(notifs);
         };
         if (!loading && db) {
-            fetchNotifications();
+            fetchNotifications(db);
         }
     }, [db, loading]);
 

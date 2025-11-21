@@ -20,7 +20,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { format } from 'date-fns';
 import { useFirebase } from "@/context/FirebaseClientProvider";
-import { collection, getDocs, doc, updateDoc, deleteDoc, type Firestore } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, deleteDoc, type Firestore, onSnapshot } from "firebase/firestore";
 
 type UserStatus = "Active" | "Banned" | "Inactive";
 type User = {
@@ -42,17 +42,16 @@ export default function UserManagementPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
   
-  const fetchUsers = async (db: Firestore) => {
-      const usersCollection = collection(db, "users");
-      const userSnapshot = await getDocs(usersCollection);
+  useEffect(() => {
+    if (loading || !db) return;
+
+    const usersCollection = collection(db, "users");
+    const unsubscribe = onSnapshot(usersCollection, (userSnapshot) => {
       const userList = userSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
       setUsers(userList);
-  };
+    });
 
-  useEffect(() => {
-    if (!loading && db) {
-        fetchUsers(db);
-    }
+    return () => unsubscribe();
   }, [db, loading]);
 
   const handleStatusChange = async (userId: string, newStatus: UserStatus) => {
@@ -61,7 +60,6 @@ export default function UserManagementPage() {
     try {
         const userDocRef = doc(db, "users", userId);
         await updateDoc(userDocRef, { status: newStatus });
-        await fetchUsers(db); // Refresh data
         
         toast({
           title: `User ${newStatus}`,
@@ -80,7 +78,6 @@ export default function UserManagementPage() {
 
     try {
         await deleteDoc(doc(db, "users", userId));
-        await fetchUsers(db); // Refresh data
         toast({
             title: "User Deleted",
             description: `User account for ${userToDelete.name} has been deleted.`
@@ -205,3 +202,5 @@ export default function UserManagementPage() {
     </div>
   );
 }
+
+    

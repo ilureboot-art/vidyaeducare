@@ -23,7 +23,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import type { TestSet } from "@/lib/question-bank";
 import type { ScheduledTest } from "@/lib/test-schedule";
-import { collection, getDocs, doc, setDoc, type Firestore } from "firebase/firestore";
+import { collection, getDocs, doc, setDoc, type Firestore, onSnapshot } from "firebase/firestore";
 import { useFirebase } from '@/context/FirebaseClientProvider';
 
 type TestStatus = 'Live' | 'Upcoming' | 'Completed';
@@ -39,22 +39,25 @@ export default function TestSchedulePage() {
     const [date, setDate] = useState<Date | undefined>(new Date());
     const [time, setTime] = useState('10:00'); // Default time
     const [selectedTestSetId, setSelectedTestSetId] = useState('');
+    
+    useEffect(() => {
+        if (loading || !db) return;
 
-    const fetchData = async (db: Firestore) => {
         const testSetsCollection = collection(db, "testSets");
-        const testSetSnapshot = await getDocs(testSetsCollection);
-        const testSetList = testSetSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TestSet));
-        setTestSets(testSetList);
+        const unsubTestSets = onSnapshot(testSetsCollection, (testSetSnapshot) => {
+            const testSetList = testSetSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TestSet));
+            setTestSets(testSetList);
+        });
 
         const schedulesCollection = collection(db, "scheduledTests");
-        const scheduleSnapshot = await getDocs(schedulesCollection);
-        const scheduleList = scheduleSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ScheduledTest));
-        refreshSchedules(scheduleList);
-    };
+        const unsubSchedules = onSnapshot(schedulesCollection, (scheduleSnapshot) => {
+            const scheduleList = scheduleSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ScheduledTest));
+            refreshSchedules(scheduleList);
+        });
 
-    useEffect(() => {
-        if (!loading && db) {
-            fetchData(db);
+        return () => {
+            unsubTestSets();
+            unsubSchedules();
         }
     }, [db, loading]);
     
@@ -71,7 +74,6 @@ export default function TestSchedulePage() {
                         status = 'Completed';
                     }
 
-                    // Check if the test is today and the time has passed or is current
                     const isToday = format(testDate, 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd');
                     if (isToday && testDate.getHours() <= now.getHours()) {
                        status = 'Live';
@@ -118,7 +120,6 @@ export default function TestSchedulePage() {
 
         try {
             await setDoc(doc(db, "scheduledTests", newTestId), newTest);
-            await fetchData(db); // Re-fetch all data to update the UI
             
             toast({
                 title: "Test Scheduled!",

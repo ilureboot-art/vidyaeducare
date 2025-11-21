@@ -32,7 +32,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { type TestSet, type Question } from "@/lib/question-bank";
 import type { AcademicConfig } from "@/lib/academic-config";
 import { useFirebase } from "@/context/FirebaseClientProvider";
-import { collection, getDocs, doc, setDoc, deleteDoc, type Firestore } from "firebase/firestore";
+import { collection, getDocs, doc, setDoc, deleteDoc, type Firestore, onSnapshot } from "firebase/firestore";
 import Papa from "papaparse";
 import { generateQuestions, GenerateQuestionsInput } from "@/ai/flows/generate-questions-flow";
 
@@ -75,27 +75,28 @@ export default function TestSetManagementPage() {
   const [editingTestSet, setEditingTestSet] = useState<TestSet | null>(null);
   const [aiInput, setAiInput] = useState<GenerateQuestionsInput>(initialAiInputState);
   
-  const fetchData = async (db: Firestore) => {
+  useEffect(() => {
+    if (loading || !db) return;
+    
     // Fetch Test Sets
     const testSetsCollection = collection(db, "testSets");
-    const testSetSnapshot = await getDocs(testSetsCollection);
-    const testSetList = testSetSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TestSet));
-    setTestSets(testSetList);
+    const unsubTestSets = onSnapshot(testSetsCollection, (testSetSnapshot) => {
+        const testSetList = testSetSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TestSet));
+        setTestSets(testSetList);
+    });
 
     // Fetch Academic Config
-    const configDoc = await getDocs(collection(db, "configs"));
-    if (!configDoc.empty) {
-        const academicData = configDoc.docs.find(d => d.id === 'academic');
-        if (academicData) {
-            setAcademicConfig(academicData.data() as AcademicConfig);
+    const configRef = doc(db, "configs", 'academic');
+    const unsubConfig = onSnapshot(configRef, (docSnap) => {
+        if (docSnap.exists()) {
+            setAcademicConfig(docSnap.data() as AcademicConfig);
         }
-    }
-  };
+    });
 
-  useEffect(() => {
-    if (!loading && db) {
-        fetchData(db);
-    }
+    return () => {
+        unsubTestSets();
+        unsubConfig();
+    };
   }, [db, loading]);
 
   const resetManualForm = () => {
@@ -124,7 +125,6 @@ export default function TestSetManagementPage() {
     if (!testSets || !db) return;
     try {
         await deleteDoc(doc(db, "testSets", testSetId));
-        await fetchData(db);
         toast({ title: "Test Set Deleted", description: "The test set has been removed from the bank."});
     } catch(error) {
         console.error("Error deleting test set:", error);
@@ -200,7 +200,6 @@ export default function TestSetManagementPage() {
     
     try {
         await setDoc(doc(db, "testSets", docId), finalTestSetData);
-        await fetchData(db);
 
         toast({ title: isEditing ? 'Test Set Updated!' : 'Test Set Created!', description: `"${finalTestSetData.name}" has been saved.` });
         
@@ -515,3 +514,5 @@ const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     </div>
   );
 }
+
+    

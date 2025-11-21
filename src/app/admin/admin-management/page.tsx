@@ -36,7 +36,7 @@ import {
 } from "@/components/ui/select"
 import { format } from 'date-fns';
 import type { Admin, AdminRole } from "@/lib/admin-data";
-import { collection, getDocs, doc, setDoc, deleteDoc, updateDoc, query, where, getDoc, type Firestore, type Auth } from "firebase/firestore";
+import { collection, onSnapshot, doc, setDoc, deleteDoc, updateDoc, query, where, getDoc, type Firestore, type Auth } from "firebase/firestore";
 import { createUserWithEmailAndPassword, updatePassword } from "firebase/auth";
 import { useFirebase } from "@/context/FirebaseClientProvider";
 
@@ -58,33 +58,34 @@ export default function AdminManagementPage() {
   const [newAdminRole, setNewAdminRole] = useState<AdminRole | ''>('');
   const { toast } = useToast();
   
-  const fetchAdmins = async (db: Firestore) => {
-    if (!auth?.currentUser) return;
-    
-    const currentUserAdminDoc = await getDoc(doc(db, "admins", auth.currentUser.uid));
-    if (!currentUserAdminDoc.exists() || currentUserAdminDoc.data()?.role !== 'Head Admin') {
-        toast({ variant: 'destructive', title: "Access Denied", description: "You don't have permission to manage admins."});
-        setAdmins([]);
-        setRequests([]);
-        return;
-    }
-
-    const adminsCollection = collection(db, "admins");
-    const adminSnapshot = await getDocs(adminsCollection);
-    const adminList = adminSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Admin));
-    
-    const allAdmins = adminList.filter(admin => admin.status === "Active");
-    const pendingRequests = adminList.filter(admin => admin.status === "Pending");
-
-    setAdmins(allAdmins);
-    setRequests(pendingRequests);
-  };
-  
   useEffect(() => {
-    if (auth?.currentUser && db) {
-        fetchAdmins(db);
-    }
-  }, [auth, db]);
+    if (loading || !db || !auth?.currentUser) return;
+
+    const checkPermissionsAndFetch = async () => {
+        const currentUserAdminDoc = await getDoc(doc(db, "admins", auth.currentUser!.uid));
+        if (!currentUserAdminDoc.exists() || currentUserAdminDoc.data()?.role !== 'Head Admin') {
+            toast({ variant: 'destructive', title: "Access Denied", description: "You don't have permission to manage admins."});
+            setAdmins([]);
+            setRequests([]);
+            return;
+        }
+
+        const adminsCollection = collection(db, "admins");
+        const unsubscribe = onSnapshot(adminsCollection, (adminSnapshot) => {
+            const adminList = adminSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Admin));
+            
+            const allAdmins = adminList.filter(admin => admin.status === "Active");
+            const pendingRequests = adminList.filter(admin => admin.status === "Pending");
+
+            setAdmins(allAdmins);
+            setRequests(pendingRequests);
+        });
+
+        return unsubscribe;
+    };
+
+    checkPermissionsAndFetch();
+  }, [auth, db, loading, toast]);
 
   const openWhatsApp = (phone: string, message?: string) => {
     const cleanedPhone = phone.replace(/\D/g, '');
@@ -129,8 +130,6 @@ export default function AdminManagementPage() {
             await deleteDoc(adminDocRef);
         }
         
-        await fetchAdmins(db); // Re-fetch data to update UI
-
         toast({
           title: `Request ${newStatus === 'Active' ? 'Approved' : 'Rejected'}`,
           description: `The request from ${requestToProcess.name} has been ${newStatus.toLowerCase()}.`,
@@ -172,7 +171,6 @@ export default function AdminManagementPage() {
 
         await setDoc(doc(db, "admins", user.uid), newAdminData);
 
-        await fetchAdmins(db);
         toast({ title: 'Admin Created!', description: `${name} has been added.`});
         setIsCreateDialogOpen(false);
 
@@ -200,7 +198,6 @@ export default function AdminManagementPage() {
 
     try {
         await updateDoc(doc(db, "admins", selectedAdmin.id), updatedData);
-        await fetchAdmins(db);
         
         toast({ title: 'Admin Updated', description: `${name}'s details have been saved.`});
         setIsEditDialogOpen(false);
@@ -234,7 +231,6 @@ export default function AdminManagementPage() {
     
     try {
         await deleteDoc(doc(db, "admins", adminId));
-        await fetchAdmins(db);
         toast({
             title: "Admin Deleted",
             description: `Admin account for ${adminToDelete.name} has been deleted. Note: Auth user may still exist.`,
@@ -498,3 +494,5 @@ export default function AdminManagementPage() {
     </div>
   );
 }
+
+    

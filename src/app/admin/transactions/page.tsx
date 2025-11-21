@@ -20,7 +20,7 @@ import { type Transaction } from "@/lib/user-data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
-import { collection, getDocs, doc, updateDoc, writeBatch, getDoc, runTransaction, Timestamp, type Firestore, onSnapshot } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, writeBatch, getDoc, runTransaction, Timestamp, type Firestore, onSnapshot, orderBy } from "firebase/firestore";
 import { useFirebase } from "@/context/FirebaseClientProvider";
 
 const getStatusBadgeVariant = (status: string) => {
@@ -52,23 +52,21 @@ export default function TransactionsPage() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'rejected'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'deposit' | 'withdrawal'>('all');
   
-  const fetchTransactions = (db: Firestore) => {
-    const unsubscribe = onSnapshot(collection(db, "transactions"), (querySnapshot) => {
+  useEffect(() => {
+    if (loading || !db) return;
+
+    const txsCollectionRef = collection(db, "transactions");
+    const q = query(txsCollectionRef, orderBy("date", "desc"));
+    
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
         const txs = querySnapshot.docs.map(doc => {
             const data = doc.data();
             const date = data.date instanceof Timestamp ? data.date.toDate().toISOString() : data.date;
             return { id: doc.id, ...data, date } as Transaction
         });
-        setTransactions(txs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+        setTransactions(txs);
     });
-    return unsubscribe;
-  };
-  
-  useEffect(() => {
-    if (!loading && db) {
-        const unsubscribe = fetchTransactions(db);
-        return () => unsubscribe();
-    }
+    return () => unsubscribe();
   }, [db, loading]);
 
 
@@ -251,3 +249,5 @@ export default function TransactionsPage() {
     </div>
   );
 }
+
+    

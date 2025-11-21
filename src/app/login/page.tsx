@@ -41,7 +41,14 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!auth) return;
+    if (!auth) {
+        toast({
+            variant: "destructive",
+            title: "Login Failed",
+            description: "Authentication service is not ready. Please wait a moment and try again.",
+        });
+        return;
+    }
     setIsLoading(true);
     const password = (e.currentTarget.querySelector('#password') as HTMLInputElement).value;
 

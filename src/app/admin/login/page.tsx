@@ -173,7 +173,8 @@ export default function AdminLoginPage() {
 
         await setDoc(doc(db, "admins", user.uid), adminRequest);
         
-        await signOut(auth);
+        // This was the error. We should not sign out the newly created user immediately.
+        // await signOut(auth);
 
         toast({
             title: isHead ? "Head Admin Created!" : "Request Sent!",
@@ -182,8 +183,9 @@ export default function AdminLoginPage() {
                 : "Your request to become a sub-admin has been sent. After approval, you will be able to log in.",
             duration: 7000,
         });
-        setActiveTab("login");
+        
         form.reset();
+        setActiveTab("login");
 
     } catch (error: any) {
         let description = "An unknown error occurred.";

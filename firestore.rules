@@ -6,19 +6,21 @@ service cloud.firestore {
     
     // Function to check if the user is a Head Admin
     function isHeadAdmin(userId) {
-      return get(/databases/$(database)/documents/admins/$(userId)).data.role == 'Head Admin';
+      // Use exists() to prevent errors on non-existent documents.
+      return exists(/databases/$(database)/documents/admins/$(userId)) &&
+             get(/databases/$(database)/documents/admins/$(userId)).data.role == 'Head Admin';
     }
 
     match /admins/{userId} {
       // A user can read their own admin document to check their role.
       allow read: if request.auth != null && request.auth.uid == userId;
 
-      // Allow a user to CREATE their own admin document ONLY IF they are setting their role to 'Head Admin'.
-      // This is the crucial rule for bootstrapping the very first admin.
-      allow create: if request.auth != null && request.auth.uid == userId && request.resource.data.role == 'Head Admin';
+      // Allow any authenticated user to CREATE their own document.
+      // The frontend logic ensures only the first "Head Admin" is created as Active.
+      // This rule will be tightened after the first admin is created.
+      allow create: if request.auth != null && request.auth.uid == userId;
       
-      // Allow a user to UPDATE or DELETE their own document if they are already a Head Admin.
-      // Or, allow an existing Head Admin to update/delete OTHER admin documents.
+      // Allow an existing Head Admin to update/delete ANY admin documents.
       allow update, delete: if request.auth != null && isHeadAdmin(request.auth.uid);
 
       // Only Head Admins can list all admins.

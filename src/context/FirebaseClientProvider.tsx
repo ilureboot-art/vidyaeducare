@@ -54,9 +54,11 @@ export function FirebaseClientProvider({
                   isHeadAdmin: adminData.role === 'Head Admin'
                 });
               } else {
+                 // User is in admin collection but not Active
                  setAdminStatus({ isAdmin: false, isHeadAdmin: false });
               }
             } else {
+              // User is not in the admins collection
               setAdminStatus({ isAdmin: false, isHeadAdmin: false });
             }
           } else {

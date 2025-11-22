@@ -23,8 +23,7 @@ import {
     BrainCircuit,
     Calendar,
     Ban,
-    Puzzle,
-    Eye
+    Puzzle
 } from "lucide-react";
 import {
     Sidebar,
@@ -86,14 +85,6 @@ export function AdminSidebar() {
                         </SidebarMenuItem>
                     );
                 })}
-                 <SidebarMenuItem>
-                    <Link href="/admin/temp-admin-view">
-                        <SidebarMenuButton tooltip="Temp Admin View" isActive={pathname.startsWith("/admin/temp-admin-view")}>
-                            <Eye/>
-                            <span>Temp Admin View</span>
-                        </SidebarMenuButton>
-                    </Link>
-                </SidebarMenuItem>
                  {deprecatedNavItems.map((item) => {
                     const isActive = pathname.startsWith(item.href);
                     return (

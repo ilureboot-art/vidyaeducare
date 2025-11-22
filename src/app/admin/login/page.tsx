@@ -18,8 +18,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 import { useFirebase, useAuth } from "@/context/FirebaseClientProvider";
+import type { Admin } from "@/lib/admin-data";
 
 export default function AdminLoginPage() {
   const { toast } = useToast();
@@ -37,6 +38,7 @@ export default function AdminLoginPage() {
   const isFirebaseReady = !!auth && !!db;
   
   useEffect(() => {
+    // This effect redirects an already logged-in admin
     if (!authLoading && user && isAdmin) {
       router.push('/admin/analytics');
     }
@@ -56,20 +58,49 @@ export default function AdminLoginPage() {
     const password = (e.currentTarget.querySelector('#password-login') as HTMLInputElement).value;
 
     try {
-      // The onAuthStateChanged listener in FirebaseClientProvider will handle the admin check.
-      await signInWithEmailAndPassword(auth, email, password);
+      // Step 1: Authenticate with Firebase Auth
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const loggedInUser = userCredential.user;
 
-      if (rememberMe) {
-          localStorage.setItem('rememberedAdmin', email);
+      // Step 2: Verify admin status in Firestore
+      const adminDocRef = doc(db, "admins", loggedInUser.uid);
+      const adminDocSnap = await getDoc(adminDocRef);
+
+      if (adminDocSnap.exists()) {
+        const adminData = adminDocSnap.data() as Admin;
+        if (adminData.status === 'Active') {
+          // SUCCESS: User is an active admin
+          if (rememberMe) {
+              localStorage.setItem('rememberedAdmin', email);
+          } else {
+              localStorage.removeItem('rememberedAdmin');
+          }
+
+          toast({
+              title: "Login Successful!",
+              description: "Redirecting to admin dashboard...",
+          });
+          // The redirect will be handled by the useEffect
+          // This ensures the auth context has time to update
+           router.push('/admin/analytics');
+        } else {
+          // FAILURE: Admin is not active (e.g., Pending)
+          await signOut(auth);
+          toast({
+            variant: "destructive",
+            title: "Login Failed",
+            description: "Your admin account has not been approved yet.",
+          });
+        }
       } else {
-          localStorage.removeItem('rememberedAdmin');
+        // FAILURE: User is not in the admins collection
+        await signOut(auth);
+        toast({
+          variant: "destructive",
+          title: "Access Denied",
+          description: "You do not have permission to access the admin panel.",
+        });
       }
-
-      toast({
-          title: "Login Successful!",
-          description: "Redirecting to admin dashboard...",
-      });
-      // The useEffect will handle the redirection.
 
     } catch (error: any) {
        let errorMessage = "An unknown error occurred.";
@@ -259,7 +290,7 @@ export default function AdminLoginPage() {
                                 Remember me
                               </Label>
                             </div>
-                            <Button type="submit" className="w-full !mt-6" disabled={isLoading || !isFirebaseReady}>
+                            <Button type="submit" className="w-full !mt-6" disabled={isLoading || authLoading || !isFirebaseReady}>
                                 {isLoading || authLoading || !isFirebaseReady ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                                 {isFirebaseReady ? 'Login' : 'Loading...'}
                             </Button>

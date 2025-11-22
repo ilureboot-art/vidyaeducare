@@ -36,7 +36,7 @@ import {
 } from "@/components/ui/select"
 import { format } from 'date-fns';
 import type { Admin, AdminRole } from "@/lib/admin-data";
-import { collection, getDocs, doc, setDoc, deleteDoc, updateDoc } from "firebase/firestore";
+import { collection, onSnapshot, doc, setDoc, deleteDoc, updateDoc } from "firebase/firestore";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { useFirebase, useAuth } from "@/context/FirebaseClientProvider";
 
@@ -64,14 +64,13 @@ export default function AdminManagementPage() {
   useEffect(() => {
     if (loading || !user || !db || !isHeadAdmin) return;
 
-    const fetchAdmins = async () => {
-        const adminsCollection = collection(db, "admins");
-        const adminSnapshot = await getDocs(adminsCollection);
-        const adminList = adminSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Admin));
+    const adminsCollection = collection(db, "admins");
+    const unsubscribe = onSnapshot(adminsCollection, (snapshot) => {
+        const adminList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Admin));
         setAllAdmins(adminList);
-    };
+    });
 
-    fetchAdmins();
+    return () => unsubscribe();
     
   }, [user, db, loading, isHeadAdmin]);
 
@@ -121,10 +120,10 @@ export default function AdminManagementPage() {
         const adminDocRef = doc(db, "admins", requestId);
         if (newStatus === "Active") {
             await updateDoc(adminDocRef, { status: "Active" });
-            setAllAdmins(prevAdmins => prevAdmins ? prevAdmins.map(admin => admin.id === requestId ? { ...admin, status: 'Active' } : admin) : null);
+            // UI will update automatically due to onSnapshot
         } else {
             await deleteDoc(adminDocRef);
-            setAllAdmins(prevAdmins => prevAdmins ? prevAdmins.filter(admin => admin.id !== requestId) : null);
+            // UI will update automatically due to onSnapshot
         }
         
         toast({
@@ -154,6 +153,7 @@ export default function AdminManagementPage() {
     }
     
     try {
+        // Note: This creates the auth user but doesn't sign them in to the current session.
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
@@ -167,9 +167,7 @@ export default function AdminManagementPage() {
         };
 
         await setDoc(doc(db, "admins", user.uid), newAdminData);
-
-        const newAdminForState: Admin = { ...newAdminData, id: user.uid };
-        setAllAdmins(prevAdmins => prevAdmins ? [...prevAdmins, newAdminForState] : [newAdminForState]);
+        // UI updates via onSnapshot
         
         toast({ title: 'Admin Created!', description: `${name} has been added.`});
         setIsCreateDialogOpen(false);
@@ -198,7 +196,7 @@ export default function AdminManagementPage() {
 
     try {
         await updateDoc(doc(db, "admins", selectedAdmin.id), updatedData);
-        setAllAdmins(prevAdmins => prevAdmins ? prevAdmins.map(admin => admin.id === selectedAdmin.id ? { ...admin, ...updatedData } : admin) : null);
+        // UI updates via onSnapshot
         
         toast({ title: 'Admin Updated', description: `${name}'s details have been saved.`});
         setIsEditDialogOpen(false);
@@ -232,7 +230,7 @@ export default function AdminManagementPage() {
     
     try {
         await deleteDoc(doc(db, "admins", adminId));
-        setAllAdmins(prevAdmins => prevAdmins ? prevAdmins.filter(admin => admin.id !== adminId) : null);
+        // UI updates via onSnapshot
         
         toast({
             title: "Admin Deleted",
@@ -510,5 +508,3 @@ export default function AdminManagementPage() {
     </div>
   );
 }
-
-    

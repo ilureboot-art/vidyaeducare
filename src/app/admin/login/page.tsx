@@ -173,9 +173,6 @@ export default function AdminLoginPage() {
 
         await setDoc(doc(db, "admins", user.uid), adminRequest);
         
-        // This was the error. We should not sign out the newly created user immediately.
-        // await signOut(auth);
-
         toast({
             title: isHead ? "Head Admin Created!" : "Request Sent!",
             description: isHead 
@@ -379,3 +376,5 @@ export default function AdminLoginPage() {
     </div>
   );
 }
+
+    

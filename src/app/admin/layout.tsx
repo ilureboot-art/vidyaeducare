@@ -1,15 +1,16 @@
 
 "use client";
 
-// This layout is now handled by the root layout.tsx to ensure the
-// FirebaseClientProvider wraps all admin pages correctly.
-// This file can be removed in the future, but is kept to avoid breaking
-// any potential dependencies, although its content is just the children.
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return <>{children}</>;
+  // Use a ProtectedRoute wrapper if you want to protect all admin routes
+  // The logic inside ProtectedRoute will handle redirection if not logged in.
+  // For role-based access, that logic would also go inside ProtectedRoute.
+  return <ProtectedRoute>{children}</ProtectedRoute>;
 }
+

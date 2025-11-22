@@ -22,7 +22,12 @@ interface AuthContextType {
 }
 
 const FirebaseContext = createContext<FirebaseContextType | undefined>(undefined);
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType>({
+    user: null,
+    loading: true,
+    isAdmin: false,
+    isHeadAdmin: false,
+});
 
 export function FirebaseClientProvider({ 
   children,
@@ -32,9 +37,12 @@ export function FirebaseClientProvider({
   loadingFallback: ReactNode 
 }) {
   const [services, setServices] = useState<FirebaseContextType | null>(null);
-  const [user, setUser] = useState<User | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
-  const [adminStatus, setAdminStatus] = useState({ isAdmin: false, isHeadAdmin: false });
+  const [authContext, setAuthContext] = useState<AuthContextType>({
+    user: null,
+    loading: true,
+    isAdmin: false,
+    isHeadAdmin: false,
+  });
 
   useEffect(() => {
     const initialize = async () => {
@@ -42,31 +50,23 @@ export function FirebaseClientProvider({
         setServices(initializedServices);
         
         const unsubscribe = onAuthStateChanged(initializedServices.auth, async (user) => {
-          setUser(user);
           if (user) {
-            // User is signed in, check if they are an admin
             const adminDocRef = doc(initializedServices.db, "admins", user.uid);
             const adminDocSnap = await getDoc(adminDocRef);
-            if (adminDocSnap.exists()) {
+            if (adminDocSnap.exists() && adminDocSnap.data().status === 'Active') {
               const adminData = adminDocSnap.data() as Admin;
-              if (adminData.status === 'Active') {
-                setAdminStatus({
-                  isAdmin: true,
-                  isHeadAdmin: adminData.role === 'Head Admin'
-                });
-              } else {
-                 // User is in admin collection but not Active
-                 setAdminStatus({ isAdmin: false, isHeadAdmin: false });
-              }
+              setAuthContext({
+                user,
+                loading: false,
+                isAdmin: true,
+                isHeadAdmin: adminData.role === 'Head Admin',
+              });
             } else {
-              // User is not in the admins collection
-              setAdminStatus({ isAdmin: false, isHeadAdmin: false });
+              setAuthContext({ user, loading: false, isAdmin: false, isHeadAdmin: false });
             }
           } else {
-            // User is signed out
-            setAdminStatus({ isAdmin: false, isHeadAdmin: false });
+            setAuthContext({ user: null, loading: false, isAdmin: false, isHeadAdmin: false });
           }
-          setAuthLoading(false);
         });
         
         return unsubscribe;
@@ -86,15 +86,13 @@ export function FirebaseClientProvider({
     }
   }, []);
 
-  const loading = authLoading || !services;
-
-  if (loading) {
+  if (authContext.loading || !services) {
     return <>{loadingFallback}</>;
   }
 
   return (
     <FirebaseContext.Provider value={services}>
-      <AuthContext.Provider value={{ user, loading: authLoading, ...adminStatus }}>
+      <AuthContext.Provider value={authContext}>
         {children}
       </AuthContext.Provider>
     </FirebaseContext.Provider>
@@ -110,7 +108,7 @@ export function useFirebase() {
   return context;
 }
 
-// Hook to access authentication state (user, loading)
+// Hook to access authentication state (user, loading, isAdmin, isHeadAdmin)
 export function useAuth() {
     const context = useContext(AuthContext);
     if (context === undefined) {
@@ -118,3 +116,4 @@ export function useAuth() {
     }
     return context;
 }
+

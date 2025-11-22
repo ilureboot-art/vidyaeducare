@@ -20,7 +20,7 @@ import { useRouter } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
-import { useFirebase, useAuth } from "@/context/FirebaseClientProvider";
+import { useFirebase } from "@/context/FirebaseClientProvider";
 import type { Admin, AdminRole } from "@/lib/admin-data";
 import {
   Select,
@@ -35,7 +35,6 @@ export default function AdminLoginPage() {
   const { toast } = useToast();
   const router = useRouter();
   const { db, auth } = useFirebase();
-  const { user, loading: authLoading, isAdmin } = useAuth();
 
   const [email, setEmail] = useState(typeof window !== 'undefined' ? localStorage.getItem('rememberedAdmin') || "" : "");
   const [rememberMe, setRememberMe] = useState(typeof window !== 'undefined' ? !!localStorage.getItem('rememberedAdmin') : false);
@@ -47,13 +46,6 @@ export default function AdminLoginPage() {
 
   const isFirebaseReady = !!auth && !!db;
   
-  useEffect(() => {
-    // This effect redirects an already logged-in admin
-    if (!authLoading && user && isAdmin) {
-      router.push('/admin/analytics');
-    }
-  }, [user, authLoading, isAdmin, router]);
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isFirebaseReady) {
@@ -90,12 +82,11 @@ export default function AdminLoginPage() {
               title: "Login Successful!",
               description: "Redirecting to admin dashboard...",
           });
-          // The redirect will be handled by the useEffect
-          // This ensures the auth context has time to update
+          // Force push to the dashboard to avoid race conditions with auth state
            router.push('/admin/analytics');
         } else {
           // FAILURE: Admin is not active (e.g., Pending)
-          await auth.signOut();
+          await signOut(auth);
           toast({
             variant: "destructive",
             title: "Login Failed",
@@ -104,7 +95,7 @@ export default function AdminLoginPage() {
         }
       } else {
         // FAILURE: User is not in the admins collection
-        await auth.signOut();
+        await signOut(auth);
         toast({
           variant: "destructive",
           title: "Access Denied",
@@ -306,8 +297,8 @@ export default function AdminLoginPage() {
                                 Remember me
                               </Label>
                             </div>
-                            <Button type="submit" className="w-full !mt-6" disabled={isLoading || authLoading || !isFirebaseReady}>
-                                {isLoading || authLoading || !isFirebaseReady ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                            <Button type="submit" className="w-full !mt-6" disabled={isLoading || !isFirebaseReady}>
+                                {isLoading || !isFirebaseReady ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                                 {isFirebaseReady ? 'Login' : 'Loading...'}
                             </Button>
                     </CardContent>
@@ -361,7 +352,7 @@ export default function AdminLoginPage() {
                               </Select>
                             </div>
                             <Button type="submit" className="w-full" disabled={isLoading || !isFirebaseReady}>
-                                {isLoading || authLoading || !isFirebaseReady ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                                {isLoading || !isFirebaseReady ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                                 {isFirebaseReady ? 'Submit' : 'Loading...'}
                             </Button>
                     </CardContent>
@@ -379,3 +370,4 @@ export default function AdminLoginPage() {
     </div>
   );
 }
+

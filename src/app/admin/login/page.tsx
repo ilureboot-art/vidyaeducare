@@ -18,7 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { useFirebase, useAuth } from "@/context/FirebaseClientProvider";
 import type { Admin, AdminRole } from "@/lib/admin-data";
@@ -172,6 +172,9 @@ export default function AdminLoginPage() {
         };
 
         await setDoc(doc(db, "admins", user.uid), adminRequest);
+
+        // Sign out the newly created user so they can log in cleanly
+        await signOut(auth);
         
         toast({
             title: isHead ? "Head Admin Created!" : "Request Sent!",

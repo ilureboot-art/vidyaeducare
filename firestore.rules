@@ -15,9 +15,9 @@ service cloud.firestore {
       // A user can read their own admin document to check their role.
       allow read: if request.auth != null && request.auth.uid == userId;
 
-      // Allow any authenticated user to CREATE their own document.
-      // The frontend logic ensures only the first "Head Admin" is created as Active.
-      // This rule will be tightened after the first admin is created.
+      // Allow a newly authenticated user to create their OWN admin document.
+      // This is crucial for bootstrapping the first Head Admin.
+      // The frontend logic handles setting the role and status correctly.
       allow create: if request.auth != null && request.auth.uid == userId;
       
       // Allow an existing Head Admin to update/delete ANY admin documents.
@@ -95,3 +95,5 @@ service cloud.firestore {
     }
   }
 }
+
+    

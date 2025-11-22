@@ -10,15 +10,19 @@ service cloud.firestore {
     }
 
     match /admins/{userId} {
-      // Any authenticated user can read their own admin doc to verify their role/status
+      // A user can read their own admin document to check their role.
       allow read: if request.auth != null && request.auth.uid == userId;
 
       // Allow a user to CREATE their own admin document ONLY IF they are setting their role to 'Head Admin'.
-      // This is essential for bootstrapping the first admin.
+      // This is the crucial rule for bootstrapping the very first admin.
       allow create: if request.auth != null && request.auth.uid == userId && request.resource.data.role == 'Head Admin';
       
-      // Only Head Admins can list, update, or delete other admin docs.
-      allow list, update, delete: if request.auth != null && isHeadAdmin(request.auth.uid);
+      // Allow a user to UPDATE or DELETE their own document if they are already a Head Admin.
+      // Or, allow an existing Head Admin to update/delete OTHER admin documents.
+      allow update, delete: if request.auth != null && isHeadAdmin(request.auth.uid);
+
+      // Only Head Admins can list all admins.
+      allow list: if request.auth != null && isHeadAdmin(request.auth.uid);
     }
 
     match /users/{userId} {

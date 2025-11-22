@@ -36,7 +36,7 @@ import {
 } from "@/components/ui/select"
 import { format } from 'date-fns';
 import type { Admin, AdminRole } from "@/lib/admin-data";
-import { collection, onSnapshot, doc, setDoc, deleteDoc, updateDoc } from "firebase/firestore";
+import { collection, getDocs, doc, setDoc, deleteDoc, updateDoc } from "firebase/firestore";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { useFirebase, useAuth } from "@/context/FirebaseClientProvider";
 
@@ -64,13 +64,14 @@ export default function AdminManagementPage() {
   useEffect(() => {
     if (loading || !user || !db || !isHeadAdmin) return;
 
-    const adminsCollection = collection(db, "admins");
-    const unsubscribe = onSnapshot(adminsCollection, (adminSnapshot) => {
+    const fetchAdmins = async () => {
+        const adminsCollection = collection(db, "admins");
+        const adminSnapshot = await getDocs(adminsCollection);
         const adminList = adminSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Admin));
         setAllAdmins(adminList);
-    });
+    };
 
-    return () => unsubscribe();
+    fetchAdmins();
     
   }, [user, db, loading, isHeadAdmin]);
 
@@ -120,8 +121,10 @@ export default function AdminManagementPage() {
         const adminDocRef = doc(db, "admins", requestId);
         if (newStatus === "Active") {
             await updateDoc(adminDocRef, { status: "Active" });
+            setAllAdmins(prevAdmins => prevAdmins ? prevAdmins.map(admin => admin.id === requestId ? { ...admin, status: 'Active' } : admin) : null);
         } else {
             await deleteDoc(adminDocRef);
+            setAllAdmins(prevAdmins => prevAdmins ? prevAdmins.filter(admin => admin.id !== requestId) : null);
         }
         
         toast({
@@ -154,17 +157,20 @@ export default function AdminManagementPage() {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
-        const newAdminData = {
+        const newAdminData: Omit<Admin, 'id'> = {
             name,
             email,
             phone,
-            role,
+            role: role as AdminRole,
             status: 'Active',
             joinDate: new Date().toISOString(),
         };
 
         await setDoc(doc(db, "admins", user.uid), newAdminData);
 
+        const newAdminForState: Admin = { ...newAdminData, id: user.uid };
+        setAllAdmins(prevAdmins => prevAdmins ? [...prevAdmins, newAdminForState] : [newAdminForState]);
+        
         toast({ title: 'Admin Created!', description: `${name} has been added.`});
         setIsCreateDialogOpen(false);
 
@@ -192,6 +198,7 @@ export default function AdminManagementPage() {
 
     try {
         await updateDoc(doc(db, "admins", selectedAdmin.id), updatedData);
+        setAllAdmins(prevAdmins => prevAdmins ? prevAdmins.map(admin => admin.id === selectedAdmin.id ? { ...admin, ...updatedData } : admin) : null);
         
         toast({ title: 'Admin Updated', description: `${name}'s details have been saved.`});
         setIsEditDialogOpen(false);
@@ -225,6 +232,8 @@ export default function AdminManagementPage() {
     
     try {
         await deleteDoc(doc(db, "admins", adminId));
+        setAllAdmins(prevAdmins => prevAdmins ? prevAdmins.filter(admin => admin.id !== adminId) : null);
+        
         toast({
             title: "Admin Deleted",
             description: `Admin account for ${adminToDelete.name} has been deleted. Note: Auth user may still exist.`,

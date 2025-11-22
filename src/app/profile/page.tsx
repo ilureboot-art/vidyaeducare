@@ -48,25 +48,33 @@ function ProfilePageContent() {
             });
 
             const q = query(collection(db, "students"), where("parentId", "==", user.uid));
+            const fetchStudents = async () => {
+                const querySnapshot = await getDocs(q);
+                const studentList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentProfile));
+                setStudents(studentList);
+            };
+            fetchStudents();
             const unsubStudents = onSnapshot(q, (snapshot) => {
                 const studentList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentProfile));
                 setStudents(studentList);
             });
 
+
             const unsubCodes = onSnapshot(doc(db, "activationCodes", user.uid), (doc) => {
                 setValidCodes(doc.exists() ? doc.data().codes : []);
             });
             
-            const unsubTests = onSnapshot(collection(db, "scheduledTests"), (snapshot) => {
-                const testsList = snapshot.docs.map(doc => doc.data() as ScheduledTest);
+            const fetchTests = async () => {
+                const testsSnapshot = await getDocs(collection(db, "scheduledTests"));
+                const testsList = testsSnapshot.docs.map(doc => doc.data() as ScheduledTest);
                 setAllScheduledTests(testsList);
-            });
+            };
+            fetchTests();
 
             return () => {
                 unsubParent();
                 unsubStudents();
                 unsubCodes();
-                unsubTests();
             };
         }
     }, [user, db]);
@@ -115,6 +123,7 @@ function ProfilePageContent() {
         
         try {
             await setDoc(doc(db, "students", newStudentId), newStudent);
+            setStudents([...students, newStudent]);
 
             const updatedCodes = validCodes.filter(c => c !== activationCode);
             await updateDoc(doc(db, "activationCodes", user.uid), { codes: updatedCodes });
@@ -134,6 +143,7 @@ function ProfilePageContent() {
         if (!students || !user || !db) return;
         try {
             await deleteDoc(doc(db, "students", studentId));
+            setStudents(students.filter(s => s.id !== studentId));
             toast({ title: "Student Removed", description: "The student profile has been deleted." });
         } catch (error) {
             console.error("Error deleting student:", error);
@@ -412,3 +422,5 @@ export default function ProfilePage() {
         </ProtectedRoute>
     );
 }
+
+    

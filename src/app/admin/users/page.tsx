@@ -20,7 +20,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { format } from 'date-fns';
 import { useFirebase } from "@/context/FirebaseClientProvider";
-import { collection, getDocs, doc, updateDoc, deleteDoc, onSnapshot } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, deleteDoc } from "firebase/firestore";
 
 type UserStatus = "Active" | "Banned" | "Inactive";
 type User = {
@@ -45,13 +45,14 @@ export default function UserManagementPage() {
   useEffect(() => {
     if (!db) return;
 
-    const usersCollection = collection(db, "users");
-    const unsubscribe = onSnapshot(usersCollection, (userSnapshot) => {
+    const fetchUsers = async () => {
+      const usersCollection = collection(db, "users");
+      const userSnapshot = await getDocs(usersCollection);
       const userList = userSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
       setUsers(userList);
-    });
+    };
 
-    return () => unsubscribe();
+    fetchUsers();
   }, [db]);
 
   const handleStatusChange = async (userId: string, newStatus: UserStatus) => {
@@ -61,6 +62,8 @@ export default function UserManagementPage() {
         const userDocRef = doc(db, "users", userId);
         await updateDoc(userDocRef, { status: newStatus });
         
+        setUsers(users.map(u => u.id === userId ? { ...u, status: newStatus } : u));
+
         toast({
           title: `User ${newStatus}`,
           description: `User ${userId} has been ${newStatus.toLowerCase()}.`,
@@ -78,6 +81,7 @@ export default function UserManagementPage() {
 
     try {
         await deleteDoc(doc(db, "users", userId));
+        setUsers(users.filter(u => u.id !== userId));
         toast({
             title: "User Deleted",
             description: `User account for ${userToDelete.name} has been deleted.`
@@ -202,3 +206,5 @@ export default function UserManagementPage() {
     </div>
   );
 }
+
+    

@@ -18,7 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from "firebase/auth";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { useFirebase, useAuth } from "@/context/FirebaseClientProvider";
 import type { Admin, AdminRole } from "@/lib/admin-data";
@@ -95,7 +95,7 @@ export default function AdminLoginPage() {
            router.push('/admin/analytics');
         } else {
           // FAILURE: Admin is not active (e.g., Pending)
-          await signOut(auth);
+          await auth.signOut();
           toast({
             variant: "destructive",
             title: "Login Failed",
@@ -104,7 +104,7 @@ export default function AdminLoginPage() {
         }
       } else {
         // FAILURE: User is not in the admins collection
-        await signOut(auth);
+        await auth.signOut();
         toast({
           variant: "destructive",
           title: "Access Denied",
@@ -303,7 +303,7 @@ export default function AdminLoginPage() {
                                 Remember me
                               </Label>
                             </div>
-                            <Button type="submit" className="w-full !mt-6" disabled={isLoading || !isFirebaseReady}>
+                            <Button type="submit" className="w-full !mt-6" disabled={isLoading || authLoading || !isFirebaseReady}>
                                 {isLoading || authLoading || !isFirebaseReady ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                                 {isFirebaseReady ? 'Login' : 'Loading...'}
                             </Button>
@@ -376,5 +376,3 @@ export default function AdminLoginPage() {
     </div>
   );
 }
-
-    

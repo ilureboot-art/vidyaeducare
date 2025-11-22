@@ -57,7 +57,14 @@ export default function SignupPage() {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isFirebaseReady) return;
+    if (!isFirebaseReady) {
+         toast({
+            variant: "destructive",
+            title: "System Not Ready",
+            description: "The authentication service is still loading. Please try again in a moment.",
+        });
+        return;
+    };
     setIsLoading(true);
     
     const form = e.target as HTMLFormElement;

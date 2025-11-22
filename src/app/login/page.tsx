@@ -144,7 +144,7 @@ export default function LoginPage() {
           </CardContent>
           <CardFooter className="flex-col gap-4">
             <Button className="w-full" type="submit" disabled={isLoading || !isFirebaseReady}>
-                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                {isLoading || !isFirebaseReady ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                 {!isFirebaseReady ? 'Loading...' : 'Login'}
             </Button>
           </CardFooter>

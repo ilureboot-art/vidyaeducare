@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -19,13 +18,14 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from "firebase/auth";
-import { doc, setDoc, getDoc } from "firebase/firestore";
-import { useFirebase } from "@/context/FirebaseClientProvider";
+import { doc, setDoc } from "firebase/firestore";
+import { useFirebase, useAuth } from "@/context/FirebaseClientProvider";
 
 export default function AdminLoginPage() {
   const { toast } = useToast();
   const router = useRouter();
   const { db, auth } = useFirebase();
+  const { user, loading: authLoading, isAdmin } = useAuth();
 
   const [email, setEmail] = useState(typeof window !== 'undefined' ? localStorage.getItem('rememberedAdmin') || "" : "");
   const [rememberMe, setRememberMe] = useState(typeof window !== 'undefined' ? !!localStorage.getItem('rememberedAdmin') : false);
@@ -35,6 +35,12 @@ export default function AdminLoginPage() {
   const [activeTab, setActiveTab] = useState("login");
 
   const isFirebaseReady = !!auth && !!db;
+  
+  useEffect(() => {
+    if (!authLoading && user && isAdmin) {
+      router.push('/admin/analytics');
+    }
+  }, [user, authLoading, isAdmin, router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,47 +56,24 @@ export default function AdminLoginPage() {
     const password = (e.currentTarget.querySelector('#password-login') as HTMLInputElement).value;
 
     try {
-      // Step 1: Authenticate with Firebase Auth
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+      // The onAuthStateChanged listener in FirebaseClientProvider will handle the admin check.
+      await signInWithEmailAndPassword(auth, email, password);
 
-      // Step 2: Directly get the admin document using the UID from Auth
-      const adminDocRef = doc(db, "admins", user.uid);
-      const adminDocSnap = await getDoc(adminDocRef);
-
-      // Step 3: Check if an admin profile exists for this user
-      if (!adminDocSnap.exists()) {
-        throw new Error("No admin profile found for this user. Access denied.");
-      }
-
-      const adminData = adminDocSnap.data();
-
-      // Step 4: Check if the admin's status is "Active"
-      if (adminData.status === "Active") {
-        if (rememberMe) {
+      if (rememberMe) {
           localStorage.setItem('rememberedAdmin', email);
-        } else {
-          localStorage.removeItem('rememberedAdmin');
-        }
-
-        toast({
-            title: "Login Successful!",
-            description: "Redirecting to admin dashboard...",
-        });
-        router.push("/admin/analytics");
-
       } else {
-        throw new Error(`Your account status is '${adminData.status}'. Access denied.`);
+          localStorage.removeItem('rememberedAdmin');
       }
+
+      toast({
+          title: "Login Successful!",
+          description: "Redirecting to admin dashboard...",
+      });
+      // The useEffect will handle the redirection.
 
     } catch (error: any) {
-       // Ensure user is signed out on any error during the login or verification process
-       if (auth.currentUser) {
-         await signOut(auth).catch(() => {}); // Sign out, ignore errors if already signed out
-       }
-       
        let errorMessage = "An unknown error occurred.";
-       if (error.code) { // Firebase Auth errors have a 'code' property
+       if (error.code) { 
           switch(error.code) {
             case 'auth/user-not-found':
             case 'auth/wrong-password':
@@ -101,7 +84,7 @@ export default function AdminLoginPage() {
                 errorMessage = error.message;
                 break;
           }
-       } else { // Custom errors thrown in the try block
+       } else {
           errorMessage = error.message;
        }
 
@@ -277,7 +260,7 @@ export default function AdminLoginPage() {
                               </Label>
                             </div>
                             <Button type="submit" className="w-full !mt-6" disabled={isLoading || !isFirebaseReady}>
-                                {isLoading || !isFirebaseReady ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                                {isLoading || authLoading || !isFirebaseReady ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                                 {isFirebaseReady ? 'Login' : 'Loading...'}
                             </Button>
                     </CardContent>
@@ -319,7 +302,7 @@ export default function AdminLoginPage() {
                                 </Button>
                             </div>
                             <Button type="submit" className="w-full" disabled={isLoading || !isFirebaseReady}>
-                                {isLoading || !isFirebaseReady ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                                {isLoading || authLoading || !isFirebaseReady ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                                 {isFirebaseReady ? 'Submit Request' : 'Loading...'}
                             </Button>
                     </CardContent>

@@ -1,11 +1,11 @@
-
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { getFirebaseServices } from '@/lib/firebase';
 import { type FirebaseApp } from "firebase/app";
 import { type Auth, onAuthStateChanged, type User } from "firebase/auth";
-import { type Firestore } from "firebase/firestore";
+import { type Firestore, doc, getDoc } from "firebase/firestore";
+import type { Admin } from '@/lib/admin-data';
 
 interface FirebaseContextType {
   app: FirebaseApp;
@@ -16,6 +16,8 @@ interface FirebaseContextType {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  isAdmin: boolean;
+  isHeadAdmin: boolean;
 }
 
 const FirebaseContext = createContext<FirebaseContextType | undefined>(undefined);
@@ -31,15 +33,36 @@ export function FirebaseClientProvider({
   const [services, setServices] = useState<FirebaseContextType | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [adminStatus, setAdminStatus] = useState({ isAdmin: false, isHeadAdmin: false });
 
   useEffect(() => {
-    // This effect now correctly handles the async initialization.
     const initialize = async () => {
         const initializedServices = await getFirebaseServices();
         setServices(initializedServices);
         
-        const unsubscribe = onAuthStateChanged(initializedServices.auth, (user) => {
+        const unsubscribe = onAuthStateChanged(initializedServices.auth, async (user) => {
           setUser(user);
+          if (user) {
+            // User is signed in, check if they are an admin
+            const adminDocRef = doc(initializedServices.db, "admins", user.uid);
+            const adminDocSnap = await getDoc(adminDocRef);
+            if (adminDocSnap.exists()) {
+              const adminData = adminDocSnap.data() as Admin;
+              if (adminData.status === 'Active') {
+                setAdminStatus({
+                  isAdmin: true,
+                  isHeadAdmin: adminData.role === 'Head Admin'
+                });
+              } else {
+                 setAdminStatus({ isAdmin: false, isHeadAdmin: false });
+              }
+            } else {
+              setAdminStatus({ isAdmin: false, isHeadAdmin: false });
+            }
+          } else {
+            // User is signed out
+            setAdminStatus({ isAdmin: false, isHeadAdmin: false });
+          }
           setAuthLoading(false);
         });
         
@@ -68,7 +91,7 @@ export function FirebaseClientProvider({
 
   return (
     <FirebaseContext.Provider value={services}>
-      <AuthContext.Provider value={{ user, loading: authLoading }}>
+      <AuthContext.Provider value={{ user, loading: authLoading, ...adminStatus }}>
         {children}
       </AuthContext.Provider>
     </FirebaseContext.Provider>

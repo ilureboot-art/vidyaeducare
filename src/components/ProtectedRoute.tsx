@@ -35,9 +35,18 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
 
   }, [user, loading, isAdmin, router, pathname]);
 
-  if (loading || !user) {
+  if (loading) {
     // Show a loader while authentication state is being determined
     return (
+      <div className="flex justify-center items-center h-screen">
+        <Loader2 className="animate-spin text-primary" size={32} />
+      </div>
+    );
+  }
+  
+  // If the user is not authenticated yet, continue showing loader until redirect happens.
+  if (!user) {
+     return (
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="animate-spin text-primary" size={32} />
       </div>
@@ -54,7 +63,5 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
       );
   }
 
-
   return <>{children}</>;
 }
-

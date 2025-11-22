@@ -51,6 +51,7 @@ export function FirebaseClientProvider({
         
         const unsubscribe = onAuthStateChanged(initializedServices.auth, async (user) => {
           if (user) {
+            // Check for admin status only once on auth state change
             const adminDocRef = doc(initializedServices.db, "admins", user.uid);
             const adminDocSnap = await getDoc(adminDocRef);
             if (adminDocSnap.exists() && adminDocSnap.data().status === 'Active') {
@@ -116,4 +117,3 @@ export function useAuth() {
     }
     return context;
 }
-

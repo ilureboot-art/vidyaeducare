@@ -17,7 +17,6 @@ service cloud.firestore {
 
       // Allow a newly authenticated user to create their OWN admin document.
       // This is crucial for bootstrapping the first Head Admin.
-      // The frontend logic handles setting the role and status correctly.
       allow create: if request.auth != null && request.auth.uid == userId;
       
       // Allow an existing Head Admin to update/delete ANY admin documents.
@@ -95,5 +94,3 @@ service cloud.firestore {
     }
   }
 }
-
-    

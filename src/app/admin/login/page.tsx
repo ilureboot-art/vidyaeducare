@@ -20,7 +20,15 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { useFirebase, useAuth } from "@/context/FirebaseClientProvider";
-import type { Admin } from "@/lib/admin-data";
+import type { Admin, AdminRole } from "@/lib/admin-data";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+
 
 export default function AdminLoginPage() {
   const { toast } = useToast();
@@ -34,6 +42,7 @@ export default function AdminLoginPage() {
   const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("login");
+  const [newAdminRole, setNewAdminRole] = useState<AdminRole>('Sub-admin');
 
   const isFirebaseReady = !!auth && !!db;
   
@@ -150,12 +159,14 @@ export default function AdminLoginPage() {
         const userCredential = await createUserWithEmailAndPassword(auth, signupEmail, password);
         const user = userCredential.user;
 
+        const isHead = newAdminRole === "Head Admin";
+
         const adminRequest = {
             name,
             email: signupEmail,
             phone,
-            role: "Sub-admin",
-            status: "Pending",
+            role: newAdminRole,
+            status: isHead ? "Active" : "Pending",
             joinDate: new Date().toISOString(),
         };
 
@@ -164,8 +175,10 @@ export default function AdminLoginPage() {
         await signOut(auth);
 
         toast({
-            title: "Request Sent!",
-            description: "Your request to become a sub-admin has been sent. After approval, you will be able to log in.",
+            title: isHead ? "Head Admin Created!" : "Request Sent!",
+            description: isHead 
+                ? "You can now log in with your new Head Admin credentials." 
+                : "Your request to become a sub-admin has been sent. After approval, you will be able to log in.",
             duration: 7000,
         });
         setActiveTab("login");
@@ -290,7 +303,7 @@ export default function AdminLoginPage() {
                                 Remember me
                               </Label>
                             </div>
-                            <Button type="submit" className="w-full !mt-6" disabled={isLoading || authLoading || !isFirebaseReady}>
+                            <Button type="submit" className="w-full !mt-6" disabled={isLoading || !isFirebaseReady}>
                                 {isLoading || authLoading || !isFirebaseReady ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                                 {isFirebaseReady ? 'Login' : 'Loading...'}
                             </Button>
@@ -300,9 +313,9 @@ export default function AdminLoginPage() {
             <TabsContent value="signup">
                  <form onSubmit={handleSignup}>
                     <CardHeader>
-                        <CardTitle>Request Sub-admin Access</CardTitle>
+                        <CardTitle>Register as an Admin</CardTitle>
                         <CardDescription>
-                           New admins must be approved by a Head Admin.
+                           New admins must be approved by a Head Admin unless creating the first Head Admin account.
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -332,9 +345,21 @@ export default function AdminLoginPage() {
                                   <span className="sr-only">Toggle password visibility</span>
                                 </Button>
                             </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="role-signup">Role</Label>
+                              <Select name="role-signup" required value={newAdminRole} onValueChange={(value) => setNewAdminRole(value as AdminRole)}>
+                                <SelectTrigger id="role-signup">
+                                    <SelectValue placeholder="Select a role" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Head Admin">Head Admin (for initial setup)</SelectItem>
+                                    <SelectItem value="Sub-admin">Sub-admin (requires approval)</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
                             <Button type="submit" className="w-full" disabled={isLoading || !isFirebaseReady}>
                                 {isLoading || authLoading || !isFirebaseReady ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                                {isFirebaseReady ? 'Submit Request' : 'Loading...'}
+                                {isFirebaseReady ? 'Submit' : 'Loading...'}
                             </Button>
                     </CardContent>
                  </form>

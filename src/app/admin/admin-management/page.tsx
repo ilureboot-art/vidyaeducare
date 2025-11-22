@@ -50,8 +50,10 @@ const WhatsAppIcon = () => (
 export default function AdminManagementPage() {
   const { db, auth } = useFirebase();
   const { user, loading, isHeadAdmin } = useAuth();
-  const [admins, setAdmins] = useState<Admin[] | null>(null);
-  const [requests, setRequests] = useState<Admin[] | null>(null);
+  const [allAdmins, setAllAdmins] = useState<Admin[] | null>(null);
+  const [activeAdmins, setActiveAdmins] = useState<Admin[]>([]);
+  const [pendingRequests, setPendingRequests] = useState<Admin[]>([]);
+  
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isResetPassOpen, setIsResetPassOpen] = useState(false);
@@ -60,30 +62,24 @@ export default function AdminManagementPage() {
   const { toast } = useToast();
   
   useEffect(() => {
-    if (loading || !user || !db) return;
-
-    if (!isHeadAdmin) {
-      toast({ variant: 'destructive', title: "Access Denied", description: "You don't have permission to manage admins."});
-      setAdmins([]);
-      setRequests([]);
-      return;
-    }
+    if (loading || !user || !db || !isHeadAdmin) return;
 
     const adminsCollection = collection(db, "admins");
     const unsubscribe = onSnapshot(adminsCollection, (adminSnapshot) => {
         const adminList = adminSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Admin));
-        
-        const allAdmins = adminList.filter(admin => admin.status === "Active");
-        const pendingRequests = adminList.filter(admin => admin.status === "Pending");
-
-        setAdmins(allAdmins);
-        setRequests(pendingRequests);
+        setAllAdmins(adminList);
     });
 
-    return () => {
-        unsubscribe();
-    }
-  }, [user, db, toast, loading, isHeadAdmin]);
+    return () => unsubscribe();
+    
+  }, [user, db, loading, isHeadAdmin]);
+
+  useEffect(() => {
+      if (allAdmins) {
+          setActiveAdmins(allAdmins.filter(admin => admin.status === "Active"));
+          setPendingRequests(allAdmins.filter(admin => admin.status === "Pending"));
+      }
+  }, [allAdmins]);
 
   const openWhatsApp = (phone: string, message?: string) => {
     const cleanedPhone = phone.replace(/\D/g, '');
@@ -116,8 +112,8 @@ export default function AdminManagementPage() {
   }
 
   const handleRequest = async (requestId: string, newStatus: "Active" | "Rejected") => {
-    if (!requests || !admins || !db) return;
-    const requestToProcess = requests.find(req => req.id === requestId);
+    if (!pendingRequests || !db) return;
+    const requestToProcess = pendingRequests.find(req => req.id === requestId);
     if (!requestToProcess) return;
 
     try {
@@ -180,7 +176,7 @@ export default function AdminManagementPage() {
   
   const handleEditAdmin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!selectedAdmin || !admins || !db) return;
+    if (!selectedAdmin || !activeAdmins || !db) return;
     const form = e.currentTarget;
     const name = (form.elements.namedItem('name-edit') as HTMLInputElement).value;
     const email = (form.elements.namedItem('email-edit') as HTMLInputElement).value;
@@ -218,8 +214,8 @@ export default function AdminManagementPage() {
   }
 
   const handleDeleteAdmin = async (adminId: string) => {
-    if (!admins || !db) return;
-    const adminToDelete = admins.find(admin => admin.id === adminId);
+    if (!activeAdmins || !db) return;
+    const adminToDelete = activeAdmins.find(admin => admin.id === adminId);
     if (!adminToDelete) return;
 
     if (adminToDelete.role === "Head Admin") {
@@ -239,7 +235,7 @@ export default function AdminManagementPage() {
     }
   }
 
-  if (loading || admins === null || requests === null) {
+  if (loading || allAdmins === null) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />
@@ -282,7 +278,7 @@ export default function AdminManagementPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {requests.length > 0 ? requests.map((req) => (
+              {pendingRequests.length > 0 ? pendingRequests.map((req) => (
                 <TableRow key={req.id}>
                   <TableCell className="font-medium">{req.name}</TableCell>
                   <TableCell>
@@ -381,7 +377,7 @@ export default function AdminManagementPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {admins.map((admin) => (
+              {activeAdmins.map((admin) => (
                 <TableRow key={admin.id}>
                   <TableCell className="font-medium">{admin.name}</TableCell>
                    <TableCell>{admin.email}</TableCell>
@@ -505,3 +501,5 @@ export default function AdminManagementPage() {
     </div>
   );
 }
+
+    

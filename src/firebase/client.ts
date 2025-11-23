@@ -6,6 +6,7 @@ import { getFirestore, type Firestore } from 'firebase/firestore';
 import { firebaseConfig } from './config';
 
 let app: FirebaseApp;
+// This check ensures that Firebase is only initialized once.
 if (!getApps().length) {
   app = initializeApp(firebaseConfig);
 } else {
@@ -15,4 +16,5 @@ if (!getApps().length) {
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+// Export the initialized services.
 export { app, auth, db };

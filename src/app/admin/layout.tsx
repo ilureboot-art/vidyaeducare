@@ -14,7 +14,7 @@ export default function AdminLayout({
 }) {
   const pathname = usePathname();
 
-  // Don't apply the main admin layout to the login page
+  // Don't apply the main admin layout to the auth pages
   if (pathname === '/admin/login' || pathname === '/admin/setup' || pathname === '/check-head-admin') {
     return <>{children}</>;
   }

@@ -10,10 +10,8 @@ import { Navbar } from '@/components/Navbar';
 import { ChatWidget } from '@/components/ChatWidget';
 import { AppHeader } from '@/components/AppHeader';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import { FirebaseProvider } from '@/firebase/provider';
-import { AdminSidebar } from '@/components/AdminSidebar';
-import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
-import { Notifications } from "@/components/admin/Notifications";
+import { FirebaseProvider } from '@/firebase'; // Corrected top-level import
+import AdminLayout from './admin/layout';
 
 const bodyClassName = `font-body antialiased`;
 
@@ -50,8 +48,9 @@ export default function RootLayout({
 }>) {
   const pathname = usePathname();
   const isAdminPage = pathname.startsWith('/admin');
-  const isAdminLoginPage = pathname === '/admin/login';
-  const isAuthPage = ['/login', '/signup', '/forgot-password', '/admin/setup', '/check-head-admin'].includes(pathname);
+  const isAdminAuthPage = ['/admin/login', '/admin/setup', '/check-head-admin'].includes(pathname);
+  const isUserAuthPage = ['/login', '/signup', '/forgot-password'].includes(pathname);
+  const isAuthPage = isUserAuthPage || isAdminAuthPage;
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -70,11 +69,10 @@ export default function RootLayout({
             disableTransitionOnChange
         >
           <FirebaseProvider>
-              {isAuthPage || isAdminLoginPage ? (
+              {isAuthPage ? (
                 <AuthLayout>{children}</AuthLayout>
               ) : isAdminPage ? (
-                // The admin layout itself is now protected inside src/app/admin/layout.tsx
-                children
+                <AdminLayout>{children}</AdminLayout>
               ) : (
                 <UserLayout>{children}</UserLayout>
               )}

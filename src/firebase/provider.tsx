@@ -4,7 +4,7 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
-import { auth, db, app } from './client';
+import { auth, db, app } from './client'; // Imports the guaranteed-initialized services
 import type { Admin } from '@/lib/admin-data';
 import { Loader2 } from 'lucide-react';
 import type { FirebaseApp } from 'firebase/app';
@@ -36,6 +36,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // This listener only runs on the client, after the services are initialized.
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
@@ -92,7 +93,7 @@ export const useFirebase = (): FirebaseServices => {
 export const useAuth = (): AuthState => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error('useAuth must be used within a FirebaseProvider');
   }
   return context;
 };

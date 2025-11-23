@@ -19,7 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from "firebase/auth";
-import { doc, setDoc, getDoc, collection, query, where, getDocs, type Firestore } from "firebase/firestore";
+import { doc, setDoc, getDoc, collection, query, where, getDocs, type Firestore, runTransaction, serverTimestamp } from "firebase/firestore";
 import { useFirebase } from "@/context/FirebaseClientProvider";
 import type { Admin, AdminRole } from "@/lib/admin-data";
 import {
@@ -43,11 +43,9 @@ export default function AdminLoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("login");
   
-  const isFirebaseReady = !!auth && !!db;
-  
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isFirebaseReady) {
+    if (!auth || !db) {
         toast({
             variant: "destructive",
             title: "Login Failed",
@@ -132,11 +130,14 @@ export default function AdminLoginPage() {
 
  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Definitive guard clause to prevent race conditions
     if (!auth || !db) {
       toast({ variant: "destructive", title: "Signup Failed", description: "Auth service not ready. Please try again in a moment." });
       return;
     }
     setIsLoading(true);
+
     const form = e.target as HTMLFormElement;
     const name = (form.elements.namedItem('name-signup') as HTMLInputElement).value;
     const signupEmail = (form.elements.namedItem('email-signup') as HTMLInputElement).value;
@@ -144,47 +145,53 @@ export default function AdminLoginPage() {
     const password = (form.elements.namedItem('password-signup') as HTMLInputElement).value;
 
     try {
-        // Step 1: Check if a Head Admin already exists.
+        // Step 1: Read from the database *before* the transaction to check for Head Admin.
         const adminsCollection = collection(db, "admins");
         const headAdminQuery = query(adminsCollection, where("role", "==", "Head Admin"));
         const headAdminSnapshot = await getDocs(headAdminQuery);
         const headAdminExists = !headAdminSnapshot.empty;
 
-        // Step 2: Create the user in Firebase Authentication.
+        // Step 2: Create the user in Firebase Authentication. This happens *outside* the transaction.
         const userCredential = await createUserWithEmailAndPassword(auth, signupEmail, password);
         const user = userCredential.user;
 
-        // Step 3: Determine role and status
-        const role: AdminRole = headAdminExists ? "Sub-admin" : "Head Admin";
-        const status: Admin['status'] = headAdminExists ? "Pending" : "Active";
+        // Step 3: Run all database writes in a single, atomic transaction.
+        await runTransaction(db, async (transaction) => {
+            const role: AdminRole = headAdminExists ? "Sub-admin" : "Head Admin";
+            const status: Admin['status'] = headAdminExists ? "Pending" : "Active";
+            
+            // Write to /admins collection
+            const adminDocRef = doc(db, "admins", user.uid);
+            transaction.set(adminDocRef, {
+                name,
+                email: signupEmail,
+                phone,
+                role,
+                status,
+                joinDate: new Date().toISOString(),
+            });
 
-        // Step 4: Create all necessary documents in Firestore.
-        const newAdminData: Omit<Admin, 'id'> = {
-            name,
-            email: signupEmail,
-            phone,
-            role,
-            status,
-            joinDate: new Date().toISOString(),
-        };
-        await setDoc(doc(db, "admins", user.uid), newAdminData);
-        
-        await setDoc(doc(db, "users", user.uid), {
-          id: user.uid,
-          name: name,
-          email: signupEmail,
-          phone: phone,
-          joinDate: new Date().toISOString(),
-          status: "Active",
-        });
+            // Write to /users collection
+            const userDocRef = doc(db, "users", user.uid);
+            transaction.set(userDocRef, {
+              id: user.uid,
+              name: name,
+              email: signupEmail,
+              phone: phone,
+              joinDate: new Date().toISOString(),
+              status: "Active",
+            });
 
-        await setDoc(doc(db, "wallets", user.uid), {
-          balance: 0,
-          coins: 0,
-          referralCode: `REF${user.uid.slice(0, 6).toUpperCase()}`
+            // Write to /wallets collection
+            const walletDocRef = doc(db, "wallets", user.uid);
+            transaction.set(walletDocRef, {
+              balance: 0,
+              coins: 0,
+              referralCode: `REF${user.uid.slice(0, 6).toUpperCase()}`
+            });
         });
         
-        // Step 5: Handle post-signup logic.
+        // Step 4: Handle post-signup UI logic.
         if (headAdminExists) {
             await signOut(auth); // Sign out the new sub-admin to await approval
             toast({
@@ -221,7 +228,7 @@ export default function AdminLoginPage() {
 };
 
   const handleForgotPassword = async () => {
-    if (!isFirebaseReady) {
+    if (!auth) {
         toast({ variant: "destructive", title: "Error", description: "Auth service not available." });
         return;
     }
@@ -277,7 +284,7 @@ export default function AdminLoginPage() {
                             <div className="space-y-2 relative">
                                 <div className="flex items-center justify-between">
                                   <Label htmlFor="password-login">Password</Label>
-                                  <Button type="button" variant="link" className="px-0 h-auto text-xs" onClick={handleForgotPassword} disabled={isLoading || !isFirebaseReady}>
+                                  <Button type="button" variant="link" className="px-0 h-auto text-xs" onClick={handleForgotPassword} disabled={isLoading || !auth}>
                                       Forgot Password?
                                   </Button>
                                 </div>
@@ -307,9 +314,9 @@ export default function AdminLoginPage() {
                                 Remember me
                               </Label>
                             </div>
-                            <Button type="submit" className="w-full !mt-6" disabled={isLoading || !isFirebaseReady}>
-                                {isLoading || !isFirebaseReady ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                                {isFirebaseReady ? 'Login' : 'Loading...'}
+                            <Button type="submit" className="w-full !mt-6" disabled={isLoading || !auth}>
+                                {isLoading || !auth ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                                {auth ? 'Login' : 'Loading...'}
                             </Button>
                     </CardContent>
                 </form>
@@ -349,9 +356,9 @@ export default function AdminLoginPage() {
                                   <span className="sr-only">Toggle password visibility</span>
                                 </Button>
                             </div>
-                            <Button type="submit" className="w-full" disabled={isLoading || !isFirebaseReady}>
-                                {isLoading || !isFirebaseReady ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                                {isFirebaseReady ? 'Submit' : 'Loading...'}
+                            <Button type="submit" className="w-full" disabled={isLoading || !auth}>
+                                {isLoading || !auth ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                                {auth ? 'Submit' : 'Loading...'}
                             </Button>
                     </CardContent>
                  </form>
@@ -368,3 +375,5 @@ export default function AdminLoginPage() {
     </div>
   );
 }
+
+    

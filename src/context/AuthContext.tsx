@@ -1,7 +1,7 @@
 
 "use client";
 
-// This file is deprecated. All its logic has been merged into the new FirebaseProvider.
+// This file is deprecated. All its logic has been merged into FirebaseProvider.
 // It is kept here only to prevent breaking any legacy imports, but it should not be used.
 // useAuth should now be imported from '@/firebase'
 

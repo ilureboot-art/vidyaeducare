@@ -22,26 +22,24 @@ interface AuthState {
   isHeadAdmin: boolean;
 }
 
-// --- Contexts ---
-const FirebaseContext = createContext<FirebaseServices | undefined>(undefined);
-const AuthContext = createContext<AuthState>({
-  user: null,
-  loading: true,
-  isAdmin: false,
-  isHeadAdmin: false,
-});
+interface FirebaseContextValue extends FirebaseServices, AuthState {}
+
+
+// --- Context ---
+const FirebaseContext = createContext<FirebaseContextValue | undefined>(undefined);
+
 
 // --- Provider Component ---
 export function FirebaseProvider({ children, loadingFallback }: { children: ReactNode, loadingFallback: ReactNode }) {
     // Initialize Firebase services ONCE and memoize them.
     const firebaseServices = useMemo(() => initializeFirebase(), []);
 
-    const [authContext, setAuthContext] = useState<AuthState>({
+    const [authState, setAuthState] = useState<Omit<AuthState, 'loading'>>({
         user: null,
-        loading: true,
         isAdmin: false,
         isHeadAdmin: false,
     });
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         // Use the memoized auth service for the listener.
@@ -49,14 +47,20 @@ export function FirebaseProvider({ children, loadingFallback }: { children: Reac
 
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
-                const adminDocRef = doc(db, "admins", user.uid);
-                const adminDocSnap = await getDoc(adminDocRef);
-                const isAdmin = adminDocSnap.exists() && adminDocSnap.data().status === 'Active';
-                const isHeadAdmin = isAdmin && (adminDocSnap.data() as Admin).role === 'Head Admin';
-                setAuthContext({ user, isAdmin, isHeadAdmin, loading: false });
+                try {
+                    const adminDocRef = doc(db, "admins", user.uid);
+                    const adminDocSnap = await getDoc(adminDocRef);
+                    const isAdmin = adminDocSnap.exists() && adminDocSnap.data().status === 'Active';
+                    const isHeadAdmin = isAdmin && (adminDocSnap.data() as Admin).role === 'Head Admin';
+                    setAuthState({ user, isAdmin, isHeadAdmin });
+                } catch(e) {
+                    console.error("Error checking admin status:", e);
+                    setAuthState({ user, isAdmin: false, isHeadAdmin: false });
+                }
             } else {
-                setAuthContext({ user: null, isAdmin: false, isHeadAdmin: false, loading: false });
+                setAuthState({ user: null, isAdmin: false, isHeadAdmin: false });
             }
+            setIsLoading(false);
         });
 
         return () => unsubscribe();
@@ -64,22 +68,27 @@ export function FirebaseProvider({ children, loadingFallback }: { children: Reac
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    const contextValue = useMemo(() => ({
+        ...firebaseServices,
+        ...authState,
+        loading: isLoading,
+    }), [firebaseServices, authState, isLoading]);
+
+
     // Show loading fallback until auth state is determined
-    if (authContext.loading) {
+    if (isLoading) {
         return <>{loadingFallback}</>;
     }
     
     return (
-        <FirebaseContext.Provider value={firebaseServices}>
-            <AuthContext.Provider value={authContext}>
-                {children}
-            </AuthContext.Provider>
+        <FirebaseContext.Provider value={contextValue}>
+            {children}
         </FirebaseContext.Provider>
     );
 }
 
 // --- Hooks ---
-export const useFirebase = (): FirebaseServices => {
+export const useFirebase = (): FirebaseContextValue => {
   const context = useContext(FirebaseContext);
   if (context === undefined) {
     throw new Error("useFirebase must be used within a FirebaseProvider");
@@ -88,11 +97,13 @@ export const useFirebase = (): FirebaseServices => {
 };
 
 export const useAuth = (): AuthState => {
-    const context = useContext(AuthContext);
-    if (context === undefined) {
-        throw new Error("useAuth must be used within a FirebaseProvider");
-    }
-    return context;
+    const context = useFirebase();
+    return {
+        user: context.user,
+        loading: context.loading,
+        isAdmin: context.isAdmin,
+        isHeadAdmin: context.isHeadAdmin,
+    };
 }
 
 export const useFirebaseApp = (): FirebaseApp => useFirebase().app;

@@ -16,14 +16,14 @@ import { Label } from "@/components/ui/label";
 import { Gamepad2, ArrowLeft, Mail, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { useFirebase } from "@/firebase";
+import { useAuthService } from "@/firebase";
 import { sendPasswordResetEmail } from "firebase/auth";
 
 
 export default function ForgotPasswordPage() {
   const { toast } = useToast();
   const router = useRouter();
-  const { auth } = useFirebase();
+  const auth = useAuthService();
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 

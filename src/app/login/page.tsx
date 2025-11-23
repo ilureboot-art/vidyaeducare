@@ -18,13 +18,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Gamepad2, Shield, Eye, EyeOff, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { useFirebase } from "@/firebase";
+import { useAuthService } from "@/firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
 
 export default function LoginPage() {
   const { toast } = useToast();
   const router = useRouter();
-  const { auth } = useFirebase();
+  const auth = useAuthService();
 
   const [email, setEmail] = useState("");
   const [rememberMe, setRememberMe] = useState(false);

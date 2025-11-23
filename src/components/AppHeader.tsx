@@ -9,7 +9,7 @@ import { Menu, BookOpen, Trophy, Store, Users, Wallet, Settings, ChevronRight, X
 import { Separator } from "@/components/ui/separator";
 import { UserNotifications } from "@/components/UserNotifications";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useAuth, useFirebase } from "@/firebase";
+import { useAuth, useAuthService } from "@/firebase";
 import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
 
@@ -27,7 +27,7 @@ const navItems = [
 export function AppHeader() {
   const [isOpen, setIsOpen] = useState(false);
   const { user } = useAuth();
-  const { auth } = useFirebase();
+  const auth = useAuthService();
   const router = useRouter();
 
   const handleSignOut = async () => {

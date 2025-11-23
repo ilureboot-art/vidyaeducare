@@ -2,10 +2,10 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { getFirebaseServices } from '@/lib/firebase';
-import { type FirebaseApp } from "firebase/app";
-import { onAuthStateChanged, type Auth, type User } from "firebase/auth";
-import { doc, getDoc, type Firestore } from "firebase/firestore";
+import { firebaseConfig } from '@/lib/firebase';
+import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
+import { onAuthStateChanged, getAuth, type Auth, type User } from "firebase/auth";
+import { doc, getDoc, getFirestore, enableIndexedDbPersistence, type Firestore } from "firebase/firestore";
 import type { Admin } from '@/lib/admin-data';
 
 // --- Auth Context ---
@@ -65,29 +65,35 @@ export function FirebaseClientProvider({
   });
 
   useEffect(() => {
-    const initialize = async () => {
-        const initializedServices = getFirebaseServices();
-        setServices(initializedServices);
-        
-        const { auth, db } = initializedServices;
-        
-        const unsubscribe = onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                const adminDocRef = doc(db, "admins", user.uid);
-                const adminDocSnap = await getDoc(adminDocRef);
-                const isAdmin = adminDocSnap.exists() && adminDocSnap.data().status === 'Active';
-                const isHeadAdmin = isAdmin && (adminDocSnap.data() as Admin).role === 'Head Admin';
+    // Initialize Firebase directly in the provider
+    const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+    const auth = getAuth(app);
+    const db = getFirestore(app);
 
-                setAuthContext({ user, isAdmin, isHeadAdmin, loading: false });
-            } else {
-                setAuthContext({ user: null, isAdmin: false, isHeadAdmin: false, loading: false });
-            }
-        });
+    enableIndexedDbPersistence(db).catch((err: any) => {
+        if (err.code === 'failed-precondition') {
+            console.warn('Firestore persistence failed: Multiple tabs open.');
+        } else if (err.code === 'unimplemented') {
+            console.warn('Firestore persistence failed: Browser does not support it.');
+        }
+    });
 
-        return () => unsubscribe();
-    };
+    setServices({ app, auth, db });
     
-    initialize();
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            const adminDocRef = doc(db, "admins", user.uid);
+            const adminDocSnap = await getDoc(adminDocRef);
+            const isAdmin = adminDocSnap.exists() && adminDocSnap.data().status === 'Active';
+            const isHeadAdmin = isAdmin && (adminDocSnap.data() as Admin).role === 'Head Admin';
+
+            setAuthContext({ user, isAdmin, isHeadAdmin, loading: false });
+        } else {
+            setAuthContext({ user: null, isAdmin: false, isHeadAdmin: false, loading: false });
+        }
+    });
+
+    return () => unsubscribe();
   }, []);
 
   if (!services || authContext.loading) {

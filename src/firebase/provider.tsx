@@ -4,13 +4,12 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
-import { auth, db } from './client';
+import { auth, db, app } from './client';
 import type { Admin } from '@/lib/admin-data';
 import { Loader2 } from 'lucide-react';
 import type { FirebaseApp } from 'firebase/app';
 import type { Auth } from 'firebase/auth';
 import type { Firestore } from 'firebase/firestore';
-import { app } from './client';
 
 interface FirebaseServices {
   app: FirebaseApp;

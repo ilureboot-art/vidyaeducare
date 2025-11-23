@@ -22,7 +22,7 @@ import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswor
 import { initializeApp, deleteApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { doc, setDoc, getDoc, collection, query, where, getDocs, type Firestore, runTransaction, serverTimestamp } from "firebase/firestore";
-import { useFirebase } from "@/firebase";
+import { useFirebase, useAuthService } from "@/firebase";
 import type { Admin, AdminRole } from "@/lib/admin-data";
 
 // Pre-defined credentials for the one-time Head Admin setup
@@ -34,7 +34,8 @@ const HEAD_ADMIN_PHONE = '9999999999';
 export default function AdminLoginPage() {
   const { toast } = useToast();
   const router = useRouter();
-  const { app: mainApp, db, auth } = useFirebase();
+  const { app: mainApp, db } = useFirebase();
+  const auth = useAuthService();
 
   const [email, setEmail] = useState(typeof window !== 'undefined' ? localStorage.getItem('rememberedAdmin') || "" : "");
   const [rememberMe, setRememberMe] = useState(typeof window !== 'undefined' ? !!localStorage.getItem('rememberedAdmin') : false);

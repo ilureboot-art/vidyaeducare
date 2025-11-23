@@ -1,38 +1,42 @@
 
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
 import { type FirebaseApp } from "firebase/app";
-import { type Firestore } from "firebase/firestore";
+import { type Firestore, doc, getDoc } from "firebase/firestore";
 import { type Auth, onAuthStateChanged, type User } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
-import { app, db, authService } from "./index";
+import { initializeFirebase } from "./index";
 import type { Admin } from '@/lib/admin-data';
 
-// --- Firebase Context ---
-interface FirebaseContextType {
+// --- Types ---
+interface FirebaseServices {
   app: FirebaseApp;
   db: Firestore;
   auth: Auth;
 }
-const FirebaseContext = createContext<FirebaseContextType | undefined>(undefined);
 
-// --- Auth Context ---
-interface AuthContextType {
+interface AuthState {
   user: User | null;
   loading: boolean;
   isAdmin: boolean;
   isHeadAdmin: boolean;
 }
-const AuthContext = createContext<AuthContextType>({
+
+// --- Contexts ---
+const FirebaseContext = createContext<FirebaseServices | undefined>(undefined);
+const AuthContext = createContext<AuthState>({
   user: null,
   loading: true,
   isAdmin: false,
   isHeadAdmin: false,
 });
 
+// --- Provider Component ---
 export function FirebaseProvider({ children, loadingFallback }: { children: ReactNode, loadingFallback: ReactNode }) {
-    const [authContext, setAuthContext] = useState<AuthContextType>({
+    // Initialize Firebase services ONCE and memoize them.
+    const firebaseServices = useMemo(() => initializeFirebase(), []);
+
+    const [authContext, setAuthContext] = useState<AuthState>({
         user: null,
         loading: true,
         isAdmin: false,
@@ -40,7 +44,10 @@ export function FirebaseProvider({ children, loadingFallback }: { children: Reac
     });
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(authService, async (user) => {
+        // Use the memoized auth service for the listener.
+        const { auth, db } = firebaseServices;
+
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
                 const adminDocRef = doc(db, "admins", user.uid);
                 const adminDocSnap = await getDoc(adminDocRef);
@@ -53,14 +60,17 @@ export function FirebaseProvider({ children, loadingFallback }: { children: Reac
         });
 
         return () => unsubscribe();
+    // The dependency array is empty to ensure this effect runs only once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    // Show loading fallback until auth state is determined
     if (authContext.loading) {
         return <>{loadingFallback}</>;
     }
     
     return (
-        <FirebaseContext.Provider value={{ app, db, auth: authService }}>
+        <FirebaseContext.Provider value={firebaseServices}>
             <AuthContext.Provider value={authContext}>
                 {children}
             </AuthContext.Provider>
@@ -69,7 +79,7 @@ export function FirebaseProvider({ children, loadingFallback }: { children: Reac
 }
 
 // --- Hooks ---
-export const useFirebase = (): FirebaseContextType => {
+export const useFirebase = (): FirebaseServices => {
   const context = useContext(FirebaseContext);
   if (context === undefined) {
     throw new Error("useFirebase must be used within a FirebaseProvider");
@@ -77,7 +87,7 @@ export const useFirebase = (): FirebaseContextType => {
   return context;
 };
 
-export function useAuth() {
+export const useAuth = (): AuthState => {
     const context = useContext(AuthContext);
     if (context === undefined) {
         throw new Error("useAuth must be used within a FirebaseProvider");

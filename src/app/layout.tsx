@@ -8,17 +8,54 @@ import { usePathname } from 'next/navigation';
 import { Navbar } from '@/components/Navbar';
 import { ChatWidget } from '@/components/ChatWidget';
 import { ThemeProvider } from "next-themes";
-import { FirebaseClientProvider } from '@/context/FirebaseClientProvider';
+import { FirebaseClientProvider, useFirebase } from '@/context/FirebaseClientProvider';
 import { Loader2 } from 'lucide-react';
 import { AdminSidebar } from "@/components/AdminSidebar";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { Notifications } from "@/components/admin/Notifications";
+import { useState, useEffect } from 'react';
+import { onAuthStateChanged, type User } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import type { Admin } from '@/lib/admin-data';
 
+// This is the new home for the Auth logic that was in FirebaseClientProvider
+// It allows us to conditionally load and check auth state, which is much more performant.
 function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { auth, db } = useFirebase();
+
   const isAdminPage = pathname.startsWith('/admin');
-  const isAuthPage = pathname === '/login' || pathname === '/signup' || pathname === '/forgot-password';
-  const isAdminLoginPage = pathname === '/admin/login';
+  const isAuthPage = pathname === '/login' || pathname === '/signup' || pathname === '/forgot-password' || pathname === '/admin/login';
+
+  const [user, setUser] = useState<User | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [loading, setLoading] = useState(!isAuthPage);
+
+  useEffect(() => {
+    if (isAuthPage) {
+        setLoading(false);
+        return;
+    }
+    
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        setUser(user);
+        const adminDocRef = doc(db, "admins", user.uid);
+        const adminDocSnap = await getDoc(adminDocRef);
+        if (adminDocSnap.exists() && adminDocSnap.data().status === 'Active') {
+          setIsAdmin(true);
+        } else {
+          setIsAdmin(false);
+        }
+      } else {
+        setUser(null);
+        setIsAdmin(false);
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [auth, db, isAuthPage, pathname]);
 
   const loadingFallback = (
     <div className="flex justify-center items-center h-screen bg-background">
@@ -26,8 +63,11 @@ function AppLayout({ children }: { children: React.ReactNode }) {
     </div>
   );
 
-  // For auth pages, we still want the provider for Firebase access, but the provider itself will be smarter.
-  if (isAdminLoginPage || isAuthPage) {
+  if (loading) {
+      return loadingFallback;
+  }
+  
+  if (isAuthPage) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-muted/40">
         {children}
@@ -35,7 +75,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // All other pages get the full layout with providers.
+  // All other pages get the full layout.
   return (
       <>
         {isAdminPage ? (

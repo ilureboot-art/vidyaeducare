@@ -3,15 +3,13 @@
 
 import { usePathname } from 'next/navigation';
 import { ReactNode } from 'react';
-import { Loader2 } from 'lucide-react';
-import { FirebaseClientProvider } from '@/context/FirebaseClientProvider';
 import { AdminSidebar } from "@/components/AdminSidebar";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { Notifications } from "@/components/admin/Notifications";
 import { AppHeader } from '@/components/AppHeader';
 import { Navbar } from '@/components/Navbar';
 import { ChatWidget } from '@/components/ChatWidget';
-import ProtectedRoute from './ProtectedRoute';
+import { AuthGuard } from '@/components/AuthGuard';
 
 function AdminLayout({ children }: { children: React.ReactNode }) {
     return (
@@ -50,41 +48,34 @@ function UserLayout({ children }: { children: React.ReactNode }) {
     );
 }
 
+function AuthLayout({ children }: { children: React.ReactNode }) {
+    return (
+        <div className="flex items-center justify-center min-h-screen bg-muted/40">
+            {children}
+        </div>
+    );
+}
+
 export function AppLayout({ children }: { children: ReactNode }) {
     const pathname = usePathname();
     const isAdminPage = pathname.startsWith('/admin');
     const isAuthPage = pathname === '/login' || pathname === '/signup' || pathname === '/forgot-password' || pathname === '/admin/login';
-    const loadingFallback = (
-      <div className="flex justify-center items-center h-screen bg-background">
-        <Loader2 className="animate-spin text-primary" size={32} />
-      </div>
-    );
 
     if (isAuthPage) {
-        return (
-            <FirebaseClientProvider loadingFallback={loadingFallback}>
-                <div className="flex items-center justify-center min-h-screen bg-muted/40">
-                    {children}
-                </div>
-            </FirebaseClientProvider>
-        );
+        return <AuthLayout>{children}</AuthLayout>;
     }
     
     if (isAdminPage) {
         return (
-            <FirebaseClientProvider loadingFallback={loadingFallback}>
-                <ProtectedRoute>
-                    <AdminLayout>{children}</AdminLayout>
-                </ProtectedRoute>
-            </FirebaseClientProvider>
+            <AuthGuard adminOnly>
+                <AdminLayout>{children}</AdminLayout>
+            </AuthGuard>
         );
     }
 
     return (
-        <FirebaseClientProvider loadingFallback={loadingFallback}>
-            <ProtectedRoute>
-                <UserLayout>{children}</UserLayout>
-            </ProtectedRoute>
-        </FirebaseClientProvider>
+        <AuthGuard>
+            <UserLayout>{children}</UserLayout>
+        </AuthGuard>
     );
 }

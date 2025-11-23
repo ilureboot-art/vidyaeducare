@@ -19,7 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from "firebase/auth";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc, collection, query, where, getDocs, type Firestore } from "firebase/firestore";
 import { useFirebase } from "@/context/FirebaseClientProvider";
 import type { Admin, AdminRole } from "@/lib/admin-data";
 import {
@@ -43,9 +43,27 @@ export default function AdminLoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("login");
   const [newAdminRole, setNewAdminRole] = useState<AdminRole>('Sub-admin');
+  const [isFirstAdmin, setIsFirstAdmin] = useState(false);
 
   const isFirebaseReady = !!auth && !!db;
   
+  // Check if any admins exist when the component mounts
+  useEffect(() => {
+    if (isFirebaseReady && activeTab === 'signup') {
+        const checkAdmins = async (db: Firestore) => {
+            const adminsCollection = collection(db, "admins");
+            const snapshot = await getDocs(query(adminsCollection, where('role', '==', 'Head Admin')));
+            if (snapshot.empty) {
+                setIsFirstAdmin(true);
+                setNewAdminRole('Head Admin'); // Force first user to be Head Admin
+            } else {
+                setIsFirstAdmin(false);
+            }
+        };
+        checkAdmins(db);
+    }
+  }, [isFirebaseReady, activeTab, db]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isFirebaseReady) {
@@ -60,18 +78,15 @@ export default function AdminLoginPage() {
     const password = (e.currentTarget.querySelector('#password-login') as HTMLInputElement).value;
 
     try {
-      // Step 1: Authenticate with Firebase Auth
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const loggedInUser = userCredential.user;
 
-      // Step 2: Verify admin status in Firestore
       const adminDocRef = doc(db, "admins", loggedInUser.uid);
       const adminDocSnap = await getDoc(adminDocRef);
 
       if (adminDocSnap.exists()) {
         const adminData = adminDocSnap.data() as Admin;
         if (adminData.status === 'Active') {
-          // SUCCESS: User is an active admin
           if (rememberMe) {
               localStorage.setItem('rememberedAdmin', email);
           } else {
@@ -82,10 +97,8 @@ export default function AdminLoginPage() {
               title: "Login Successful!",
               description: "Redirecting to admin dashboard...",
           });
-          // Force push to the dashboard to avoid race conditions with auth state
            router.push('/admin/analytics');
         } else {
-          // FAILURE: Admin is not active (e.g., Pending)
           await signOut(auth);
           toast({
             variant: "destructive",
@@ -94,7 +107,6 @@ export default function AdminLoginPage() {
           });
         }
       } else {
-        // FAILURE: User is not in the admins collection
         await signOut(auth);
         toast({
           variant: "destructive",
@@ -133,11 +145,7 @@ export default function AdminLoginPage() {
   const handleSignup = async (e: React.FormEvent) => {
      e.preventDefault();
      if (!isFirebaseReady) {
-        toast({
-            variant: "destructive",
-            title: "Signup Failed",
-            description: "Auth configuration not found. Please try again in a moment.",
-        });
+        toast({ variant: "destructive", title: "Signup Failed", description: "Auth service not ready." });
         return;
      }
      setIsLoading(true);
@@ -148,6 +156,18 @@ export default function AdminLoginPage() {
      const password = (form.elements.namedItem('password-signup') as HTMLInputElement).value;
 
     try {
+        const adminsCollection = collection(db, "admins");
+        const headAdminQuery = query(adminsCollection, where("role", "==", "Head Admin"));
+        const headAdminSnapshot = await getDocs(headAdminQuery);
+
+        if (!headAdminSnapshot.empty && newAdminRole === 'Head Admin') {
+            throw new Error("A Head Admin already exists. Only one Head Admin is allowed.");
+        }
+        
+        if (headAdminSnapshot.empty && newAdminRole !== 'Head Admin') {
+             throw new Error("The first admin must be a Head Admin.");
+        }
+        
         const userCredential = await createUserWithEmailAndPassword(auth, signupEmail, password);
         const user = userCredential.user;
 
@@ -164,14 +184,13 @@ export default function AdminLoginPage() {
 
         await setDoc(doc(db, "admins", user.uid), adminRequest);
 
-        // Sign out the newly created user so they can log in cleanly
         await signOut(auth);
         
         toast({
             title: isHead ? "Head Admin Created!" : "Request Sent!",
             description: isHead 
                 ? "You can now log in with your new Head Admin credentials." 
-                : "Your request to become a sub-admin has been sent. After approval, you will be able to log in.",
+                : "Your request to become a sub-admin has been sent for approval.",
             duration: 7000,
         });
         
@@ -181,7 +200,7 @@ export default function AdminLoginPage() {
     } catch (error: any) {
         let description = "An unknown error occurred.";
         if (error.code === 'auth/email-already-in-use') {
-            description = "This email is already registered. If you are an admin, please log in. If you have forgotten your password, use the 'Forgot Password' link.";
+            description = "This email is already registered. Please log in or use 'Forgot Password'.";
         } else {
             description = error.message;
         }
@@ -197,35 +216,20 @@ export default function AdminLoginPage() {
 
   const handleForgotPassword = async () => {
     if (!isFirebaseReady) {
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Auth service not available. Please try again in a moment.",
-        });
+        toast({ variant: "destructive", title: "Error", description: "Auth service not available." });
         return;
     }
     const currentEmail = (document.getElementById('email-login') as HTMLInputElement)?.value || email;
     if (!currentEmail) {
-        toast({
-            variant: "destructive",
-            title: "Email Required",
-            description: "Please enter your email address in the login form to reset your password.",
-        });
+        toast({ variant: "destructive", title: "Email Required", description: "Enter your email to reset password."});
         return;
     }
     setIsLoading(true);
     try {
         await sendPasswordResetEmail(auth, currentEmail);
-        toast({
-            title: "Password Reset Email Sent",
-            description: `If an account exists for ${currentEmail}, a password reset link has been sent to it.`,
-        });
+        toast({ title: "Password Reset Email Sent", description: `A reset link has been sent to ${currentEmail}.`});
     } catch (error: any) {
-        toast({
-            variant: "destructive",
-            title: "Error Sending Email",
-            description: error.message,
-        });
+        toast({ variant: "destructive", title: "Error Sending Email", description: error.message });
     } finally {
         setIsLoading(false);
     }
@@ -341,7 +345,7 @@ export default function AdminLoginPage() {
                             </div>
                             <div className="space-y-2">
                               <Label htmlFor="role-signup">Role</Label>
-                              <Select name="role-signup" required value={newAdminRole} onValueChange={(value) => setNewAdminRole(value as AdminRole)}>
+                              <Select name="role-signup" required value={newAdminRole} onValueChange={(value) => setNewAdminRole(value as AdminRole)} disabled={isFirstAdmin}>
                                 <SelectTrigger id="role-signup">
                                     <SelectValue placeholder="Select a role" />
                                 </SelectTrigger>
@@ -350,6 +354,7 @@ export default function AdminLoginPage() {
                                     <SelectItem value="Sub-admin">Sub-admin (requires approval)</SelectItem>
                                 </SelectContent>
                               </Select>
+                               {isFirstAdmin && <p className="text-xs text-muted-foreground">The first registered admin must be a Head Admin.</p>}
                             </div>
                             <Button type="submit" className="w-full" disabled={isLoading || !isFirebaseReady}>
                                 {isLoading || !isFirebaseReady ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
@@ -370,3 +375,5 @@ export default function AdminLoginPage() {
     </div>
   );
 }
+
+    

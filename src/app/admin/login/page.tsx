@@ -19,7 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from "firebase/auth";
-import { doc, setDoc, getDoc, collection, query, where, getDocs, type Firestore } from "firebase/firestore";
+import { doc, setDoc, getDoc, collection, query, where, getDocs, runTransaction, type Firestore } from "firebase/firestore";
 import { useFirebase } from "@/context/FirebaseClientProvider";
 import type { Admin, AdminRole } from "@/lib/admin-data";
 import {
@@ -43,27 +43,9 @@ export default function AdminLoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("login");
   const [newAdminRole, setNewAdminRole] = useState<AdminRole>('Sub-admin');
-  const [isFirstAdmin, setIsFirstAdmin] = useState(false);
-
+  
   const isFirebaseReady = !!auth && !!db;
   
-  // Check if any admins exist when the component mounts
-  useEffect(() => {
-    if (isFirebaseReady && activeTab === 'signup') {
-        const checkAdmins = async (db: Firestore) => {
-            const adminsCollection = collection(db, "admins");
-            const snapshot = await getDocs(query(adminsCollection, where('role', '==', 'Head Admin')));
-            if (snapshot.empty) {
-                setIsFirstAdmin(true);
-                setNewAdminRole('Head Admin'); // Force first user to be Head Admin
-            } else {
-                setIsFirstAdmin(false);
-            }
-        };
-        checkAdmins(db);
-    }
-  }, [isFirebaseReady, activeTab, db]);
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isFirebaseReady) {
@@ -142,58 +124,70 @@ export default function AdminLoginPage() {
     }
   };
 
-  const handleSignup = async (e: React.FormEvent) => {
-     e.preventDefault();
-     if (!isFirebaseReady) {
-        toast({ variant: "destructive", title: "Signup Failed", description: "Auth service not ready." });
-        return;
-     }
-     setIsLoading(true);
-     const form = e.target as HTMLFormElement;
-     const name = (form.elements.namedItem('name-signup') as HTMLInputElement).value;
-     const signupEmail = (form.elements.namedItem('email-signup') as HTMLInputElement).value;
-     const phone = (form.elements.namedItem('phone-signup') as HTMLInputElement).value;
-     const password = (form.elements.namedItem('password-signup') as HTMLInputElement).value;
+ const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isFirebaseReady) {
+      toast({ variant: "destructive", title: "Signup Failed", description: "Auth service not ready." });
+      return;
+    }
+    setIsLoading(true);
+    const form = e.target as HTMLFormElement;
+    const name = (form.elements.namedItem('name-signup') as HTMLInputElement).value;
+    const signupEmail = (form.elements.namedItem('email-signup') as HTMLInputElement).value;
+    const phone = (form.elements.namedItem('phone-signup') as HTMLInputElement).value;
+    const password = (form.elements.namedItem('password-signup') as HTMLInputElement).value;
 
     try {
-        const adminsCollection = collection(db, "admins");
-        const headAdminQuery = query(adminsCollection, where("role", "==", "Head Admin"));
-        const headAdminSnapshot = await getDocs(headAdminQuery);
-
-        if (!headAdminSnapshot.empty && newAdminRole === 'Head Admin') {
-            throw new Error("A Head Admin already exists. Only one Head Admin is allowed.");
-        }
-        
-        if (headAdminSnapshot.empty && newAdminRole !== 'Head Admin') {
-             throw new Error("The first admin must be a Head Admin.");
-        }
-        
+        // Create the user in Firebase Auth first. This will be the temporary user.
         const userCredential = await createUserWithEmailAndPassword(auth, signupEmail, password);
         const user = userCredential.user;
 
-        const isHead = newAdminRole === "Head Admin";
+        // Now, run a transaction to create the admin document.
+        // This ensures the check for a Head Admin and the creation are atomic.
+        const { finalRole, finalStatus } = await runTransaction(db, async (transaction) => {
+            const adminsCollection = collection(db, "admins");
+            const headAdminQuery = query(adminsCollection, where("role", "==", "Head Admin"));
+            const headAdminSnapshot = await transaction.get(headAdminQuery);
 
-        const adminRequest = {
-            name,
-            email: signupEmail,
-            phone,
-            role: newAdminRole,
-            status: isHead ? "Active" : "Pending",
-            joinDate: new Date().toISOString(),
-        };
+            let role: AdminRole;
+            let status: Admin['status'];
 
-        await setDoc(doc(db, "admins", user.uid), adminRequest);
+            if (headAdminSnapshot.empty) {
+                // No Head Admin exists, this user becomes the first one.
+                role = "Head Admin";
+                status = "Active";
+            } else {
+                // A Head Admin already exists, this user becomes a sub-admin pending approval.
+                role = "Sub-admin";
+                status = "Pending";
+            }
 
+            const newAdminData = {
+                name,
+                email: signupEmail,
+                phone,
+                role,
+                status,
+                joinDate: new Date().toISOString(),
+            };
+            
+            const newAdminRef = doc(db, "admins", user.uid);
+            transaction.set(newAdminRef, newAdminData);
+            
+            return { finalRole: role, finalStatus: status };
+        });
+
+        // Sign out the temporary user session. The current admin does not get logged out.
         await signOut(auth);
-        
+
         toast({
-            title: isHead ? "Head Admin Created!" : "Request Sent!",
-            description: isHead 
-                ? "You can now log in with your new Head Admin credentials." 
+            title: finalStatus === 'Active' ? "Head Admin Created!" : "Request Sent!",
+            description: finalStatus === 'Active'
+                ? "You can now log in with your new Head Admin credentials."
                 : "Your request to become a sub-admin has been sent for approval.",
             duration: 7000,
         });
-        
+
         form.reset();
         setActiveTab("login");
 
@@ -212,7 +206,7 @@ export default function AdminLoginPage() {
     } finally {
         setIsLoading(false);
     }
-  }
+};
 
   const handleForgotPassword = async () => {
     if (!isFirebaseReady) {
@@ -313,7 +307,7 @@ export default function AdminLoginPage() {
                     <CardHeader>
                         <CardTitle>Register as an Admin</CardTitle>
                         <CardDescription>
-                           New admins must be approved by a Head Admin unless creating the first Head Admin account.
+                           The first account created will be the Head Admin. Subsequent accounts will be Sub-admins requiring approval.
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -343,19 +337,6 @@ export default function AdminLoginPage() {
                                   <span className="sr-only">Toggle password visibility</span>
                                 </Button>
                             </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="role-signup">Role</Label>
-                              <Select name="role-signup" required value={newAdminRole} onValueChange={(value) => setNewAdminRole(value as AdminRole)} disabled={isFirstAdmin}>
-                                <SelectTrigger id="role-signup">
-                                    <SelectValue placeholder="Select a role" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Head Admin">Head Admin (for initial setup)</SelectItem>
-                                    <SelectItem value="Sub-admin">Sub-admin (requires approval)</SelectItem>
-                                </SelectContent>
-                              </Select>
-                               {isFirstAdmin && <p className="text-xs text-muted-foreground">The first registered admin must be a Head Admin.</p>}
-                            </div>
                             <Button type="submit" className="w-full" disabled={isLoading || !isFirebaseReady}>
                                 {isLoading || !isFirebaseReady ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                                 {isFirebaseReady ? 'Submit' : 'Loading...'}
@@ -375,5 +356,3 @@ export default function AdminLoginPage() {
     </div>
   );
 }
-
-    

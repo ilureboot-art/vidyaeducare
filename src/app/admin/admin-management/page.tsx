@@ -288,7 +288,7 @@ export default function AdminManagementPage() {
                   <TableCell className="font-medium">{req.name}</TableCell>
                   <TableCell>
                       <div className="flex items-center gap-2">
-                        <span>+{req.phone}</span>
+                        <span>{req.phone}</span>
                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openWhatsApp(req.phone)}>
                             <WhatsAppIcon />
                          </Button>
@@ -398,7 +398,7 @@ export default function AdminManagementPage() {
                   </TableCell>
                   <TableCell>
                       <div className="flex items-center gap-2">
-                        <span>+{admin.phone}</span>
+                        <span>{admin.phone}</span>
                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openWhatsApp(admin.phone)}>
                             <WhatsAppIcon />
                          </Button>

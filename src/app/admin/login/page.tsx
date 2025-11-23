@@ -42,7 +42,6 @@ export default function AdminLoginPage() {
   const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("login");
-  const [newAdminRole, setNewAdminRole] = useState<AdminRole>('Sub-admin');
   
   const isFirebaseReady = !!auth && !!db;
   
@@ -80,12 +79,19 @@ export default function AdminLoginPage() {
               description: "Redirecting to admin dashboard...",
           });
            router.push('/admin/analytics');
-        } else {
+        } else if (adminData.status === 'Pending') {
           await signOut(auth);
           toast({
             variant: "destructive",
             title: "Login Failed",
             description: "Your admin account has not been approved yet.",
+          });
+        } else {
+          await signOut(auth);
+           toast({
+            variant: "destructive",
+            title: "Access Denied",
+            description: "Your admin account is not active.",
           });
         }
       } else {
@@ -138,7 +144,7 @@ export default function AdminLoginPage() {
     const password = (form.elements.namedItem('password-signup') as HTMLInputElement).value;
 
     try {
-        // Create the user in Firebase Auth first. This will be the temporary user.
+        // Create the user in Firebase Auth. This session will be used to write the firestore doc.
         const userCredential = await createUserWithEmailAndPassword(auth, signupEmail, password);
         const user = userCredential.user;
 
@@ -177,16 +183,18 @@ export default function AdminLoginPage() {
             return { finalRole: role, finalStatus: status };
         });
 
-        // Sign out the temporary user session. The current admin does not get logged out.
-        await signOut(auth);
 
         toast({
             title: finalStatus === 'Active' ? "Head Admin Created!" : "Request Sent!",
             description: finalStatus === 'Active'
                 ? "You can now log in with your new Head Admin credentials."
-                : "Your request to become a sub-admin has been sent for approval.",
+                : "Your request to become a sub-admin has been sent for approval. You will be logged out.",
             duration: 7000,
         });
+        
+        if(finalStatus === 'Pending') {
+            await signOut(auth);
+        }
 
         form.reset();
         setActiveTab("login");

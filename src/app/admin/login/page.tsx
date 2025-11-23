@@ -109,7 +109,7 @@ export default function AdminLoginPage() {
   };
 
   const handleCreateHeadAdmin = async () => {
-    if (!db) {
+    if (!db || !mainApp) {
         toast({ variant: "destructive", title: "Setup Failed", description: "Database service not ready." });
         return;
     }
@@ -127,7 +127,6 @@ export default function AdminLoginPage() {
         const headAdminSnapshot = await getDocs(headAdminQuery);
         if (!headAdminSnapshot.empty) {
           setSetupStatus('already_exists');
-          await deleteApp(tempApp);
           return;
         }
 

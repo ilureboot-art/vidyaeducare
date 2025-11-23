@@ -94,7 +94,7 @@ export default function SetupAdminPage() {
     };
 
     createHeadAdmin();
-  }, [db, auth]);
+  }, [db, auth, router]);
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-muted">

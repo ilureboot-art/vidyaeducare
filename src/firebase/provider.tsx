@@ -1,22 +1,12 @@
-
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
-import { onAuthStateChanged, type User, type Auth } from 'firebase/auth';
-import { doc, getDoc, type Firestore } from 'firebase/firestore';
-import { getFirebase } from './client'; // Import the function to get initialized services
+import { onAuthStateChanged, type User } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from './client'; // Import pre-initialized services
 import type { Admin } from '@/lib/admin-data';
 import { Loader2 } from 'lucide-react';
-import type { FirebaseApp } from 'firebase/app';
-
-// Get the initialized services. This is safe to call at the top level on the client.
-const { app, auth, db } = getFirebase();
-
-interface FirebaseServices {
-  app: FirebaseApp;
-  db: Firestore;
-  auth: Auth;
-}
+import { getFirebase } from './client';
 
 interface AuthState {
   user: User | null;
@@ -25,7 +15,6 @@ interface AuthState {
   isHeadAdmin: boolean;
 }
 
-const FirebaseContext = createContext<FirebaseServices | undefined>(undefined);
 const AuthContext = createContext<AuthState | undefined>(undefined);
 
 export function FirebaseProvider({ children }: { children: React.ReactNode }) {
@@ -37,7 +26,6 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // onAuthStateChanged uses the guaranteed-initialized `auth` instance
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
@@ -63,9 +51,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     ...authState,
     loading: isLoading,
   }), [authState, isLoading]);
-
-  const firebaseServices = { app, db, auth };
-
+  
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-screen bg-background">
@@ -75,21 +61,11 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <FirebaseContext.Provider value={firebaseServices}>
-      <AuthContext.Provider value={authContextValue}>
-        {children}
-      </AuthContext.Provider>
-    </FirebaseContext.Provider>
+    <AuthContext.Provider value={authContextValue}>
+      {children}
+    </AuthContext.Provider>
   );
 }
-
-export const useFirebase = (): FirebaseServices => {
-  const context = useContext(FirebaseContext);
-  if (context === undefined) {
-    throw new Error('useFirebase must be used within a FirebaseProvider');
-  }
-  return context;
-};
 
 export const useAuth = (): AuthState => {
   const context = useContext(AuthContext);
@@ -99,7 +75,6 @@ export const useAuth = (): AuthState => {
   return context;
 };
 
-export const useAuthService = (): Auth => {
-  const { auth: authService } = useFirebase();
-  return authService;
-};
+// These hooks provide direct access to the initialized services
+export const useFirebase = () => getFirebase();
+export const useAuthService = () => auth;

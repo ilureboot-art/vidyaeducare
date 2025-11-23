@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import type { AppNotification } from "@/lib/notifications";
 import { useFirebase } from "@/context/FirebaseClientProvider";
-import { collection, query, where, orderBy, Timestamp, type Firestore, onSnapshot } from "firebase/firestore";
+import { collection, query, where, orderBy, Timestamp, type Firestore, getDocs } from "firebase/firestore";
 
 const getIconForType = (type: string) => {
     switch(type) {
@@ -29,21 +29,20 @@ export default function AdminNotificationsPage() {
     const [notifications, setNotifications] = useState<AppNotification[] | null>(null);
     
     useEffect(() => {
-        if (!db) return;
-
-        const notifsRef = collection(db, "notifications");
-        const q = query(notifsRef, where("userId", "==", "admin"), orderBy("timestamp", "desc"));
-        
-        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const fetchNotifications = async () => {
+            if (!db) return;
+            const notifsRef = collection(db, "notifications");
+            const q = query(notifsRef, where("userId", "==", "admin"), orderBy("timestamp", "desc"));
+            
+            const querySnapshot = await getDocs(q);
             const notifs = querySnapshot.docs.map(doc => {
                 const data = doc.data();
                 const timestamp = data.timestamp instanceof Timestamp ? data.timestamp.toDate().toISOString() : data.timestamp;
                 return { id: doc.id, ...data, timestamp } as AppNotification
             });
             setNotifications(notifs);
-        });
-
-        return () => unsubscribe();
+        };
+        if(db) fetchNotifications();
     }, [db]);
 
     if (!notifications) {
@@ -95,3 +94,5 @@ export default function AdminNotificationsPage() {
         </div>
     );
 }
+
+    

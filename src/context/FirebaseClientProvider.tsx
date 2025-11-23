@@ -6,6 +6,7 @@ import { getFirebaseServices } from '@/lib/firebase';
 import { type FirebaseApp } from "firebase/app";
 import { type Auth } from "firebase/auth";
 import { type Firestore } from "firebase/firestore";
+import { AuthContext } from './AuthContext';
 
 interface FirebaseContextType {
   app: FirebaseApp;
@@ -53,28 +54,13 @@ export function useFirebase() {
   return context;
 }
 
-// DEPRECATED - This is now handled in AppLayout
-// This context and provider are kept for compatibility to avoid breaking other components that might use it,
-// but the logic is effectively moved.
-interface AuthContextType {
-  user: null;
-  loading: boolean;
-  isAdmin: boolean;
-  isHeadAdmin: boolean;
-}
-const AuthContext = createContext<AuthContextType>({
-    user: null,
-    loading: true,
-    isAdmin: false,
-    isHeadAdmin: false,
-});
-
+// Hook to access auth state
 export function useAuth() {
     const context = useContext(AuthContext);
     if (context === undefined) {
-        // This should not happen if AppLayout is correctly managing auth state.
-        // We'll return a default non-authed state to prevent crashes.
-        return { user: null, loading: true, isAdmin: false, isHeadAdmin: false };
+        throw new Error("useAuth must be used within an AuthContext.Provider");
     }
     return context;
 }
+
+    

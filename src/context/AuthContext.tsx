@@ -1,12 +1,25 @@
 
 "use client";
 
-// This file is deprecated. All its logic has been merged into FirebaseClientProvider.
-// It is kept here only to prevent breaking any legacy imports, but it should not be used.
-// useAuth should now be imported from '@/context/FirebaseClientProvider'
+import { createContext } from 'react';
+import type { User } from 'firebase/auth';
 
-export { useAuth } from '@/context/FirebaseClientProvider';
+interface AuthContextType {
+  user: User | null;
+  loading: boolean;
+  isAdmin: boolean;
+  isHeadAdmin: boolean;
+}
+
+export const AuthContext = createContext<AuthContextType>({
+    user: null,
+    loading: true,
+    isAdmin: false,
+    isHeadAdmin: false,
+});
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
+
+    

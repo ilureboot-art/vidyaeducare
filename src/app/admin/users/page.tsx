@@ -20,7 +20,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { format } from 'date-fns';
 import { useFirebase } from "@/context/FirebaseClientProvider";
-import { collection, onSnapshot, doc, updateDoc, deleteDoc } from "firebase/firestore";
+import { collection, doc, updateDoc, deleteDoc, getDocs } from "firebase/firestore";
 
 type UserStatus = "Active" | "Banned" | "Inactive";
 type User = {
@@ -42,16 +42,16 @@ export default function UserManagementPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
   
-  useEffect(() => {
+  const fetchUsers = async () => {
     if (!db) return;
-
     const usersCollection = collection(db, "users");
-    const unsubscribe = onSnapshot(usersCollection, (userSnapshot) => {
-      const userList = userSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
-      setUsers(userList);
-    });
+    const userSnapshot = await getDocs(usersCollection);
+    const userList = userSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
+    setUsers(userList);
+  };
 
-    return () => unsubscribe();
+  useEffect(() => {
+    fetchUsers();
   }, [db]);
 
   const handleStatusChange = async (userId: string, newStatus: UserStatus) => {
@@ -60,7 +60,7 @@ export default function UserManagementPage() {
     try {
         const userDocRef = doc(db, "users", userId);
         await updateDoc(userDocRef, { status: newStatus });
-        // The onSnapshot listener will update the UI automatically.
+        fetchUsers();
         toast({
           title: `User ${newStatus}`,
           description: `User ${userId} has been ${newStatus.toLowerCase()}.`,
@@ -78,7 +78,7 @@ export default function UserManagementPage() {
 
     try {
         await deleteDoc(doc(db, "users", userId));
-        // The onSnapshot listener will update the UI automatically.
+        fetchUsers();
         toast({
             title: "User Deleted",
             description: `User account for ${userToDelete.name} has been deleted.`

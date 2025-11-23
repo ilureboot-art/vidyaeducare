@@ -36,7 +36,7 @@ import {
 } from "@/components/ui/select"
 import { format } from 'date-fns';
 import type { Admin, AdminRole } from "@/lib/admin-data";
-import { collection, onSnapshot, doc, setDoc, deleteDoc, updateDoc } from "firebase/firestore";
+import { collection, onSnapshot, doc, setDoc, deleteDoc, updateDoc, getDocs } from "firebase/firestore";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { useFirebase, useAuth } from "@/context/FirebaseClientProvider";
 
@@ -51,8 +51,6 @@ export default function AdminManagementPage() {
   const { db, auth } = useFirebase();
   const { user, loading, isHeadAdmin } = useAuth();
   const [allAdmins, setAllAdmins] = useState<Admin[] | null>(null);
-  const [activeAdmins, setActiveAdmins] = useState<Admin[]>([]);
-  const [pendingRequests, setPendingRequests] = useState<Admin[]>([]);
   
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -60,26 +58,19 @@ export default function AdminManagementPage() {
   const [selectedAdmin, setSelectedAdmin] = useState<Admin | null>(null);
   const [newAdminRole, setNewAdminRole] = useState<AdminRole | ''>('');
   const { toast } = useToast();
+
+  const fetchAdmins = async () => {
+      if (loading || !user || !db || !isHeadAdmin) return;
+      const adminsCollection = collection(db, "admins");
+      const adminSnapshot = await getDocs(adminsCollection);
+      const adminList = adminSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Admin));
+      setAllAdmins(adminList);
+  };
   
   useEffect(() => {
-    if (loading || !user || !db || !isHeadAdmin) return;
-
-    const adminsCollection = collection(db, "admins");
-    const unsubscribe = onSnapshot(adminsCollection, (snapshot) => {
-        const adminList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Admin));
-        setAllAdmins(adminList);
-    });
-
-    return () => unsubscribe();
-    
+    fetchAdmins();
   }, [user, db, loading, isHeadAdmin]);
 
-  useEffect(() => {
-      if (allAdmins) {
-          setActiveAdmins(allAdmins.filter(admin => admin.status === "Active"));
-          setPendingRequests(allAdmins.filter(admin => admin.status === "Pending"));
-      }
-  }, [allAdmins]);
 
   const openWhatsApp = (phone: string, message?: string) => {
     const cleanedPhone = phone.replace(/\D/g, '');
@@ -112,19 +103,18 @@ export default function AdminManagementPage() {
   }
 
   const handleRequest = async (requestId: string, newStatus: "Active" | "Rejected") => {
-    if (!pendingRequests || !db) return;
-    const requestToProcess = pendingRequests.find(req => req.id === requestId);
+    if (!allAdmins || !db) return;
+    const requestToProcess = allAdmins.find(req => req.id === requestId);
     if (!requestToProcess) return;
 
     try {
         const adminDocRef = doc(db, "admins", requestId);
         if (newStatus === "Active") {
             await updateDoc(adminDocRef, { status: "Active" });
-            // UI will update automatically due to onSnapshot
         } else {
             await deleteDoc(adminDocRef);
-            // UI will update automatically due to onSnapshot
         }
+        await fetchAdmins(); // Re-fetch
         
         toast({
           title: `Request ${newStatus === 'Active' ? 'Approved' : 'Rejected'}`,
@@ -153,7 +143,6 @@ export default function AdminManagementPage() {
     }
     
     try {
-        // Note: This creates the auth user but doesn't sign them in to the current session.
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
@@ -167,7 +156,7 @@ export default function AdminManagementPage() {
         };
 
         await setDoc(doc(db, "admins", user.uid), newAdminData);
-        // UI updates via onSnapshot
+        await fetchAdmins();
         
         toast({ title: 'Admin Created!', description: `${name} has been added.`});
         setIsCreateDialogOpen(false);
@@ -180,7 +169,7 @@ export default function AdminManagementPage() {
   
   const handleEditAdmin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!selectedAdmin || !activeAdmins || !db) return;
+    if (!selectedAdmin || !allAdmins || !db) return;
     const form = e.currentTarget;
     const name = (form.elements.namedItem('name-edit') as HTMLInputElement).value;
     const email = (form.elements.namedItem('email-edit') as HTMLInputElement).value;
@@ -196,7 +185,7 @@ export default function AdminManagementPage() {
 
     try {
         await updateDoc(doc(db, "admins", selectedAdmin.id), updatedData);
-        // UI updates via onSnapshot
+        await fetchAdmins();
         
         toast({ title: 'Admin Updated', description: `${name}'s details have been saved.`});
         setIsEditDialogOpen(false);
@@ -219,8 +208,8 @@ export default function AdminManagementPage() {
   }
 
   const handleDeleteAdmin = async (adminId: string) => {
-    if (!activeAdmins || !db) return;
-    const adminToDelete = activeAdmins.find(admin => admin.id === adminId);
+    if (!allAdmins || !db) return;
+    const adminToDelete = allAdmins.find(admin => admin.id === adminId);
     if (!adminToDelete) return;
 
     if (adminToDelete.role === "Head Admin") {
@@ -230,7 +219,7 @@ export default function AdminManagementPage() {
     
     try {
         await deleteDoc(doc(db, "admins", adminId));
-        // UI updates via onSnapshot
+        await fetchAdmins();
         
         toast({
             title: "Admin Deleted",
@@ -262,6 +251,9 @@ export default function AdminManagementPage() {
           </div>
       )
   }
+  
+  const activeAdmins = allAdmins.filter(admin => admin.status === "Active");
+  const pendingRequests = allAdmins.filter(admin => admin.status === "Pending");
 
   return (
     <div className="space-y-6">
@@ -508,3 +500,5 @@ export default function AdminManagementPage() {
     </div>
   );
 }
+
+    

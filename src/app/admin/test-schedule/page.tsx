@@ -23,7 +23,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import type { TestSet } from "@/lib/question-bank";
 import type { ScheduledTest } from "@/lib/test-schedule";
-import { collection, getDocs, doc, setDoc, onSnapshot } from "firebase/firestore";
+import { collection, getDocs, doc, setDoc } from "firebase/firestore";
 import { useFirebase } from '@/context/FirebaseClientProvider';
 
 type TestStatus = 'Live' | 'Upcoming' | 'Completed';
@@ -40,25 +40,22 @@ export default function TestSchedulePage() {
     const [time, setTime] = useState('10:00'); // Default time
     const [selectedTestSetId, setSelectedTestSetId] = useState('');
     
-    useEffect(() => {
+    const fetchPageData = async () => {
         if (loading || !db) return;
 
         const testSetsCollection = collection(db, "testSets");
-        const unsubTestSets = onSnapshot(testSetsCollection, (testSetSnapshot) => {
-            const testSetList = testSetSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TestSet));
-            setTestSets(testSetList);
-        });
+        const testSetSnapshot = await getDocs(testSetsCollection);
+        const testSetList = testSetSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TestSet));
+        setTestSets(testSetList);
 
         const schedulesCollection = collection(db, "scheduledTests");
-        const unsubSchedules = onSnapshot(schedulesCollection, (scheduleSnapshot) => {
-            const scheduleList = scheduleSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ScheduledTest));
-            refreshSchedules(scheduleList);
-        });
+        const scheduleSnapshot = await getDocs(schedulesCollection);
+        const scheduleList = scheduleSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ScheduledTest));
+        refreshSchedules(scheduleList);
+    };
 
-        return () => {
-            unsubTestSets();
-            unsubSchedules();
-        }
+    useEffect(() => {
+        fetchPageData();
     }, [db, loading]);
     
     const refreshSchedules = (schedules: ScheduledTest[]) => {
@@ -120,6 +117,7 @@ export default function TestSchedulePage() {
 
         try {
             await setDoc(doc(db, "scheduledTests", newTestId), newTest);
+            fetchPageData();
             
             toast({
                 title: "Test Scheduled!",
@@ -242,3 +240,5 @@ export default function TestSchedulePage() {
         </div>
     );
 }
+
+    

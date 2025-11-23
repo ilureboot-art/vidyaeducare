@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Share2, IndianRupee, Gift, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { doc, getDoc, type Firestore } from "firebase/firestore";
-import { useFirebase, useAuth } from "@/firebase/client-provider";
+import { useFirebase, useAuth } from "@/firebase";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 function ReferAndEarnPageContent() {

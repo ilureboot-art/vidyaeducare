@@ -12,7 +12,7 @@ import { Bell, CheckCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import type { AppNotification } from "@/lib/notifications";
-import { useAuth, useFirebase } from "@/firebase/client-provider";
+import { useAuth, useFirebase } from "@/firebase";
 import { collection, query, where, orderBy, onSnapshot, Timestamp } from "firebase/firestore";
 
 

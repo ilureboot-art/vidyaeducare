@@ -38,7 +38,7 @@ import { format } from 'date-fns';
 import type { Admin, AdminRole } from "@/lib/admin-data";
 import { collection, onSnapshot, doc, setDoc, deleteDoc, updateDoc, getDocs } from "firebase/firestore";
 import { createUserWithEmailAndPassword, getAuth } from "firebase/auth";
-import { useFirebase, useAuth } from "@/firebase/client-provider";
+import { useFirebase, useAuth } from "@/firebase";
 import { initializeApp, deleteApp } from "firebase/app";
 
 

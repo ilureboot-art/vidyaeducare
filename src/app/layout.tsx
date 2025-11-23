@@ -2,7 +2,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "next-themes";
 import { AppLayout } from '@/components/AppLayout';
-import { FirebaseClientProvider } from '@/firebase/client-provider';
+import { FirebaseProvider } from '@/firebase/provider'; // Updated import
 import { Loader2 } from 'lucide-react';
 
 export default function RootLayout({
@@ -34,11 +34,11 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
         >
-          <FirebaseClientProvider loadingFallback={loadingFallback}>
+          <FirebaseProvider loadingFallback={loadingFallback}>
             <AppLayout>
               {children}
             </AppLayout>
-          </FirebaseClientProvider>
+          </FirebaseProvider>
           <Toaster />
         </ThemeProvider>
       </body>

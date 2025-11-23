@@ -24,7 +24,7 @@ import { Badge } from '@/components/ui/badge';
 import type { TestSet } from "@/lib/question-bank";
 import type { ScheduledTest } from "@/lib/test-schedule";
 import { collection, getDocs, doc, setDoc } from "firebase/firestore";
-import { useFirebase } from '@/firebase/client-provider';
+import { useFirebase } from '@/firebase';
 
 type TestStatus = 'Live' | 'Upcoming' | 'Completed';
 
@@ -240,5 +240,3 @@ export default function TestSchedulePage() {
         </div>
     );
 }
-
-    

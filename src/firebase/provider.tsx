@@ -1,59 +1,74 @@
+
 "use client";
 
-import { createContext, useContext, ReactNode } from "react";
-import { initializeApp, getApp, getApps, type FirebaseApp } from "firebase/app";
-import { getFirestore, type Firestore, enableIndexedDbPersistence } from "firebase/firestore";
-import { getAuth, type Auth } from "firebase/auth";
-import { firebaseConfig } from "./config";
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { type FirebaseApp } from "firebase/app";
+import { type Firestore } from "firebase/firestore";
+import { type Auth, onAuthStateChanged, type User } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { app, db, authService } from "./index";
+import type { Admin } from '@/lib/admin-data';
 
-// --- Firebase Services Context ---
+// --- Firebase Context ---
 interface FirebaseContextType {
   app: FirebaseApp;
   db: Firestore;
   auth: Auth;
 }
-
 const FirebaseContext = createContext<FirebaseContextType | undefined>(undefined);
 
-let firebaseApp: FirebaseApp;
-let firestore: Firestore;
-let auth: Auth;
-
-if (typeof window !== "undefined" && !getApps().length) {
-    firebaseApp = initializeApp(firebaseConfig);
-    firestore = getFirestore(firebaseApp);
-    auth = getAuth(firebaseApp);
-    
-    enableIndexedDbPersistence(firestore).catch((err) => {
-        if (err.code == 'failed-precondition') {
-            console.warn("Firestore persistence failed: multiple tabs open.");
-        } else if (err.code == 'unimplemented') {
-            console.warn("Firestore persistence not supported in this browser.");
-        }
-    });
-} else if (typeof window !== 'undefined') {
-    firebaseApp = getApp();
-    firestore = getFirestore(firebaseApp);
-    auth = getAuth(firebaseApp);
+// --- Auth Context ---
+interface AuthContextType {
+  user: User | null;
+  loading: boolean;
+  isAdmin: boolean;
+  isHeadAdmin: boolean;
 }
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  loading: true,
+  isAdmin: false,
+  isHeadAdmin: false,
+});
 
+export function FirebaseProvider({ children, loadingFallback }: { children: ReactNode, loadingFallback: ReactNode }) {
+    const [authContext, setAuthContext] = useState<AuthContextType>({
+        user: null,
+        loading: true,
+        isAdmin: false,
+        isHeadAdmin: false,
+    });
 
-export function FirebaseProvider({ children }: { children: ReactNode }) {
-    // This check is necessary for server components, though the provider is client-side.
-    if (typeof window === "undefined") {
-        return <>{children}</>;
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(authService, async (user) => {
+            if (user) {
+                const adminDocRef = doc(db, "admins", user.uid);
+                const adminDocSnap = await getDoc(adminDocRef);
+                const isAdmin = adminDocSnap.exists() && adminDocSnap.data().status === 'Active';
+                const isHeadAdmin = isAdmin && (adminDocSnap.data() as Admin).role === 'Head Admin';
+                setAuthContext({ user, isAdmin, isHeadAdmin, loading: false });
+            } else {
+                setAuthContext({ user: null, isAdmin: false, isHeadAdmin: false, loading: false });
+            }
+        });
+
+        return () => unsubscribe();
+    }, []);
+
+    if (authContext.loading) {
+        return <>{loadingFallback}</>;
     }
-
-    const services = { app: firebaseApp, db: firestore, auth };
-
+    
     return (
-        <FirebaseContext.Provider value={services}>
-            {children}
+        <FirebaseContext.Provider value={{ app, db, auth: authService }}>
+            <AuthContext.Provider value={authContext}>
+                {children}
+            </AuthContext.Provider>
         </FirebaseContext.Provider>
     );
 }
 
-// Hooks to access Firebase services
+// --- Hooks ---
 export const useFirebase = (): FirebaseContextType => {
   const context = useContext(FirebaseContext);
   if (context === undefined) {
@@ -61,6 +76,14 @@ export const useFirebase = (): FirebaseContextType => {
   }
   return context;
 };
+
+export function useAuth() {
+    const context = useContext(AuthContext);
+    if (context === undefined) {
+        throw new Error("useAuth must be used within a FirebaseProvider");
+    }
+    return context;
+}
 
 export const useFirebaseApp = (): FirebaseApp => useFirebase().app;
 export const useFirestore = (): Firestore => useFirebase().db;

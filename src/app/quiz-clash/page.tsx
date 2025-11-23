@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Puzzle, Users, IndianRupee, Loader2 } from "lucide-react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useRouter } from "next/navigation";
-import { useAuth, useFirebase } from "@/firebase/client-provider";
+import { useAuth, useFirebase } from "@/firebase";
 import { collection, query, where, getDocs, doc, updateDoc, arrayUnion, runTransaction, serverTimestamp } from "firebase/firestore";
 import type { QuizClashTournament } from "@/lib/quiz-clash-data";
 import { Badge } from "@/components/ui/badge";

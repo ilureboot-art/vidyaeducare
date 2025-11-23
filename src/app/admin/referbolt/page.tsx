@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw, Users, IndianRupee, Repeat, Loader2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import { useFirebase } from "@/firebase/client-provider";
+import { useFirebase } from "@/firebase";
 import { collection, getDocs, query, Timestamp, type Firestore, getCountFromServer } from "firebase/firestore";
 
 type Cycle = {
@@ -234,5 +234,3 @@ export default function ReferBoltManagementPage() {
     </div>
   );
 }
-
-    

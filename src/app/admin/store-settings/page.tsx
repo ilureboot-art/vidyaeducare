@@ -12,7 +12,7 @@ import { PlusCircle, Trash2, Zap, BookOpen, GraduationCap, Percent, Loader2 } fr
 import type { TicketPackage, ReferboltSubscription, MockTestPackage, ReferboltSettings, GameSettings, StoreConfig } from "@/lib/store-config";
 import type { AcademicConfig } from "@/lib/academic-config";
 import { Switch } from "@/components/ui/switch";
-import { useFirebase } from "@/context/FirebaseClientProvider";
+import { useFirebase } from "@/firebase/client-provider";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 
 export default function AdminStoreSettingsPage() {

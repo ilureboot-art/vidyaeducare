@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -32,7 +31,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Image from "next/image";
 import { CopyButton } from "@/components/CopyButton";
 import { format } from "date-fns";
-import { useAuth, useFirebase } from "@/context/FirebaseClientProvider";
+import { useAuth, useFirebase } from "@/firebase/client-provider";
 import { doc, getDoc, collection, addDoc, query, where, orderBy, limit, onSnapshot, serverTimestamp, runTransaction, Timestamp } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 

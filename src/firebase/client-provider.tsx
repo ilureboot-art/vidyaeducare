@@ -32,8 +32,7 @@ export function useAuth() {
 
 // --- Auth State Logic ---
 function AuthStateProvider({ children, loadingFallback }: { children: ReactNode, loadingFallback: ReactNode }) {
-    const { db } = useFirebase();
-    const auth = useAuthService();
+    const { db, auth } = useFirebase();
     const [authContext, setAuthContext] = useState<AuthContextType>({
         user: null,
         loading: true,
@@ -42,6 +41,8 @@ function AuthStateProvider({ children, loadingFallback }: { children: ReactNode,
     });
 
     useEffect(() => {
+        if (!auth || !db) return;
+
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
                 const adminDocRef = doc(db, "admins", user.uid);

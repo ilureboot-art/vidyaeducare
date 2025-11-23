@@ -8,7 +8,7 @@ import { Bell, UserPlus, ArrowDown, ArrowUp, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import type { AppNotification } from "@/lib/notifications";
-import { useFirebase } from "@/context/FirebaseClientProvider";
+import { useFirebase } from "@/firebase/client-provider";
 import { collection, query, where, orderBy, Timestamp, type Firestore, getDocs } from "firebase/firestore";
 
 const getIconForType = (type: string) => {
@@ -94,5 +94,3 @@ export default function AdminNotificationsPage() {
         </div>
     );
 }
-
-    

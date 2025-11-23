@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -18,10 +17,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut, getAuth } from "firebase/auth";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from "firebase/auth";
 import { initializeApp, deleteApp } from "firebase/app";
+import { getAuth } from "firebase/auth";
 import { doc, setDoc, getDoc, collection, query, where, getDocs, type Firestore, runTransaction, serverTimestamp } from "firebase/firestore";
-import { useFirebase } from "@/context/FirebaseClientProvider";
+import { useFirebase } from "@/firebase/client-provider";
 import type { Admin, AdminRole } from "@/lib/admin-data";
 
 // Pre-defined credentials for the one-time Head Admin setup

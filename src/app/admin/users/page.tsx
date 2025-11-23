@@ -19,7 +19,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { format } from 'date-fns';
-import { useFirebase } from "@/context/FirebaseClientProvider";
+import { useFirebase } from "@/firebase/client-provider";
 import { collection, doc, updateDoc, deleteDoc, getDocs } from "firebase/firestore";
 
 type UserStatus = "Active" | "Banned" | "Inactive";
@@ -203,5 +203,3 @@ export default function UserManagementPage() {
     </div>
   );
 }
-
-    

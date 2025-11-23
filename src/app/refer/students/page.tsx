@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -22,7 +21,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { format } from "date-fns";
-import { useAuth, useFirebase } from "@/context/FirebaseClientProvider";
+import { useAuth, useFirebase } from "@/firebase/client-provider";
 import { collection, query, where, getDocs, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -12,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from 'next/link';
 import type { StoreConfig, MockTestPackage, ReferboltSubscription } from "@/lib/store-config";
 import type { WalletData } from "@/lib/user-data";
-import { useFirebase, useAuth } from "@/context/FirebaseClientProvider";
+import { useFirebase, useAuth } from "@/firebase/client-provider";
 import { doc, getDoc, runTransaction, collection, serverTimestamp, updateDoc, arrayUnion, query, where, getDocs, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 

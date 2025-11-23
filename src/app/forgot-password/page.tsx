@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Gamepad2, ArrowLeft, Mail, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { useFirebase } from "@/context/FirebaseClientProvider";
+import { useFirebase } from "@/firebase/client-provider";
 import { sendPasswordResetEmail } from "firebase/auth";
 
 

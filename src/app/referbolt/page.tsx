@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -12,7 +11,7 @@ import { Zap, Share2, IndianRupee, Users, CheckCircle, Repeat, Loader2 } from "l
 import Link from "next/link";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { useAuth, useFirebase } from "@/context/FirebaseClientProvider";
+import { useAuth, useFirebase } from "@/firebase/client-provider";
 import { doc, getDoc, onSnapshot, DocumentData, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 

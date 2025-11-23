@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Archive, Search, Send, Loader2 } from "lucide-react";
-import { useFirebase } from "@/context/FirebaseClientProvider";
+import { useFirebase } from "@/firebase/client-provider";
 import { collection, doc, updateDoc, addDoc, serverTimestamp, query, orderBy, Timestamp, onSnapshot, type Firestore } from "firebase/firestore";
 
 type Message = {

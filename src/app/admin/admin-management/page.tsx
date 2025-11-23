@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -37,8 +36,8 @@ import {
 import { format } from 'date-fns';
 import type { Admin, AdminRole } from "@/lib/admin-data";
 import { collection, onSnapshot, doc, setDoc, deleteDoc, updateDoc, getDocs } from "firebase/firestore";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { useFirebase, useAuth } from "@/context/FirebaseClientProvider";
+import { createUserWithEmailAndPassword, getAuth } from "firebase/auth";
+import { useFirebase, useAuth } from "@/firebase/client-provider";
 import { initializeApp, deleteApp } from "firebase/app";
 
 
@@ -49,7 +48,7 @@ const WhatsAppIcon = () => (
 )
 
 export default function AdminManagementPage() {
-  const { app: mainApp, db, auth } = useFirebase();
+  const { app: mainApp, db } = useFirebase();
   const { user, loading: authLoading, isHeadAdmin } = useAuth();
   const [allAdmins, setAllAdmins] = useState<Admin[] | null>(null);
   
@@ -138,7 +137,7 @@ export default function AdminManagementPage() {
 
   const handleCreateAdmin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!db || !auth) return;
+    if (!db) return;
     const form = e.currentTarget;
     const name = (form.elements.namedItem('name') as HTMLInputElement).value;
     const email = (form.elements.namedItem('email') as HTMLInputElement).value;
@@ -519,5 +518,3 @@ export default function AdminManagementPage() {
     </div>
   );
 }
-
-    

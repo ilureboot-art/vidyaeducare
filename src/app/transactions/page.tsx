@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -20,7 +19,7 @@ import type { Transaction } from "@/lib/user-data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
-import { useAuth, useFirebase } from "@/context/FirebaseClientProvider";
+import { useAuth, useFirebase } from "@/firebase/client-provider";
 import { collection, query, where, getDocs, orderBy, onSnapshot, Timestamp, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 

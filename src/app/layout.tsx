@@ -3,7 +3,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "next-themes";
 import { AppLayout } from '@/components/AppLayout';
-import { FirebaseClientProvider } from '@/context/FirebaseClientProvider';
+import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { Loader2 } from 'lucide-react';
 
 export default function RootLayout({

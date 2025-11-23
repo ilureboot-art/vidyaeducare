@@ -20,23 +20,33 @@ type FirebaseServices = {
     db: Firestore;
 };
 
-// This function must be awaited.
-export const getFirebaseServices = async (): Promise<FirebaseServices> => {
+// --- Singleton Pattern for Firebase Initialization ---
+let firebaseServices: FirebaseServices | null = null;
+
+const initializeFirebase = () => {
+    if (firebaseServices) {
+        return firebaseServices;
+    }
+
     const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // This is the critical change: We MUST await the completion of persistence setup.
-    // This was the root cause of all the "client is offline" errors.
-    try {
-        await enableIndexedDbPersistence(db);
-    } catch (err: any) {
+    // Try to enable persistence. This can be done without awaiting
+    // as the app can function while it's being set up.
+    enableIndexedDbPersistence(db).catch((err: any) => {
         if (err.code === 'failed-precondition') {
-            console.warn('Firestore persistence failed: Multiple tabs open. App will still function with in-memory cache.');
+            console.warn('Firestore persistence failed: Multiple tabs open.');
         } else if (err.code === 'unimplemented') {
-            console.warn('Firestore persistence failed: Browser does not support it. App will still function with in-memory cache.');
+            console.warn('Firestore persistence failed: Browser does not support it.');
         }
-    }
+    });
 
-    return { app, auth, db };
+    firebaseServices = { app, auth, db };
+    return firebaseServices;
+};
+
+// This function is now a simple getter for the singleton instance.
+export const getFirebaseServices = (): FirebaseServices => {
+    return initializeFirebase();
 };

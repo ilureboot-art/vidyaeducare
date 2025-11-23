@@ -9,6 +9,7 @@ import { firebaseConfig } from "./config";
 import type { Admin } from '@/lib/admin-data';
 
 // --- Initialization ---
+// This function is now self-contained within the provider file to prevent circular dependencies.
 function initializeFirebase() {
     if (getApps().length > 0) {
         const app = getApp();
@@ -62,6 +63,7 @@ const FirebaseContext = createContext<FirebaseContextValue | undefined>(undefine
 
 // --- Provider Component ---
 export function FirebaseProvider({ children, loadingFallback }: { children: ReactNode, loadingFallback: ReactNode }) {
+    // Services are initialized once and memoized.
     const firebaseServices = useMemo(() => initializeFirebase(), []);
 
     const [authState, setAuthState] = useState<Omit<AuthState, 'loading'>>({
@@ -101,7 +103,8 @@ export function FirebaseProvider({ children, loadingFallback }: { children: Reac
         ...authState,
         loading: isLoading,
     }), [firebaseServices, authState, isLoading]);
-
+    
+    // Only show loading fallback on initial auth load
     if (isLoading) {
         return <>{loadingFallback}</>;
     }

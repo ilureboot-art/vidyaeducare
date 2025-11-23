@@ -144,39 +144,29 @@ export default function AdminLoginPage() {
     const password = (form.elements.namedItem('password-signup') as HTMLInputElement).value;
 
     try {
-        // --- Step 1: Perform reads BEFORE the transaction ---
         const adminsCollection = collection(db, "admins");
         const headAdminQuery = query(adminsCollection, where("role", "==", "Head Admin"));
         const headAdminSnapshot = await getDocs(headAdminQuery);
         const headAdminExists = !headAdminSnapshot.empty;
-
-        // --- Step 2: Create the user in Firebase Authentication ---
-        // This is a write operation and must be outside the transaction.
+        
         const userCredential = await createUserWithEmailAndPassword(auth, signupEmail, password);
         const user = userCredential.user;
 
-        // --- Step 3: Run a transaction for all database writes ---
-        await runTransaction(db, async (transaction) => {
-            const role: AdminRole = headAdminExists ? "Sub-admin" : "Head Admin";
-            const status: Admin['status'] = headAdminExists ? "Pending" : "Active";
+        const role: AdminRole = headAdminExists ? "Sub-admin" : "Head Admin";
+        const status: Admin['status'] = headAdminExists ? "Pending" : "Active";
 
-            const newAdminData: Omit<Admin, 'id'> = {
-                name,
-                email: signupEmail,
-                phone,
-                role,
-                status,
-                joinDate: new Date().toISOString(),
-            };
+        const newAdminData: Omit<Admin, 'id'> = {
+            name,
+            email: signupEmail,
+            phone,
+            role,
+            status,
+            joinDate: new Date().toISOString(),
+        };
 
-            const adminDocRef = doc(db, "admins", user.uid);
-            // All database writes happen inside the transaction.
-            transaction.set(adminDocRef, newAdminData);
-        });
+        await setDoc(doc(db, "admins", user.uid), newAdminData);
 
-        // --- Step 4: Handle post-creation logic ---
-        if (headAdminExists) {
-            // If a Head Admin already exists, the new user is a Sub-admin and should be logged out to await approval.
+        if (role === 'Sub-admin') {
             await signOut(auth);
             toast({
                 title: "Request Sent!",
@@ -184,7 +174,6 @@ export default function AdminLoginPage() {
                 duration: 7000,
             });
         } else {
-             // If this was the first admin, they are now the Head Admin and can proceed to log in.
             toast({
                 title: "Head Admin Created!",
                 description: "You can now log in with your new Head Admin credentials.",
@@ -360,5 +349,3 @@ export default function AdminLoginPage() {
     </div>
   );
 }
-
-    

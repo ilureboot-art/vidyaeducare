@@ -132,8 +132,8 @@ export default function AdminLoginPage() {
 
  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isFirebaseReady) {
-      toast({ variant: "destructive", title: "Signup Failed", description: "Auth service not ready." });
+    if (!auth || !db) {
+      toast({ variant: "destructive", title: "Signup Failed", description: "Auth service not ready. Please try again in a moment." });
       return;
     }
     setIsLoading(true);

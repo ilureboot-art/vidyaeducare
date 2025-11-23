@@ -29,20 +29,17 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   
   const isFirebaseReady = !!auth;
 
   useEffect(() => {
-    if (isFirebaseReady) {
-      setIsLoading(false);
-    }
     const rememberedEmail = localStorage.getItem('rememberedUser');
     if (rememberedEmail) {
       setEmail(rememberedEmail);
       setRememberMe(true);
     }
-  }, [isFirebaseReady]);
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -146,8 +143,8 @@ export default function LoginPage() {
             </div>
           </CardContent>
           <CardFooter className="flex-col gap-4">
-            <Button className="w-full" type="submit" disabled={isLoading}>
-                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+            <Button className="w-full" type="submit" disabled={isLoading || !isFirebaseReady}>
+                {isLoading || !isFirebaseReady ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                 {isLoading ? 'Logging in...' : 'Login'}
             </Button>
           </CardFooter>

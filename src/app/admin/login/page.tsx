@@ -20,7 +20,7 @@ import { useRouter } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from "firebase/auth";
 import { doc, setDoc, getDoc, collection, query, where, getDocs, type Firestore, runTransaction, serverTimestamp } from "firebase/firestore";
-import { useFirebase, useAuthService } from "@/firebase";
+import { useAuthService, useDbService } from "@/firebase";
 import type { Admin, AdminRole } from "@/lib/admin-data";
 
 // Pre-defined credentials for the one-time Head Admin setup
@@ -32,8 +32,8 @@ const HEAD_ADMIN_PHONE = '9999999999';
 export default function AdminLoginPage() {
   const { toast } = useToast();
   const router = useRouter();
-  const { db } = useFirebase();
   const auth = useAuthService();
+  const db = useDbService();
 
   const [email, setEmail] = useState(typeof window !== 'undefined' ? localStorage.getItem('rememberedAdmin') || "" : "");
   const [rememberMe, setRememberMe] = useState(typeof window !== 'undefined' ? !!localStorage.getItem('rememberedAdmin') : false);

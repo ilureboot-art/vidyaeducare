@@ -69,7 +69,13 @@ export default function AdminLoginPage() {
           router.push('/admin/analytics');
       } else {
         await signOut(auth);
-        toast({ variant: "destructive", title: "Access Denied", description: "You do not have permission to access the admin panel or your account is inactive."});
+        toast({ 
+            variant: "destructive", 
+            title: "Access Denied", 
+            description: adminDocSnap.exists() 
+                ? "Your admin account is not active. Please contact support."
+                : "You are not registered as an admin. Your credentials are correct, but you lack admin permissions."
+        });
       }
     } catch (error: any) {
        let errorMessage = "An unknown error occurred.";
@@ -78,7 +84,7 @@ export default function AdminLoginPage() {
             case 'auth/user-not-found':
             case 'auth/wrong-password':
             case 'auth/invalid-credential':
-                errorMessage = "Invalid email or password.";
+                errorMessage = "Invalid email or password. Please check your credentials and try again.";
                 break;
             default:
                 errorMessage = error.message;
@@ -292,5 +298,3 @@ export default function AdminLoginPage() {
     </div>
   );
 }
-
-    

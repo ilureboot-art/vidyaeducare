@@ -8,6 +8,7 @@ import { getFirestore, type Firestore, enableIndexedDbPersistence } from "fireba
 const firebaseConfig = {
   "projectId": "vidyaeducare",
   "appId": "1:759861893307:web:9c8d51835795392bc6b19e",
+  "storageBucket": "vidyaeducare.appspot.com",
   "apiKey": "AIzaSyBvwttvsCmg-gL3RBXsxfhHPccIAssXWFo",
   "authDomain": "vidyaeducare.firebaseapp.com",
   "measurementId": "",

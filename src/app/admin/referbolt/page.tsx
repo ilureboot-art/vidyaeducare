@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { RefreshCw, Users, IndianRupee, Repeat, Loader2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { useFirebase } from "@/context/FirebaseClientProvider";
-import { collection, getDocs, query, Timestamp, type Firestore } from "firebase/firestore";
+import { collection, getDocs, query, Timestamp, type Firestore, getCountFromServer } from "firebase/firestore";
 
 type Cycle = {
   id: string;
@@ -42,48 +42,51 @@ export default function ReferBoltManagementPage() {
   useEffect(() => {
     const fetchData = async () => {
         if (!db) return;
+        setStats(null); // Show loader
+        
         const referboltSnapshot = await getDocs(collection(db, "referbolt"));
         let totalCycles = 0;
-        let totalCommissions = 0;
-        const cycleList: Cycle[] = [];
-        const referralList: Referral[] = [];
         let activeReferrers = 0;
 
-        referboltSnapshot.forEach(doc => {
+        const cycleList: Cycle[] = referboltSnapshot.docs.map(doc => {
             const data = doc.data();
             totalCycles += (data.cyclesCompleted || 0);
-            totalCommissions += (data.totalCommissions || 0);
             if (data.isSubscribed) {
               activeReferrers++;
             }
-            cycleList.push({
+            return {
               id: doc.id,
               referrer: data.userName || `User ${doc.id.substring(0, 5)}`,
               referrals: data.cycleProgress || 0,
               status: (data.cycleProgress || 0) >= 3 ? 'Completed' : 'In Progress',
               subscriptionType: data.autoRenew ? 'Auto-Renewed' : 'Manual',
-            });
+            };
         });
 
-        setStats({ totalCycles, totalCommissions, activeReferrers });
-        setCycles(cycleList);
-
         // Fetch recent referral activities (more complex, simplified for now)
-        const transactionsSnapshot = await getDocs(query(collection(db, 'transactions')));
+        const transactionsQuery = query(collection(db, 'transactions'));
+        const transactionsSnapshot = await getDocs(transactionsQuery);
+        let totalCommissions = 0;
+        const referralList: Referral[] = [];
+
         transactionsSnapshot.forEach(doc => {
             const tx = doc.data();
-            if (tx.type === 'Referral Bonus') {
+            if (tx.type === 'Referral Bonus' || tx.type === 'Commission') {
+                totalCommissions += tx.amount;
                 const date = tx.date instanceof Timestamp ? tx.date.toDate().toISOString() : tx.date;
                 referralList.push({
                     id: doc.id,
                     referrer: tx.user,
-                    newUser: tx.description.split(' for ')[1] || 'N/A',
+                    newUser: tx.description.split(' for ')[1] || tx.description.split(' from ')[1] || 'N/A',
                     date: date,
                     commission: `₹${tx.amount}`,
                     status: tx.status
                 });
             }
         });
+        
+        setStats({ totalCycles, totalCommissions, activeReferrers });
+        setCycles(cycleList);
         setReferrals(referralList);
     };
     if (db) {

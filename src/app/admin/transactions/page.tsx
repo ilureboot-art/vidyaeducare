@@ -52,21 +52,23 @@ export default function TransactionsPage() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'rejected'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'deposit' | 'withdrawal'>('all');
   
-  useEffect(() => {
+  const fetchTransactions = async () => {
     if (!db) return;
-
+    setTransactions(null); // Show loader while fetching
     const txsCollectionRef = collection(db, "transactions");
     const q = query(txsCollectionRef, orderBy("date", "desc"));
     
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-        const txs = querySnapshot.docs.map(doc => {
-            const data = doc.data();
-            const date = data.date instanceof Timestamp ? data.date.toDate().toISOString() : data.date;
-            return { id: doc.id, ...data, date } as Transaction
-        });
-        setTransactions(txs);
+    const querySnapshot = await getDocs(q);
+    const txs = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        const date = data.date instanceof Timestamp ? data.date.toDate().toISOString() : data.date;
+        return { id: doc.id, ...data, date } as Transaction;
     });
-    return () => unsubscribe();
+    setTransactions(txs);
+  };
+  
+  useEffect(() => {
+    fetchTransactions();
   }, [db]);
 
 
@@ -121,6 +123,10 @@ export default function TransactionsPage() {
           title: "Transaction Updated",
           description: `Transaction ${id} has been marked as ${newStatus}.`,
         });
+        
+        // Refresh data after update
+        fetchTransactions();
+
     } catch(error) {
         console.error("Error updating transaction:", error);
         toast({ variant: 'destructive', title: 'Error', description: 'Could not update transaction.' });

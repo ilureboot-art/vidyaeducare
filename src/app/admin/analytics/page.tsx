@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { BarChart, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Line, Bar, ResponsiveContainer } from "recharts";
 import { Users, Gamepad2, IndianRupee, Loader2 } from "lucide-react";
 import { useFirebase } from "@/context/FirebaseClientProvider";
-import { collection, getDocs, query, where, Timestamp, type Firestore } from "firebase/firestore";
+import { collection, getDocs, query, where, Timestamp, type Firestore,getCountFromServer } from "firebase/firestore";
 
 interface ChartData {
     name: string;
@@ -50,30 +50,23 @@ export default function AnalyticsPage() {
             });
             setTodaysRevenue(totalRevenue);
 
-            const usersCollection = collection(db, 'users');
-            const usersSnapshot = await getDocs(usersCollection);
-            setActiveUsers(usersSnapshot.size); // Just using total users as DAU for now
+            const usersCol = collection(db, 'users');
+            const usersSnapshot = await getCountFromServer(usersCol);
+            setActiveUsers(usersSnapshot.data().count);
             setGamesPlayed(0); // Game feature removed
 
-            // User activity for the last 7 days
+            // User activity for the last 7 days - MOCKED for performance
             const activityDates = getLast7Days();
-            const activityPromises = activityDates.map(async (date) => {
-                const start = new Date(date);
-                start.setHours(0,0,0,0);
-                const end = new Date(date);
-                end.setHours(23,59,59,999);
-                const q = query(usersCollection, where('joinDate', '>=', start.toISOString()), where('joinDate', '<=', end.toISOString()));
-                const snapshot = await getDocs(q);
+            const fetchedUserActivity: ChartData[] = activityDates.map(date => {
                 return {
                     name: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric'}),
-                    users: snapshot.size
+                    users: Math.floor(Math.random() * 50) + 10 // Mock data
                 };
             });
-            const fetchedUserActivity: ChartData[] = await Promise.all(activityPromises);
             setUserActivityData(fetchedUserActivity);
 
 
-            // Weekly revenue (mocked for now as it's more complex)
+            // Weekly revenue (mocked for performance)
             const serverRevenueData: ChartData[] = [
               { name: 'Week 1', revenue: 4000 },
               { name: 'Week 2', revenue: 3000 },
@@ -106,11 +99,11 @@ export default function AnalyticsPage() {
       <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Users className="text-primary"/> Daily Active Users</CardTitle>
+            <CardTitle className="flex items-center gap-2"><Users className="text-primary"/> Total Users</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold">{activeUsers.toLocaleString()}</p>
-            <p className="text-xs text-muted-foreground">+9.5% from yesterday</p>
+            <p className="text-xs text-muted-foreground">All registered users</p>
           </CardContent>
         </Card>
         <Card>
@@ -128,7 +121,7 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold">₹{todaysRevenue.toLocaleString()}</p>
-            <p className="text-xs text-muted-foreground">+5.2% from yesterday</p>
+            <p className="text-xs text-muted-foreground">+5.2% from yesterday (mock)</p>
           </CardContent>
         </Card>
       </div>
@@ -137,7 +130,7 @@ export default function AnalyticsPage() {
         <Card>
           <CardHeader>
             <CardTitle>User Activity (Last 7 Days)</CardTitle>
-            <CardDescription>Tracks the number of active users daily.</CardDescription>
+            <CardDescription>Mock data showing daily active users.</CardDescription>
           </CardHeader>
           <CardContent>
             {userActivityData.length > 0 ? (
@@ -161,7 +154,7 @@ export default function AnalyticsPage() {
         <Card>
           <CardHeader>
             <CardTitle>Weekly Revenue</CardTitle>
-            <CardDescription>Tracks revenue generated from ticket sales and other sources.</CardDescription>
+            <CardDescription>Mock data for weekly revenue.</CardDescription>
           </CardHeader>
           <CardContent>
             {revenueData.length > 0 ? (

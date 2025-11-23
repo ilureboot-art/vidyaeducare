@@ -12,14 +12,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from 'next/link';
 import type { StoreConfig, MockTestPackage, ReferboltSubscription } from "@/lib/store-config";
 import type { WalletData } from "@/lib/user-data";
-import { useFirebase, useAuth } from "@/firebase";
+import { useAuth, useDbService } from "@/firebase";
 import { doc, getDoc, runTransaction, collection, serverTimestamp, updateDoc, arrayUnion, query, where, getDocs, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 function StorePageContent() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const { db, loading } = useFirebase();
+  const db = useDbService();
   
   const [walletData, setWalletData] = useState<WalletData | null>(null);
   const [storeConfig, setStoreConfig] = useState<StoreConfig | null>(null);
@@ -29,7 +29,7 @@ function StorePageContent() {
   const [referralCode2, setReferralCode2] = useState("");
 
   useEffect(() => {
-    if (user && !loading && db) {
+    if (user && db) {
         const fetchData = async () => {
             const walletDocRef = doc(db, "wallets", user.uid);
             const walletDoc = await getDoc(walletDocRef);
@@ -44,7 +44,7 @@ function StorePageContent() {
         };
         fetchData();
     }
-  }, [user, db, loading]);
+  }, [user, db]);
 
   const handlePurchase = async (item: MockTestPackage | ReferboltSubscription, type: 'mock' | 'referbolt') => {
     if (!user || !storeConfig || !walletData || !db) return;
@@ -145,7 +145,7 @@ function StorePageContent() {
     }
   };
 
-  if (loading || !walletData || !storeConfig) {
+  if (!walletData || !storeConfig) {
     return (
         <div className="w-full max-w-4xl mx-auto flex justify-center items-center h-64">
             <Loader2 className="animate-spin text-primary" size={32}/>

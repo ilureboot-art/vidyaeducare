@@ -20,7 +20,7 @@ import type { Transaction } from "@/lib/user-data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
-import { useAuth, useFirebase } from "@/firebase";
+import { useAuth, useDbService } from "@/firebase";
 import { collection, query, where, getDocs, orderBy, onSnapshot, Timestamp, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
@@ -46,14 +46,14 @@ const getTypeIcon = (type: string, amount: number) => {
 
 function TransactionsPageContent() {
   const { user, loading: authLoading } = useAuth();
-  const { db, loading: firebaseLoading } = useFirebase();
+  const db = useDbService();
   const [transactions, setTransactions] = useState<Transaction[] | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'rejected'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'deposit' | 'withdrawal'>('all');
   
   useEffect(() => {
-    if (user && !firebaseLoading && db) {
+    if (user && db) {
         const txsRef = collection(db, "transactions");
         const q = query(txsRef, where("user", "==", user.uid), orderBy("date", "desc"));
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -66,9 +66,9 @@ function TransactionsPageContent() {
         });
         return () => unsubscribe();
     }
-  }, [user, db, firebaseLoading]);
+  }, [user, db]);
 
-  if (authLoading || firebaseLoading || !transactions) {
+  if (authLoading || !transactions) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />

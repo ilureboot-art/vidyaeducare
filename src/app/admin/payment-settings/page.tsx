@@ -10,12 +10,12 @@ import { useToast } from "@/hooks/use-toast";
 import { Landmark, Loader2 } from "lucide-react";
 import type { AdminPaymentMethods } from "@/lib/user-data";
 import Image from "next/image";
-import { useFirebase } from "@/firebase";
+import { useDbService } from "@/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 
 export default function PaymentSettingsPage() {
     const { toast } = useToast();
-    const { db } = useFirebase();
+    const db = useDbService();
     const [methods, setMethods] = useState<AdminPaymentMethods | null>(null);
     const [qrFile, setQrFile] = useState<File | null>(null);
     

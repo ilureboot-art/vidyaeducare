@@ -12,7 +12,7 @@ import { Zap, Share2, IndianRupee, Users, CheckCircle, Repeat, Loader2 } from "l
 import Link from "next/link";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { useAuth, useFirebase } from "@/firebase";
+import { useAuth, useDbService } from "@/firebase";
 import { doc, getDoc, onSnapshot, DocumentData, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
@@ -27,13 +27,13 @@ const benefits = [
 function ReferBoltPageContent() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const { db, loading } = useFirebase();
+  const db = useDbService();
   
   const [data, setData] = useState<DocumentData | null | { isSubscribed: boolean }>({ isSubscribed: false });
   const [autoRenew, setAutoRenew] = useState(false);
   
   useEffect(() => {
-    if (user && !loading && db) {
+    if (user && db) {
         const referboltDocRef = doc(db, "referbolt", user.uid);
         const unsub = onSnapshot(referboltDocRef, (docSnap) => {
             if (docSnap.exists()) {
@@ -46,7 +46,7 @@ function ReferBoltPageContent() {
         });
         return () => unsub();
     }
-  }, [user, db, loading]);
+  }, [user, db]);
 
   const handleShare = async () => {
     if (!data || !('referralCode' in data)) return;
@@ -87,7 +87,7 @@ Subscribe and start your earning cycle now: ${shareUrl}
     }
   };
   
-  if (loading || !data) {
+  if (!data) {
       return (
           <div className="w-full max-w-2xl mx-auto flex items-center justify-center h-96">
               <Loader2 className="animate-spin text-primary" size={32}/>

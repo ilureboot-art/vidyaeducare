@@ -23,7 +23,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useAuth, useFirebase } from "@/firebase";
+import { useAuth, useDbService } from "@/firebase";
 import { doc, getDoc, collection, query, where, getDocs, Timestamp, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
@@ -51,7 +51,7 @@ interface ReferralData {
 function IBADashboardPageContent() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const { db } = useFirebase();
+  const db = useDbService();
   const [referralData, setReferralData] = useState<ReferralData | null>(null);
   const [ibaReferralCode, setIbaReferralCode] = useState<string | null>(null);
   

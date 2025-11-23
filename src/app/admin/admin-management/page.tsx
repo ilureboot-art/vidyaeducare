@@ -38,7 +38,7 @@ import { format } from 'date-fns';
 import type { Admin, AdminRole } from "@/lib/admin-data";
 import { collection, onSnapshot, doc, setDoc, deleteDoc, updateDoc, getDocs } from "firebase/firestore";
 import { createUserWithEmailAndPassword, signOut } from "firebase/auth";
-import { useFirebase, useAuth, useAuthService } from "@/firebase";
+import { useAuth, useAuthService, useDbService } from "@/firebase";
 
 
 const WhatsAppIcon = () => (
@@ -48,7 +48,7 @@ const WhatsAppIcon = () => (
 )
 
 export default function AdminManagementPage() {
-  const { db } = useFirebase();
+  const db = useDbService();
   const auth = useAuthService();
   const { user, loading: authLoading, isHeadAdmin } = useAuth();
   const [allAdmins, setAllAdmins] = useState<Admin[] | null>(null);

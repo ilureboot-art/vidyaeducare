@@ -32,7 +32,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Image from "next/image";
 import { CopyButton } from "@/components/CopyButton";
 import { format } from "date-fns";
-import { useAuth, useFirebase } from "@/firebase";
+import { useAuth, useDbService } from "@/firebase";
 import { doc, getDoc, collection, addDoc, query, where, orderBy, limit, onSnapshot, serverTimestamp, runTransaction, Timestamp } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
@@ -58,7 +58,7 @@ type WalletInfo = {
 function WalletPageContent() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const { db } = useFirebase();
+  const db = useDbService();
   
   const [walletInfo, setWalletInfo] = useState<WalletInfo | null>(null);
   const [transactions, setTransactions] = useState<Transaction[] | null>(null);

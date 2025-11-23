@@ -22,7 +22,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { format } from "date-fns";
-import { useAuth, useFirebase } from "@/firebase";
+import { useAuth, useDbService } from "@/firebase";
 import { collection, query, where, getDocs, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
@@ -40,7 +40,7 @@ type Client = {
 };
 
 function StudentAccessPageContent() {
-  const { db } = useFirebase();
+  const db = useDbService();
   const [clients, setClients] = useState<Client[] | null>(null);
   const { user } = useAuth();
   
@@ -142,7 +142,8 @@ function StudentAccessPageContent() {
                 )}
               </TableBody>
             </Table>
-          </CardContent>
+          </Table>
+        </CardContent>
         </Card>
       </div>
   );

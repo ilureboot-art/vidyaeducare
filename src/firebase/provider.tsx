@@ -6,7 +6,7 @@ import { onAuthStateChanged, type User, type Auth } from 'firebase/auth';
 import { doc, getDoc, type Firestore } from 'firebase/firestore';
 import type { Admin } from '@/lib/admin-data';
 import { Loader2 } from 'lucide-react';
-import { useFirebase } from '@/hooks/use-firebase'; // Use the new dedicated hook
+import { getFirebase } from '@/firebase/client'; // Use the new dedicated hook
 
 interface AuthState {
   user: User | null;
@@ -16,10 +16,10 @@ interface AuthState {
 }
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
-const FirebaseContext = createContext<{ auth: Auth | null; db: Firestore | null }>({ auth: null, db: null });
+const FirebaseServicesContext = createContext<{ auth: Auth; db: Firestore; } | undefined>(undefined);
 
 export function FirebaseProvider({ children }: { children: React.ReactNode }) {
-  const { app, auth, db, loading: firebaseLoading } = useFirebase();
+  const [services] = useState(getFirebase()); // Initialize once and hold the reference
   const [authState, setAuthState] = useState<Omit<AuthState, 'loading'>>({
     user: null,
     isAdmin: false,
@@ -28,7 +28,8 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   useEffect(() => {
-    if (firebaseLoading || !auth || !db) return;
+    // services are guaranteed to be initialized here.
+    const { auth, db } = services;
 
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
@@ -49,19 +50,19 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => unsubscribe();
-  }, [auth, db, firebaseLoading]);
+  }, [services]); // Dependency on services ensures it runs once services are available.
 
   const authContextValue = useMemo(() => ({
     ...authState,
-    loading: isAuthLoading || firebaseLoading,
-  }), [authState, isAuthLoading, firebaseLoading]);
+    loading: isAuthLoading,
+  }), [authState, isAuthLoading]);
 
-  const firebaseContextValue = useMemo(() => ({
-    auth,
-    db,
-  }), [auth, db]);
+  const firebaseServicesContextValue = useMemo(() => ({
+    auth: services.auth,
+    db: services.db,
+  }), [services]);
 
-  if (isAuthLoading || firebaseLoading) {
+  if (isAuthLoading) {
     return (
       <div className="flex justify-center items-center h-screen bg-background">
         <Loader2 className="animate-spin text-primary" size={32} />
@@ -71,9 +72,9 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider value={authContextValue}>
-      <FirebaseContext.Provider value={firebaseContextValue}>
+      <FirebaseServicesContext.Provider value={firebaseServicesContextValue}>
         {children}
-      </FirebaseContext.Provider>
+      </FirebaseServicesContext.Provider>
     </AuthContext.Provider>
   );
 }
@@ -88,7 +89,7 @@ export const useAuth = (): AuthState => {
 
 // These hooks provide direct access to the initialized services
 export const useFirebaseServices = () => {
-    const context = useContext(FirebaseContext);
+    const context = useContext(FirebaseServicesContext);
     if(context === undefined) {
         throw new Error('useFirebaseServices must be used within a FirebaseProvider');
     }
@@ -97,11 +98,9 @@ export const useFirebaseServices = () => {
 
 export const useAuthService = (): Auth => {
     const { auth } = useFirebaseServices();
-    if (!auth) throw new Error('Auth service is not available');
     return auth;
 }
 export const useDbService = (): Firestore => {
     const { db } = useFirebaseServices();
-    if (!db) throw new Error('Firestore service is not available');
     return db;
 }

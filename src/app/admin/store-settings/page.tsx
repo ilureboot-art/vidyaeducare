@@ -12,12 +12,12 @@ import { PlusCircle, Trash2, Zap, BookOpen, GraduationCap, Percent, Loader2 } fr
 import type { TicketPackage, ReferboltSubscription, MockTestPackage, ReferboltSettings, GameSettings, StoreConfig } from "@/lib/store-config";
 import type { AcademicConfig } from "@/lib/academic-config";
 import { Switch } from "@/components/ui/switch";
-import { useFirebase } from "@/firebase";
+import { useDbService } from "@/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 
 export default function AdminStoreSettingsPage() {
   const { toast } = useToast();
-  const { db } = useFirebase();
+  const db = useDbService();
   
   const [storeConfig, setStoreConfig] = useState<StoreConfig | null>(null);
   const [academicConfig, setAcademicConfig] = useState<AcademicConfig | null>(null);

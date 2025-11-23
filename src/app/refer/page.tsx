@@ -7,13 +7,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Share2, IndianRupee, Gift, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { doc, getDoc, type Firestore } from "firebase/firestore";
-import { useFirebase, useAuth } from "@/firebase";
+import { useDbService, useAuth } from "@/firebase";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 function ReferAndEarnPageContent() {
     const { toast } = useToast();
     const { user } = useAuth();
-    const { db, loading } = useFirebase();
+    const db = useDbService();
     
     const [referralBonus, setReferralBonus] = useState<number | null>(null);
     const [referralCode, setReferralCode] = useState<string | null>(null);
@@ -38,11 +38,11 @@ function ReferAndEarnPageContent() {
             }
         }
         
-        if (!loading && db) {
+        if (db) {
             fetchConfig();
             fetchUserRefCode();
         }
-    }, [user, db, loading]);
+    }, [user, db]);
 
     const handleShare = async () => {
         if (referralCode === null || referralBonus === null) return;
@@ -78,7 +78,7 @@ Click here to join: ${url}`;
         }
     };
     
-    if (loading || referralCode === null || referralBonus === null) {
+    if (referralCode === null || referralBonus === null) {
         return (
           <div className="w-full max-w-2xl mx-auto flex items-center justify-center h-96">
             <Loader2 className="animate-spin text-primary" size={32} />

@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useFirebase } from '@/firebase';
+import { useDbService, useAuthService } from '@/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, runTransaction, getDocs, collection, query, where } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -17,7 +17,8 @@ const HEAD_ADMIN_NAME = 'Main Admin';
 const HEAD_ADMIN_PHONE = '9999999999';
 
 export default function SetupAdminPage() {
-  const { db, auth } = useFirebase();
+  const db = useDbService();
+  const auth = useAuthService();
   const router = useRouter();
   const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'already_exists'>('loading');
   const [errorMessage, setErrorMessage] = useState('');

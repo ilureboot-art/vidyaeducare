@@ -14,13 +14,19 @@ import { AdminSidebar } from "@/components/AdminSidebar";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { Notifications } from "@/components/admin/Notifications";
 
-function AppContent({ children }: { children: React.ReactNode }) {
+function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAdminPage = pathname.startsWith('/admin');
   const isAuthPage = pathname === '/login' || pathname === '/signup' || pathname === '/forgot-password';
   const isAdminLoginPage = pathname === '/admin/login';
 
-  if (isAdminLoginPage) {
+  const loadingFallback = (
+    <div className="flex justify-center items-center h-screen bg-background">
+      <Loader2 className="animate-spin text-primary" size={32} />
+    </div>
+  );
+
+  if (isAdminLoginPage || isAuthPage) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-muted/40">
         {children}
@@ -28,45 +34,42 @@ function AppContent({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (isAdminPage) {
-    return (
-      <SidebarProvider>
-        <div className="flex min-h-screen">
-            <AdminSidebar />
-            <SidebarInset className="flex-1 flex flex-col">
-                <header className="p-4 border-b flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                    <SidebarTrigger className="md:hidden" />
-                    <h1 className="text-xl font-semibold">Admin Panel</h1>
-                    </div>
-                    <Notifications />
-                </header>
-                <main className="flex-1 p-8 bg-muted/40">
-                    {children}
-                </main>
-            </SidebarInset>
-        </div>
-      </SidebarProvider>
-    );
-  }
-
   return (
-    <div className="flex flex-col min-h-screen">
-      {!isAuthPage && <AppHeader />}
-      <main className={`flex-1 flex flex-col w-full items-center ${!isAuthPage ? 'p-4 pb-24 pt-20' : ''} ${isAuthPage ? 'justify-center' : ''}`}>
-        {children}
-      </main>
-      {!isAuthPage && (
-        <>
-          <Navbar />
-          <ChatWidget />
-        </>
+    <FirebaseClientProvider loadingFallback={loadingFallback}>
+      {isAdminPage ? (
+        <SidebarProvider>
+          <div className="flex min-h-screen">
+              <AdminSidebar />
+              <SidebarInset className="flex-1 flex flex-col">
+                  <header className="p-4 border-b flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-4">
+                      <SidebarTrigger className="md:hidden" />
+                      <h1 className="text-xl font-semibold">Admin Panel</h1>
+                      </div>
+                      <Notifications />
+                  </header>
+                  <main className="flex-1 p-8 bg-muted/40">
+                      {children}
+                  </main>
+              </SidebarInset>
+          </div>
+        </SidebarProvider>
+      ) : (
+        <div className="flex flex-col min-h-screen">
+          <AppHeader />
+          <main className='flex-1 flex flex-col w-full items-center p-4 pb-24 pt-20'>
+            {children}
+          </main>
+          <>
+            <Navbar />
+            <ChatWidget />
+          </>
+        </div>
       )}
       <Toaster />
-    </div>
+    </FirebaseClientProvider>
   );
 }
-
 
 export default function RootLayout({
   children,
@@ -92,15 +95,7 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
         >
-          <FirebaseClientProvider
-             loadingFallback={
-              <div className="flex justify-center items-center h-screen bg-background">
-                <Loader2 className="animate-spin text-primary" size={32} />
-              </div>
-            }
-          >
-            <AppContent>{children}</AppContent>
-          </FirebaseClientProvider>
+          <AppLayout>{children}</AppLayout>
         </ThemeProvider>
       </body>
     </html>

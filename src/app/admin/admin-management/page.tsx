@@ -39,6 +39,7 @@ import type { Admin, AdminRole } from "@/lib/admin-data";
 import { collection, onSnapshot, doc, setDoc, deleteDoc, updateDoc, getDocs } from "firebase/firestore";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { useFirebase, useAuth } from "@/context/FirebaseClientProvider";
+import { initializeApp, deleteApp } from "firebase/app";
 
 
 const WhatsAppIcon = () => (
@@ -48,7 +49,7 @@ const WhatsAppIcon = () => (
 )
 
 export default function AdminManagementPage() {
-  const { db, auth } = useFirebase();
+  const { app: mainApp, db, auth } = useFirebase();
   const { user, loading: authLoading, isHeadAdmin } = useAuth();
   const [allAdmins, setAllAdmins] = useState<Admin[] | null>(null);
   
@@ -150,11 +151,14 @@ export default function AdminManagementPage() {
         return;
     }
     
+    // Create a temporary, secondary Firebase app instance to create the user
+    // This prevents the current admin from being signed out
+    const tempAppName = `temp-admin-creation-${Date.now()}`;
+    const tempApp = initializeApp(mainApp.options, tempAppName);
+
     try {
-        // This creates a temporary user. It's important to not let this interfere with the current logged-in admin.
-        // The proper way involves a secondary Firebase app instance on a backend, but for client-side,
-        // we'll create the user and immediately write their doc. The current admin's auth state is preserved.
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const tempAuth = getAuth(tempApp);
+        const userCredential = await createUserWithEmailAndPassword(tempAuth, email, password);
         const tempUser = userCredential.user;
 
         const newAdminData: Omit<Admin, 'id'> = {
@@ -166,20 +170,21 @@ export default function AdminManagementPage() {
             joinDate: new Date().toISOString(),
         };
 
-        // The security rule `allow create: if request.auth.uid == userId` allows this, as the `auth` object's
-        // current user is now the `tempUser` we just created.
+        // Use the main db instance to write the document
         await setDoc(doc(db, "admins", tempUser.uid), newAdminData);
         
         toast({ title: 'Admin Created!', description: `${name} has been added.`});
         setIsCreateDialogOpen(false);
-        
-        // IMPORTANT: We must re-establish the original admin's authentication state.
-        // A simple page reload is the most straightforward way to do this client-side without complex state management.
+        // Page reload is no longer strictly necessary, but good for ensuring clean state.
+        // It's better to update the local state directly if possible, but reload is simpler.
         window.location.reload();
 
     } catch(error: any) {
          console.error("Error creating admin:", error);
          toast({ variant: 'destructive', title: "Error creating admin", description: error.message || 'An unknown error occurred.'});
+    } finally {
+        // Clean up the temporary app
+        await deleteApp(tempApp);
     }
   }
   
@@ -514,4 +519,5 @@ export default function AdminManagementPage() {
     </div>
   );
 }
+
     

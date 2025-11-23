@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,9 +25,15 @@ export default function ForgotPasswordPage() {
   const router = useRouter();
   const auth = useAuthService();
   const [email, setEmail] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const isFirebaseReady = !!auth;
+
+  useEffect(() => {
+    if (isFirebaseReady) {
+      setIsLoading(false);
+    }
+  }, [isFirebaseReady]);
 
   const handleResetRequest = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,9 +85,9 @@ export default function ForgotPasswordPage() {
                       onChange={(e) => setEmail(e.target.value)}
                     />
                 </div>
-                <Button type="submit" className="w-full" disabled={isLoading || !isFirebaseReady}>
-                    {isLoading || !isFirebaseReady ? <Loader2 className="animate-spin mr-2"/> : <Mail className="mr-2"/>}
-                    {isFirebaseReady ? 'Send Reset Link' : 'Loading...'}
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? <Loader2 className="animate-spin mr-2"/> : <Mail className="mr-2"/>}
+                    {isLoading ? 'Loading...' : 'Send Reset Link'}
                 </Button>
             </form>
         </CardContent>

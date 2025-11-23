@@ -58,18 +58,26 @@ export default function AdminManagementPage() {
   const [selectedAdmin, setSelectedAdmin] = useState<Admin | null>(null);
   const [newAdminRole, setNewAdminRole] = useState<AdminRole | ''>('');
   const { toast } = useToast();
-
-  const fetchAdmins = async () => {
-      if (loading || !user || !db || !isHeadAdmin) return;
-      const adminsCollection = collection(db, "admins");
-      const adminSnapshot = await getDocs(adminsCollection);
-      const adminList = adminSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Admin));
-      setAllAdmins(adminList);
-  };
   
   useEffect(() => {
-    fetchAdmins();
-  }, [user, db, loading, isHeadAdmin]);
+    if (!db || !isHeadAdmin) {
+      if (!loading && !isHeadAdmin) {
+        setAllAdmins([]);
+      }
+      return;
+    };
+    const adminsCollection = collection(db, "admins");
+    const unsubscribe = onSnapshot(adminsCollection, (snapshot) => {
+        const adminList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Admin));
+        setAllAdmins(adminList);
+    }, (error) => {
+        console.error("Error fetching admins:", error);
+        toast({ variant: 'destructive', title: "Error", description: "Could not fetch admin data."});
+        setAllAdmins([]);
+    });
+
+    return () => unsubscribe();
+  }, [db, isHeadAdmin, loading, toast]);
 
 
   const openWhatsApp = (phone: string, message?: string) => {
@@ -114,7 +122,6 @@ export default function AdminManagementPage() {
         } else {
             await deleteDoc(adminDocRef);
         }
-        await fetchAdmins(); // Re-fetch
         
         toast({
           title: `Request ${newStatus === 'Active' ? 'Approved' : 'Rejected'}`,
@@ -156,7 +163,6 @@ export default function AdminManagementPage() {
         };
 
         await setDoc(doc(db, "admins", user.uid), newAdminData);
-        await fetchAdmins();
         
         toast({ title: 'Admin Created!', description: `${name} has been added.`});
         setIsCreateDialogOpen(false);
@@ -185,7 +191,6 @@ export default function AdminManagementPage() {
 
     try {
         await updateDoc(doc(db, "admins", selectedAdmin.id), updatedData);
-        await fetchAdmins();
         
         toast({ title: 'Admin Updated', description: `${name}'s details have been saved.`});
         setIsEditDialogOpen(false);
@@ -219,7 +224,6 @@ export default function AdminManagementPage() {
     
     try {
         await deleteDoc(doc(db, "admins", adminId));
-        await fetchAdmins();
         
         toast({
             title: "Admin Deleted",
@@ -500,5 +504,3 @@ export default function AdminManagementPage() {
     </div>
   );
 }
-
-    

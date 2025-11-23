@@ -101,24 +101,22 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
         >
-            {isAuthPage ? (
-                <div className="flex items-center justify-center min-h-screen bg-muted/40">
-                    <FirebaseClientProvider loadingFallback={loadingFallback}>
-                        {children}
-                    </FirebaseClientProvider>
-                </div>
-            ) : (
-                <FirebaseClientProvider loadingFallback={loadingFallback}>
-                    <AuthGuard>
-                        {isAdminPage ? (
-                            <AdminLayout>{children}</AdminLayout>
-                        ) : (
-                            <UserLayout>{children}</UserLayout>
-                        )}
-                        <Toaster />
-                    </AuthGuard>
-                </FirebaseClientProvider>
-            )}
+            <FirebaseClientProvider loadingFallback={loadingFallback}>
+              {isAuthPage ? (
+                  <div className="flex items-center justify-center min-h-screen bg-muted/40">
+                      {children}
+                  </div>
+              ) : (
+                  <AuthGuard>
+                      {isAdminPage ? (
+                          <AdminLayout>{children}</AdminLayout>
+                      ) : (
+                          <UserLayout>{children}</UserLayout>
+                      )}
+                  </AuthGuard>
+              )}
+              <Toaster />
+            </FirebaseClientProvider>
         </ThemeProvider>
       </body>
     </html>

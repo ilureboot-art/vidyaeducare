@@ -7,6 +7,7 @@ import { type FirebaseApp } from "firebase/app";
 import { type Auth, onAuthStateChanged, type User } from "firebase/auth";
 import { type Firestore, doc, getDoc } from "firebase/firestore";
 import type { Admin } from '@/lib/admin-data';
+import { usePathname } from 'next/navigation';
 
 interface FirebaseContextType {
   app: FirebaseApp;
@@ -36,10 +37,13 @@ export function FirebaseClientProvider({
   children: ReactNode,
   loadingFallback: ReactNode 
 }) {
+  const pathname = usePathname();
+  const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup') || pathname.startsWith('/forgot-password') || pathname.startsWith('/admin/login');
+
   const [services, setServices] = useState<FirebaseContextType | null>(null);
   const [authContext, setAuthContext] = useState<AuthContextType>({
     user: null,
-    loading: true,
+    loading: !isAuthPage, // Don't show loading on auth pages initially
     isAdmin: false,
     isHeadAdmin: false,
   });
@@ -49,6 +53,13 @@ export function FirebaseClientProvider({
         const initializedServices = await getFirebaseServices();
         setServices(initializedServices);
         
+        // If we are on an auth page, we don't need to wait for onAuthStateChanged
+        // The page itself will handle the redirect upon successful login.
+        if(isAuthPage) {
+          setAuthContext(prev => ({ ...prev, loading: false }));
+          return () => {}; // Return empty cleanup function
+        }
+
         const unsubscribe = onAuthStateChanged(initializedServices.auth, async (user) => {
           if (user) {
             // Check for admin status only once on auth state change
@@ -85,9 +96,16 @@ export function FirebaseClientProvider({
             unsubscribe();
         }
     }
-  }, []);
+  }, [isAuthPage]);
 
-  if (authContext.loading || !services) {
+  // For non-auth pages, show the main loading fallback.
+  if (authContext.loading && !isAuthPage) {
+    return <>{loadingFallback}</>;
+  }
+
+  // Provide the context even on auth pages so useFirebase() doesn't fail.
+  if (!services) {
+    // If services aren't ready yet, show a loader. This should be very brief.
     return <>{loadingFallback}</>;
   }
 

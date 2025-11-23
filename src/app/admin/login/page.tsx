@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,44 +13,39 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Shield, ArrowLeft, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Shield, ArrowLeft, Eye, EyeOff, Loader2, UserPlus, AlertTriangle, CheckCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from "firebase/auth";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut, getAuth, deleteApp, initializeApp } from "firebase/auth";
 import { doc, setDoc, getDoc, collection, query, where, getDocs, type Firestore, runTransaction, serverTimestamp } from "firebase/firestore";
 import { useFirebase } from "@/context/FirebaseClientProvider";
 import type { Admin, AdminRole } from "@/lib/admin-data";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 
+// Pre-defined credentials for the one-time Head Admin setup
+const HEAD_ADMIN_EMAIL = 'admin@vidyaeducare.com';
+const HEAD_ADMIN_PASSWORD = 'password123';
+const HEAD_ADMIN_NAME = 'Main Admin';
+const HEAD_ADMIN_PHONE = '9999999999';
 
 export default function AdminLoginPage() {
   const { toast } = useToast();
   const router = useRouter();
-  const { db, auth } = useFirebase();
+  const { app: mainApp, db, auth } = useFirebase();
 
   const [email, setEmail] = useState(typeof window !== 'undefined' ? localStorage.getItem('rememberedAdmin') || "" : "");
   const [rememberMe, setRememberMe] = useState(typeof window !== 'undefined' ? !!localStorage.getItem('rememberedAdmin') : false);
   const [showPassword, setShowPassword] = useState(false);
-  const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("login");
-  
+  const [setupStatus, setSetupStatus] = useState<'idle' | 'loading' | 'success' | 'error' | 'already_exists'>('idle');
+  const [setupError, setSetupError] = useState('');
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!auth || !db) {
-        toast({
-            variant: "destructive",
-            title: "Login Failed",
-            description: "Auth configuration not found. Please try again in a moment.",
-        });
+        toast({ variant: "destructive", title: "Login Failed", description: "Auth service not ready. Please try again." });
         return;
     }
     setIsLoading(true);
@@ -63,44 +58,18 @@ export default function AdminLoginPage() {
       const adminDocRef = doc(db, "admins", loggedInUser.uid);
       const adminDocSnap = await getDoc(adminDocRef);
 
-      if (adminDocSnap.exists()) {
-        const adminData = adminDocSnap.data() as Admin;
-        if (adminData.status === 'Active') {
+      if (adminDocSnap.exists() && adminDocSnap.data().status === 'Active') {
           if (rememberMe) {
               localStorage.setItem('rememberedAdmin', email);
           } else {
               localStorage.removeItem('rememberedAdmin');
           }
-
-          toast({
-              title: "Login Successful!",
-              description: "Redirecting to admin dashboard...",
-          });
-           router.push('/admin/analytics');
-        } else if (adminData.status === 'Pending') {
-          await signOut(auth);
-          toast({
-            variant: "destructive",
-            title: "Login Failed",
-            description: "Your admin account has not been approved yet.",
-          });
-        } else {
-          await signOut(auth);
-           toast({
-            variant: "destructive",
-            title: "Access Denied",
-            description: "Your admin account is not active.",
-          });
-        }
+          toast({ title: "Login Successful!", description: "Redirecting to admin dashboard..." });
+          router.push('/admin/analytics');
       } else {
         await signOut(auth);
-        toast({
-          variant: "destructive",
-          title: "Access Denied",
-          description: "You do not have permission to access the admin panel.",
-        });
+        toast({ variant: "destructive", title: "Access Denied", description: "You do not have permission to access the admin panel or your account is inactive."});
       }
-
     } catch (error: any) {
        let errorMessage = "An unknown error occurred.";
        if (error.code) { 
@@ -112,127 +81,16 @@ export default function AdminLoginPage() {
                 break;
             default:
                 errorMessage = error.message;
-                break;
           }
-       } else {
-          errorMessage = error.message;
        }
-
-       toast({
-        variant: "destructive",
-        title: "Login Failed",
-        description: errorMessage,
-      });
+       toast({ variant: "destructive", title: "Login Failed", description: errorMessage });
     } finally {
         setIsLoading(false);
     }
   };
 
- const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Definitive guard clause to prevent race conditions
-    if (!auth || !db) {
-      toast({ variant: "destructive", title: "Signup Failed", description: "Auth service not ready. Please try again in a moment." });
-      setIsLoading(false); // Make sure to stop loading indicator
-      return;
-    }
-    setIsLoading(true);
-
-    const form = e.target as HTMLFormElement;
-    const name = (form.elements.namedItem('name-signup') as HTMLInputElement).value;
-    const signupEmail = (form.elements.namedItem('email-signup') as HTMLInputElement).value;
-    const phone = (form.elements.namedItem('phone-signup') as HTMLInputElement).value;
-    const password = (form.elements.namedItem('password-signup') as HTMLInputElement).value;
-
-    try {
-        // Step 1: Read from the database *before* the transaction to check for Head Admin.
-        const adminsCollection = collection(db, "admins");
-        const headAdminQuery = query(adminsCollection, where("role", "==", "Head Admin"));
-        const headAdminSnapshot = await getDocs(headAdminQuery);
-        const headAdminExists = !headAdminSnapshot.empty;
-
-        // Step 2: Create the user in Firebase Authentication. This happens *outside* the transaction.
-        const userCredential = await createUserWithEmailAndPassword(auth, signupEmail, password);
-        const user = userCredential.user;
-
-        // Step 3: Run all database writes in a single, atomic transaction.
-        await runTransaction(db, async (transaction) => {
-            const role: AdminRole = headAdminExists ? "Sub-admin" : "Head Admin";
-            const status: Admin['status'] = headAdminExists ? "Pending" : "Active";
-            
-            // Write to /admins collection
-            const adminDocRef = doc(db, "admins", user.uid);
-            transaction.set(adminDocRef, {
-                name,
-                email: signupEmail,
-                phone,
-                role,
-                status,
-                joinDate: new Date().toISOString(),
-            });
-
-            // Write to /users collection
-            const userDocRef = doc(db, "users", user.uid);
-            transaction.set(userDocRef, {
-              id: user.uid,
-              name: name,
-              email: signupEmail,
-              phone: phone,
-              joinDate: new Date().toISOString(),
-              status: "Active",
-            });
-
-            // Write to /wallets collection
-            const walletDocRef = doc(db, "wallets", user.uid);
-            transaction.set(walletDocRef, {
-              balance: 0,
-              coins: 0,
-              referralCode: `REF${user.uid.slice(0, 6).toUpperCase()}`
-            });
-        });
-        
-        // Step 4: Handle post-signup UI logic.
-        if (headAdminExists) {
-            await signOut(auth); // Sign out the new sub-admin to await approval
-            toast({
-                title: "Request Sent!",
-                description: "Your request to become a sub-admin has been sent. You will be logged out.",
-                duration: 7000,
-            });
-        } else {
-            toast({
-                title: "Head Admin Created!",
-                description: "You can now log in with your new Head Admin credentials.",
-                duration: 7000,
-            });
-        }
-        
-        form.reset();
-        setActiveTab("login");
-
-    } catch (error: any) {
-        let description = "An unknown error occurred.";
-        if (error.code === 'auth/email-already-in-use') {
-            description = "This email is already registered. Please log in or use 'Forgot Password'.";
-        } else {
-            description = error.message;
-        }
-        toast({
-            variant: "destructive",
-            title: "Signup Failed",
-            description: description,
-        });
-    } finally {
-        setIsLoading(false);
-    }
-};
-
   const handleForgotPassword = async () => {
-    if (!auth) {
-        toast({ variant: "destructive", title: "Error", description: "Auth service not available." });
-        return;
-    }
+    if (!auth) return;
     const currentEmail = (document.getElementById('email-login') as HTMLInputElement)?.value || email;
     if (!currentEmail) {
         toast({ variant: "destructive", title: "Email Required", description: "Enter your email to reset password."});
@@ -249,6 +107,70 @@ export default function AdminLoginPage() {
     }
   };
 
+  const handleCreateHeadAdmin = async () => {
+    if (!db) {
+        toast({ variant: "destructive", title: "Setup Failed", description: "Database service not ready." });
+        return;
+    }
+    setSetupStatus('loading');
+    
+    // Create a temporary, secondary Firebase app instance. This is the key to the fix.
+    // It allows us to create a user without disturbing the current auth state.
+    const tempAppName = `temp-head-admin-creation-${Date.now()}`;
+    const tempApp = initializeApp(mainApp.options, tempAppName);
+    const tempAuth = getAuth(tempApp);
+
+    try {
+        // 1. Check if Head Admin already exists to prevent duplicates.
+        const headAdminQuery = query(collection(db, "admins"), where("role", "==", "Head Admin"));
+        const headAdminSnapshot = await getDocs(headAdminQuery);
+        if (!headAdminSnapshot.empty) {
+          setSetupStatus('already_exists');
+          await deleteApp(tempApp);
+          return;
+        }
+
+        // 2. Create the user in the temporary auth instance.
+        const userCredential = await createUserWithEmailAndPassword(tempAuth, HEAD_ADMIN_EMAIL, HEAD_ADMIN_PASSWORD);
+        const user = userCredential.user;
+
+        // 3. Run all database writes in a single, atomic transaction using the MAIN db connection.
+        await runTransaction(db, async (transaction) => {
+            const adminDocRef = doc(db, "admins", user.uid);
+            transaction.set(adminDocRef, {
+                name: HEAD_ADMIN_NAME, email: HEAD_ADMIN_EMAIL, phone: HEAD_ADMIN_PHONE,
+                role: "Head Admin", status: "Active", joinDate: new Date().toISOString(),
+            });
+
+            const userDocRef = doc(db, "users", user.uid);
+            transaction.set(userDocRef, {
+              id: user.uid, name: HEAD_ADMIN_NAME, email: HEAD_ADMIN_EMAIL, phone: HEAD_ADMIN_PHONE,
+              joinDate: new Date().toISOString(), status: "Active",
+            });
+
+            const walletDocRef = doc(db, "wallets", user.uid);
+            transaction.set(walletDocRef, {
+              balance: 0, coins: 0, referralCode: `REF${user.uid.slice(0, 6).toUpperCase()}`
+            });
+        });
+
+        setSetupStatus('success');
+
+    } catch (error: any) {
+        if (error.code === 'auth/email-already-in-use') {
+            setSetupStatus('already_exists');
+        } else {
+            console.error("Head Admin creation failed:", error);
+            setSetupError(error.message);
+            setSetupStatus('error');
+        }
+    } finally {
+        // 4. Clean up the temporary app instance.
+        await deleteApp(tempApp);
+    }
+  };
+
+
   return (
     <div className="w-full max-w-md mx-auto flex flex-col items-center justify-center min-h-screen p-4">
       <div className="text-center space-y-2 mb-4">
@@ -261,7 +183,7 @@ export default function AdminLoginPage() {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="login">Login</TabsTrigger>
-                <TabsTrigger value="signup">Sign Up</TabsTrigger>
+                <TabsTrigger value="signup">Head Admin Setup</TabsTrigger>
             </TabsList>
             <TabsContent value="login">
                 <form onSubmit={handleLogin}>
@@ -274,13 +196,7 @@ export default function AdminLoginPage() {
                     <CardContent className="space-y-4">
                             <div className="space-y-2">
                                 <Label htmlFor="email-login">Email Address</Label>
-                                <Input 
-                                  id="email-login" 
-                                  type="email" 
-                                  required 
-                                  value={email}
-                                  onChange={(e) => setEmail(e.target.value)}
-                                />
+                                <Input id="email-login" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
                             </div>
                             <div className="space-y-2 relative">
                                 <div className="flex items-center justify-between">
@@ -289,31 +205,14 @@ export default function AdminLoginPage() {
                                       Forgot Password?
                                   </Button>
                                 </div>
-                                <Input 
-                                  id="password-login" 
-                                  type={showPassword ? "text" : "password"} 
-                                  required 
-                                />
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  className="absolute right-1 top-6 h-7 w-7"
-                                  onClick={() => setShowPassword(prev => !prev)}
-                                >
+                                <Input id="password-login" type={showPassword ? "text" : "password"} required />
+                                <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-6 h-7 w-7" onClick={() => setShowPassword(prev => !prev)}>
                                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                  <span className="sr-only">Toggle password visibility</span>
                                 </Button>
                             </div>
                             <div className="flex items-center space-x-2">
-                              <Checkbox 
-                                id="remember-me-admin" 
-                                checked={rememberMe}
-                                onCheckedChange={(checked) => setRememberMe(checked as boolean)}
-                              />
-                              <Label htmlFor="remember-me-admin" className="text-sm font-normal">
-                                Remember me
-                              </Label>
+                              <Checkbox id="remember-me-admin" checked={rememberMe} onCheckedChange={(checked) => setRememberMe(checked as boolean)} />
+                              <Label htmlFor="remember-me-admin" className="text-sm font-normal">Remember me</Label>
                             </div>
                             <Button type="submit" className="w-full !mt-6" disabled={isLoading || !auth}>
                                 {isLoading || !auth ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
@@ -323,46 +222,63 @@ export default function AdminLoginPage() {
                 </form>
             </TabsContent>
             <TabsContent value="signup">
-                 <form onSubmit={handleSignup}>
-                    <CardHeader>
-                        <CardTitle>Register as an Admin</CardTitle>
-                        <CardDescription>
-                           The first account created will be the Head Admin. Subsequent accounts will be Sub-admins requiring approval.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="name-signup">Full Name</Label>
-                                <Input id="name-signup" name="name-signup" placeholder="Admin Name" required />
+                <CardHeader>
+                    <CardTitle>Head Admin Setup</CardTitle>
+                    <CardDescription>
+                        Use this one-time tool to create the first Head Admin account for the application.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4 text-center">
+                    {setupStatus === 'idle' && (
+                        <Button onClick={handleCreateHeadAdmin} className="w-full">
+                            <UserPlus className="mr-2"/> Create Head Admin Account
+                        </Button>
+                    )}
+
+                    {setupStatus === 'loading' && (
+                        <Button disabled className="w-full">
+                            <Loader2 className="mr-2 animate-spin"/> Creating Account...
+                        </Button>
+                    )}
+
+                    {setupStatus === 'success' && (
+                        <div className="space-y-3 text-left p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                            <div className="flex items-center gap-2">
+                               <CheckCircle className="text-green-600"/>
+                               <h3 className="font-semibold">Head Admin Created Successfully!</h3>
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="email-signup">Email Address</Label>
-                                <Input id="email-signup" name="email-signup" type="email" placeholder="you@example.com" required />
+                            <p className="text-xs text-muted-foreground">You can now log in using these credentials. Please change the password after your first login.</p>
+                             <div className="text-sm">
+                                <p><strong>Email:</strong> {HEAD_ADMIN_EMAIL}</p>
+                                <p><strong>Password:</strong> {HEAD_ADMIN_PASSWORD}</p>
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="phone-signup">WhatsApp Number</Label>
-                                <Input id="phone-signup" name="phone-signup" type="tel" placeholder="+91 12345 67890" required />
-                            </div>
-                             <div className="space-y-2 relative">
-                                <Label htmlFor="password-signup">Password</Label>
-                                <Input id="password-signup" name="password-signup" type={showSignupPassword ? "text" : "password"} required />
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  className="absolute right-1 top-6 h-7 w-7"
-                                  onClick={() => setShowSignupPassword(prev => !prev)}
-                                >
-                                  {showSignupPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                  <span className="sr-only">Toggle password visibility</span>
-                                </Button>
-                            </div>
-                            <Button type="submit" className="w-full" disabled={isLoading || !auth}>
-                                {isLoading || !auth ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                                {auth ? 'Submit' : 'Loading...'}
-                            </Button>
-                    </CardContent>
-                 </form>
+                        </div>
+                    )}
+                    
+                    {setupStatus === 'already_exists' && (
+                        <div className="space-y-2 text-left p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                           <div className="flex items-center gap-2">
+                               <AlertTriangle className="text-yellow-600"/>
+                               <h3 className="font-semibold">Head Admin Already Exists</h3>
+                           </div>
+                           <p className="text-sm text-muted-foreground">The system already has a Head Admin. No action was taken. Please proceed to the Login tab.</p>
+                        </div>
+                    )}
+
+                     {setupStatus === 'error' && (
+                        <div className="space-y-2 text-left p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                            <div className="flex items-center gap-2">
+                               <AlertTriangle className="text-red-600"/>
+                               <h3 className="font-semibold">An Error Occurred</h3>
+                           </div>
+                           <p className="text-sm text-muted-foreground">{setupError}</p>
+                        </div>
+                    )}
+                    
+                    {setupStatus !== 'loading' && setupStatus !== 'idle' && (
+                        <Button variant="outline" onClick={() => setActiveTab('login')} className="w-full">Go to Login</Button>
+                    )}
+                </CardContent>
             </TabsContent>
         </Tabs>
       </Card>
@@ -376,3 +292,5 @@ export default function AdminLoginPage() {
     </div>
   );
 }
+
+    

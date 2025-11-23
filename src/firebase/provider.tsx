@@ -1,9 +1,8 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
-import { onAuthStateChanged, type User } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { auth, db } from './client'; // Import pre-initialized services
+import { onAuthStateChanged, type User, type Auth } from 'firebase/auth';
+import { doc, getDoc, type Firestore } from 'firebase/firestore';
 import type { Admin } from '@/lib/admin-data';
 import { Loader2 } from 'lucide-react';
 import { getFirebase } from './client';
@@ -25,7 +24,11 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   });
   const [isLoading, setIsLoading] = useState(true);
 
+  // Correctly get initialized services within the component lifecycle
+  const { auth, db } = getFirebase();
+
   useEffect(() => {
+    // Now 'auth' is guaranteed to be initialized here.
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
@@ -45,7 +48,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [auth, db]); // Add auth and db to dependency array
 
   const authContextValue = useMemo(() => ({
     ...authState,
@@ -77,4 +80,5 @@ export const useAuth = (): AuthState => {
 
 // These hooks provide direct access to the initialized services
 export const useFirebase = () => getFirebase();
-export const useAuthService = () => auth;
+export const useAuthService = (): Auth => getFirebase().auth;
+export const useDbService = (): Firestore => getFirebase().db;

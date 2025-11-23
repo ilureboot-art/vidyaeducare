@@ -134,6 +134,7 @@ export default function AdminLoginPage() {
     // Definitive guard clause to prevent race conditions
     if (!auth || !db) {
       toast({ variant: "destructive", title: "Signup Failed", description: "Auth service not ready. Please try again in a moment." });
+      setIsLoading(false); // Make sure to stop loading indicator
       return;
     }
     setIsLoading(true);
@@ -375,5 +376,3 @@ export default function AdminLoginPage() {
     </div>
   );
 }
-
-    

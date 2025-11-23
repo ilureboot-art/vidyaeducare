@@ -66,7 +66,7 @@ export function FirebaseClientProvider({
 
   useEffect(() => {
     const initialize = async () => {
-        const initializedServices = await getFirebaseServices();
+        const initializedServices = getFirebaseServices();
         setServices(initializedServices);
         
         const { auth, db } = initializedServices;

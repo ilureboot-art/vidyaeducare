@@ -24,6 +24,12 @@ type FirebaseServices = {
 let firebaseServices: FirebaseServices | null = null;
 
 const initializeFirebase = () => {
+    if (typeof window === 'undefined') {
+        // This check prevents running Firebase initialization on the server.
+        // If you need server-side Firebase, you'd use the Admin SDK instead.
+        throw new Error("Firebase cannot be initialized on the server.");
+    }
+    
     if (firebaseServices) {
         return firebaseServices;
     }

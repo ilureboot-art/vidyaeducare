@@ -34,14 +34,16 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
 }
 
 function UserLayout({ children }: { children: React.ReactNode }) {
+    const pathname = usePathname();
+    const isHomePage = pathname === '/';
     return (
         <div className="flex flex-col min-h-screen">
-            <AppHeader />
-            <main className='flex-1 flex flex-col w-full items-center p-4 pb-24 pt-20'>
+            {!isHomePage && <AppHeader />}
+            <main className={`flex-1 flex flex-col w-full items-center ${isHomePage ? '' : 'p-4 pb-24 pt-20'}`}>
               {children}
             </main>
             <>
-              <Navbar />
+              {!isHomePage && <Navbar />}
               <ChatWidget />
             </>
         </div>
@@ -60,6 +62,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
     const pathname = usePathname();
     const isAdminPage = pathname.startsWith('/admin');
     const isAuthPage = pathname === '/login' || pathname === '/signup' || pathname === '/forgot-password' || pathname === '/admin/login';
+    const isPublicPage = pathname === '/';
 
     if (isAuthPage) {
         return <AuthLayout>{children}</AuthLayout>;
@@ -74,7 +77,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
     }
 
     return (
-        <AuthGuard>
+        <AuthGuard isPublic={isPublicPage}>
             <UserLayout>{children}</UserLayout>
         </AuthGuard>
     );

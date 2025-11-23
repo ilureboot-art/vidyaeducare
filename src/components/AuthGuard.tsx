@@ -9,17 +9,19 @@ import { Loader2 } from "lucide-react";
 export function AuthGuard({
   children,
   adminOnly = false,
+  isPublic = false,
 }: {
   children: React.ReactNode;
   adminOnly?: boolean;
+  isPublic?: boolean;
 }) {
   const { user, loading, isAdmin } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    if (loading) {
-      return; // Wait for authentication state to resolve
+    if (loading || isPublic) {
+      return; // Wait for auth or if page is public
     }
 
     if (!user) {
@@ -33,20 +35,10 @@ export function AuthGuard({
       // If it's an admin route and the user is not an admin, redirect to home
       router.replace("/");
     }
-  }, [user, loading, isAdmin, adminOnly, router, pathname]);
+  }, [user, loading, isAdmin, adminOnly, isPublic, router, pathname]);
 
-  // While loading or if the user is not yet determined, show a loader
-  if (loading || !user) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <Loader2 className="animate-spin text-primary" size={32} />
-      </div>
-    );
-  }
-
-  // If this is an admin route, verify admin status before rendering
-  if (adminOnly && !isAdmin) {
-    // Show a loader while redirecting
+  // While loading auth state for a protected route, show a loader
+  if (loading && !isPublic) {
     return (
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="animate-spin text-primary" size={32} />

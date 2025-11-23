@@ -32,8 +32,7 @@ const HEAD_ADMIN_PHONE = '9999999999';
 export default function AdminLoginPage() {
   const { toast } = useToast();
   const router = useRouter();
-  const { db } = useFirebase();
-  const auth = useAuthService();
+  const { db, auth } = useFirebase();
 
   const [email, setEmail] = useState(typeof window !== 'undefined' ? localStorage.getItem('rememberedAdmin') || "" : "");
   const [rememberMe, setRememberMe] = useState(typeof window !== 'undefined' ? !!localStorage.getItem('rememberedAdmin') : false);
@@ -121,9 +120,6 @@ export default function AdminLoginPage() {
     }
     setSetupStatus('loading');
     
-    // Hold current user if one is logged in
-    const currentUser = auth.currentUser;
-
     try {
         // 1. Check if Head Admin already exists to prevent duplicates.
         const headAdminQuery = query(collection(db, "admins"), where("role", "==", "Head Admin"));
@@ -156,7 +152,8 @@ export default function AdminLoginPage() {
               balance: 0, coins: 0, referralCode: `REF${user.uid.slice(0, 6).toUpperCase()}`
             });
         });
-
+        
+        await signOut(auth);
         setSetupStatus('success');
 
     } catch (error: any) {
@@ -166,16 +163,6 @@ export default function AdminLoginPage() {
             console.error("Head Admin creation failed:", error);
             setSetupError(error.message);
             setSetupStatus('error');
-        }
-    } finally {
-        // 4. Sign out the newly created user and restore previous session if it existed
-        if (auth.currentUser && auth.currentUser.email === HEAD_ADMIN_EMAIL) {
-            await signOut(auth);
-            // This part is tricky without re-triggering a full login flow for the original user.
-            // For this setup script, we'll just sign out the new admin. The original user will have to log in again.
-            if (currentUser) {
-                 toast({ title: 'Session Note', description: 'Your session was briefly interrupted. Please log in again.'});
-            }
         }
     }
   };
@@ -240,8 +227,9 @@ export default function AdminLoginPage() {
                 </CardHeader>
                 <CardContent className="space-y-4 text-center">
                     {setupStatus === 'idle' && (
-                        <Button onClick={handleCreateHeadAdmin} className="w-full">
-                            <UserPlus className="mr-2"/> Create Head Admin Account
+                        <Button onClick={handleCreateHeadAdmin} className="w-full" disabled={isLoading || !auth}>
+                           {isLoading || !auth ? <Loader2 className="mr-2 animate-spin"/> : <UserPlus className="mr-2"/>}
+                            Create Head Admin Account
                         </Button>
                     )}
 

@@ -2,43 +2,13 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
-import { initializeApp, getApp, getApps, type FirebaseApp } from "firebase/app";
-import { getFirestore, type Firestore, enableIndexedDbPersistence, doc, getDoc } from "firebase/firestore";
-import { getAuth, type Auth, onAuthStateChanged, type User } from "firebase/auth";
-import { firebaseConfig } from "./config";
+import { getDoc, doc } from "firebase/firestore";
+import { onAuthStateChanged, type User } from "firebase/auth";
+import { db, auth, app } from './index'; // Import initialized services
+import type { FirebaseApp } from "firebase/app";
+import type { Firestore } from "firebase/firestore";
+import type { Auth } from "firebase/auth";
 import type { Admin } from '@/lib/admin-data';
-
-// --- Initialization ---
-// This function is now self-contained within the provider file to prevent circular dependencies.
-function initializeFirebase() {
-    if (getApps().length > 0) {
-        const app = getApp();
-        const db = getFirestore(app);
-        const auth = getAuth(app);
-        return { app, db, auth };
-    }
-    
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const auth = getAuth(app);
-
-    if (typeof window !== 'undefined') {
-        try {
-            enableIndexedDbPersistence(db).catch((err) => {
-                 if (err.code == 'failed-precondition') {
-                    console.warn('Firestore persistence failed: multiple tabs open.');
-                } else if (err.code == 'unimplemented') {
-                    console.warn('Firestore persistence not supported in this browser.');
-                }
-            });
-        } catch (error) {
-            console.error("Error enabling Firestore persistence:", error);
-        }
-    }
-    
-    return { app, db, auth };
-}
-
 
 // --- Types ---
 interface FirebaseServices {
@@ -56,16 +26,11 @@ interface AuthState {
 
 interface FirebaseContextValue extends FirebaseServices, AuthState {}
 
-
 // --- Context ---
 const FirebaseContext = createContext<FirebaseContextValue | undefined>(undefined);
 
-
 // --- Provider Component ---
 export function FirebaseProvider({ children, loadingFallback }: { children: ReactNode, loadingFallback: ReactNode }) {
-    // Services are initialized once and memoized.
-    const firebaseServices = useMemo(() => initializeFirebase(), []);
-
     const [authState, setAuthState] = useState<Omit<AuthState, 'loading'>>({
         user: null,
         isAdmin: false,
@@ -74,8 +39,6 @@ export function FirebaseProvider({ children, loadingFallback }: { children: Reac
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const { auth, db } = firebaseServices;
-
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
                 try {
@@ -95,16 +58,16 @@ export function FirebaseProvider({ children, loadingFallback }: { children: Reac
         });
 
         return () => unsubscribe();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [firebaseServices]);
+    }, []);
 
     const contextValue = useMemo(() => ({
-        ...firebaseServices,
+        app,
+        db,
+        auth,
         ...authState,
         loading: isLoading,
-    }), [firebaseServices, authState, isLoading]);
+    }), [authState, isLoading]);
     
-    // Only show loading fallback on initial auth load
     if (isLoading) {
         return <>{loadingFallback}</>;
     }

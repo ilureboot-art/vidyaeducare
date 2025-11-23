@@ -65,35 +65,49 @@ export function FirebaseClientProvider({
   });
 
   useEffect(() => {
-    // Initialize Firebase directly in the provider
     const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    enableIndexedDbPersistence(db).catch((err: any) => {
+    // This function will only be called once.
+    const initializeServices = async () => {
+      try {
+        await enableIndexedDbPersistence(db);
+      } catch (err: any) {
         if (err.code === 'failed-precondition') {
-            console.warn('Firestore persistence failed: Multiple tabs open.');
+          console.warn('Firestore persistence failed: Multiple tabs open.');
         } else if (err.code === 'unimplemented') {
-            console.warn('Firestore persistence failed: Browser does not support it.');
+          console.warn('Firestore persistence failed: Browser does not support it.');
         }
-    });
+      }
 
-    setServices({ app, auth, db });
-    
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setServices({ app, auth, db });
+
+      const unsubscribe = onAuthStateChanged(auth, async (user) => {
         if (user) {
-            const adminDocRef = doc(db, "admins", user.uid);
-            const adminDocSnap = await getDoc(adminDocRef);
-            const isAdmin = adminDocSnap.exists() && adminDocSnap.data().status === 'Active';
-            const isHeadAdmin = isAdmin && (adminDocSnap.data() as Admin).role === 'Head Admin';
-
-            setAuthContext({ user, isAdmin, isHeadAdmin, loading: false });
+          const adminDocRef = doc(db, "admins", user.uid);
+          const adminDocSnap = await getDoc(adminDocRef);
+          const isAdmin = adminDocSnap.exists() && adminDocSnap.data().status === 'Active';
+          const isHeadAdmin = isAdmin && (adminDocSnap.data() as Admin).role === 'Head Admin';
+          setAuthContext({ user, isAdmin, isHeadAdmin, loading: false });
         } else {
-            setAuthContext({ user: null, isAdmin: false, isHeadAdmin: false, loading: false });
+          setAuthContext({ user: null, isAdmin: false, isHeadAdmin: false, loading: false });
         }
-    });
+      });
 
-    return () => unsubscribe();
+      // The unsubscribe function will be called when the component unmounts.
+      return unsubscribe;
+    };
+
+    const unsubscribePromise = initializeServices();
+
+    return () => {
+        unsubscribePromise.then(unsubscribe => {
+            if (unsubscribe) {
+                unsubscribe();
+            }
+        });
+    };
   }, []);
 
   if (!services || authContext.loading) {

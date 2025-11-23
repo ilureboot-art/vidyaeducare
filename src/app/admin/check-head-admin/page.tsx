@@ -1,7 +1,8 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Loader2, UserCheck, AlertTriangle, ArrowLeft } from "lucide-react";
 import { useFirebase } from "@/context/FirebaseClientProvider";
 import { collection, query, where, getDocs, type Firestore } from "firebase/firestore";

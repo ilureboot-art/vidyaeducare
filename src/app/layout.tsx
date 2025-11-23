@@ -2,8 +2,6 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "next-themes";
 import { AppLayout } from '@/components/AppLayout';
-import { FirebaseProvider } from '@/firebase';
-import { Loader2 } from 'lucide-react';
 
 export default function RootLayout({
   children,
@@ -12,11 +10,6 @@ export default function RootLayout({
 }>) {
   
   const bodyClassName = `font-body antialiased`;
-  const loadingFallback = (
-      <div className="flex justify-center items-center h-screen bg-background">
-        <Loader2 className="animate-spin text-primary" size={32} />
-      </div>
-    );
   
   return (
     <html lang="en" suppressHydrationWarning>
@@ -34,11 +27,9 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
         >
-          <FirebaseProvider loadingFallback={loadingFallback}>
             <AppLayout>
               {children}
             </AppLayout>
-          </FirebaseProvider>
           <Toaster />
         </ThemeProvider>
       </body>

@@ -25,19 +25,11 @@ export default function ForgotPasswordPage() {
   const router = useRouter();
   const auth = useAuthService();
   const [email, setEmail] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
-
-  const isFirebaseReady = !!auth;
-
-  useEffect(() => {
-    if (isFirebaseReady) {
-      setIsLoading(false);
-    }
-  }, [isFirebaseReady]);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleResetRequest = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isFirebaseReady) return;
+    if (!auth) return;
     setIsLoading(true);
     try {
       await sendPasswordResetEmail(auth, email);
@@ -85,8 +77,8 @@ export default function ForgotPasswordPage() {
                       onChange={(e) => setEmail(e.target.value)}
                     />
                 </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? <Loader2 className="animate-spin mr-2"/> : <Mail className="mr-2"/>}
+                <Button type="submit" className="w-full" disabled={isLoading || !auth}>
+                    {isLoading || !auth ? <Loader2 className="animate-spin mr-2"/> : <Mail className="mr-2"/>}
                     {isLoading ? 'Loading...' : 'Send Reset Link'}
                 </Button>
             </form>

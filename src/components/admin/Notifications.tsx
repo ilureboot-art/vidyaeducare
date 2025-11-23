@@ -13,7 +13,7 @@ import { Bell, CheckCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import type { AppNotification } from "@/lib/notifications";
-import { collection, query, where, onSnapshot, orderBy, Timestamp, type Firestore } from "firebase/firestore";
+import { collection, query, where, onSnapshot, orderBy, Timestamp } from "firebase/firestore";
 import { useFirebase } from "@/firebase";
 
 export function Notifications() {

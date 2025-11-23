@@ -62,7 +62,7 @@ const initialAiInputState: GenerateQuestionsInput = {
 
 export default function TestSetManagementPage() {
   const { toast } = useToast();
-  const { db, loading } = useFirebase();
+  const { db } = useFirebase();
   const [testSets, setTestSets] = useState<TestSet[] | null>(null);
   const [academicConfig, setAcademicConfig] = useState<AcademicConfig | null>(null);
 
@@ -76,7 +76,7 @@ export default function TestSetManagementPage() {
   const [aiInput, setAiInput] = useState<GenerateQuestionsInput>(initialAiInputState);
   
   const fetchPageData = async () => {
-      if (loading || !db) return;
+      if (!db) return;
       
       const testSetsCollection = collection(db, "testSets");
       const testSetSnapshot = await getDocs(testSetsCollection);
@@ -92,7 +92,7 @@ export default function TestSetManagementPage() {
 
   useEffect(() => {
     fetchPageData();
-  }, [db, loading]);
+  }, [db]);
 
   const resetManualForm = () => {
       setStep(1);
@@ -279,7 +279,7 @@ const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
 };
 
 
-  if (loading || !testSets || !academicConfig) {
+  if (!testSets || !academicConfig) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />

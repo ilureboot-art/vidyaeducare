@@ -1,1 +1,2 @@
-// This file is intentionally left blank. The logic was moved to src/firebase/provider.tsx
+// This file is deprecated and can be safely deleted.
+// The new provider logic is in `src/firebase/provider.tsx`.

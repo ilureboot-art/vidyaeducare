@@ -32,7 +32,7 @@ type ScheduledTestWithStatus = ScheduledTest & { status: TestStatus };
 
 export default function TestSchedulePage() {
     const { toast } = useToast();
-    const { db, loading } = useFirebase();
+    const { db } = useFirebase();
 
     const [allSchedules, setAllSchedules] = useState<ScheduledTestWithStatus[] | null>(null);
     const [testSets, setTestSets] = useState<TestSet[] | null>(null);
@@ -41,7 +41,7 @@ export default function TestSchedulePage() {
     const [selectedTestSetId, setSelectedTestSetId] = useState('');
     
     const fetchPageData = async () => {
-        if (loading || !db) return;
+        if (!db) return;
 
         const testSetsCollection = collection(db, "testSets");
         const testSetSnapshot = await getDocs(testSetsCollection);
@@ -56,7 +56,7 @@ export default function TestSchedulePage() {
 
     useEffect(() => {
         fetchPageData();
-    }, [db, loading]);
+    }, [db]);
     
     const refreshSchedules = (schedules: ScheduledTest[]) => {
          if (schedules) {
@@ -134,7 +134,7 @@ export default function TestSchedulePage() {
         }
     };
     
-    if (loading || !allSchedules || !testSets) {
+    if (!allSchedules || !testSets) {
         return (
           <div className="flex justify-center items-center h-96">
             <Loader2 className="animate-spin text-primary" size={32} />

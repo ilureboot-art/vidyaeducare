@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Loader2, UserCheck, AlertTriangle, ArrowLeft } from "lucide-react";
 import { useFirebase } from "@/firebase";
-import { collection, query, where, getDocs, type Firestore } from "firebase/firestore";
+import { collection, query, where, getDocs } from "firebase/firestore";
 import type { Admin } from "@/lib/admin-data";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";

@@ -9,7 +9,9 @@ import { Notifications } from "@/components/admin/Notifications";
 import { AppHeader } from '@/components/AppHeader';
 import { Navbar } from '@/components/Navbar';
 import { ChatWidget } from '@/components/ChatWidget';
-import { AuthGuard } from '@/components/AuthGuard';
+import ProtectedRoute from './ProtectedRoute'; // Will be updated to use new auth
+import { FirebaseProvider } from '@/firebase/provider';
+
 
 function AdminLayout({ children }: { children: React.ReactNode }) {
     return (
@@ -61,24 +63,29 @@ function AuthLayout({ children }: { children: React.ReactNode }) {
 export function AppLayout({ children }: { children: ReactNode }) {
     const pathname = usePathname();
     const isAdminPage = pathname.startsWith('/admin');
-    const isAuthPage = pathname === '/login' || pathname === '/signup' || pathname === '/forgot-password' || pathname === '/admin/login';
-    const isPublicPage = pathname === '/';
-
-    if (isAuthPage) {
-        return <AuthLayout>{children}</AuthLayout>;
-    }
-    
-    if (isAdminPage) {
-        return (
-            <AuthGuard adminOnly>
-                <AdminLayout>{children}</AdminLayout>
-            </AuthGuard>
-        );
-    }
+    const isAuthPage = pathname === '/login' || pathname === '/signup' || pathname === '/forgot-password' || pathname === '/admin/login' || pathname === '/admin/setup' || pathname === '/check-head-admin';
 
     return (
-        <AuthGuard isPublic={isPublicPage}>
-            <UserLayout>{children}</UserLayout>
-        </AuthGuard>
-    );
+      <FirebaseProvider>
+          {(() => {
+            if (isAuthPage) {
+              return <AuthLayout>{children}</AuthLayout>;
+            }
+          
+            if (isAdminPage) {
+                return (
+                    <ProtectedRoute adminOnly>
+                        <AdminLayout>{children}</AdminLayout>
+                    </ProtectedRoute>
+                );
+            }
+        
+            return (
+                <ProtectedRoute>
+                    <UserLayout>{children}</UserLayout>
+                </ProtectedRoute>
+            );
+          })()}
+      </FirebaseProvider>
+    )
 }

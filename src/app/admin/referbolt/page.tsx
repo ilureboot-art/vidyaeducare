@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { RefreshCw, Users, IndianRupee, Repeat, Loader2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { useFirebase } from "@/firebase";
-import { collection, getDocs, query, Timestamp, type Firestore, getCountFromServer } from "firebase/firestore";
+import { collection, getDocs, query, Timestamp, getCountFromServer } from "firebase/firestore";
 
 type Cycle = {
   id: string;

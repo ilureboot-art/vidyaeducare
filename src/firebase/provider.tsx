@@ -1,16 +1,17 @@
 
-"use client";
+'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
-import { getDoc, doc } from "firebase/firestore";
-import { onAuthStateChanged, type User } from "firebase/auth";
-import { db, auth, app } from './index'; // Import initialized services
-import type { FirebaseApp } from "firebase/app";
-import type { Firestore } from "firebase/firestore";
-import type { Auth } from "firebase/auth";
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import { onAuthStateChanged, type User } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from './client';
 import type { Admin } from '@/lib/admin-data';
+import { Loader2 } from 'lucide-react';
+import type { FirebaseApp } from 'firebase/app';
+import type { Auth } from 'firebase/auth';
+import type { Firestore } from 'firebase/firestore';
+import { app } from './client';
 
-// --- Types ---
 interface FirebaseServices {
   app: FirebaseApp;
   db: Firestore;
@@ -24,80 +25,80 @@ interface AuthState {
   isHeadAdmin: boolean;
 }
 
-interface FirebaseContextValue extends FirebaseServices, AuthState {}
+const FirebaseContext = createContext<FirebaseServices | undefined>(undefined);
+const AuthContext = createContext<AuthState | undefined>(undefined);
 
-// --- Context ---
-const FirebaseContext = createContext<FirebaseContextValue | undefined>(undefined);
+export function FirebaseProvider({ children }: { children: React.ReactNode }) {
+  const [authState, setAuthState] = useState<Omit<AuthState, 'loading'>>({
+    user: null,
+    isAdmin: false,
+    isHeadAdmin: false,
+  });
+  const [isLoading, setIsLoading] = useState(true);
 
-// --- Provider Component ---
-export function FirebaseProvider({ children, loadingFallback }: { children: ReactNode, loadingFallback: ReactNode }) {
-    const [authState, setAuthState] = useState<Omit<AuthState, 'loading'>>({
-        user: null,
-        isAdmin: false,
-        isHeadAdmin: false,
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const adminDocRef = doc(db, "admins", user.uid);
+          const adminDocSnap = await getDoc(adminDocRef);
+          const isAdmin = adminDocSnap.exists() && adminDocSnap.data().status === 'Active';
+          const isHeadAdmin = isAdmin && (adminDocSnap.data() as Admin).role === 'Head Admin';
+          setAuthState({ user, isAdmin, isHeadAdmin });
+        } catch (e) {
+          console.error("Error checking admin status:", e);
+          setAuthState({ user, isAdmin: false, isHeadAdmin: false });
+        }
+      } else {
+        setAuthState({ user: null, isAdmin: false, isHeadAdmin: false });
+      }
+      setIsLoading(false);
     });
-    const [isLoading, setIsLoading] = useState(true);
 
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                try {
-                    const adminDocRef = doc(db, "admins", user.uid);
-                    const adminDocSnap = await getDoc(adminDocRef);
-                    const isAdmin = adminDocSnap.exists() && adminDocSnap.data().status === 'Active';
-                    const isHeadAdmin = isAdmin && (adminDocSnap.data() as Admin).role === 'Head Admin';
-                    setAuthState({ user, isAdmin, isHeadAdmin });
-                } catch(e) {
-                    console.error("Error checking admin status:", e);
-                    setAuthState({ user, isAdmin: false, isHeadAdmin: false });
-                }
-            } else {
-                setAuthState({ user: null, isAdmin: false, isHeadAdmin: false });
-            }
-            setIsLoading(false);
-        });
+    return () => unsubscribe();
+  }, []);
 
-        return () => unsubscribe();
-    }, []);
+  const authContextValue = useMemo(() => ({
+    ...authState,
+    loading: isLoading,
+  }), [authState, isLoading]);
 
-    const contextValue = useMemo(() => ({
-        app,
-        db,
-        auth,
-        ...authState,
-        loading: isLoading,
-    }), [authState, isLoading]);
-    
-    if (isLoading) {
-        return <>{loadingFallback}</>;
-    }
-    
+  const firebaseServices = { app, db, auth };
+
+  if (isLoading) {
     return (
-        <FirebaseContext.Provider value={contextValue}>
-            {children}
-        </FirebaseContext.Provider>
+      <div className="flex justify-center items-center h-screen bg-background">
+        <Loader2 className="animate-spin text-primary" size={32} />
+      </div>
     );
+  }
+
+  return (
+    <FirebaseContext.Provider value={firebaseServices}>
+      <AuthContext.Provider value={authContextValue}>
+        {children}
+      </AuthContext.Provider>
+    </FirebaseContext.Provider>
+  );
 }
 
-// --- Hooks ---
-export const useFirebase = (): FirebaseContextValue => {
+export const useFirebase = (): FirebaseServices => {
   const context = useContext(FirebaseContext);
   if (context === undefined) {
-    throw new Error("useFirebase must be used within a FirebaseProvider");
+    throw new Error('useFirebase must be used within a FirebaseProvider');
   }
   return context;
 };
 
 export const useAuth = (): AuthState => {
-    const context = useFirebase();
-    return {
-        user: context.user,
-        loading: context.loading,
-        isAdmin: context.isAdmin,
-        isHeadAdmin: context.isHeadAdmin,
-    };
-}
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
 
-export const useFirebaseApp = (): FirebaseApp => useFirebase().app;
-export const useFirestore = (): Firestore => useFirebase().db;
-export const useAuthService = (): Auth => useFirebase().auth;
+export const useAuthService = (): Auth => {
+    const { auth } = useFirebase();
+    return auth;
+};

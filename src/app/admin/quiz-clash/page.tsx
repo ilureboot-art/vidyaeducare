@@ -30,7 +30,7 @@ const initialAutoConfig: QuizClashAutoCreateConfig = {
 
 export default function AdminQuizClashPage() {
     const { toast } = useToast();
-    const { db, loading } = useFirebase();
+    const { db } = useFirebase();
     const [tournaments, setTournaments] = useState<QuizClashTournament[] | null>(null);
     const [testSets, setTestSets] = useState<TestSet[] | null>(null);
     const [autoConfig, setAutoConfig] = useState<QuizClashAutoCreateConfig | null>(null);
@@ -64,10 +64,10 @@ export default function AdminQuizClashPage() {
     };
 
     useEffect(() => {
-        if(!loading && db) {
+        if(db) {
             fetchTournamentsAndTestSets(db);
         }
-    }, [db, loading]);
+    }, [db]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -156,7 +156,7 @@ export default function AdminQuizClashPage() {
     };
 
 
-    if (loading || !tournaments || !testSets || !autoConfig) {
+    if (!tournaments || !testSets || !autoConfig) {
         return <div className="flex justify-center items-center h-96"><Loader2 className="animate-spin text-primary" size={32} /></div>;
     }
 

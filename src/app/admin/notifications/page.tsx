@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import type { AppNotification } from "@/lib/notifications";
 import { useFirebase } from "@/firebase";
-import { collection, query, where, orderBy, Timestamp, type Firestore, getDocs } from "firebase/firestore";
+import { collection, query, where, orderBy, Timestamp, getDocs } from "firebase/firestore";
 
 const getIconForType = (type: string) => {
     switch(type) {

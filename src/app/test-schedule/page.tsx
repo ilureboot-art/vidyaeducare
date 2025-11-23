@@ -25,7 +25,7 @@ type ScheduledTestWithStatus = ScheduledTest & { status: TestStatus };
 
 export default function TestSchedulePage() {
     const { toast } = useToast();
-    const { db, loading } = useFirebase();
+    const { db } = useFirebase();
     const [allSchedules, setAllSchedules] = useState<ScheduledTestWithStatus[] | null>(null);
     
     useEffect(() => {
@@ -58,10 +58,10 @@ export default function TestSchedulePage() {
                 setAllSchedules(updatedSchedules);
             }
         };
-        if(!loading && db) fetchSchedules();
-    }, [db, loading]);
+        if(db) fetchSchedules();
+    }, [db]);
     
-    if (loading || !allSchedules) {
+    if (!allSchedules) {
         return (
           <div className="flex justify-center items-center h-96">
             <Loader2 className="animate-spin text-primary" size={32} />

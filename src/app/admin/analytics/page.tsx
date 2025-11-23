@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { BarChart, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Line, Bar, ResponsiveContainer } from "recharts";
 import { Users, Gamepad2, IndianRupee, Loader2 } from "lucide-react";
 import { useFirebase } from "@/firebase";
-import { collection, getDocs, query, where, Timestamp, type Firestore,getCountFromServer } from "firebase/firestore";
+import { collection, getDocs, query, where, Timestamp, getCountFromServer } from "firebase/firestore";
 
 interface ChartData {
     name: string;

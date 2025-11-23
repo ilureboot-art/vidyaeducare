@@ -33,7 +33,7 @@ const getRankColor = (rank: number) => {
 }
 
 export default function LeaderboardPage() {
-  const { db, loading } = useFirebase();
+  const { db } = useFirebase();
   const [leaderboardData, setLeaderboardData] = useState<Player[] | null>(null);
   
   useEffect(() => {
@@ -49,12 +49,12 @@ export default function LeaderboardPage() {
         } as Player));
         setLeaderboardData(leaderboard);
     };
-    if (!loading && db) {
+    if (db) {
         fetchLeaderboard();
     }
-  }, [db, loading]);
+  }, [db]);
 
-  if (loading || !leaderboardData) {
+  if (!leaderboardData) {
     return (
       <div className="w-full max-w-3xl mx-auto flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />

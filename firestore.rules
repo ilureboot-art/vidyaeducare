@@ -16,7 +16,7 @@ service cloud.firestore {
       allow read: if request.auth != null && request.auth.uid == userId;
 
       // Allow a newly authenticated user to create their OWN admin document.
-      // This is crucial for bootstrapping the first Head Admin.
+      // This is a temporarily relaxed rule to bootstrap the first Head Admin.
       allow create: if request.auth != null && request.auth.uid == userId;
       
       // Allow an existing Head Admin to update/delete ANY admin documents.

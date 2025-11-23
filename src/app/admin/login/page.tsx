@@ -19,7 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from "firebase/auth";
-import { doc, setDoc, getDoc, collection, query, where, getDocs, runTransaction, type Firestore } from "firebase/firestore";
+import { doc, setDoc, getDoc, collection, query, where, getDocs, type Firestore } from "firebase/firestore";
 import { useFirebase } from "@/context/FirebaseClientProvider";
 import type { Admin, AdminRole } from "@/lib/admin-data";
 import {
@@ -144,62 +144,55 @@ export default function AdminLoginPage() {
     const password = (form.elements.namedItem('password-signup') as HTMLInputElement).value;
 
     try {
-        // Step 1: Perform reads *before* the transaction to determine if a Head Admin exists.
+        // Step 1: Check if a Head Admin already exists.
         const adminsCollection = collection(db, "admins");
         const headAdminQuery = query(adminsCollection, where("role", "==", "Head Admin"));
         const headAdminSnapshot = await getDocs(headAdminQuery);
         const headAdminExists = !headAdminSnapshot.empty;
 
-        // Step 2: Create the user in Firebase Authentication. This happens *outside* the transaction.
+        // Step 2: Create the user in Firebase Authentication.
         const userCredential = await createUserWithEmailAndPassword(auth, signupEmail, password);
         const user = userCredential.user;
 
-        // Step 3: Use a transaction to atomically write all the necessary documents to Firestore.
-        await runTransaction(db, async (transaction) => {
-            const role: AdminRole = headAdminExists ? "Sub-admin" : "Head Admin";
-            const status: Admin['status'] = headAdminExists ? "Pending" : "Active";
+        // Step 3: Determine role and status
+        const role: AdminRole = headAdminExists ? "Sub-admin" : "Head Admin";
+        const status: Admin['status'] = headAdminExists ? "Pending" : "Active";
 
-            const newAdminData: Omit<Admin, 'id'> = {
-                name,
-                email: signupEmail,
-                phone,
-                role,
-                status,
-                joinDate: new Date().toISOString(),
-            };
-
-            // Write the new admin document.
-            transaction.set(doc(db, "admins", user.uid), newAdminData);
-            
-            // Also create a corresponding user document for consistency.
-            transaction.set(doc(db, "users", user.uid), {
-              id: user.uid,
-              name: name,
-              email: signupEmail,
-              phone: phone,
-              joinDate: new Date().toISOString(),
-              status: "Active",
-            });
-
-             // Also create a corresponding wallet document.
-            transaction.set(doc(db, "wallets", user.uid), {
-              balance: 0,
-              coins: 0,
-              referralCode: `REF${user.uid.slice(0, 6).toUpperCase()}`
-            });
+        // Step 4: Create all necessary documents in Firestore.
+        const newAdminData: Omit<Admin, 'id'> = {
+            name,
+            email: signupEmail,
+            phone,
+            role,
+            status,
+            joinDate: new Date().toISOString(),
+        };
+        await setDoc(doc(db, "admins", user.uid), newAdminData);
+        
+        await setDoc(doc(db, "users", user.uid), {
+          id: user.uid,
+          name: name,
+          email: signupEmail,
+          phone: phone,
+          joinDate: new Date().toISOString(),
+          status: "Active",
         });
 
-        // Step 4: Handle post-signup logic.
+        await setDoc(doc(db, "wallets", user.uid), {
+          balance: 0,
+          coins: 0,
+          referralCode: `REF${user.uid.slice(0, 6).toUpperCase()}`
+        });
+        
+        // Step 5: Handle post-signup logic.
         if (headAdminExists) {
-            // If a sub-admin was created, sign them out to await approval.
-            await signOut(auth);
+            await signOut(auth); // Sign out the new sub-admin to await approval
             toast({
                 title: "Request Sent!",
                 description: "Your request to become a sub-admin has been sent. You will be logged out.",
                 duration: 7000,
             });
         } else {
-            // If the Head Admin was created, inform them so they can log in.
             toast({
                 title: "Head Admin Created!",
                 description: "You can now log in with your new Head Admin credentials.",
@@ -375,5 +368,3 @@ export default function AdminLoginPage() {
     </div>
   );
 }
-
-    

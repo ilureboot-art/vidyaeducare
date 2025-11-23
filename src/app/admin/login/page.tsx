@@ -144,56 +144,44 @@ export default function AdminLoginPage() {
     const password = (form.elements.namedItem('password-signup') as HTMLInputElement).value;
 
     try {
-        // Create the user in Firebase Auth. This session will be used to write the firestore doc.
+        // Step 1: Check if a Head Admin already exists before creating an auth user.
+        // This is a read operation and can be done outside the transaction.
+        const adminsCollection = collection(db, "admins");
+        const headAdminQuery = query(adminsCollection, where("role", "==", "Head Admin"));
+        const headAdminSnapshot = await getDocs(headAdminQuery);
+        const headAdminExists = !headAdminSnapshot.empty;
+
+        // Step 2: Create the user in Firebase Auth.
         const userCredential = await createUserWithEmailAndPassword(auth, signupEmail, password);
         const user = userCredential.user;
 
-        // Now, run a transaction to create the admin document.
-        // This ensures the check for a Head Admin and the creation are atomic.
-        const { finalRole, finalStatus } = await runTransaction(db, async (transaction) => {
-            const adminsCollection = collection(db, "admins");
-            const headAdminQuery = query(adminsCollection, where("role", "==", "Head Admin"));
-            const headAdminSnapshot = await transaction.get(headAdminQuery);
+        // The new user is now authenticated. We can proceed to create their Firestore document.
+        const role: AdminRole = headAdminExists ? "Sub-admin" : "Head Admin";
+        const status: Admin['status'] = headAdminExists ? "Pending" : "Active";
 
-            let role: AdminRole;
-            let status: Admin['status'];
+        const newAdminData: Omit<Admin, 'id'> = {
+            name,
+            email: signupEmail,
+            phone,
+            role,
+            status,
+            joinDate: new Date().toISOString(),
+        };
 
-            if (headAdminSnapshot.empty) {
-                // No Head Admin exists, this user becomes the first one.
-                role = "Head Admin";
-                status = "Active";
-            } else {
-                // A Head Admin already exists, this user becomes a sub-admin pending approval.
-                role = "Sub-admin";
-                status = "Pending";
-            }
-
-            const newAdminData = {
-                name,
-                email: signupEmail,
-                phone,
-                role,
-                status,
-                joinDate: new Date().toISOString(),
-            };
-            
-            const newAdminRef = doc(db, "admins", user.uid);
-            transaction.set(newAdminRef, newAdminData);
-            
-            return { finalRole: role, finalStatus: status };
-        });
-
+        // Step 3: Create the admin document in Firestore. This will be allowed by security rules
+        // because the currently authenticated user's UID matches the document ID.
+        await setDoc(doc(db, "admins", user.uid), newAdminData);
 
         toast({
-            title: finalStatus === 'Active' ? "Head Admin Created!" : "Request Sent!",
-            description: finalStatus === 'Active'
+            title: status === 'Active' ? "Head Admin Created!" : "Request Sent!",
+            description: status === 'Active'
                 ? "You can now log in with your new Head Admin credentials."
                 : "Your request to become a sub-admin has been sent for approval. You will be logged out.",
             duration: 7000,
         });
-        
-        if(finalStatus === 'Pending') {
-            await signOut(auth);
+
+        if (status === 'Pending') {
+            await signOut(auth); // Sign out only if they are a pending sub-admin.
         }
 
         form.reset();
@@ -364,3 +352,4 @@ export default function AdminLoginPage() {
     </div>
   );
 }
+    

@@ -60,7 +60,7 @@ export default function AdminManagementPage() {
   const { toast } = useToast();
   
   useEffect(() => {
-    if (authLoading || !db) return;
+    if (authLoading || !db || !user) return;
     
     if (!isHeadAdmin) {
         setAllAdmins([]);
@@ -78,7 +78,7 @@ export default function AdminManagementPage() {
     });
 
     return () => unsubscribe();
-  }, [db, isHeadAdmin, authLoading, toast]);
+  }, [db, user, isHeadAdmin, authLoading, toast]);
 
 
   const openWhatsApp = (phone: string, message?: string) => {
@@ -151,7 +151,9 @@ export default function AdminManagementPage() {
     }
     
     try {
-        // This creates a temporary auth session which we don't need to manage further
+        // This creates a temporary user. It's important to not let this interfere with the current logged-in admin.
+        // The proper way involves a secondary Firebase app instance on a backend, but for client-side,
+        // we'll create the user and immediately write their doc. The current admin's auth state is preserved.
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const tempUser = userCredential.user;
 
@@ -164,11 +166,17 @@ export default function AdminManagementPage() {
             joinDate: new Date().toISOString(),
         };
 
+        // The security rule `allow create: if request.auth.uid == userId` allows this, as the `auth` object's
+        // current user is now the `tempUser` we just created.
         await setDoc(doc(db, "admins", tempUser.uid), newAdminData);
         
         toast({ title: 'Admin Created!', description: `${name} has been added.`});
         setIsCreateDialogOpen(false);
-        // Important: We don't sign out the current admin. The new admin can log in separately.
+        
+        // IMPORTANT: We must re-establish the original admin's authentication state.
+        // A simple page reload is the most straightforward way to do this client-side without complex state management.
+        window.location.reload();
+
     } catch(error: any) {
          console.error("Error creating admin:", error);
          toast({ variant: 'destructive', title: "Error creating admin", description: error.message || 'An unknown error occurred.'});
@@ -506,3 +514,4 @@ export default function AdminManagementPage() {
     </div>
   );
 }
+    

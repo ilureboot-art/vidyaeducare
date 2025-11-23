@@ -9,7 +9,7 @@ import { Notifications } from "@/components/admin/Notifications";
 import { AppHeader } from '@/components/AppHeader';
 import { Navbar } from '@/components/Navbar';
 import { ChatWidget } from '@/components/ChatWidget';
-import ProtectedRoute from './ProtectedRoute'; // Will be updated to use new auth
+import ProtectedRoute from './ProtectedRoute';
 import { FirebaseProvider } from '@/firebase/provider';
 
 
@@ -63,7 +63,7 @@ function AuthLayout({ children }: { children: React.ReactNode }) {
 export function AppLayout({ children }: { children: ReactNode }) {
     const pathname = usePathname();
     const isAdminPage = pathname.startsWith('/admin');
-    const isAuthPage = pathname === '/login' || pathname === '/signup' || pathname === '/forgot-password' || pathname === '/admin/login' || pathname === '/admin/setup' || pathname === '/check-head-admin';
+    const isAuthPage = ['/login', '/signup', '/forgot-password', '/admin/login', '/admin/setup', '/check-head-admin'].includes(pathname);
 
     return (
       <FirebaseProvider>

@@ -8,9 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Archive, Search, Send, Loader2 } from "lucide-react";
 import { useFirebase } from "@/context/FirebaseClientProvider";
-import { collection, getDocs, doc, updateDoc, addDoc, serverTimestamp, query, orderBy, Timestamp, onSnapshot, type Firestore } from "firebase/firestore";
+import { collection, doc, updateDoc, addDoc, serverTimestamp, query, orderBy, Timestamp, onSnapshot, type Firestore } from "firebase/firestore";
 
 type Message = {
+    id: string;
     from: 'user' | 'admin';
     text: string;
     timestamp?: Timestamp;
@@ -23,41 +24,34 @@ type Chat = {
     lastMessageTimestamp?: Timestamp;
     unread: boolean;
     avatar: string;
-    messages: Message[];
 };
+
+type ActiveChat = Chat & {
+    messages: Message[];
+}
 
 
 export default function ChatManagementPage() {
     const { db } = useFirebase();
     const [chats, setChats] = useState<Chat[] | null>(null);
-    const [activeChat, setActiveChat] = useState<Chat | null>(null);
+    const [activeChat, setActiveChat] = useState<ActiveChat | null>(null);
     const [reply, setReply] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
     const messagesEndRef = useRef<HTMLDivElement | null>(null);
+    const [messagesUnsubscribe, setMessagesUnsubscribe] = useState<(() => void) | null>(null);
     
     useEffect(() => {
         if (!db) return;
         const chatsCollection = collection(db, "chats");
         const q = query(chatsCollection, orderBy("lastMessageTimestamp", "desc"));
         
-        const unsubscribe = onSnapshot(q, async (snapshot) => {
-            const chatListPromises = snapshot.docs.map(async (chatDoc) => {
-                const messagesCollection = collection(db, "chats", chatDoc.id, "messages");
-                const messagesSnapshot = await getDocs(query(messagesCollection, orderBy("timestamp", "asc")));
-                const messages = messagesSnapshot.docs.map(msgDoc => {
-                    const data = msgDoc.data();
-                    return {
-                        ...data,
-                        timestamp: data.timestamp instanceof Timestamp ? data.timestamp : serverTimestamp()
-                    } as Message;
-                });
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const chatList = snapshot.docs.map((chatDoc) => {
                 return {
                     id: chatDoc.id,
                     ...chatDoc.data(),
-                    messages
                 } as Chat;
             });
-            const chatList = await Promise.all(chatListPromises);
             setChats(chatList);
         });
 
@@ -71,22 +65,41 @@ export default function ChatManagementPage() {
 
     const handleSelectChat = async (chatId: string) => {
         if (!chats || !db) return;
+        
+        // Unsubscribe from previous chat messages listener
+        if (messagesUnsubscribe) {
+            messagesUnsubscribe();
+        }
+
         const selected = chats.find(c => c.id === chatId);
         if (selected) {
-            setActiveChat(selected);
-            if (selected.unread) {
+             if (selected.unread) {
                  const chatDocRef = doc(db, "chats", selected.id);
                  await updateDoc(chatDocRef, { unread: false });
-                 // The real-time listener will handle the UI update
-            }
+             }
+
+            // Set active chat immediately with empty messages
+            setActiveChat({ ...selected, messages: [] });
+
+            // Subscribe to new chat's messages
+            const messagesCollection = collection(db, "chats", chatId, "messages");
+            const messagesQuery = query(messagesCollection, orderBy("timestamp", "asc"));
+            const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
+                const messages = snapshot.docs.map(msgDoc => ({
+                    id: msgDoc.id,
+                    ...msgDoc.data(),
+                } as Message));
+                setActiveChat(prev => prev ? { ...prev, messages } : null);
+            });
+            setMessagesUnsubscribe(() => unsubscribe);
         }
     };
 
     const handleSendReply = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!reply.trim() || !activeChat || !chats || !db) return;
+        if (!reply.trim() || !activeChat || !db) return;
 
-        const newMessage: Omit<Message, 'timestamp'> = { from: 'admin', text: reply };
+        const newMessage: Omit<Message, 'id' | 'timestamp'> = { from: 'admin', text: reply };
         
         const messagesCollectionRef = collection(db, "chats", activeChat.id, "messages");
         await addDoc(messagesCollectionRef, { ...newMessage, timestamp: serverTimestamp() });
@@ -163,23 +176,29 @@ export default function ChatManagementPage() {
                     </Button>
                 </CardHeader>
                 <CardContent className="flex-1 p-4 space-y-4 overflow-y-auto bg-muted/20">
-                    {activeChat.messages.map((msg, index) => (
-                        <div key={index} className={`flex items-end gap-2 ${msg.from === 'admin' ? 'justify-end' : ''}`}>
-                            {msg.from === 'user' && (
-                                <Avatar className="w-8 h-8">
-                                    <AvatarFallback>{activeChat.avatar}</AvatarFallback>
-                                </Avatar>
-                            )}
-                            <div className={`max-w-xs md:max-w-md p-3 rounded-lg ${msg.from === 'admin' ? 'bg-primary text-primary-foreground' : 'bg-background border'}`}>
-                                <p className="text-sm">{msg.text}</p>
-                            </div>
-                             {msg.from === 'admin' && (
-                                <Avatar className="w-8 h-8">
-                                    <AvatarFallback>AD</AvatarFallback>
-                                </Avatar>
-                            )}
+                    {activeChat.messages.length === 0 ? (
+                        <div className="flex items-center justify-center h-full text-muted-foreground">
+                            <Loader2 className="animate-spin" />
                         </div>
-                    ))}
+                    ) : (
+                        activeChat.messages.map((msg) => (
+                            <div key={msg.id} className={`flex items-end gap-2 ${msg.from === 'admin' ? 'justify-end' : ''}`}>
+                                {msg.from === 'user' && (
+                                    <Avatar className="w-8 h-8">
+                                        <AvatarFallback>{activeChat.avatar}</AvatarFallback>
+                                    </Avatar>
+                                )}
+                                <div className={`max-w-xs md:max-w-md p-3 rounded-lg ${msg.from === 'admin' ? 'bg-primary text-primary-foreground' : 'bg-background border'}`}>
+                                    <p className="text-sm">{msg.text}</p>
+                                </div>
+                                 {msg.from === 'admin' && (
+                                    <Avatar className="w-8 h-8">
+                                        <AvatarFallback>AD</AvatarFallback>
+                                    </Avatar>
+                                )}
+                            </div>
+                        ))
+                    )}
                     <div ref={messagesEndRef} />
                 </CardContent>
                  <CardContent className="py-4 border-t">

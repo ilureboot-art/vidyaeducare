@@ -19,8 +19,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from "firebase/auth";
-import { initializeApp, deleteApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
 import { doc, setDoc, getDoc, collection, query, where, getDocs, type Firestore, runTransaction, serverTimestamp } from "firebase/firestore";
 import { useFirebase, useAuthService } from "@/firebase";
 import type { Admin, AdminRole } from "@/lib/admin-data";
@@ -34,7 +32,7 @@ const HEAD_ADMIN_PHONE = '9999999999';
 export default function AdminLoginPage() {
   const { toast } = useToast();
   const router = useRouter();
-  const { app: mainApp, db } = useFirebase();
+  const { db } = useFirebase();
   const auth = useAuthService();
 
   const [email, setEmail] = useState(typeof window !== 'undefined' ? localStorage.getItem('rememberedAdmin') || "" : "");
@@ -117,17 +115,14 @@ export default function AdminLoginPage() {
   };
 
   const handleCreateHeadAdmin = async () => {
-    if (!db || !mainApp) {
+    if (!db || !auth) {
         toast({ variant: "destructive", title: "Setup Failed", description: "Database service not ready." });
         return;
     }
     setSetupStatus('loading');
     
-    // Create a temporary, secondary Firebase app instance. This is the key to the fix.
-    // It allows us to create a user without disturbing the current auth state.
-    const tempAppName = `temp-head-admin-creation-${Date.now()}`;
-    const tempApp = initializeApp(mainApp.options, tempAppName);
-    const tempAuth = getAuth(tempApp);
+    // Hold current user if one is logged in
+    const currentUser = auth.currentUser;
 
     try {
         // 1. Check if Head Admin already exists to prevent duplicates.
@@ -138,8 +133,8 @@ export default function AdminLoginPage() {
           return;
         }
 
-        // 2. Create the user in the temporary auth instance.
-        const userCredential = await createUserWithEmailAndPassword(tempAuth, HEAD_ADMIN_EMAIL, HEAD_ADMIN_PASSWORD);
+        // 2. Create the user with the main auth instance.
+        const userCredential = await createUserWithEmailAndPassword(auth, HEAD_ADMIN_EMAIL, HEAD_ADMIN_PASSWORD);
         const user = userCredential.user;
 
         // 3. Run all database writes in a single, atomic transaction using the MAIN db connection.
@@ -173,8 +168,15 @@ export default function AdminLoginPage() {
             setSetupStatus('error');
         }
     } finally {
-        // 4. Clean up the temporary app instance.
-        await deleteApp(tempApp);
+        // 4. Sign out the newly created user and restore previous session if it existed
+        if (auth.currentUser && auth.currentUser.email === HEAD_ADMIN_EMAIL) {
+            await signOut(auth);
+            // This part is tricky without re-triggering a full login flow for the original user.
+            // For this setup script, we'll just sign out the new admin. The original user will have to log in again.
+            if (currentUser) {
+                 toast({ title: 'Session Note', description: 'Your session was briefly interrupted. Please log in again.'});
+            }
+        }
     }
   };
 

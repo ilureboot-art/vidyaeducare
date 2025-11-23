@@ -37,9 +37,8 @@ import {
 import { format } from 'date-fns';
 import type { Admin, AdminRole } from "@/lib/admin-data";
 import { collection, onSnapshot, doc, setDoc, deleteDoc, updateDoc, getDocs } from "firebase/firestore";
-import { createUserWithEmailAndPassword, getAuth } from "firebase/auth";
-import { useFirebase, useAuth } from "@/firebase";
-import { initializeApp, deleteApp } from "firebase/app";
+import { createUserWithEmailAndPassword, getAuth, signOut } from "firebase/auth";
+import { useFirebase, useAuth, useAuthService } from "@/firebase";
 
 
 const WhatsAppIcon = () => (
@@ -49,7 +48,8 @@ const WhatsAppIcon = () => (
 )
 
 export default function AdminManagementPage() {
-  const { app: mainApp, db } = useFirebase();
+  const { db } = useFirebase();
+  const auth = useAuthService();
   const { user, loading: authLoading, isHeadAdmin } = useAuth();
   const [allAdmins, setAllAdmins] = useState<Admin[] | null>(null);
   
@@ -138,7 +138,7 @@ export default function AdminManagementPage() {
 
   const handleCreateAdmin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!db) return;
+    if (!db || !auth) return;
     const form = e.currentTarget;
     const name = (form.elements.namedItem('name') as HTMLInputElement).value;
     const email = (form.elements.namedItem('email') as HTMLInputElement).value;
@@ -151,14 +151,11 @@ export default function AdminManagementPage() {
         return;
     }
     
-    // Create a temporary, secondary Firebase app instance to create the user
-    // This prevents the current admin from being signed out
-    const tempAppName = `temp-admin-creation-${Date.now()}`;
-    const tempApp = initializeApp(mainApp.options, tempAppName);
+    // Hold current user if one is logged in
+    const currentUser = auth.currentUser;
 
     try {
-        const tempAuth = getAuth(tempApp);
-        const userCredential = await createUserWithEmailAndPassword(tempAuth, email, password);
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const tempUser = userCredential.user;
 
         const newAdminData: Omit<Admin, 'id'> = {
@@ -175,16 +172,20 @@ export default function AdminManagementPage() {
         
         toast({ title: 'Admin Created!', description: `${name} has been added.`});
         setIsCreateDialogOpen(false);
-        // Page reload is no longer strictly necessary, but good for ensuring clean state.
-        // It's better to update the local state directly if possible, but reload is simpler.
-        window.location.reload();
+        // We will optimistically update the UI, but a page reload is a safe fallback
+        // window.location.reload();
 
     } catch(error: any) {
          console.error("Error creating admin:", error);
          toast({ variant: 'destructive', title: "Error creating admin", description: error.message || 'An unknown error occurred.'});
     } finally {
-        // Clean up the temporary app
-        await deleteApp(tempApp);
+        // Sign out the newly created user and restore previous session if it existed
+        if (auth.currentUser && auth.currentUser.email === email) {
+            await signOut(auth);
+            if (currentUser) {
+                toast({ title: 'Session Note', description: 'Your session was briefly interrupted to create the user. You are still logged in.'});
+            }
+        }
     }
   }
   

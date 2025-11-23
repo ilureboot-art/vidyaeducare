@@ -90,7 +90,7 @@ export function FirebaseClientProvider({
     initialize();
   }, []);
 
-  if (!services || authContext.loading) {
+  if (!services) {
     return <>{loadingFallback}</>;
   }
 

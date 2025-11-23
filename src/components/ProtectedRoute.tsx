@@ -19,11 +19,7 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
     const isAdminRoute = pathname.startsWith('/admin');
 
     if (!user) {
-      if (isAdminRoute) {
-        router.replace("/admin/login");
-      } else {
-        router.replace("/login");
-      }
+      router.replace(isAdminRoute ? "/admin/login" : "/login");
       return;
     }
 
@@ -33,8 +29,7 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
 
   }, [user, loading, isAdmin, router, pathname]);
 
-  // Combined loading check
-  if (loading || !user || (pathname.startsWith('/admin') && !isAdmin)) {
+  if (loading || !user) {
     return (
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="animate-spin text-primary" size={32} />
@@ -44,5 +39,3 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
 
   return <>{children}</>;
 }
-
-    

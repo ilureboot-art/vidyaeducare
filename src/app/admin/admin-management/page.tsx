@@ -49,7 +49,7 @@ const WhatsAppIcon = () => (
 
 export default function AdminManagementPage() {
   const { db, auth } = useFirebase();
-  const { user, loading, isHeadAdmin } = useAuth();
+  const { user, loading: authLoading, isHeadAdmin } = useAuth();
   const [allAdmins, setAllAdmins] = useState<Admin[] | null>(null);
   
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -60,12 +60,13 @@ export default function AdminManagementPage() {
   const { toast } = useToast();
   
   useEffect(() => {
-    if (!db || !isHeadAdmin) {
-      if (!loading && !isHeadAdmin) {
+    if (authLoading || !db) return;
+    
+    if (!isHeadAdmin) {
         setAllAdmins([]);
-      }
-      return;
+        return;
     };
+
     const adminsCollection = collection(db, "admins");
     const unsubscribe = onSnapshot(adminsCollection, (snapshot) => {
         const adminList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Admin));
@@ -77,7 +78,7 @@ export default function AdminManagementPage() {
     });
 
     return () => unsubscribe();
-  }, [db, isHeadAdmin, loading, toast]);
+  }, [db, isHeadAdmin, authLoading, toast]);
 
 
   const openWhatsApp = (phone: string, message?: string) => {
@@ -150,8 +151,9 @@ export default function AdminManagementPage() {
     }
     
     try {
+        // This creates a temporary auth session which we don't need to manage further
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
+        const tempUser = userCredential.user;
 
         const newAdminData: Omit<Admin, 'id'> = {
             name,
@@ -162,11 +164,11 @@ export default function AdminManagementPage() {
             joinDate: new Date().toISOString(),
         };
 
-        await setDoc(doc(db, "admins", user.uid), newAdminData);
+        await setDoc(doc(db, "admins", tempUser.uid), newAdminData);
         
         toast({ title: 'Admin Created!', description: `${name} has been added.`});
         setIsCreateDialogOpen(false);
-
+        // Important: We don't sign out the current admin. The new admin can log in separately.
     } catch(error: any) {
          console.error("Error creating admin:", error);
          toast({ variant: 'destructive', title: "Error creating admin", description: error.message || 'An unknown error occurred.'});
@@ -175,7 +177,7 @@ export default function AdminManagementPage() {
   
   const handleEditAdmin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!selectedAdmin || !allAdmins || !db) return;
+    if (!selectedAdmin || !db) return;
     const form = e.currentTarget;
     const name = (form.elements.namedItem('name-edit') as HTMLInputElement).value;
     const email = (form.elements.namedItem('email-edit') as HTMLInputElement).value;
@@ -235,7 +237,7 @@ export default function AdminManagementPage() {
     }
   }
 
-  if (loading || allAdmins === null) {
+  if (authLoading || allAdmins === null) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />
@@ -416,7 +418,7 @@ export default function AdminManagementPage() {
                             <MessageSquare className="mr-2 h-4 w-4"/>
                             Send Welcome Message
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => openEditDialog(admin)} disabled={admin.role === "Head Admin"}>
+                        <DropdownMenuItem onClick={() => openEditDialog(admin)} disabled={admin.id === user?.uid}>
                             <Edit className="mr-2 h-4 w-4"/>
                             Edit Details
                         </DropdownMenuItem>

@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Puzzle, Users, IndianRupee, Loader2 } from "lucide-react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useRouter } from "next/navigation";
-import { useAuth, useFirebase } from "@/firebase";
+import { useAuth, useDbService } from "@/firebase";
 import { collection, query, where, getDocs, doc, updateDoc, arrayUnion, runTransaction, serverTimestamp } from "firebase/firestore";
 import type { QuizClashTournament } from "@/lib/quiz-clash-data";
 import { Badge } from "@/components/ui/badge";
@@ -18,11 +18,11 @@ function QuizClashPageContent() {
   const { toast } = useToast();
   const router = useRouter();
   const { user } = useAuth();
-  const { db, loading } = useFirebase();
+  const db = useDbService();
   const [tournaments, setTournaments] = useState<QuizClashTournament[] | null>(null);
 
   useEffect(() => {
-    if (loading || !db) return;
+    if (!db) return;
     const fetchTournaments = async () => {
         const q = query(collection(db, "quizClashTournaments"), where("status", "==", "scheduled"));
         const querySnapshot = await getDocs(q);
@@ -30,7 +30,7 @@ function QuizClashPageContent() {
         setTournaments(tournamentList);
     };
     fetchTournaments();
-  }, [loading, db]);
+  }, [db]);
 
   const handleRegister = async (tournament: QuizClashTournament) => {
     if (!user || !db) {
@@ -103,7 +103,7 @@ function QuizClashPageContent() {
     }
   };
   
-  if (loading || !tournaments) {
+  if (!tournaments) {
     return (
       <div className="w-full max-w-4xl mx-auto flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />

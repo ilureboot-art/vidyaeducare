@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useAuth } from "@/firebase";
+import { useAuth } from "@/firebase/provider";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { Loader2 } from "lucide-react";

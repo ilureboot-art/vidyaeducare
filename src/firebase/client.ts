@@ -8,6 +8,7 @@ let app: FirebaseApp;
 let auth: Auth;
 let db: Firestore;
 
+// This ensures we initialize firebase only once
 if (getApps().length === 0) {
   app = initializeApp(firebaseConfig);
 } else {

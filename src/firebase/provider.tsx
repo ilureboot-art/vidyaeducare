@@ -26,7 +26,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   useEffect(() => {
-    // auth and db are guaranteed to be initialized here because of the module evaluation order.
+    // auth and db are guaranteed to be initialized here because they are imported from client.ts
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
@@ -76,6 +76,6 @@ export const useAuth = (): AuthState => {
   return context;
 };
 
-// These hooks provide direct access to the initialized services
+// These hooks provide direct access to the initialized services from client.ts
 export const useAuthService = () => auth;
 export const useDbService = () => db;

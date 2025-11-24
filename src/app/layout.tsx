@@ -10,7 +10,7 @@ import { Navbar } from '@/components/Navbar';
 import { ChatWidget } from '@/components/ChatWidget';
 import { AppHeader } from '@/components/AppHeader';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import { FirebaseProvider } from '@/firebase'; // Corrected top-level import
+import { FirebaseProvider } from '@/firebase/provider'; // Corrected import path
 import AdminLayout from './admin/layout';
 
 const bodyClassName = `font-body antialiased`;

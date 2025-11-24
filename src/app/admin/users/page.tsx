@@ -19,7 +19,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { format } from 'date-fns';
-import { useDbService } from "@/firebase";
+import { useDbService } from "@/firebase/provider";
 import { collection, doc, updateDoc, deleteDoc, getDocs } from "firebase/firestore";
 
 type UserStatus = "Active" | "Banned" | "Inactive";

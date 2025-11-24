@@ -1,12 +1,22 @@
 
 "use client";
 
-// This file is deprecated. All its logic has been merged into FirebaseClientProvider.
-// It is kept here only to prevent breaking any legacy imports, but it should not be used.
-// useAuth should now be imported from '@/firebase'
+// This file is deprecated and no longer used.
+// All Firebase provider logic is now consolidated in `src/firebase/provider.tsx`.
+// This file can be safely deleted.
 
-export { useAuth } from '@/firebase';
+import React from 'react';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
+}
+
+export function useAuth() {
+    console.warn("useAuth from src/context/AuthContext.tsx is deprecated. Please import from @/firebase/provider.");
+    return {
+        user: null,
+        loading: true,
+        isAdmin: false,
+        isHeadAdmin: false,
+    };
 }

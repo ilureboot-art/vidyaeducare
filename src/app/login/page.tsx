@@ -18,7 +18,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Gamepad2, Shield, Eye, EyeOff, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { useAuthService } from "@/firebase";
+import { useAuthService } from "@/firebase/provider";
 import { signInWithEmailAndPassword } from "firebase/auth";
 
 export default function LoginPage() {

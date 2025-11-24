@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Landmark, Loader2 } from "lucide-react";
 import type { AdminPaymentMethods } from "@/lib/user-data";
 import Image from "next/image";
-import { useDbService } from "@/firebase";
+import { useDbService } from "@/firebase/provider";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 
 export default function PaymentSettingsPage() {

@@ -2,11 +2,24 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
-import { onAuthStateChanged, type User } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
+import { getAuth, onAuthStateChanged, type Auth, type User } from 'firebase/auth';
+import { getFirestore, doc, getDoc, type Firestore } from 'firebase/firestore';
+import { firebaseConfig } from '@/firebase/config';
 import type { Admin } from '@/lib/admin-data';
 import { Loader2 } from 'lucide-react';
-import { auth, db } from '@/firebase/client'; // Import pre-initialized services
+
+// --- Single, Guaranteed Initialization ---
+// This code runs once on the client when the module is first loaded.
+let app: FirebaseApp;
+if (!getApps().length) {
+  app = initializeApp(firebaseConfig);
+} else {
+  app = getApp();
+}
+const auth = getAuth(app);
+const db = getFirestore(app);
+// --- End of Initialization ---
 
 interface AuthState {
   user: User | null;
@@ -26,7 +39,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   useEffect(() => {
-    // auth and db are guaranteed to be initialized here because they are imported from client.ts
+    // onAuthStateChanged uses the pre-initialized `auth` instance.
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
@@ -68,6 +81,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+// Hook to get the user's auth state
 export const useAuth = (): AuthState => {
   const context = useContext(AuthContext);
   if (context === undefined) {
@@ -76,6 +90,6 @@ export const useAuth = (): AuthState => {
   return context;
 };
 
-// These hooks provide direct access to the initialized services from client.ts
-export const useAuthService = () => auth;
-export const useDbService = () => db;
+// Hooks to get the initialized Firebase services
+export const useAuthService = (): Auth => auth;
+export const useDbService = (): Firestore => db;

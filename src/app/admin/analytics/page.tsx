@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BarChart, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Line, Bar, ResponsiveContainer } from "recharts";
 import { Users, Gamepad2, IndianRupee, Loader2 } from "lucide-react";
-import { useDbService } from "@/firebase";
+import { useDbService } from "@/firebase/provider";
 import { collection, getDocs, query, where, Timestamp, getCountFromServer } from "firebase/firestore";
 
 interface ChartData {

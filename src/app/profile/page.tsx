@@ -17,7 +17,7 @@ import { ResponsiveContainer, BarChart, XAxis, YAxis, Tooltip, Bar, CartesianGri
 import { format } from "date-fns";
 import type { StudentProfile } from "@/lib/student-data";
 import type { ScheduledTest } from "@/lib/test-schedule";
-import { useAuth, useDbService } from "@/firebase";
+import { useAuth, useDbService } from "@/firebase/provider";
 import { doc, getDoc, setDoc, collection, getDocs, deleteDoc, updateDoc, query, where, DocumentData, onSnapshot, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 

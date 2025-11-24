@@ -24,7 +24,7 @@ import { Badge } from '@/components/ui/badge';
 import type { TestSet } from "@/lib/question-bank";
 import type { ScheduledTest } from "@/lib/test-schedule";
 import { collection, getDocs, doc, setDoc } from "firebase/firestore";
-import { useDbService } from '@/firebase';
+import { useDbService } from '@/firebase/provider';
 
 type TestStatus = 'Live' | 'Upcoming' | 'Completed';
 

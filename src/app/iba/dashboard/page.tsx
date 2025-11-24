@@ -23,7 +23,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useAuth, useDbService } from "@/firebase";
+import { useAuth, useDbService } from "@/firebase/provider";
 import { doc, getDoc, collection, query, where, getDocs, Timestamp, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 

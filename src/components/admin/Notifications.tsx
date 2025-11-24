@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import type { AppNotification } from "@/lib/notifications";
 import { collection, query, where, onSnapshot, orderBy, Timestamp } from "firebase/firestore";
-import { useDbService } from "@/firebase";
+import { useDbService } from "@/firebase/provider";
 
 export function Notifications() {
   const db = useDbService();

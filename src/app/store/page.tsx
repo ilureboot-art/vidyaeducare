@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from 'next/link';
 import type { StoreConfig, MockTestPackage, ReferboltSubscription } from "@/lib/store-config";
 import type { WalletData } from "@/lib/user-data";
-import { useAuth, useDbService } from "@/firebase";
+import { useAuth, useDbService } from "@/firebase/provider";
 import { doc, getDoc, runTransaction, collection, serverTimestamp, updateDoc, arrayUnion, query, where, getDocs, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 

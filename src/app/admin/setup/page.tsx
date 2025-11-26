@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useDbService, useAuthService } from '@/firebase';
+import { useDbService, useAuthService } from '@/app/layout';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, runTransaction, getDocs, collection, query, where } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';

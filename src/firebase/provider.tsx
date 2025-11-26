@@ -1,14 +1,14 @@
 
-// src/firebase/provider.tsx
-'use client';
+"use client";
 
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { onAuthStateChanged, type User } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { auth, db } from '@/firebase/client'; // Import pre-initialized services
-import type { Admin } from '@/lib/admin-data';
+import { doc, getDoc, type Firestore } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
+import type { Admin } from '@/lib/admin-data';
+import { auth, db } from './client'; // Import pre-initialized services
 
+// 1. Auth Context and Provider
 interface AuthState {
   user: User | null;
   loading: boolean;
@@ -27,7 +27,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   useEffect(() => {
-    // onAuthStateChanged now uses the guaranteed-to-be-initialized `auth` instance
+    // onAuthStateChanged is now guaranteed to work because `auth` is pre-initialized
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
@@ -69,7 +69,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-// Hook to get the user's auth state
+// 2. Public Hooks
 export const useAuth = (): AuthState => {
   const context = useContext(AuthContext);
   if (context === undefined) {
@@ -78,6 +78,5 @@ export const useAuth = (): AuthState => {
   return context;
 };
 
-// Hooks to get the initialized Firebase services
 export const useAuthService = () => auth;
 export const useDbService = () => db;

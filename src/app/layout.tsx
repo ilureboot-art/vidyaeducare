@@ -4,18 +4,21 @@
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "next-themes";
-import { usePathname } from 'next/navigation';
-import { ReactNode } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import React, { useEffect } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { ChatWidget } from '@/components/ChatWidget';
 import { AppHeader } from '@/components/AppHeader';
-import ProtectedRoute from '@/components/ProtectedRoute';
-import { FirebaseProvider } from '@/firebase/provider';
+import { Loader2 } from 'lucide-react';
+import { FirebaseProvider, useAuth } from '@/firebase/provider';
 import AdminLayout from './admin/layout';
+
+// Force the client-side firebase client to be loaded.
+import { app } from '@/firebase/client';
 
 const bodyClassName = `font-body antialiased`;
 
-function AuthLayout({ children }: { children: ReactNode }) {
+function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex items-center justify-center min-h-screen bg-muted/40">
         {children}
@@ -23,14 +26,32 @@ function AuthLayout({ children }: { children: ReactNode }) {
   );
 }
 
-function UserLayout({ children }: { children: ReactNode }) {
+function UserLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isHomePage = pathname === '/';
+  
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.replace("/login");
+    }
+  }, [user, loading, router]);
+
+  if (loading || !user) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <Loader2 className="animate-spin text-primary" size={32} />
+      </div>
+    );
+  }
+
   return (
       <div className="flex flex-col min-h-screen">
           {!isHomePage && <AppHeader />}
           <main className={`flex-1 flex flex-col w-full items-center ${isHomePage ? '' : 'p-4 pb-24 pt-20'}`}>
-            <ProtectedRoute>{children}</ProtectedRoute>
+            {children}
           </main>
           <>
             {!isHomePage && <Navbar />}
@@ -51,6 +72,7 @@ export default function RootLayout({
   const isAdminAuthPage = ['/admin/login', '/admin/setup', '/check-head-admin'].includes(pathname);
   const isUserAuthPage = ['/login', '/signup', '/forgot-password'].includes(pathname);
   const isAuthPage = isUserAuthPage || isAdminAuthPage;
+  const isPublicPage = pathname === '/' || pathname === '/how-to-play';
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -69,10 +91,12 @@ export default function RootLayout({
             disableTransitionOnChange
         >
           <FirebaseProvider>
-              {isAuthPage ? (
-                <AuthLayout>{children}</AuthLayout>
-              ) : isAdminPage ? (
-                <AdminLayout>{children}</AdminLayout>
+              {isAuthPage || isAdminPage ? (
+                <>
+                  {isAdminPage ? <AdminLayout>{children}</AdminLayout> : <AuthLayout>{children}</AuthLayout>}
+                </>
+              ) : isPublicPage ? (
+                 children
               ) : (
                 <UserLayout>{children}</UserLayout>
               )}

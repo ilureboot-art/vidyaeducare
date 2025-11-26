@@ -1,25 +1,12 @@
-
+// src/firebase/provider.tsx
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
-import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
-import { getAuth, onAuthStateChanged, type Auth, type User } from 'firebase/auth';
-import { getFirestore, doc, getDoc, type Firestore } from 'firebase/firestore';
-import { firebaseConfig } from '@/firebase/config';
+import { onAuthStateChanged, type User } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '@/firebase/client'; // Import pre-initialized services
 import type { Admin } from '@/lib/admin-data';
 import { Loader2 } from 'lucide-react';
-
-// --- Single, Guaranteed Initialization ---
-// This code runs once on the client when the module is first loaded.
-let app: FirebaseApp;
-if (!getApps().length) {
-  app = initializeApp(firebaseConfig);
-} else {
-  app = getApp();
-}
-const auth = getAuth(app);
-const db = getFirestore(app);
-// --- End of Initialization ---
 
 interface AuthState {
   user: User | null;
@@ -39,7 +26,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   useEffect(() => {
-    // onAuthStateChanged uses the pre-initialized `auth` instance.
+    // onAuthStateChanged now uses the guaranteed-to-be-initialized `auth` instance
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
@@ -91,5 +78,5 @@ export const useAuth = (): AuthState => {
 };
 
 // Hooks to get the initialized Firebase services
-export const useAuthService = (): Auth => auth;
-export const useDbService = (): Firestore => db;
+export const useAuthService = () => auth;
+export const useDbService = () => db;

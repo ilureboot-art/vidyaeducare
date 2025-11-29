@@ -10,8 +10,9 @@ import { Navbar } from '@/components/Navbar';
 import { ChatWidget } from '@/components/ChatWidget';
 import { AppHeader } from '@/components/AppHeader';
 import { Loader2 } from 'lucide-react';
-import { FirebaseProvider, useAuth } from '@/firebase/provider';
+import { useAuth } from '@/firebase/provider';
 import AdminLayout from './admin/layout';
+import { FirebaseClientProvider } from '@/firebase/client-provider';
 
 const bodyClassName = `font-body antialiased`;
 
@@ -87,7 +88,7 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
         >
-          <FirebaseProvider>
+          <FirebaseClientProvider>
               {isAuthPage || isAdminPage ? (
                 <>
                   {isAdminPage ? <AdminLayout>{children}</AdminLayout> : <AuthLayout>{children}</AuthLayout>}
@@ -97,7 +98,7 @@ export default function RootLayout({
               ) : (
                 <UserLayout>{children}</UserLayout>
               )}
-          </FirebaseProvider>
+          </FirebaseClientProvider>
           <Toaster />
         </ThemeProvider>
       </body>

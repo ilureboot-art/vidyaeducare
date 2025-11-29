@@ -2,13 +2,19 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
-import { onAuthStateChanged, type User } from 'firebase/auth';
-import { doc, getDoc, type Firestore } from 'firebase/firestore';
-import { Loader2 } from 'lucide-react';
+import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
+import { getAuth, onAuthStateChanged, type Auth, type User } from 'firebase/auth';
+import { getFirestore, doc, getDoc, type Firestore } from 'firebase/firestore';
 import type { Admin } from '@/lib/admin-data';
-import { auth, db } from './client'; // Import pre-initialized services
+import { firebaseConfig } from './config';
 
-// 1. Auth Context and Provider
+// --- 1. Initialize Firebase App and Services ---
+// This guarantees that Firebase is initialized once and only once.
+const app: FirebaseApp = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+const auth: Auth = getAuth(app);
+const db: Firestore = getFirestore(app);
+
+// --- 2. Define Auth State and Context ---
 interface AuthState {
   user: User | null;
   loading: boolean;
@@ -18,6 +24,7 @@ interface AuthState {
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
 
+// --- 3. Create a Provider Component ---
 export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   const [authState, setAuthState] = useState<Omit<AuthState, 'loading'>>({
     user: null,
@@ -27,7 +34,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   useEffect(() => {
-    // onAuthStateChanged is now guaranteed to work because `auth` is pre-initialized
+    // onAuthStateChanged uses the pre-initialized `auth` instance.
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
@@ -54,10 +61,6 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     loading: isAuthLoading,
   }), [authState, isAuthLoading]);
 
-  // We don't show a loader here anymore at the top level, 
-  // because the layout needs to render.
-  // Individual consuming components or layouts can show loaders.
-
   return (
     <AuthContext.Provider value={authContextValue}>
       {children}
@@ -65,7 +68,8 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-// 2. Public Hooks
+// --- 4. Export Public Hooks ---
+// Hook to access authentication state (user, loading, etc.)
 export const useAuth = (): AuthState => {
   const context = useContext(AuthContext);
   if (context === undefined) {
@@ -74,5 +78,8 @@ export const useAuth = (): AuthState => {
   return context;
 };
 
+// Hook to get the initialized Firebase Auth service
 export const useAuthService = () => auth;
+
+// Hook to get the initialized Firestore service
 export const useDbService = () => db;

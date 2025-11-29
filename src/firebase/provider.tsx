@@ -54,13 +54,9 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     loading: isAuthLoading,
   }), [authState, isAuthLoading]);
 
-  if (isAuthLoading) {
-    return (
-      <div className="flex justify-center items-center h-screen bg-background">
-        <Loader2 className="animate-spin text-primary" size={32} />
-      </div>
-    );
-  }
+  // We don't show a loader here anymore at the top level, 
+  // because the layout needs to render.
+  // Individual consuming components or layouts can show loaders.
 
   return (
     <AuthContext.Provider value={authContextValue}>

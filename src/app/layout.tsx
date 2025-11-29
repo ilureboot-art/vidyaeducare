@@ -13,7 +13,7 @@ import { Loader2 } from 'lucide-react';
 import { FirebaseProvider, useAuth } from '@/firebase/provider';
 import AdminLayout from './admin/layout';
 
-// Force the client-side firebase client to be loaded.
+// Force the client-side firebase client to be loaded and initialized.
 import { app } from '@/firebase/client';
 
 const bodyClassName = `font-body antialiased`;

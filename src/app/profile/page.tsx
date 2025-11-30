@@ -17,7 +17,7 @@ import { ResponsiveContainer, BarChart, XAxis, YAxis, Tooltip, Bar, CartesianGri
 import { format } from "date-fns";
 import type { StudentProfile } from "@/lib/student-data";
 import type { ScheduledTest } from "@/lib/test-schedule";
-import { useAuth, useDbService } from "@/firebase/provider";
+import { useAuth, useDbService } from "@/firebase/client-provider";
 import { doc, getDoc, setDoc, collection, getDocs, deleteDoc, updateDoc, query, where, DocumentData, onSnapshot, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
@@ -53,7 +53,7 @@ function ProfilePageContent() {
                 const studentList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentProfile));
                 setStudents(studentList);
             };
-            fetchStudents();
+            if(db) fetchStudents();
             const unsubStudents = onSnapshot(q, (snapshot) => {
                 const studentList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentProfile));
                 setStudents(studentList);
@@ -69,7 +69,7 @@ function ProfilePageContent() {
                 const testsList = testsSnapshot.docs.map(doc => doc.data() as ScheduledTest);
                 setAllScheduledTests(testsList);
             };
-            fetchTests();
+            if(db) fetchTests();
 
             return () => {
                 unsubParent();

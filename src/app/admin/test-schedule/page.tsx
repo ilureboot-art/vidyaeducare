@@ -24,7 +24,7 @@ import { Badge } from '@/components/ui/badge';
 import type { TestSet } from "@/lib/question-bank";
 import type { ScheduledTest } from "@/lib/test-schedule";
 import { collection, getDocs, doc, setDoc } from "firebase/firestore";
-import { useDbService } from '@/firebase/provider';
+import { useDbService } from '@/firebase/client-provider';
 
 type TestStatus = 'Live' | 'Upcoming' | 'Completed';
 
@@ -55,7 +55,7 @@ export default function TestSchedulePage() {
     };
 
     useEffect(() => {
-        fetchPageData();
+        if(db) fetchPageData();
     }, [db]);
     
     const refreshSchedules = (schedules: ScheduledTest[]) => {

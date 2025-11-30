@@ -21,7 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
 import { collection, getDocs, doc, updateDoc, writeBatch, getDoc, runTransaction, Timestamp, onSnapshot, orderBy, query } from "firebase/firestore";
-import { useDbService } from "@/firebase/provider";
+import { useDbService } from "@/firebase/client-provider";
 
 const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -68,7 +68,7 @@ export default function TransactionsPage() {
   };
   
   useEffect(() => {
-    fetchTransactions();
+    if(db) fetchTransactions();
   }, [db]);
 
 

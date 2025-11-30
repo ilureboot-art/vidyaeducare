@@ -31,7 +31,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { type TestSet, type Question } from "@/lib/question-bank";
 import type { AcademicConfig } from "@/lib/academic-config";
-import { useDbService } from "@/firebase/provider";
+import { useDbService } from "@/firebase/client-provider";
 import { collection, getDocs, doc, setDoc, deleteDoc } from "firebase/firestore";
 import Papa from "papaparse";
 import { generateQuestions, GenerateQuestionsInput } from "@/ai/flows/generate-questions-flow";
@@ -91,7 +91,7 @@ export default function TestSetManagementPage() {
   };
 
   useEffect(() => {
-    fetchPageData();
+    if(db) fetchPageData();
   }, [db]);
 
   const resetManualForm = () => {

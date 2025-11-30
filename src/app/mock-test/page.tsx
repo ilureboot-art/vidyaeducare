@@ -20,7 +20,7 @@ import type { Question, TestSet } from "@/lib/question-bank";
 import type { ScheduledTest } from "@/lib/test-schedule";
 import { doc, getDoc, setDoc, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import { useDbService } from "@/firebase/provider";
+import { useDbService } from "@/firebase/client-provider";
 
 const MOCK_TEST_DURATION = 30 * 60; // 30 minutes in seconds
 

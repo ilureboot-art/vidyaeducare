@@ -8,7 +8,7 @@ import { Bell, UserPlus, ArrowDown, ArrowUp, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import type { AppNotification } from "@/lib/notifications";
-import { useDbService } from "@/firebase/provider";
+import { useDbService } from "@/firebase/client-provider";
 import { collection, query, where, orderBy, Timestamp, getDocs } from "firebase/firestore";
 
 const getIconForType = (type: string) => {

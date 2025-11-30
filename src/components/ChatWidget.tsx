@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Input } from '@/components/ui/input';
 import { MessageSquare, X, Send } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-import { useAuth, useDbService } from '@/firebase/provider';
+import { useAuth, useDbService } from '@/firebase/client-provider';
 import { doc, setDoc, addDoc, collection, serverTimestamp, getDoc } from 'firebase/firestore';
 
 export function ChatWidget() {

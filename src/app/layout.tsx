@@ -10,9 +10,8 @@ import { Navbar } from '@/components/Navbar';
 import { ChatWidget } from '@/components/ChatWidget';
 import { AppHeader } from '@/components/AppHeader';
 import { Loader2 } from 'lucide-react';
-import { useAuth } from '@/firebase/provider';
 import AdminLayout from './admin/layout';
-import { FirebaseClientProvider } from '@/firebase/client-provider';
+import { FirebaseClientProvider, useAuth } from '@/firebase/client-provider';
 
 const bodyClassName = `font-body antialiased`;
 

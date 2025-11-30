@@ -9,7 +9,7 @@ import { Menu, BookOpen, Trophy, Store, Users, Wallet, Settings, ChevronRight, X
 import { Separator } from "@/components/ui/separator";
 import { UserNotifications } from "@/components/UserNotifications";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useAuth, useAuthService } from "@/firebase/provider";
+import { useAuth, useAuthService } from "@/firebase/client-provider";
 import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
 

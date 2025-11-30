@@ -38,7 +38,7 @@ import { format } from 'date-fns';
 import type { Admin, AdminRole } from "@/lib/admin-data";
 import { collection, onSnapshot, doc, setDoc, deleteDoc, updateDoc, getDocs } from "firebase/firestore";
 import { createUserWithEmailAndPassword, signOut } from "firebase/auth";
-import { useAuth, useAuthService, useDbService } from "@/firebase/provider";
+import { useAuth, useAuthService, useDbService } from "@/firebase/client-provider";
 
 
 const WhatsAppIcon = () => (

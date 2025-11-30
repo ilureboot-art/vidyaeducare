@@ -18,7 +18,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import type { ScheduledTest } from "@/lib/test-schedule";
 import { collection, getDocs } from 'firebase/firestore';
-import { useDbService } from '@/firebase/provider';
+import { useDbService } from '@/firebase/client-provider';
 
 type TestStatus = 'Live' | 'Upcoming' | 'Completed';
 type ScheduledTestWithStatus = ScheduledTest & { status: TestStatus };

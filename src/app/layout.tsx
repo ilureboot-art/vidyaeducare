@@ -5,7 +5,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "next-themes";
 import { usePathname } from 'next/navigation';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { ChatWidget } from '@/components/ChatWidget';
 import { AppHeader } from '@/components/AppHeader';
@@ -51,19 +51,46 @@ function UserLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
-
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+// New component to handle client-side rendering logic
+function AppContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  if (!isClient) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <Loader2 className="animate-spin text-primary" size={32} />
+      </div>
+    );
+  }
+
   const isAdminPage = pathname.startsWith('/admin');
   const isAdminAuthPage = ['/admin/login', '/admin/setup', '/check-head-admin'].includes(pathname);
   const isUserAuthPage = ['/login', '/signup', '/forgot-password'].includes(pathname);
   const isAuthPage = isUserAuthPage || isAdminAuthPage;
   const isPublicPage = pathname === '/' || pathname === '/how-to-play';
 
+  if (isAuthPage) {
+    return <AuthLayout>{children}</AuthLayout>;
+  }
+  if (isAdminPage) {
+    return <AdminLayout>{children}</AdminLayout>;
+  }
+  if (isPublicPage) {
+    return <>{children}</>;
+  }
+  return <UserLayout>{children}</UserLayout>;
+}
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -81,15 +108,7 @@ export default function RootLayout({
             disableTransitionOnChange
         >
           <FirebaseClientProvider>
-              {isAuthPage ? (
-                <AuthLayout>{children}</AuthLayout>
-              ) : isAdminPage ? (
-                <AdminLayout>{children}</AdminLayout>
-              ) : isPublicPage ? (
-                 children
-              ) : (
-                <UserLayout>{children}</UserLayout>
-              )}
+            <AppContent>{children}</AppContent>
           </FirebaseClientProvider>
           <Toaster />
         </ThemeProvider>

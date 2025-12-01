@@ -4,8 +4,8 @@
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "next-themes";
-import { usePathname, useRouter } from 'next/navigation';
-import React, { useEffect } from 'react';
+import { usePathname } from 'next/navigation';
+import React from 'react';
 import { Navbar } from '@/components/Navbar';
 import { ChatWidget } from '@/components/ChatWidget';
 import { AppHeader } from '@/components/AppHeader';
@@ -28,15 +28,8 @@ function UserLayout({ children }: { children: React.ReactNode }) {
   const isHomePage = pathname === '/';
   
   const { user, loading } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!loading && !user) {
-      router.replace("/login");
-    }
-  }, [user, loading, router]);
-
-  if (loading || !user) {
+ 
+  if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="animate-spin text-primary" size={32} />
@@ -88,10 +81,10 @@ export default function RootLayout({
             disableTransitionOnChange
         >
           <FirebaseClientProvider>
-              {isAuthPage || isAdminPage ? (
-                <>
-                  {isAdminPage ? <AdminLayout>{children}</AdminLayout> : <AuthLayout>{children}</AuthLayout>}
-                </>
+              {isAuthPage ? (
+                <AuthLayout>{children}</AuthLayout>
+              ) : isAdminPage ? (
+                <AdminLayout>{children}</AdminLayout>
               ) : isPublicPage ? (
                  children
               ) : (

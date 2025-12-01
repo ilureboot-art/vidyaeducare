@@ -5,24 +5,28 @@ import React, { createContext, useContext, useState, useEffect, useMemo } from '
 import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, type Auth, type User } from 'firebase/auth';
 import { getFirestore, doc, getDoc, type Firestore } from 'firebase/firestore';
-import { firebaseConfig } from './config';
 import type { Admin } from '@/lib/admin-data';
 
-// --- 1. Initialize Firebase App (Singleton Pattern) ---
-// This ensures Firebase is initialized only once per client session.
-let firebaseApp: FirebaseApp;
-if (!getApps().length) {
-  firebaseApp = initializeApp(firebaseConfig);
-} else {
-  firebaseApp = getApp();
-}
+// --- 1. Firebase Configuration ---
+const firebaseConfig = {
+  "projectId": "vidyaeducare",
+  "appId": "1:759861893307:web:9c8d51835795392bc6b19e",
+  "storageBucket": "vidyaeducare.appspot.com",
+  "apiKey": "AIzaSyBvwttvsCmg-gL3RBXsxfhHPccIAssXWFo",
+  "authDomain": "vidyaeducare.firebaseapp.com",
+  "measurementId": "",
+  "messagingSenderId": "759861893307"
+};
 
-// Export the initialized services directly.
-export const auth = getAuth(firebaseApp);
-export const db = getFirestore(firebaseApp);
+// --- 2. Initialize Firebase App and Services (Singleton Pattern) ---
+const firebaseApp: FirebaseApp = !getApps().length
+  ? initializeApp(firebaseConfig)
+  : getApp();
 
+const auth: Auth = getAuth(firebaseApp);
+const db: Firestore = getFirestore(firebaseApp);
 
-// --- 2. Define Contexts ---
+// --- 3. Define Authentication State Context ---
 interface AuthState {
   user: User | null;
   loading: boolean;
@@ -32,7 +36,7 @@ interface AuthState {
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
 
-// --- 3. Create a Single Provider Component ---
+// --- 4. Create a Single Provider Component for Authentication State ---
 export function FirebaseClientProvider({ children }: { children: React.ReactNode }) {
   const [authState, setAuthState] = useState<Omit<AuthState, 'loading'>>({
     user: null,
@@ -42,7 +46,6 @@ export function FirebaseClientProvider({ children }: { children: React.ReactNode
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   useEffect(() => {
-    // onAuthStateChanged uses the pre-initialized 'auth' instance.
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
@@ -76,7 +79,7 @@ export function FirebaseClientProvider({ children }: { children: React.ReactNode
   );
 }
 
-// --- 4. Export Public Hooks ---
+// --- 5. Export Public Hooks for Accessing Context and Services ---
 export const useAuth = (): AuthState => {
   const context = useContext(AuthContext);
   if (context === undefined) {
@@ -85,7 +88,6 @@ export const useAuth = (): AuthState => {
   return context;
 };
 
-// These hooks now return the pre-initialized instances.
 export const useAuthService = (): Auth => {
   return auth;
 };

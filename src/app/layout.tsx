@@ -51,7 +51,6 @@ function UserLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
-// New component to handle client-side rendering logic
 function AppContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [isClient, setIsClient] = useState(false);

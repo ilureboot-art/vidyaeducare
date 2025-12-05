@@ -37,8 +37,9 @@ import {
 import { format } from 'date-fns';
 import type { Admin, AdminRole } from "@/lib/admin-data";
 import { collection, onSnapshot, doc, setDoc, deleteDoc, updateDoc, getDocs } from "firebase/firestore";
-import { createUserWithEmailAndPassword, signOut } from "firebase/auth";
-import { useAuth, useAuthService, useDbService } from "@/firebase/client-provider";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { auth as mainAuth } from '@/firebase/config';
+import { useAuth, useDbService } from "@/firebase/client-provider";
 
 
 const WhatsAppIcon = () => (
@@ -49,7 +50,6 @@ const WhatsAppIcon = () => (
 
 export default function AdminManagementPage() {
   const db = useDbService();
-  const auth = useAuthService();
   const { user, loading: authLoading, isHeadAdmin } = useAuth();
   const [allAdmins, setAllAdmins] = useState<Admin[] | null>(null);
   
@@ -138,7 +138,7 @@ export default function AdminManagementPage() {
 
   const handleCreateAdmin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!db || !auth) return;
+    if (!db) return;
     const form = e.currentTarget;
     const name = (form.elements.namedItem('name') as HTMLInputElement).value;
     const email = (form.elements.namedItem('email') as HTMLInputElement).value;
@@ -151,18 +151,19 @@ export default function AdminManagementPage() {
         return;
     }
     
-    // Hold current user if one is logged in
-    const currentUser = auth.currentUser;
-    const originalEmail = currentUser?.email;
+    // Create a temporary, secondary auth instance to create the new user
+    // This avoids signing out the current admin.
+    // NOTE: This approach has limitations and is not recommended for production.
+    // A secure backend function is the standard way to handle user creation by an admin.
+    const { initializeApp, getAuth: getTempAuth } = await import("firebase/app");
+    const { firebaseConfig } = await import("@/firebase/config");
+
+    const tempAppName = `temp-admin-creation-${Date.now()}`;
+    const tempApp = initializeApp(firebaseConfig, tempAppName);
+    const tempAuth = getTempAuth(tempApp);
+
 
     try {
-        // Create a temporary, secondary auth instance to create the new user
-        // This avoids signing out the current admin
-        const { initializeApp, getAuth: getTempAuth } = await import("firebase/app");
-        const { firebaseConfig } = await import("@/firebase/config"); // Assuming you have this
-        const tempApp = initializeApp(firebaseConfig, `temp-admin-creation-${Date.now()}`);
-        const tempAuth = getTempAuth(tempApp);
-
         const userCredential = await createUserWithEmailAndPassword(tempAuth, email, password);
         const tempUser = userCredential.user;
 
@@ -517,5 +518,3 @@ export default function AdminManagementPage() {
     </div>
   );
 }
-
-    

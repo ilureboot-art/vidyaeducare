@@ -4,7 +4,7 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
-import { auth, db, app, firebaseConfig } from './config'; // Import pre-initialized services
+import { auth, db } from './config'; // Import pre-initialized services
 import type { Admin } from '@/lib/admin-data';
 
 // --- Define Authentication State Context ---
@@ -28,6 +28,7 @@ export function FirebaseClientProvider({ children }: { children: React.ReactNode
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setIsAuthLoading(true);
       if (user) {
         try {
           const adminDocRef = doc(db, "admins", user.uid);
@@ -72,6 +73,3 @@ export const useAuth = (): AuthState => {
 // These hooks now return the pre-initialized services
 export const useAuthService = () => auth;
 export const useDbService = () => db;
-export const useAppService = () => app;
-
-    

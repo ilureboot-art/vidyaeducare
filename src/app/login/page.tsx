@@ -70,10 +70,22 @@ export default function LoginPage() {
       router.push("/profile");
 
     } catch (error: any) {
+       let errorMessage = "An unknown error occurred.";
+       if (error.code) { 
+          switch(error.code) {
+            case 'auth/user-not-found':
+            case 'auth/wrong-password':
+            case 'auth/invalid-credential':
+                errorMessage = "Invalid email or password. Please check your credentials and try again.";
+                break;
+            default:
+                errorMessage = error.message;
+          }
+       }
         toast({
             variant: "destructive",
             title: "Login Failed",
-            description: error.message,
+            description: errorMessage,
         });
     } finally {
         setIsLoading(false);

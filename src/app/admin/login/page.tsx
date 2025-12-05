@@ -68,8 +68,6 @@ export default function AdminLoginPage() {
           toast({ title: "Login Successful!", description: "Redirecting to admin dashboard..." });
           router.push('/admin/analytics');
       } else {
-        // Do not sign out here. Let the user stay logged in but show an error.
-        // The ProtectedRoute or useAuth hook will handle redirection if necessary.
         toast({ 
             variant: "destructive", 
             title: "Access Denied", 
@@ -77,6 +75,7 @@ export default function AdminLoginPage() {
                 ? "Your admin account is not active. Please contact support."
                 : "You are not registered as an admin. Your credentials are correct, but you lack admin permissions."
         });
+        // Do not sign out here. Let the ProtectedRoute handle redirection.
       }
     } catch (error: any) {
        let errorMessage = "An unknown error occurred.";

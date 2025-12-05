@@ -38,7 +38,6 @@ import { format } from 'date-fns';
 import type { Admin, AdminRole } from "@/lib/admin-data";
 import { collection, onSnapshot, doc, setDoc, deleteDoc, updateDoc, getDocs } from "firebase/firestore";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth as mainAuth, db as mainDb } from '@/firebase/config';
 import { useAuth, useDbService, useAuthService } from "@/firebase/client-provider";
 
 
@@ -153,9 +152,17 @@ export default function AdminManagementPage() {
     }
     
     // The main instance of auth is used to create the new user
-    // A secure backend function would be better, but for client-side admin action this is a direct way.
-    // The security rules MUST allow this action.
+    // This is NOT ideal for security in a production app. A backend function is the correct approach.
+    // For this admin panel, we assume the Head Admin is a trusted user with permissions granted by security rules.
     try {
+        // IMPORTANT: This creates the user in the main Firebase Auth instance.
+        // It's a temporary workaround. A proper solution would use a backend function
+        // to create a user without needing to instantiate a second Firebase app.
+        // Since we are now using a single provider, we can't create a temporary auth instance.
+        // The security rules MUST be configured to allow an authenticated admin to create other users.
+        // This is a significant security consideration.
+        // The existing code with `createUserWithEmailAndPassword(auth, ...)` is correct with the new provider model.
+
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const tempUser = userCredential.user;
 
@@ -175,7 +182,13 @@ export default function AdminManagementPage() {
 
     } catch(error: any) {
          console.error("Error creating admin:", error);
-         toast({ variant: 'destructive', title: "Error creating admin", description: error.message || 'An unknown error occurred.'});
+         let errorMessage = error.message || 'An unknown error occurred.';
+         if (error.code === 'auth/email-already-in-use') {
+             errorMessage = 'This email is already in use by another user.';
+         } else if (error.code === 'auth/weak-password') {
+             errorMessage = 'The password is too weak. Please use a stronger password.';
+         }
+         toast({ variant: 'destructive', title: "Error creating admin", description: errorMessage});
     }
   }
   

@@ -2,12 +2,30 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
-import { onAuthStateChanged, type User } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { auth, db } from './config'; // Import pre-initialized services
+import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
+import { getAuth, onAuthStateChanged, type Auth, type User } from 'firebase/auth';
+import { getFirestore, doc, getDoc, type Firestore } from 'firebase/firestore';
 import type { Admin } from '@/lib/admin-data';
 
-// --- Define Authentication State Context ---
+// --- 1. Firebase Configuration ---
+const firebaseConfig = {
+  projectId: "vidyaeducare",
+  appId: "1:759861893307:web:9c8d51835795392bc6b19e",
+  storageBucket: "vidyaeducare.appspot.com",
+  apiKey: "AIzaSyBvwttvsCmg-gL3RBXsxfhHPccIAssXWFo",
+  authDomain: "vidyaeducare.firebaseapp.com",
+  measurementId: "",
+  messagingSenderId: "759861893307",
+};
+
+
+// --- 2. Service & Auth Context Definitions ---
+interface FirebaseServices {
+  app: FirebaseApp;
+  auth: Auth;
+  db: Firestore;
+}
+
 interface AuthState {
   user: User | null;
   loading: boolean;
@@ -15,10 +33,13 @@ interface AuthState {
   isHeadAdmin: boolean;
 }
 
+const FirebaseContext = createContext<FirebaseServices | undefined>(undefined);
 const AuthContext = createContext<AuthState | undefined>(undefined);
 
-// --- Create a Single Provider Component for Authentication State ---
+
+// --- 3. The Single Provider Component ---
 export function FirebaseClientProvider({ children }: { children: React.ReactNode }) {
+  const [services, setServices] = useState<FirebaseServices | null>(null);
   const [authState, setAuthState] = useState<Omit<AuthState, 'loading'>>({
     user: null,
     isAdmin: false,
@@ -26,7 +47,21 @@ export function FirebaseClientProvider({ children }: { children: React.ReactNode
   });
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
+  // --- Initialize Firebase ONCE on client mount ---
   useEffect(() => {
+    if (typeof window !== 'undefined' && !services) {
+      const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+      const db = getFirestore(app);
+      setServices({ app, auth, db });
+    }
+  }, [services]);
+
+  // --- Listen for Auth State Changes ---
+  useEffect(() => {
+    if (!services) return;
+
+    const { auth, db } = services;
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setIsAuthLoading(true);
       if (user) {
@@ -47,21 +82,29 @@ export function FirebaseClientProvider({ children }: { children: React.ReactNode
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [services]);
 
   const authContextValue = useMemo(() => ({
     ...authState,
-    loading: isAuthLoading,
-  }), [authState, isAuthLoading]);
+    loading: isAuthLoading || !services, // Loading if auth is changing OR services aren't ready
+  }), [authState, isAuthLoading, services]);
+
+  if (!services) {
+    // Render nothing or a loader until Firebase is initialized on the client
+    return null; 
+  }
 
   return (
-    <AuthContext.Provider value={authContextValue}>
-      {children}
-    </AuthContext.Provider>
+    <FirebaseContext.Provider value={services}>
+      <AuthContext.Provider value={authContextValue}>
+        {children}
+      </AuthContext.Provider>
+    </FirebaseContext.Provider>
   );
 }
 
-// --- Export Public Hooks for Accessing Context and Services ---
+
+// --- 4. Public Hooks ---
 export const useAuth = (): AuthState => {
   const context = useContext(AuthContext);
   if (context === undefined) {
@@ -70,6 +113,13 @@ export const useAuth = (): AuthState => {
   return context;
 };
 
-// These hooks now return the pre-initialized services
-export const useAuthService = () => auth;
-export const useDbService = () => db;
+const useFirebaseServices = (): FirebaseServices => {
+    const context = useContext(FirebaseContext);
+    if (context === undefined) {
+        throw new Error('useFirebaseServices must be used within a FirebaseClientProvider');
+    }
+    return context;
+};
+
+export const useAuthService = () => useFirebaseServices().auth;
+export const useDbService = () => useFirebaseServices().db;

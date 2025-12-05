@@ -18,13 +18,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Gamepad2, Shield, Eye, EyeOff, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { useAuthService } from "@/firebase/client-provider";
+import { useAuthService, useAuth } from "@/firebase/client-provider";
 import { signInWithEmailAndPassword } from "firebase/auth";
 
 export default function LoginPage() {
   const { toast } = useToast();
   const router = useRouter();
   const auth = useAuthService();
+  const { user } = useAuth(); // Get user from central hook
 
   const [email, setEmail] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
@@ -32,6 +33,13 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   
   const isFirebaseReady = !!auth;
+
+  // Effect to redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      router.push("/profile");
+    }
+  }, [user, router]);
 
   useEffect(() => {
     const rememberedEmail = localStorage.getItem('rememberedUser');
@@ -67,7 +75,8 @@ export default function LoginPage() {
           title: "Login Successful!",
           description: "Welcome back!",
       });
-      router.push("/profile");
+      // The useEffect hook will now handle the redirect to /profile
+      // router.push("/profile");
 
     } catch (error: any) {
        let errorMessage = "An unknown error occurred.";
@@ -157,7 +166,7 @@ export default function LoginPage() {
           <CardFooter className="flex-col gap-4">
             <Button className="w-full" type="submit" disabled={isLoading || !isFirebaseReady}>
                 {isLoading || !isFirebaseReady ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                {isLoading ? 'Logging in...' : 'Login'}
+                {isFirebaseReady ? 'Login' : 'Loading...'}
             </Button>
           </CardFooter>
         </form>

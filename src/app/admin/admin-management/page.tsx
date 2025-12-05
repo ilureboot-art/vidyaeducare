@@ -151,18 +151,11 @@ export default function AdminManagementPage() {
         return;
     }
     
-    // The main instance of auth is used to create the new user
-    // This is NOT ideal for security in a production app. A backend function is the correct approach.
-    // For this admin panel, we assume the Head Admin is a trusted user with permissions granted by security rules.
+    // IMPORTANT: Security rules MUST be configured to allow an authenticated admin
+    // to call createUserWithEmailAndPassword. This is not a default behavior.
+    // A more secure production pattern uses a backend Cloud Function.
+    // For this app, we are relying on security rules for this action.
     try {
-        // IMPORTANT: This creates the user in the main Firebase Auth instance.
-        // It's a temporary workaround. A proper solution would use a backend function
-        // to create a user without needing to instantiate a second Firebase app.
-        // Since we are now using a single provider, we can't create a temporary auth instance.
-        // The security rules MUST be configured to allow an authenticated admin to create other users.
-        // This is a significant security consideration.
-        // The existing code with `createUserWithEmailAndPassword(auth, ...)` is correct with the new provider model.
-
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const tempUser = userCredential.user;
 

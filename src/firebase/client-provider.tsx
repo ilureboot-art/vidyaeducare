@@ -4,7 +4,7 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { onAuthStateChanged, type Auth, type User } from 'firebase/auth';
 import { doc, getDoc, type Firestore } from 'firebase/firestore';
-import { auth, db } from './config'; // Import initialized services
+import { auth, db } from './config'; // Import the guaranteed-to-be-initialized services
 import type { Admin } from '@/lib/admin-data';
 import { Loader2 } from 'lucide-react';
 
@@ -26,6 +26,8 @@ export function FirebaseClientProvider({ children }: { children: React.ReactNode
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   useEffect(() => {
+    // Now that 'auth' and 'db' are imported from a module that correctly initializes them,
+    // we can safely use them in this effect.
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setIsAuthLoading(true);
       if (user) {
@@ -53,13 +55,13 @@ export function FirebaseClientProvider({ children }: { children: React.ReactNode
     loading: isAuthLoading,
   }), [authState, isAuthLoading]);
 
-  // Render a loading state until authentication check is complete
+  // The loading check is now very simple.
   if (isAuthLoading) {
-      return (
-          <div className="flex justify-center items-center h-screen w-screen">
-              <Loader2 className="animate-spin text-primary" size={48} />
-          </div>
-      );
+    return (
+      <div className="flex justify-center items-center h-screen w-screen">
+        <Loader2 className="animate-spin text-primary" size={48} />
+      </div>
+    );
   }
 
   return (
@@ -77,6 +79,6 @@ export const useAuth = (): AuthState => {
   return context;
 };
 
-// These hooks now directly provide the imported services.
+// These hooks directly provide the imported, stable services.
 export const useAuthService = (): Auth => auth;
 export const useDbService = (): Firestore => db;

@@ -4,7 +4,9 @@ import { getAuth, type Auth } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
 
 // --- 1. Firebase Configuration ---
-export const firebaseConfig = {
+// By defining the config object directly in this file, we guarantee it is available
+// when initializeApp is called, preventing the "auth configuration not found" error.
+const firebaseConfig = {
   "projectId": "vidyaeducare",
   "appId": "1:759861893307:web:9c8d51835795392bc6b19e",
   "storageBucket": "vidyaeducare.appspot.com",

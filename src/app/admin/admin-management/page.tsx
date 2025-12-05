@@ -38,8 +38,8 @@ import { format } from 'date-fns';
 import type { Admin, AdminRole } from "@/lib/admin-data";
 import { collection, onSnapshot, doc, setDoc, deleteDoc, updateDoc, getDocs } from "firebase/firestore";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth as mainAuth } from '@/firebase/config';
-import { useAuth, useDbService } from "@/firebase/client-provider";
+import { auth as mainAuth, db as mainDb } from '@/firebase/config';
+import { useAuth, useDbService, useAuthService } from "@/firebase/client-provider";
 
 
 const WhatsAppIcon = () => (
@@ -50,6 +50,7 @@ const WhatsAppIcon = () => (
 
 export default function AdminManagementPage() {
   const db = useDbService();
+  const auth = useAuthService();
   const { user, loading: authLoading, isHeadAdmin } = useAuth();
   const [allAdmins, setAllAdmins] = useState<Admin[] | null>(null);
   
@@ -138,7 +139,7 @@ export default function AdminManagementPage() {
 
   const handleCreateAdmin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!db) return;
+    if (!db || !auth) return;
     const form = e.currentTarget;
     const name = (form.elements.namedItem('name') as HTMLInputElement).value;
     const email = (form.elements.namedItem('email') as HTMLInputElement).value;
@@ -151,20 +152,11 @@ export default function AdminManagementPage() {
         return;
     }
     
-    // Create a temporary, secondary auth instance to create the new user
-    // This avoids signing out the current admin.
-    // NOTE: This approach has limitations and is not recommended for production.
-    // A secure backend function is the standard way to handle user creation by an admin.
-    const { initializeApp, getAuth: getTempAuth } = await import("firebase/app");
-    const { firebaseConfig } = await import("@/firebase/config");
-
-    const tempAppName = `temp-admin-creation-${Date.now()}`;
-    const tempApp = initializeApp(firebaseConfig, tempAppName);
-    const tempAuth = getTempAuth(tempApp);
-
-
+    // The main instance of auth is used to create the new user
+    // A secure backend function would be better, but for client-side admin action this is a direct way.
+    // The security rules MUST allow this action.
     try {
-        const userCredential = await createUserWithEmailAndPassword(tempAuth, email, password);
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const tempUser = userCredential.user;
 
         const newAdminData: Omit<Admin, 'id'> = {

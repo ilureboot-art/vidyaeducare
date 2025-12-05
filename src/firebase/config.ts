@@ -15,15 +15,7 @@ export const firebaseConfig = {
 };
 
 // --- 2. Initialize Firebase App and Services (Correct Singleton Pattern) ---
-function getClientApp(): FirebaseApp {
-    if (getApps().length) {
-        return getApp();
-    }
-    const app = initializeApp(firebaseConfig);
-    return app;
-}
-
-const app: FirebaseApp = getClientApp();
+const app: FirebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const auth: Auth = getAuth(app);
 const db: Firestore = getFirestore(app);
 

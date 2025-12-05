@@ -4,7 +4,7 @@ import { getAuth, type Auth } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
 
 // --- 1. Firebase Configuration ---
-const firebaseConfig = {
+export const firebaseConfig = {
   "projectId": "vidyaeducare",
   "appId": "1:759861893307:web:9c8d51835795392bc6b19e",
   "storageBucket": "vidyaeducare.appspot.com",
@@ -23,3 +23,5 @@ const auth: Auth = getAuth(app);
 const db: Firestore = getFirestore(app);
 
 export { app, auth, db };
+
+    

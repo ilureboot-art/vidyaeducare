@@ -4,7 +4,7 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
-import { auth, db } from './config'; // Import pre-initialized services
+import { auth, db, app, firebaseConfig } from './config'; // Import pre-initialized services
 import type { Admin } from '@/lib/admin-data';
 
 // --- Define Authentication State Context ---
@@ -72,3 +72,6 @@ export const useAuth = (): AuthState => {
 // These hooks now return the pre-initialized services
 export const useAuthService = () => auth;
 export const useDbService = () => db;
+export const useAppService = () => app;
+
+    

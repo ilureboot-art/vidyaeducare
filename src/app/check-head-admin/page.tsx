@@ -17,7 +17,7 @@ export default function CheckHeadAdminPage() {
 
   useEffect(() => {
     if (!db) {
-      setError("Database service is not available.");
+      // The db service might not be ready on first render, so we wait.
       return;
     };
 
@@ -117,3 +117,5 @@ export default function CheckHeadAdminPage() {
      </div>
   );
 }
+
+    

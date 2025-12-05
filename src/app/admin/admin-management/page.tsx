@@ -153,9 +153,17 @@ export default function AdminManagementPage() {
     
     // Hold current user if one is logged in
     const currentUser = auth.currentUser;
+    const originalEmail = currentUser?.email;
 
     try {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        // Create a temporary, secondary auth instance to create the new user
+        // This avoids signing out the current admin
+        const { initializeApp, getAuth: getTempAuth } = await import("firebase/app");
+        const { firebaseConfig } = await import("@/firebase/config"); // Assuming you have this
+        const tempApp = initializeApp(firebaseConfig, `temp-admin-creation-${Date.now()}`);
+        const tempAuth = getTempAuth(tempApp);
+
+        const userCredential = await createUserWithEmailAndPassword(tempAuth, email, password);
         const tempUser = userCredential.user;
 
         const newAdminData: Omit<Admin, 'id'> = {
@@ -167,25 +175,14 @@ export default function AdminManagementPage() {
             joinDate: new Date().toISOString(),
         };
 
-        // Use the main db instance to write the document
         await setDoc(doc(db, "admins", tempUser.uid), newAdminData);
         
         toast({ title: 'Admin Created!', description: `${name} has been added.`});
         setIsCreateDialogOpen(false);
-        // We will optimistically update the UI, but a page reload is a safe fallback
-        // window.location.reload();
 
     } catch(error: any) {
          console.error("Error creating admin:", error);
          toast({ variant: 'destructive', title: "Error creating admin", description: error.message || 'An unknown error occurred.'});
-    } finally {
-        // Sign out the newly created user and restore previous session if it existed
-        if (auth.currentUser && auth.currentUser.email === email) {
-            await signOut(auth);
-            if (currentUser) {
-                toast({ title: 'Session Note', description: 'Your session was briefly interrupted to create the user. You are still logged in.'});
-            }
-        }
     }
   }
   
@@ -520,3 +517,5 @@ export default function AdminManagementPage() {
     </div>
   );
 }
+
+    

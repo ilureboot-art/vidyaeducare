@@ -20,7 +20,7 @@ import { useRouter } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from "firebase/auth";
 import { doc, setDoc, getDoc, collection, query, where, getDocs, type Firestore, runTransaction, serverTimestamp } from "firebase/firestore";
-import { useAuthService, useDbService } from "@/firebase/client-provider";
+import { useAuth, useAuthService, useDbService } from "@/firebase/client-provider";
 import type { Admin, AdminRole } from "@/lib/admin-data";
 
 // Pre-defined credentials for the one-time Head Admin setup
@@ -291,3 +291,5 @@ export default function AdminLoginPage() {
     </div>
   );
 }
+
+    

@@ -53,20 +53,7 @@ function UserLayout({ children }: { children: React.ReactNode }) {
 
 function AppContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const [isClient, setIsClient] = useState(false);
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  if (!isClient) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <Loader2 className="animate-spin text-primary" size={32} />
-      </div>
-    );
-  }
-
+  
   const isAdminPage = pathname.startsWith('/admin');
   const isAdminAuthPage = ['/admin/login', '/admin/setup', '/check-head-admin'].includes(pathname);
   const isUserAuthPage = ['/login', '/signup', '/forgot-password'].includes(pathname);
@@ -90,6 +77,13 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+    const [isClient, setIsClient] = useState(false);
+
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
+
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -107,7 +101,11 @@ export default function RootLayout({
             disableTransitionOnChange
         >
           <FirebaseClientProvider>
-            <AppContent>{children}</AppContent>
+             {isClient ? <AppContent>{children}</AppContent> : (
+                <div className="flex justify-center items-center h-screen">
+                    <Loader2 className="animate-spin text-primary" size={32} />
+                </div>
+             )}
           </FirebaseClientProvider>
           <Toaster />
         </ThemeProvider>

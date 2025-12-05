@@ -2,27 +2,11 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
-import { initializeApp, getApp, getApps, type FirebaseApp } from 'firebase/app';
-import { getAuth, onAuthStateChanged, type Auth, type User } from 'firebase/auth';
-import { getFirestore, doc, getDoc, type Firestore } from 'firebase/firestore';
+import { onAuthStateChanged, type Auth, type User } from 'firebase/auth';
+import { doc, getDoc, type Firestore } from 'firebase/firestore';
+import { auth, db } from './config'; // Import initialized services
 import type { Admin } from '@/lib/admin-data';
 import { Loader2 } from 'lucide-react';
-
-const firebaseConfig = {
-  projectId: "vidyaeducare",
-  appId: "1:759861893307:web:9c8d51835795392bc6b19e",
-  storageBucket: "vidyaeducare.appspot.com",
-  apiKey: "AIzaSyBvwttvsCmg-gL3RBXsxfhHPccIAssXWFo",
-  authDomain: "vidyaeducare.firebaseapp.com",
-  measurementId: "",
-  messagingSenderId: "759861893307",
-};
-
-interface FirebaseServices {
-  app: FirebaseApp;
-  auth: Auth;
-  db: Firestore;
-}
 
 interface AuthState {
   user: User | null;
@@ -31,11 +15,9 @@ interface AuthState {
   isHeadAdmin: boolean;
 }
 
-const FirebaseContext = createContext<FirebaseServices | undefined>(undefined);
 const AuthContext = createContext<AuthState | undefined>(undefined);
 
 export function FirebaseClientProvider({ children }: { children: React.ReactNode }) {
-  const [services, setServices] = useState<FirebaseServices | null>(null);
   const [authState, setAuthState] = useState<Omit<AuthState, 'loading'>>({
     user: null,
     isAdmin: false,
@@ -44,18 +26,6 @@ export function FirebaseClientProvider({ children }: { children: React.ReactNode
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && !services) {
-      const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-      const auth = getAuth(app);
-      const db = getFirestore(app);
-      setServices({ app, auth, db });
-    }
-  }, []); // Empty dependency array ensures this runs only ONCE.
-
-  useEffect(() => {
-    if (!services) return;
-
-    const { auth, db } = services;
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setIsAuthLoading(true);
       if (user) {
@@ -76,29 +46,26 @@ export function FirebaseClientProvider({ children }: { children: React.ReactNode
     });
 
     return () => unsubscribe();
-  }, [services]);
+  }, []);
 
   const authContextValue = useMemo(() => ({
     ...authState,
-    loading: isAuthLoading || !services,
-  }), [authState, isAuthLoading, services]);
+    loading: isAuthLoading,
+  }), [authState, isAuthLoading]);
 
-  // CRITICAL FIX: Do not render children until Firebase services are initialized.
-  // This prevents any child component from trying to access Firebase before it's ready.
-  if (!services) {
-    return (
-        <div className="flex justify-center items-center h-screen w-screen">
-          <Loader2 className="animate-spin text-primary" size={48} />
-        </div>
-    );
+  // Render a loading state until authentication check is complete
+  if (isAuthLoading) {
+      return (
+          <div className="flex justify-center items-center h-screen w-screen">
+              <Loader2 className="animate-spin text-primary" size={48} />
+          </div>
+      );
   }
 
   return (
-    <FirebaseContext.Provider value={services}>
-      <AuthContext.Provider value={authContextValue}>
-        {children}
-      </AuthContext.Provider>
-    </FirebaseContext.Provider>
+    <AuthContext.Provider value={authContextValue}>
+      {children}
+    </AuthContext.Provider>
   );
 }
 
@@ -110,13 +77,6 @@ export const useAuth = (): AuthState => {
   return context;
 };
 
-const useFirebaseServices = (): FirebaseServices => {
-    const context = useContext(FirebaseContext);
-    if (context === undefined) {
-        throw new Error('useFirebaseServices must be used within a FirebaseClientProvider');
-    }
-    return context;
-};
-
-export const useAuthService = () => useFirebaseServices().auth;
-export const useDbService = () => useFirebaseServices().db;
+// These hooks now directly provide the imported services.
+export const useAuthService = (): Auth => auth;
+export const useDbService = (): Firestore => db;

@@ -50,7 +50,7 @@ export function FirebaseClientProvider({ children }: { children: React.ReactNode
       const db = getFirestore(app);
       setServices({ app, auth, db });
     }
-  }, []); // The empty dependency array ensures this runs only ONCE.
+  }, []); // Empty dependency array ensures this runs only ONCE.
 
   useEffect(() => {
     if (!services) return;
@@ -83,6 +83,8 @@ export function FirebaseClientProvider({ children }: { children: React.ReactNode
     loading: isAuthLoading || !services,
   }), [authState, isAuthLoading, services]);
 
+  // CRITICAL FIX: Do not render children until Firebase services are initialized.
+  // This prevents any child component from trying to access Firebase before it's ready.
   if (!services) {
     return (
         <div className="flex justify-center items-center h-screen w-screen">

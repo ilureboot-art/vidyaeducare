@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw, Users, IndianRupee, Repeat, Loader2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import { useDbService } from "@/firebase/client-provider";
+import { useDb } from "@/firebase";
 import { collection, getDocs, query, Timestamp, getCountFromServer } from "firebase/firestore";
 
 type Cycle = {
@@ -34,7 +34,7 @@ type Referral = {
 }
 
 export default function ReferBoltManagementPage() {
-  const db = useDbService();
+  const db = useDb();
   const [stats, setStats] = useState<Stats | null>(null);
   const [cycles, setCycles] = useState<Cycle[] | null>(null);
   const [referrals, setReferrals] = useState<Referral[] | null>(null);

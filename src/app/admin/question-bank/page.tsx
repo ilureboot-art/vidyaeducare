@@ -31,7 +31,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { type TestSet, type Question } from "@/lib/question-bank";
 import type { AcademicConfig } from "@/lib/academic-config";
-import { useDbService } from "@/firebase/client-provider";
+import { useDb } from "@/firebase";
 import { collection, getDocs, doc, setDoc, deleteDoc } from "firebase/firestore";
 import Papa from "papaparse";
 import { generateQuestions, GenerateQuestionsInput } from "@/ai/flows/generate-questions-flow";
@@ -62,7 +62,7 @@ const initialAiInputState: GenerateQuestionsInput = {
 
 export default function TestSetManagementPage() {
   const { toast } = useToast();
-  const db = useDbService();
+  const db = useDb();
   const [testSets, setTestSets] = useState<TestSet[] | null>(null);
   const [academicConfig, setAcademicConfig] = useState<AcademicConfig | null>(null);
 

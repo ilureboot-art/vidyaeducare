@@ -4,14 +4,14 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Loader2, UserCheck, AlertTriangle, ArrowLeft } from "lucide-react";
-import { useDbService } from "@/firebase/client-provider";
+import { useDb } from "@/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import type { Admin } from "@/lib/admin-data";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
 export default function CheckHeadAdminPage() {
-  const db = useDbService();
+  const db = useDb();
   const [headAdmin, setHeadAdmin] = useState<Admin | null | undefined>(undefined); // undefined for loading state
   const [error, setError] = useState<string | null>(null);
 

@@ -4,7 +4,7 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { onAuthStateChanged, type Auth, type User } from 'firebase/auth';
 import { doc, getDoc, type Firestore } from 'firebase/firestore';
-import { auth, db } from './config'; // Import the guaranteed-to-be-initialized services
+import { auth, db } from './config'; 
 import type { Admin } from '@/lib/admin-data';
 import { Loader2 } from 'lucide-react';
 
@@ -16,8 +16,11 @@ interface AuthState {
 }
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
+const DbContext = createContext<Firestore | undefined>(undefined);
+const AuthServiceContext = createContext<Auth | undefined>(undefined);
 
-export function FirebaseClientProvider({ children }: { children: React.ReactNode }) {
+
+export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   const [authState, setAuthState] = useState<Omit<AuthState, 'loading'>>({
     user: null,
     isAdmin: false,
@@ -26,8 +29,6 @@ export function FirebaseClientProvider({ children }: { children: React.ReactNode
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   useEffect(() => {
-    // Now that 'auth' and 'db' are imported from a module that correctly initializes them,
-    // we can safely use them in this effect.
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setIsAuthLoading(true);
       if (user) {
@@ -55,18 +56,13 @@ export function FirebaseClientProvider({ children }: { children: React.ReactNode
     loading: isAuthLoading,
   }), [authState, isAuthLoading]);
 
-  // The loading check is now very simple.
-  if (isAuthLoading) {
-    return (
-      <div className="flex justify-center items-center h-screen w-screen">
-        <Loader2 className="animate-spin text-primary" size={48} />
-      </div>
-    );
-  }
-
   return (
     <AuthContext.Provider value={authContextValue}>
-      {children}
+      <DbContext.Provider value={db}>
+        <AuthServiceContext.Provider value={auth}>
+            {children}
+        </AuthServiceContext.Provider>
+      </DbContext.Provider>
     </AuthContext.Provider>
   );
 }
@@ -74,11 +70,23 @@ export function FirebaseClientProvider({ children }: { children: React.ReactNode
 export const useAuth = (): AuthState => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within a FirebaseClientProvider');
+    throw new Error('useAuth must be used within a FirebaseProvider');
   }
   return context;
 };
 
-// These hooks directly provide the imported, stable services.
-export const useAuthService = (): Auth => auth;
-export const useDbService = (): Firestore => db;
+export const useDb = (): Firestore => {
+  const context = useContext(DbContext);
+  if (context === undefined) {
+    throw new Error('useDb must be used within a FirebaseProvider');
+  }
+  return context;
+}
+
+export const useAuthService = (): Auth => {
+    const context = useContext(AuthServiceContext);
+    if (context === undefined) {
+        throw new Error('useAuthService must be used within a FirebaseProvider');
+    }
+    return context;
+}

@@ -19,13 +19,13 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { doc, setDoc, getDoc, runTransaction, collection, query, where, getDocs, serverTimestamp } from "firebase/firestore";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { useAuthService, useDbService } from "@/firebase/client-provider";
+import { useAuthService, useDb } from "@/firebase";
 
 export default function SignupPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { toast } = useToast();
-  const db = useDbService();
+  const db = useDb();
   const auth = useAuthService();
   
   const [referralCode, setReferralCode] = useState('');

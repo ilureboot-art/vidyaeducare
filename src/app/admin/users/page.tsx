@@ -19,7 +19,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { format } from 'date-fns';
-import { useDbService } from "@/firebase/client-provider";
+import { useDb } from "@/firebase";
 import { collection, doc, updateDoc, deleteDoc, getDocs } from "firebase/firestore";
 
 type UserStatus = "Active" | "Banned" | "Inactive";
@@ -37,7 +37,7 @@ const getStatusBadgeVariant = (status: string) => {
 }
 
 export default function UserManagementPage() {
-  const db = useDbService();
+  const db = useDb();
   const [users, setUsers] = useState<User[] | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();

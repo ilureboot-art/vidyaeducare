@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Archive, Search, Send, Loader2 } from "lucide-react";
-import { useDbService } from "@/firebase/client-provider";
+import { useDb } from "@/firebase";
 import { collection, doc, updateDoc, addDoc, serverTimestamp, query, orderBy, Timestamp, onSnapshot } from "firebase/firestore";
 
 type Message = {
@@ -32,7 +32,7 @@ type ActiveChat = Chat & {
 
 
 export default function ChatManagementPage() {
-    const db = useDbService();
+    const db = useDb();
     const [chats, setChats] = useState<Chat[] | null>(null);
     const [activeChat, setActiveChat] = useState<ActiveChat | null>(null);
     const [reply, setReply] = useState("");

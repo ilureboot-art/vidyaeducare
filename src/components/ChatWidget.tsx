@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Input } from '@/components/ui/input';
 import { MessageSquare, X, Send } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-import { useAuth, useDbService } from '@/firebase/client-provider';
+import { useAuth, useDb } from '@/firebase';
 import { doc, setDoc, addDoc, collection, serverTimestamp, getDoc } from 'firebase/firestore';
 
 export function ChatWidget() {
@@ -15,7 +15,7 @@ export function ChatWidget() {
     const [message, setMessage] = useState('');
     const { toast } = useToast();
     const { user } = useAuth();
-    const db = useDbService();
+    const db = useDb();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

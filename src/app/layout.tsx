@@ -11,7 +11,7 @@ import { ChatWidget } from '@/components/ChatWidget';
 import { AppHeader } from '@/components/AppHeader';
 import { Loader2 } from 'lucide-react';
 import AdminLayout from './admin/layout';
-import { FirebaseClientProvider, useAuth } from '@/firebase/client-provider';
+import { FirebaseProvider, useAuth } from '@/firebase/provider';
 
 const bodyClassName = `font-body antialiased`;
 
@@ -103,9 +103,9 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
         >
-          <FirebaseClientProvider>
+          <FirebaseProvider>
              <AppContent>{children}</AppContent>
-          </FirebaseClientProvider>
+          </FirebaseProvider>
           <Toaster />
         </ThemeProvider>
       </body>

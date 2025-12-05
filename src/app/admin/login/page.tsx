@@ -68,7 +68,8 @@ export default function AdminLoginPage() {
           toast({ title: "Login Successful!", description: "Redirecting to admin dashboard..." });
           router.push('/admin/analytics');
       } else {
-        await signOut(auth);
+        // Do not sign out here. Let the user stay logged in but show an error.
+        // The ProtectedRoute or useAuth hook will handle redirection if necessary.
         toast({ 
             variant: "destructive", 
             title: "Access Denied", 
@@ -291,5 +292,3 @@ export default function AdminLoginPage() {
     </div>
   );
 }
-
-    

@@ -4,12 +4,12 @@ import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyARX4ziyytJoYRgSj1Sevq0dGIxLO7PRiY",
-  authDomain: "next-on-firebase-serverless-c5a7e.firebaseapp.com",
-  projectId: "next-on-firebase-serverless-c5a7e",
-  storageBucket: "next-on-firebase-serverless-c5a7e.appspot.com",
-  messagingSenderId: "939956486427",
-  appId: "1:939956486427:web:05c7b5065a57262f3f035f"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
 let app: FirebaseApp;

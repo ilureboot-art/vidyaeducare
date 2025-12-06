@@ -4,34 +4,28 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Function to check if the user is a Head Admin
-    function isHeadAdmin(userId) {
-      // Use exists() to prevent errors on non-existent documents.
-      return exists(/databases/$(database)/documents/admins/$(userId)) &&
-             get(/databases/$(database)/documents/admins/$(userId)).data.role == 'Head Admin';
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    function isHeadAdmin() {
+      return request.auth != null && exists(/databases/$(database)/documents/admins/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'Head Admin';
     }
 
     match /admins/{userId} {
-      // A user can read their own admin document to check their role.
-      allow read: if request.auth != null && request.auth.uid == userId;
-
-      // Allow a newly authenticated user to create their OWN admin document.
-      // This is a temporarily relaxed rule to bootstrap the first Head Admin.
-      allow create: if request.auth != null && request.auth.uid == userId;
-      
-      // Allow an existing Head Admin to update/delete ANY admin documents.
-      allow update, delete: if request.auth != null && isHeadAdmin(request.auth.uid);
-
-      // Only Head Admins can list all admins.
-      allow list: if request.auth != null && isHeadAdmin(request.auth.uid);
+      allow read: if isOwner(userId) || isHeadAdmin();
+      allow list, update, delete: if isHeadAdmin();
+      // Lock down creation to only Head Admins
+      allow create: if isHeadAdmin();
     }
 
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isOwner(userId);
     }
 
     match /wallets/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isOwner(userId);
     }
 
     match /students/{studentId} {
@@ -42,55 +36,59 @@ service cloud.firestore {
     match /transactions/{txId} {
         // Users can read their own transactions
         allow read: if request.auth != null && get(/databases/$(database)/documents/transactions/$(txId)).data.user == request.auth.uid;
-        // Creating transactions is handled by secure logic (e.g. backend functions or specific client actions)
-        allow create: if request.auth != null;
-        // Admins can update status, but users cannot
-        allow update: if request.auth != null && isHeadAdmin(request.auth.uid);
+        // Users can create their own transactions (e.g., deposit/withdrawal requests)
+        allow create: if request.auth != null && request.resource.data.user == request.auth.uid;
+        // Only Admins can update status (e.g., from Pending to Completed)
+        allow update: if isHeadAdmin();
     }
 
     match /chats/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isOwner(userId);
       match /messages/{messageId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read, write: if isOwner(userId);
       }
     }
 
     match /configs/{configId} {
-      allow read: if true;
-      allow write: if request.auth != null && isHeadAdmin(request.auth.uid);
+      allow read: if true; // Configs are public
+      allow write: if isHeadAdmin();
     }
 
     match /activationCodes/{userId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read, write: if isOwner(userId);
     }
 
     match /testSets/{testSetId} {
         allow read: if true; // Test questions are public
-        allow write: if request.auth != null && isHeadAdmin(request.auth.uid);
+        allow write: if isHeadAdmin();
     }
 
     match /scheduledTests/{testId} {
-        allow read: if true;
-        allow write: if request.auth != null && isHeadAdmin(request.auth.uid);
+        allow read: if true; // Schedule is public
+        allow write: if isHeadAdmin();
     }
 
     match /testResults/{resultId} {
-        allow read, write: if request.auth != null;
+        // A user can write their own test result
+        allow create: if request.auth != null && request.resource.data.studentId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.students;
+        // Only the user who owns the student can read the result.
+        allow read: if request.auth != null && get(/databases/$(database)/documents/testResults/$(resultId)).data.studentId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.students;
     }
 
     match /leaderboard/{resultId} {
-        allow read: if true;
-        allow write: if request.auth != null;
+        allow read: if true; // Leaderboard is public
+        // Users can write their own results to the leaderboard
+        allow write: if request.auth != null; 
     }
 
     match /quizClashTournaments/{tournamentId} {
         allow read: if true;
-        allow write: if request.auth != null;
+        allow write: if isHeadAdmin() || request.auth != null; // Admins can create, users can update by registering
     }
 
     match /quizClashResults/{resultId} {
         allow read: if true;
-        allow write: if request.auth != null;
+        allow write: if request.auth != null; // Users can write their own results
     }
   }
 }

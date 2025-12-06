@@ -12,7 +12,8 @@ export function GET() {
   };
 
   if (!firebaseConfig.apiKey) {
-    return NextResponse.json({ error: 'Firebase config not found on server.' }, { status: 500 });
+    // This will now provide a clear error message if the server environment is misconfigured.
+    return NextResponse.json({ error: 'Firebase server environment variables are not configured.' }, { status: 500 });
   }
 
   return NextResponse.json(firebaseConfig);

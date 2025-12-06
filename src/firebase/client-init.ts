@@ -3,23 +3,23 @@ import { initializeApp, getApp, getApps, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
 
-let app: FirebaseApp;
-let auth: Auth;
-let db: Firestore;
-
-// This function will be called by the client-side provider.
-export async function initializeFirebaseOnClient() {
+// This function is the new single point of entry for client-side Firebase initialization.
+// It ensures that we fetch a valid configuration before attempting to initialize the app.
+export async function initializeFirebaseOnClient(): Promise<{ app: FirebaseApp; auth: Auth; db: Firestore; }> {
+  // If the app is already initialized, return the existing services.
   if (getApps().length > 0) {
-    app = getApp();
-    auth = getAuth(app);
-    db = getFirestore(app);
+    const app = getApp();
+    const auth = getAuth(app);
+    const db = getFirestore(app);
     return { app, auth, db };
   }
 
   try {
+    // Fetch the configuration from our secure API endpoint.
     const response = await fetch('/api/firebase-config');
     if (!response.ok) {
-        throw new Error('Failed to fetch Firebase configuration.');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to fetch Firebase configuration from server.');
     }
     const firebaseConfig = await response.json();
 
@@ -27,14 +27,15 @@ export async function initializeFirebaseOnClient() {
       throw new Error("Invalid Firebase configuration received from server.");
     }
 
-    app = initializeApp(firebaseConfig);
-    auth = getAuth(app);
-    db = getFirestore(app);
+    // Initialize the app with the fetched, guaranteed-valid config.
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
     
     return { app, auth, db };
   } catch (error) {
     console.error("Firebase client initialization failed:", error);
-    // Return null or throw error to be handled by the caller
+    // Propagate the error to be handled by the UI.
     throw error;
   }
 }

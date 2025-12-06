@@ -1,7 +1,6 @@
-
-// This file is no longer the primary source of initialization.
-// Client-side initialization is now handled by client-init.ts after fetching config from the server.
-// This file can be kept for server-side logic if needed in the future, or removed if unused.
-// For now, we'll keep its content minimal to avoid confusion.
+// This file is no longer used for client-side initialization.
+// All logic has been consolidated into src/firebase/provider.tsx
+// to ensure a single, reliable source of truth for Firebase services.
+// This file can be removed if it is not used by any server-side logic.
 
 export {};

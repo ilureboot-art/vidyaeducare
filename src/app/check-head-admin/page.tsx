@@ -117,5 +117,3 @@ export default function CheckHeadAdminPage() {
      </div>
   );
 }
-
-    

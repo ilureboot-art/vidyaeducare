@@ -66,7 +66,7 @@ export default function AdminLoginPage() {
       await signInWithEmailAndPassword(auth, email, password);
       
       // Step 2: Let the `useAuth` hook and ProtectedRoute handle the rest.
-      // The onAuthStateChanged listener in FirebaseClientProvider will automatically
+      // The onAuthStateChanged listener in FirebaseProvider will automatically
       // check for admin status and update the global state.
       // The ProtectedRoute component will then automatically redirect to the dashboard.
       if (rememberMe) {

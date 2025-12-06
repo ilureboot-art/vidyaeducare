@@ -4,9 +4,15 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { onAuthStateChanged, type Auth, type User } from 'firebase/auth';
 import { doc, getDoc, type Firestore } from 'firebase/firestore';
-import { auth, db } from './config'; 
 import type { Admin } from '@/lib/admin-data';
 import { Loader2 } from 'lucide-react';
+import { initializeFirebaseOnClient } from './client-init';
+
+interface FirebaseServices {
+    app: any;
+    auth: Auth;
+    db: Firestore;
+}
 
 interface AuthState {
   user: User | null;
@@ -21,14 +27,30 @@ const AuthServiceContext = createContext<Auth | undefined>(undefined);
 
 
 export function FirebaseProvider({ children }: { children: React.ReactNode }) {
+  const [services, setServices] = useState<FirebaseServices | null>(null);
   const [authState, setAuthState] = useState<Omit<AuthState, 'loading'>>({
     user: null,
     isAdmin: false,
     isHeadAdmin: false,
   });
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    initializeFirebaseOnClient()
+      .then(firebaseServices => {
+        setServices(firebaseServices);
+      })
+      .catch(err => {
+        console.error(err);
+        setError("Could not connect to Firebase. Please check your configuration.");
+      });
+  }, []);
+
+  useEffect(() => {
+    if (!services) return;
+
+    const { auth, db } = services;
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setIsAuthLoading(true);
       if (user) {
@@ -49,17 +71,35 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [services]);
 
   const authContextValue = useMemo(() => ({
     ...authState,
-    loading: isAuthLoading,
-  }), [authState, isAuthLoading]);
+    loading: isAuthLoading || !services, // Loading is true if auth is loading OR services aren't ready
+  }), [authState, isAuthLoading, services]);
+
+  if (error) {
+    return (
+        <div className="flex flex-col gap-4 justify-center items-center h-screen bg-destructive text-destructive-foreground p-4">
+            <h1 className="text-2xl font-bold">Initialization Error</h1>
+            <p>{error}</p>
+        </div>
+    );
+  }
+
+  if (!services) {
+     return (
+      <div className="flex justify-center items-center h-screen">
+        <Loader2 className="animate-spin text-primary" size={32} />
+        <p className="ml-2">Connecting to services...</p>
+      </div>
+    );
+  }
 
   return (
     <AuthContext.Provider value={authContextValue}>
-      <DbContext.Provider value={db}>
-        <AuthServiceContext.Provider value={auth}>
+      <DbContext.Provider value={services.db}>
+        <AuthServiceContext.Provider value={services.auth}>
             {children}
         </AuthServiceContext.Provider>
       </DbContext.Provider>

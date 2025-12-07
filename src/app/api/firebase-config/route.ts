@@ -1,6 +1,9 @@
 
 import { NextResponse } from 'next/server';
 
+// This API route is no longer the primary method for client-side config loading
+// but is kept for potential server-side use or reference.
+// The client now initializes Firebase directly from environment variables.
 export function GET() {
   const firebaseConfig = {
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -12,7 +15,6 @@ export function GET() {
   };
 
   if (!firebaseConfig.apiKey) {
-    // This will now provide a clear error message if the server environment is misconfigured.
     return NextResponse.json({ error: 'Firebase server environment variables are not configured.' }, { status: 500 });
   }
 

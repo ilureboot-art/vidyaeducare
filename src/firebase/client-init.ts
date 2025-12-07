@@ -14,20 +14,26 @@ export async function initializeFirebaseOnClient(): Promise<{ app: FirebaseApp; 
     return { app, auth, db };
   }
 
+  // Construct the Firebase config from environment variables
+  // This is a more direct and reliable method for Next.js apps.
+  const firebaseConfig = {
+    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  };
+
+
+  if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+    const errorMessage = "Firebase environment variables are not set. Please check your NEXT_PUBLIC_FIREBASE_* variables.";
+    console.error(errorMessage);
+    throw new Error(errorMessage);
+  }
+
   try {
-    // Fetch the configuration from our secure API endpoint.
-    const response = await fetch('/api/firebase-config');
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to fetch Firebase configuration from server.');
-    }
-    const firebaseConfig = await response.json();
-
-    if (!firebaseConfig.apiKey) {
-      throw new Error("Invalid Firebase configuration received from server.");
-    }
-
-    // Initialize the app with the fetched, guaranteed-valid config.
+    // Initialize the app with the config from environment variables.
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);

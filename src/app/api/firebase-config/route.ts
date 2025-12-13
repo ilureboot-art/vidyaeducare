@@ -20,3 +20,5 @@ export function GET() {
 
   return NextResponse.json(firebaseConfig);
 }
+
+    

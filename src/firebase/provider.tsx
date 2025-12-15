@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { onAuthStateChanged, type Auth, type User } from 'firebase/auth';
 import { doc, getDoc, type Firestore } from 'firebase/firestore';
 import { Loader2, AlertTriangle } from 'lucide-react';
@@ -46,32 +46,37 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       });
   }, []);
 
+  const checkAdminStatus = useCallback(async (user: User | null, db: Firestore) => {
+    if (user) {
+      try {
+        const adminDocRef = doc(db, "admins", user.uid);
+        const adminDocSnap = await getDoc(adminDocRef);
+        const isAdmin = adminDocSnap.exists() && adminDocSnap.data().status === 'Active';
+        const isHeadAdmin = isAdmin && (adminDocSnap.data() as Admin).role === 'Head Admin';
+        setAuthState({ user, isAdmin, isHeadAdmin });
+      } catch (e) {
+        console.error("Error checking admin status:", e);
+        setAuthState({ user, isAdmin: false, isHeadAdmin: false });
+      }
+    } else {
+      setAuthState({ user: null, isAdmin: false, isHeadAdmin: false });
+    }
+    setIsAuthLoading(false);
+  }, []);
+
   // Effect to listen for authentication state changes
   useEffect(() => {
     if (!services) return;
 
     const { auth, db } = services;
     setIsAuthLoading(true);
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        try {
-          const adminDocRef = doc(db, "admins", user.uid);
-          const adminDocSnap = await getDoc(adminDocRef);
-          const isAdmin = adminDocSnap.exists() && adminDocSnap.data().status === 'Active';
-          const isHeadAdmin = isAdmin && (adminDocSnap.data() as Admin).role === 'Head Admin';
-          setAuthState({ user, isAdmin, isHeadAdmin });
-        } catch (e) {
-          console.error("Error checking admin status:", e);
-          setAuthState({ user, isAdmin: false, isHeadAdmin: false });
-        }
-      } else {
-        setAuthState({ user: null, isAdmin: false, isHeadAdmin: false });
-      }
-      setIsAuthLoading(false);
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      // THIS IS THE FIX: We now explicitly re-check admin status on every auth change.
+      checkAdminStatus(user, db);
     });
 
     return () => unsubscribe();
-  }, [services]);
+  }, [services, checkAdminStatus]);
 
   // Memoize the context values to prevent unnecessary re-renders
   const authContextValue = useMemo(() => ({
@@ -91,7 +96,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Render loading state
+  // Render loading state while services initialize
   if (!services) {
      return (
       <div className="flex justify-center items-center h-screen">

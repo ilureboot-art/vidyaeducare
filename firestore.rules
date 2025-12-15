@@ -14,7 +14,9 @@ service cloud.firestore {
     }
 
     match /admins/{userId} {
-      allow read: if isOwner(userId) || isHeadAdmin();
+      // Allow any authenticated user to read the admins collection to verify roles.
+      // Write access remains restricted, so this is secure.
+      allow read: if request.auth != null;
       allow list, update, delete: if isHeadAdmin();
       // Lock down creation to only Head Admins
       allow create: if isHeadAdmin();

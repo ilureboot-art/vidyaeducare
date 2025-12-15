@@ -5,7 +5,7 @@ import React, { createContext, useContext, useState, useEffect, useMemo, useCall
 import { onAuthStateChanged, type Auth, type User } from 'firebase/auth';
 import { doc, getDoc, type Firestore } from 'firebase/firestore';
 import { Loader2, AlertTriangle } from 'lucide-react';
-import { initializeFirebaseOnClient } from './client-init'; // Use the new initializer
+import { initializeFirebaseOnClient } from './client-init'; 
 import type { Admin } from '@/lib/admin-data';
 
 // Define the shape of our services and auth state

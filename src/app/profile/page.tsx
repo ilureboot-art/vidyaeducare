@@ -102,7 +102,7 @@ function ProfilePageContent() {
             parentId: user.uid,
             name: studentName,
             dob: formData.get('dob') as string,
-            avatarUrl: `https://placehold.co/100x100.png?text=${studentName.charAt(0)}`,
+            avatarUrl: `https://picsum.photos/seed/${newStudentId}/100/100`,
             academic: {
                 standard: formData.get('standard') as string,
                 board: formData.get('board') as "CBSE" | "ICSE" | "SSC",

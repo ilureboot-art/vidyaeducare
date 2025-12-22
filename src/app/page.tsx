@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -106,7 +107,7 @@ Start your journey to success now: ${url}
             </div>
         </div>
         <div>
-            <Image src="https://placehold.co/600x400.png" width={600} height={400} alt="Promotional image for Vidya EduCare" className="rounded-lg shadow-xl" data-ai-hint="students learning" />
+            <Image src="https://picsum.photos/seed/1/600/400" width={600} height={400} alt="Promotional image for Vidya EduCare" className="rounded-lg shadow-xl" data-ai-hint="students learning" />
         </div>
       </section>
       
@@ -162,7 +163,7 @@ Start your journey to success now: ${url}
       <section className="bg-muted/50 rounded-lg p-6 md:p-12">
         <div className="grid md:grid-cols-3 gap-8 items-center">
           <div className="md:col-span-1">
-              <Image src="https://placehold.co/400x400.png" width={400} height={400} alt="Mr. Sanjay Vidya Vijay Gurav, Founder of Vidya EduCare" className="rounded-lg shadow-xl mx-auto" data-ai-hint="portrait professional" />
+              <Image src="https://picsum.photos/seed/2/400/400" width={400} height={400} alt="Mr. Sanjay Vidya Vijay Gurav, Founder of Vidya EduCare" className="rounded-lg shadow-xl mx-auto" data-ai-hint="portrait professional" />
           </div>
           <div className="md:col-span-2">
             <h2 className="text-3xl font-bold text-primary">A Note From Our Founder</h2>
@@ -194,7 +195,7 @@ Start your journey to success now: ${url}
                   <CardFooter className="mt-4">
                       <div className="flex items-center gap-3">
                           <Avatar>
-                              <AvatarImage src={`https://placehold.co/40x40.png?text=${testimonial.avatar}`} data-ai-hint="profile avatar" />
+                              <AvatarImage src={`https://picsum.photos/seed/${testimonial.avatar}/40/40`} data-ai-hint="profile avatar" />
                               <AvatarFallback>{testimonial.avatar}</AvatarFallback>
                           </Avatar>
                           <div>
@@ -225,5 +226,3 @@ Start your journey to success now: ${url}
     </div>
   );
 }
-
-    

@@ -100,7 +100,7 @@ export default function LeaderboardPage() {
                   <TableCell>
                     <div className="flex items-center gap-3">
                         <Avatar className={`w-10 h-10 border-2 ${getRankColor(player.rank)}`}>
-                             <AvatarImage src={`https://placehold.co/40x40.png?text=${player.avatar}`} data-ai-hint="profile avatar" />
+                             <AvatarImage src={`https://picsum.photos/seed/${player.avatar}/40/40`} data-ai-hint="profile avatar" />
                             <AvatarFallback>{player.avatar}</AvatarFallback>
                         </Avatar>
                         <span>{player.name}</span>

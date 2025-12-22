@@ -145,7 +145,7 @@ export default function UserManagementPage() {
                   <TableCell>
                     <div className="flex items-center gap-3">
                         <Avatar>
-                            <AvatarImage src={`https://placehold.co/40x40.png?text=${user.name.charAt(0)}`} data-ai-hint="profile avatar" />
+                            <AvatarImage src={`https://picsum.photos/seed/${user.id}/40/40`} data-ai-hint="profile avatar" />
                             <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
                         </Avatar>
                         <div>

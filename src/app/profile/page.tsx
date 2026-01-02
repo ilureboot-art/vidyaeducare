@@ -17,7 +17,7 @@ import { ResponsiveContainer, BarChart, XAxis, YAxis, Tooltip, Bar, CartesianGri
 import { format } from "date-fns";
 import type { StudentProfile } from "@/lib/student-data";
 import type { ScheduledTest } from "@/lib/test-schedule";
-import { useAuth, useDbService } from "@/firebase/client-provider";
+import { useAuth, useDb } from "@/firebase";
 import { doc, getDoc, setDoc, collection, getDocs, deleteDoc, updateDoc, query, where, DocumentData, onSnapshot, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
@@ -26,7 +26,7 @@ function ProfilePageContent() {
     const { toast } = useToast();
     const router = useRouter();
     const { user } = useAuth();
-    const db = useDbService();
+    const db = useDb();
     
     const [parentProfile, setParentProfile] = useState<DocumentData | null>(null);
     const [students, setStudents] = useState<StudentProfile[] | null>(null);

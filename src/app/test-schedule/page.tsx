@@ -18,14 +18,14 @@ import {
 import { Badge } from '@/components/ui/badge';
 import type { ScheduledTest } from "@/lib/test-schedule";
 import { collection, getDocs } from 'firebase/firestore';
-import { useDbService } from '@/firebase/client-provider';
+import { useDb } from '@/firebase';
 
 type TestStatus = 'Live' | 'Upcoming' | 'Completed';
 type ScheduledTestWithStatus = ScheduledTest & { status: TestStatus };
 
 export default function TestSchedulePage() {
     const { toast } = useToast();
-    const db = useDbService();
+    const db = useDb();
     const [allSchedules, setAllSchedules] = useState<ScheduledTestWithStatus[] | null>(null);
     
     useEffect(() => {

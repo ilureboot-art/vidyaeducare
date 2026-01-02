@@ -7,13 +7,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Share2, IndianRupee, Gift, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { doc, getDoc, type Firestore } from "firebase/firestore";
-import { useDbService, useAuth } from "@/firebase/client-provider";
+import { useDb, useAuth } from "@/firebase";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 function ReferAndEarnPageContent() {
     const { toast } = useToast();
     const { user } = useAuth();
-    const db = useDbService();
+    const db = useDb();
     
     const [referralBonus, setReferralBonus] = useState<number | null>(null);
     const [referralCode, setReferralCode] = useState<string | null>(null);

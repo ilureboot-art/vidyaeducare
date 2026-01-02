@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Loader2, Trophy, Award, Users, IndianRupee } from "lucide-react";
 import Link from "next/link";
-import { useAuth, useDbService } from "@/firebase/client-provider";
+import { useAuth, useDb } from "@/firebase";
 import { doc, getDoc, collection, query, where, getDocs, orderBy, updateDoc, runTransaction, serverTimestamp, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import type { QuizClashTournament } from "@/lib/quiz-clash-data";
@@ -33,7 +33,7 @@ function QuizClashResultsContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const tournamentId = searchParams.get('tournamentId');
-    const db = useDbService();
+    const db = useDb();
 
     const [tournament, setTournament] = useState<QuizClashTournament | null>(null);
     const [results, setResults] = useState<Result[] | null>(null);

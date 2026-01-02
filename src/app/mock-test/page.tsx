@@ -20,7 +20,7 @@ import type { Question, TestSet } from "@/lib/question-bank";
 import type { ScheduledTest } from "@/lib/test-schedule";
 import { doc, getDoc, setDoc, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import { useDbService } from "@/firebase/client-provider";
+import { useDb } from "@/firebase";
 
 const MOCK_TEST_DURATION = 30 * 60; // 30 minutes in seconds
 
@@ -30,7 +30,7 @@ function MockTestContent() {
     const { toast } = useToast();
     const router = useRouter();
     const searchParams = useSearchParams();
-    const db = useDbService();
+    const db = useDb();
 
     const [testState, setTestState] = useState<TestState>("loading");
     const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(null);

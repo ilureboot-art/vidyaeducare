@@ -20,7 +20,7 @@ import type { Transaction } from "@/lib/user-data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
-import { useAuth, useDbService } from "@/firebase/client-provider";
+import { useAuth, useDb } from "@/firebase";
 import { collection, query, where, getDocs, orderBy, onSnapshot, Timestamp, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
@@ -46,7 +46,7 @@ const getTypeIcon = (type: string, amount: number) => {
 
 function TransactionsPageContent() {
   const { user, loading: authLoading } = useAuth();
-  const db = useDbService();
+  const db = useDb();
   const [transactions, setTransactions] = useState<Transaction[] | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'rejected'>('all');

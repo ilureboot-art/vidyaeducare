@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Puzzle, Users, IndianRupee, Loader2 } from "lucide-react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useRouter } from "next/navigation";
-import { useAuth, useDbService } from "@/firebase/client-provider";
+import { useAuth, useDb } from "@/firebase";
 import { collection, query, where, getDocs, doc, updateDoc, arrayUnion, runTransaction, serverTimestamp } from "firebase/firestore";
 import type { QuizClashTournament } from "@/lib/quiz-clash-data";
 import { Badge } from "@/components/ui/badge";
@@ -18,7 +18,7 @@ function QuizClashPageContent() {
   const { toast } = useToast();
   const router = useRouter();
   const { user } = useAuth();
-  const db = useDbService();
+  const db = useDb();
   const [tournaments, setTournaments] = useState<QuizClashTournament[] | null>(null);
 
   useEffect(() => {

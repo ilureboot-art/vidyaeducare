@@ -12,7 +12,7 @@ import { Zap, Share2, IndianRupee, Users, CheckCircle, Repeat, Loader2 } from "l
 import Link from "next/link";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { useAuth, useDbService } from "@/firebase/client-provider";
+import { useAuth, useDb } from "@/firebase";
 import { doc, getDoc, onSnapshot, DocumentData, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
@@ -27,7 +27,7 @@ const benefits = [
 function ReferBoltPageContent() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const db = useDbService();
+  const db = useDb();
   
   const [data, setData] = useState<DocumentData | null | { isSubscribed: boolean }>({ isSubscribed: false });
   const [autoRenew, setAutoRenew] = useState(false);

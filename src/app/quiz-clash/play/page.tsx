@@ -19,7 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, HelpCircle, RefreshCw, Star, Trophy, X, Check, Timer, Coins, ShieldHalf, BrainCircuit, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import { useAuth, useDbService } from "@/firebase/client-provider";
+import { useAuth, useDb } from "@/firebase";
 import { doc, getDoc, collection, addDoc, serverTimestamp, runTransaction, type Firestore } from "firebase/firestore";
 import type { QuizClashTournament } from "@/lib/quiz-clash-data";
 import type { TestSet, Question } from "@/lib/question-bank";
@@ -32,7 +32,7 @@ function QuizClashGameContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { user } = useAuth();
-    const db = useDbService();
+    const db = useDb();
     
     const [gameState, setGameState] = useState<GameState>("loading");
     const [tournament, setTournament] = useState<QuizClashTournament | null>(null);

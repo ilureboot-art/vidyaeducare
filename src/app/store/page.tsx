@@ -12,14 +12,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from 'next/link';
 import type { StoreConfig, MockTestPackage, ReferboltSubscription } from "@/lib/store-config";
 import type { WalletData } from "@/lib/user-data";
-import { useAuth, useDbService } from "@/firebase/client-provider";
+import { useAuth, useDb } from "@/firebase";
 import { doc, getDoc, runTransaction, collection, serverTimestamp, updateDoc, arrayUnion, query, where, getDocs, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 function StorePageContent() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const db = useDbService();
+  const db = useDb();
   
   const [walletData, setWalletData] = useState<WalletData | null>(null);
   const [storeConfig, setStoreConfig] = useState<StoreConfig | null>(null);

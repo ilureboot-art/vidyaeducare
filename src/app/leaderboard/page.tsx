@@ -13,7 +13,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Trophy, Award, Loader2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useDbService } from "@/firebase/client-provider";
+import { useDb } from "@/firebase";
 import { collection, getDocs, query, orderBy, limit } from "firebase/firestore";
 
 type Player = {
@@ -33,7 +33,7 @@ const getRankColor = (rank: number) => {
 }
 
 export default function LeaderboardPage() {
-  const db = useDbService();
+  const db = useDb();
   const [leaderboardData, setLeaderboardData] = useState<Player[] | null>(null);
   
   useEffect(() => {

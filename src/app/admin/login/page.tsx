@@ -34,7 +34,7 @@ export default function AdminLoginPage() {
   const router = useRouter();
   const auth = useAuthService();
   const db = useDb();
-  const { user, isAdmin } = useAuth(); // Get user and admin status from the central hook
+  const { user, isAdmin, loading } = useAuth(); // Get user and admin status from the central hook
 
   const [email, setEmail] = useState(typeof window !== 'undefined' ? localStorage.getItem('rememberedAdmin') || "" : "");
   const [rememberMe, setRememberMe] = useState(typeof window !== 'undefined' ? !!localStorage.getItem('rememberedAdmin') : false);
@@ -46,10 +46,10 @@ export default function AdminLoginPage() {
 
   // Effect to redirect if already logged in as admin
   useEffect(() => {
-    if (user && isAdmin) {
+    if (!loading && user && isAdmin) {
       router.push('/admin/analytics');
     }
-  }, [user, isAdmin, router]);
+  }, [user, isAdmin, router, loading]);
 
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -59,25 +59,31 @@ export default function AdminLoginPage() {
         return;
     }
     setIsLoading(true);
-    const password = (e.currentTarget.querySelector('#password-login') as HTMLInputElement).value;
+    const passwordInput = (e.currentTarget.querySelector('#password-login') as HTMLInputElement);
+    const password = passwordInput.value;
 
     try {
       // Step 1: Sign in the user
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
       
-      // Step 2: Let the `useAuth` hook and ProtectedRoute handle the rest.
-      // The onAuthStateChanged listener in FirebaseProvider will automatically
-      // check for admin status and update the global state.
-      // The ProtectedRoute component will then automatically redirect to the dashboard.
-      if (rememberMe) {
-          localStorage.setItem('rememberedAdmin', email);
+      // Step 2: Manually verify admin status
+      const adminDocRef = doc(db, "admins", userCredential.user.uid);
+      const adminDocSnap = await getDoc(adminDocRef);
+
+      if (adminDocSnap.exists() && adminDocSnap.data().status === 'Active') {
+        // Step 3: If admin, handle remember me and redirect
+        if (rememberMe) {
+            localStorage.setItem('rememberedAdmin', email);
+        } else {
+            localStorage.removeItem('rememberedAdmin');
+        }
+        toast({ title: "Login Successful!", description: "Redirecting to admin dashboard..." });
+        router.push('/admin/analytics');
       } else {
-          localStorage.removeItem('rememberedAdmin');
+        // Step 4: If not an admin, sign out and show error
+        await signOut(auth);
+        toast({ variant: "destructive", title: "Access Denied", description: "This account does not have admin privileges." });
       }
-      toast({ title: "Login Successful!", description: "Redirecting to admin dashboard..." });
-      // We no longer need a manual router.push here, as the ProtectedRoute will handle it.
-      // A manual check here can cause race conditions.
-      // router.push('/admin/analytics'); // This is now handled by ProtectedRoute
       
     } catch (error: any) {
        let errorMessage = "An unknown error occurred.";
@@ -292,4 +298,5 @@ export default function AdminLoginPage() {
       </div>
     </div>
   );
-}
+
+    

@@ -63,27 +63,18 @@ export default function AdminLoginPage() {
     const password = passwordInput.value;
 
     try {
-      // Step 1: Sign in the user
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      // Step 1: Sign in the user.
+      await signInWithEmailAndPassword(auth, email, password);
       
-      // Step 2: Manually verify admin status
-      const adminDocRef = doc(db, "admins", userCredential.user.uid);
-      const adminDocSnap = await getDoc(adminDocRef);
-
-      if (adminDocSnap.exists() && adminDocSnap.data().status === 'Active') {
-        // Step 3: If admin, handle remember me and redirect
-        if (rememberMe) {
-            localStorage.setItem('rememberedAdmin', email);
-        } else {
-            localStorage.removeItem('rememberedAdmin');
-        }
-        toast({ title: "Login Successful!", description: "Redirecting to admin dashboard..." });
-        router.push('/admin/analytics');
+      // Step 2: Let the onAuthStateChanged listener in FirebaseProvider handle the rest.
+      // It will automatically check for admin status and update the global state.
+      // The useEffect hook above will then redirect to the dashboard.
+      if (rememberMe) {
+          localStorage.setItem('rememberedAdmin', email);
       } else {
-        // Step 4: If not an admin, sign out and show error
-        await signOut(auth);
-        toast({ variant: "destructive", title: "Access Denied", description: "This account does not have admin privileges." });
+          localStorage.removeItem('rememberedAdmin');
       }
+      toast({ title: "Login Successful!", description: "Redirecting to admin dashboard..." });
       
     } catch (error: any) {
        let errorMessage = "An unknown error occurred.";

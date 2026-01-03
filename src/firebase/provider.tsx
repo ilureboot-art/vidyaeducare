@@ -71,7 +71,6 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     const { auth, db } = services;
     setIsAuthLoading(true);
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      // THIS IS THE FIX: We now explicitly re-check admin status on every auth change.
       checkAdminStatus(user, db);
     });
 

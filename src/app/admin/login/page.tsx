@@ -34,7 +34,7 @@ export default function AdminLoginPage() {
   const router = useRouter();
   const auth = useAuthService();
   const db = useDb();
-  const { user, isAdmin, loading } = useAuth(); // Get user and admin status from the central hook
+  const { user, isAdmin, loading } = useAuth();
 
   const [email, setEmail] = useState(typeof window !== 'undefined' ? localStorage.getItem('rememberedAdmin') || "" : "");
   const [rememberMe, setRememberMe] = useState(typeof window !== 'undefined' ? !!localStorage.getItem('rememberedAdmin') : false);
@@ -52,29 +52,46 @@ export default function AdminLoginPage() {
   }, [user, isAdmin, router, loading]);
 
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!auth || !db) {
         toast({ variant: "destructive", title: "Login Failed", description: "Auth service not ready. Please try again." });
         return;
     }
     setIsLoading(true);
-    const passwordInput = (e.currentTarget.querySelector('#password-login') as HTMLInputElement);
+
+    const form = e.currentTarget;
+    const emailInput = form.elements.namedItem('email-login') as HTMLInputElement;
+    const passwordInput = form.elements.namedItem('password-login') as HTMLInputElement;
+    const loginEmail = emailInput.value;
     const password = passwordInput.value;
 
     try {
       // Step 1: Sign in the user.
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, loginEmail, password);
       
-      // Step 2: Let the onAuthStateChanged listener in FirebaseProvider handle the rest.
-      // It will automatically check for admin status and update the global state.
-      // The useEffect hook above will then redirect to the dashboard.
-      if (rememberMe) {
-          localStorage.setItem('rememberedAdmin', email);
+      // Step 2: Explicitly verify admin status after login
+      const adminDocRef = doc(db, "admins", userCredential.user.uid);
+      const adminDocSnap = await getDoc(adminDocRef);
+
+      if (adminDocSnap.exists() && adminDocSnap.data().status === 'Active') {
+          // It's a valid admin, proceed
+          if (rememberMe) {
+              localStorage.setItem('rememberedAdmin', loginEmail);
+          } else {
+              localStorage.removeItem('rememberedAdmin');
+          }
+          toast({ title: "Login Successful!", description: "Redirecting to admin dashboard..." });
+          router.push('/admin/analytics');
       } else {
-          localStorage.removeItem('rememberedAdmin');
+          // Not an admin or not active, sign out and show error
+          await signOut(auth);
+          toast({
+              variant: "destructive",
+              title: "Access Denied",
+              description: "This account does not have admin privileges or is not active.",
+          });
       }
-      toast({ title: "Login Successful!", description: "Redirecting to admin dashboard..." });
       
     } catch (error: any) {
        let errorMessage = "An unknown error occurred.";
@@ -193,7 +210,7 @@ export default function AdminLoginPage() {
                     <CardContent className="space-y-4">
                             <div className="space-y-2">
                                 <Label htmlFor="email-login">Email Address</Label>
-                                <Input id="email-login" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+                                <Input id="email-login" name="email-login" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
                             </div>
                             <div className="space-y-2 relative">
                                 <div className="flex items-center justify-between">
@@ -202,7 +219,7 @@ export default function AdminLoginPage() {
                                       Forgot Password?
                                   </Button>
                                 </div>
-                                <Input id="password-login" type={showPassword ? "text" : "password"} required />
+                                <Input id="password-login" name="password-login" type={showPassword ? "text" : "password"} required />
                                 <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-6 h-7 w-7" onClick={() => setShowPassword(prev => !prev)}>
                                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                 </Button>

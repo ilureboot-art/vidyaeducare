@@ -33,7 +33,7 @@ export default function AdminLoginPage() {
   const router = useRouter();
   const auth = useAuthService();
   const db = useDb();
-  const { user, isAdmin } = useAuth(); // Get user and admin status from the central hook
+  const { user, isAdmin, loading: authLoading } = useAuth(); // Get user and admin status from the central hook
 
   const [email, setEmail] = useState(typeof window !== 'undefined' ? localStorage.getItem('rememberedAdmin') || "" : "");
   const [password, setPassword] = useState("");
@@ -46,10 +46,11 @@ export default function AdminLoginPage() {
 
   // Effect to redirect if already logged in as admin. This is the primary redirect mechanism.
   useEffect(() => {
-    if (user && isAdmin) {
+    // Wait for auth to finish loading before checking.
+    if (!authLoading && user && isAdmin) {
       router.push('/admin/analytics');
     }
-  }, [user, isAdmin, router]);
+  }, [user, isAdmin, authLoading, router]);
 
 
   const handleLogin = async (e: React.FormEvent) => {

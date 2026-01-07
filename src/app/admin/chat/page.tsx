@@ -9,7 +9,6 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Archive, Search, Send, Loader2 } from "lucide-react";
 import { useDb } from "@/firebase";
 import { collection, doc, updateDoc, addDoc, serverTimestamp, query, orderBy, Timestamp, onSnapshot } from "firebase/firestore";
-import ProtectedRoute from "@/components/ProtectedRoute";
 
 type Message = {
     id: string;
@@ -32,7 +31,7 @@ type ActiveChat = Chat & {
 }
 
 
-function ChatManagementPageContent() {
+export default function ChatManagementPage() {
     const db = useDb();
     const [chats, setChats] = useState<Chat[] | null>(null);
     const [activeChat, setActiveChat] = useState<ActiveChat | null>(null);
@@ -224,12 +223,4 @@ function ChatManagementPageContent() {
         </div>
     </div>
   );
-}
-
-export default function ChatManagementPage() {
-    return (
-        <ProtectedRoute adminOnly>
-            <ChatManagementPageContent />
-        </ProtectedRoute>
-    )
 }

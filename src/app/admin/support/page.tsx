@@ -10,7 +10,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import ProtectedRoute from "@/components/ProtectedRoute";
 
 const adminFaqs = [
     {
@@ -31,7 +30,7 @@ const adminFaqs = [
     }
 ];
 
-function SupportPageContent() {
+export default function SupportPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Support Center</h1>
@@ -89,12 +88,4 @@ function SupportPageContent() {
       </Card>
     </div>
   );
-}
-
-export default function SupportPage() {
-    return (
-        <ProtectedRoute adminOnly>
-            <SupportPageContent />
-        </ProtectedRoute>
-    )
 }

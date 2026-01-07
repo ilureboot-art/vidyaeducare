@@ -22,7 +22,6 @@ import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
 import { collection, getDocs, doc, updateDoc, writeBatch, getDoc, runTransaction, Timestamp, onSnapshot, orderBy, query } from "firebase/firestore";
 import { useDb } from "@/firebase";
-import ProtectedRoute from "@/components/ProtectedRoute";
 
 const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -44,7 +43,7 @@ const getTypeIcon = (type: string, amount: number) => {
     return <ArrowDownLeft className="w-4 h-4 text-green-500" />;
 }
 
-function TransactionsPageContent() {
+export default function TransactionsPage() {
   const { toast } = useToast();
   const db = useDb();
 
@@ -255,12 +254,4 @@ function TransactionsPageContent() {
       </Card>
     </div>
   );
-}
-
-export default function TransactionsPage() {
-    return (
-        <ProtectedRoute adminOnly>
-            <TransactionsPageContent />
-        </ProtectedRoute>
-    )
 }

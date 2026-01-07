@@ -4,9 +4,8 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Shield, KeyRound, ListChecks } from "lucide-react";
-import ProtectedRoute from "@/components/ProtectedRoute";
 
-function SecurityPageContent() {
+export default function SecurityPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Security</h1>
@@ -53,12 +52,4 @@ function SecurityPageContent() {
       </Card>
     </div>
   );
-}
-
-export default function SecurityPage() {
-    return (
-        <ProtectedRoute adminOnly>
-            <SecurityPageContent />
-        </ProtectedRoute>
-    )
 }

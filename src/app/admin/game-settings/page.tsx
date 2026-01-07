@@ -3,9 +3,8 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Ban } from "lucide-react";
-import ProtectedRoute from "@/components/ProtectedRoute";
 
-function AdminGameSettingsPageContent() {
+export default function AdminGameSettingsPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Game Settings</h1>
@@ -19,12 +18,4 @@ function AdminGameSettingsPageContent() {
       </Card>
     </div>
   );
-}
-
-export default function AdminGameSettingsPage() {
-    return (
-        <ProtectedRoute adminOnly>
-            <AdminGameSettingsPageContent />
-        </ProtectedRoute>
-    )
 }

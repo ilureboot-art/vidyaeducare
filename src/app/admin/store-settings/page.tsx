@@ -14,9 +14,8 @@ import type { AcademicConfig } from "@/lib/academic-config";
 import { Switch } from "@/components/ui/switch";
 import { useDb } from "@/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import ProtectedRoute from "@/components/ProtectedRoute";
 
-function AdminStoreSettingsPageContent() {
+export default function AdminStoreSettingsPage() {
   const { toast } = useToast();
   const db = useDb();
   
@@ -305,12 +304,4 @@ function AdminStoreSettingsPageContent() {
       </form>
     </div>
   );
-}
-
-export default function AdminStoreSettingsPage() {
-    return (
-        <ProtectedRoute adminOnly>
-            <AdminStoreSettingsPageContent />
-        </ProtectedRoute>
-    )
 }

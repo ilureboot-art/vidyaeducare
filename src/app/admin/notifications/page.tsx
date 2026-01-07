@@ -10,7 +10,6 @@ import { format } from "date-fns";
 import type { AppNotification } from "@/lib/notifications";
 import { useDb } from "@/firebase";
 import { collection, query, where, orderBy, Timestamp, getDocs } from "firebase/firestore";
-import ProtectedRoute from "@/components/ProtectedRoute";
 
 const getIconForType = (type: string) => {
     switch(type) {
@@ -25,7 +24,7 @@ const getIconForType = (type: string) => {
     }
 }
 
-function AdminNotificationsPageContent() {
+export default function AdminNotificationsPage() {
     const db = useDb();
     const [notifications, setNotifications] = useState<AppNotification[] | null>(null);
     
@@ -94,12 +93,4 @@ function AdminNotificationsPageContent() {
             </Card>
         </div>
     );
-}
-
-export default function AdminNotificationsPage() {
-    return (
-        <ProtectedRoute adminOnly>
-            <AdminNotificationsPageContent />
-        </ProtectedRoute>
-    )
 }

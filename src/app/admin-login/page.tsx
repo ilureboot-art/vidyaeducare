@@ -48,6 +48,8 @@ export default function AdminLoginPage() {
   // Effect to redirect if already logged in as admin. This is the primary redirect mechanism.
   useEffect(() => {
     // Wait for auth to finish loading before checking.
+    // If the user is an admin, the ProtectedRoute in the admin layout will handle showing the dashboard.
+    // This effect handles the case where an already logged-in admin lands on this page.
     if (!authLoading && user && isAdmin) {
       router.push('/admin/analytics');
     }
@@ -290,5 +292,3 @@ export default function AdminLoginPage() {
     </div>
   );
 }
-
-    

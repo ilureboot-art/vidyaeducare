@@ -19,7 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from "firebase/auth";
-import { doc, setDoc, getDoc, collection, query, where, getDocs, runTransaction } from "firebase/firestore";
+import { doc, setDoc, getDoc, collection, query, where, getDocs, type Firestore, runTransaction, serverTimestamp } from "firebase/firestore";
 import { useAuth, useAuthService, useDb } from "@/firebase";
 import type { Admin, AdminRole } from "@/lib/admin-data";
 
@@ -34,10 +34,9 @@ export default function AdminLoginPage() {
   const router = useRouter();
   const auth = useAuthService();
   const db = useDb();
-  const { user, isAdmin, loading } = useAuth();
+  const { user, isAdmin } = useAuth(); // Get user and admin status from the central hook
 
   const [email, setEmail] = useState(typeof window !== 'undefined' ? localStorage.getItem('rememberedAdmin') || "" : "");
-  const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(typeof window !== 'undefined' ? !!localStorage.getItem('rememberedAdmin') : false);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -47,46 +46,38 @@ export default function AdminLoginPage() {
 
   // Effect to redirect if already logged in as admin
   useEffect(() => {
-    if (!loading && user && isAdmin) {
+    if (user && isAdmin) {
       router.push('/admin/analytics');
     }
-  }, [user, isAdmin, router, loading]);
+  }, [user, isAdmin, router]);
 
 
-  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!auth || !db) {
         toast({ variant: "destructive", title: "Login Failed", description: "Auth service not ready. Please try again." });
         return;
     }
     setIsLoading(true);
+    const password = (e.currentTarget.querySelector('#password-login') as HTMLInputElement).value;
 
     try {
-      // Step 1: Sign in the user using the state variables.
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      // Step 1: Sign in the user
+      await signInWithEmailAndPassword(auth, email, password);
       
-      // Step 2: Explicitly verify admin status after login
-      const adminDocRef = doc(db, "admins", userCredential.user.uid);
-      const adminDocSnap = await getDoc(adminDocRef);
-
-      if (adminDocSnap.exists() && adminDocSnap.data().status === 'Active') {
-          // It's a valid admin, proceed
-          if (rememberMe) {
-              localStorage.setItem('rememberedAdmin', email);
-          } else {
-              localStorage.removeItem('rememberedAdmin');
-          }
-          toast({ title: "Login Successful!", description: "Redirecting to admin dashboard..." });
-          router.push('/admin/analytics');
+      // Step 2: Let the `useAuth` hook and ProtectedRoute handle the rest.
+      // The onAuthStateChanged listener in FirebaseProvider will automatically
+      // check for admin status and update the global state.
+      // The ProtectedRoute component will then automatically redirect to the dashboard.
+      if (rememberMe) {
+          localStorage.setItem('rememberedAdmin', email);
       } else {
-          // Not an admin or not active, sign out and show error
-          await signOut(auth);
-          toast({
-              variant: "destructive",
-              title: "Access Denied",
-              description: "This account does not have admin privileges or is not active.",
-          });
+          localStorage.removeItem('rememberedAdmin');
       }
+      toast({ title: "Login Successful!", description: "Redirecting to admin dashboard..." });
+      // We no longer need a manual router.push here, as the ProtectedRoute will handle it.
+      // A manual check here can cause race conditions.
+      // router.push('/admin/analytics'); // This is now handled by ProtectedRoute
       
     } catch (error: any) {
        let errorMessage = "An unknown error occurred.";
@@ -109,7 +100,7 @@ export default function AdminLoginPage() {
 
   const handleForgotPassword = async () => {
     if (!auth) return;
-    const currentEmail = email;
+    const currentEmail = (document.getElementById('email-login') as HTMLInputElement)?.value || email;
     if (!currentEmail) {
         toast({ variant: "destructive", title: "Email Required", description: "Enter your email to reset password."});
         return;
@@ -205,7 +196,7 @@ export default function AdminLoginPage() {
                     <CardContent className="space-y-4">
                             <div className="space-y-2">
                                 <Label htmlFor="email-login">Email Address</Label>
-                                <Input id="email-login" name="email-login" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+                                <Input id="email-login" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
                             </div>
                             <div className="space-y-2 relative">
                                 <div className="flex items-center justify-between">
@@ -214,7 +205,7 @@ export default function AdminLoginPage() {
                                       Forgot Password?
                                   </Button>
                                 </div>
-                                <Input id="password-login" name="password-login" type={showPassword ? "text" : "password"} required value={password} onChange={(e) => setPassword(e.target.value)} />
+                                <Input id="password-login" type={showPassword ? "text" : "password"} required />
                                 <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-6 h-7 w-7" onClick={() => setShowPassword(prev => !prev)}>
                                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                 </Button>
@@ -302,3 +293,7 @@ export default function AdminLoginPage() {
     </div>
   );
 }
+
+    
+
+    

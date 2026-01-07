@@ -64,7 +64,7 @@ export default function ProtectedRoute({
         </div>
       )
   }
-  if (!user) {
+  if (!adminOnly && !user) {
      return (
         <div className="flex justify-center items-center h-screen">
           <Loader2 className="animate-spin text-primary" size={32} />

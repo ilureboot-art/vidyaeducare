@@ -40,11 +40,6 @@ export default function ProtectedRoute({
       return;
     }
     
-    // If a logged-in admin somehow lands on the login page, redirect them
-    if (isAdmin && user && pathname === "/admin-login") {
-        router.replace("/admin/analytics");
-    }
-
   }, [user, loading, isAdmin, adminOnly, router, pathname]);
 
   // Show a loading spinner while auth state is being determined

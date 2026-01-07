@@ -19,7 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from "firebase/auth";
-import { doc, setDoc, getDoc, collection, query, where, getDocs, type Firestore, runTransaction, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, getDoc, collection, query, where, getDocs, runTransaction } from "firebase/firestore";
 import { useAuth, useAuthService, useDb } from "@/firebase";
 import type { Admin, AdminRole } from "@/lib/admin-data";
 
@@ -37,6 +37,7 @@ export default function AdminLoginPage() {
   const { user, isAdmin, loading } = useAuth();
 
   const [email, setEmail] = useState(typeof window !== 'undefined' ? localStorage.getItem('rememberedAdmin') || "" : "");
+  const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(typeof window !== 'undefined' ? !!localStorage.getItem('rememberedAdmin') : false);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -60,15 +61,9 @@ export default function AdminLoginPage() {
     }
     setIsLoading(true);
 
-    const form = e.currentTarget;
-    const emailInput = form.elements.namedItem('email-login') as HTMLInputElement;
-    const passwordInput = form.elements.namedItem('password-login') as HTMLInputElement;
-    const loginEmail = emailInput.value;
-    const password = passwordInput.value;
-
     try {
-      // Step 1: Sign in the user.
-      const userCredential = await signInWithEmailAndPassword(auth, loginEmail, password);
+      // Step 1: Sign in the user using the state variables.
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
       
       // Step 2: Explicitly verify admin status after login
       const adminDocRef = doc(db, "admins", userCredential.user.uid);
@@ -77,7 +72,7 @@ export default function AdminLoginPage() {
       if (adminDocSnap.exists() && adminDocSnap.data().status === 'Active') {
           // It's a valid admin, proceed
           if (rememberMe) {
-              localStorage.setItem('rememberedAdmin', loginEmail);
+              localStorage.setItem('rememberedAdmin', email);
           } else {
               localStorage.removeItem('rememberedAdmin');
           }
@@ -114,7 +109,7 @@ export default function AdminLoginPage() {
 
   const handleForgotPassword = async () => {
     if (!auth) return;
-    const currentEmail = (document.getElementById('email-login') as HTMLInputElement)?.value || email;
+    const currentEmail = email;
     if (!currentEmail) {
         toast({ variant: "destructive", title: "Email Required", description: "Enter your email to reset password."});
         return;
@@ -219,7 +214,7 @@ export default function AdminLoginPage() {
                                       Forgot Password?
                                   </Button>
                                 </div>
-                                <Input id="password-login" name="password-login" type={showPassword ? "text" : "password"} required />
+                                <Input id="password-login" name="password-login" type={showPassword ? "text" : "password"} required value={password} onChange={(e) => setPassword(e.target.value)} />
                                 <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-6 h-7 w-7" onClick={() => setShowPassword(prev => !prev)}>
                                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                 </Button>

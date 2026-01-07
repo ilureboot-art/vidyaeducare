@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -74,7 +75,8 @@ export default function AdminLoginPage() {
       }
       toast({ title: "Login Successful!", description: "Redirecting to admin dashboard..." });
       
-    } catch (error: any)       let errorMessage = "An unknown error occurred.";
+    } catch (error: any) {
+       let errorMessage = "An unknown error occurred.";
        if (error.code) { 
           switch(error.code) {
             case 'auth/user-not-found':
@@ -287,3 +289,5 @@ export default function AdminLoginPage() {
     </div>
   );
 }
+
+    

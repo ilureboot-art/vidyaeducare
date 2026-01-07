@@ -41,6 +41,8 @@ function ReferAndEarnPageContent() {
         
         if (db) {
             fetchConfig();
+        }
+        if (user && db) {
             fetchUserRefCode();
         }
     }, [user, db]);

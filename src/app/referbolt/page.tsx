@@ -2,7 +2,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -13,7 +12,7 @@ import Link from "next/link";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useAuth, useDb } from "@/firebase";
-import { doc, getDoc, onSnapshot, DocumentData, type Firestore } from "firebase/firestore";
+import { doc, onSnapshot, DocumentData, updateDoc } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import UserLayout from "@/components/UserLayout";
 
@@ -30,17 +29,14 @@ function ReferBoltPageContent() {
   const { user } = useAuth();
   const db = useDb();
   
-  const [data, setData] = useState<DocumentData | null | { isSubscribed: boolean }>({ isSubscribed: false });
-  const [autoRenew, setAutoRenew] = useState(false);
+  const [data, setData] = useState<DocumentData | null | { isSubscribed: boolean }>(null);
   
   useEffect(() => {
     if (user && db) {
         const referboltDocRef = doc(db, "referbolt", user.uid);
         const unsub = onSnapshot(referboltDocRef, (docSnap) => {
             if (docSnap.exists()) {
-                const docData = docSnap.data();
-                setData(docData);
-                setAutoRenew(docData.autoRenew || false);
+                setData(docSnap.data());
             } else {
                 setData({ isSubscribed: false });
             }
@@ -48,6 +44,20 @@ function ReferBoltPageContent() {
         return () => unsub();
     }
   }, [user, db]);
+
+  const handleAutoRenewToggle = async (checked: boolean) => {
+      if (!user || !db || !data || !('isSubscribed' in data) || !data.isSubscribed) return;
+      const referboltDocRef = doc(db, "referbolt", user.uid);
+      try {
+          await updateDoc(referboltDocRef, { autoRenew: checked });
+          toast({
+              title: "Auto-renewal settings updated!",
+              description: `Auto-renewal is now ${checked ? 'enabled' : 'disabled'}.`
+          });
+      } catch (error) {
+          toast({ variant: 'destructive', title: "Error", description: "Could not update settings."});
+      }
+  };
 
   const handleShare = async () => {
     if (!data || !('referralCode' in data)) return;
@@ -96,7 +106,7 @@ Subscribe and start your earning cycle now: ${shareUrl}
       )
   }
 
-  if (!data.isSubscribed) {
+  if (!('isSubscribed' in data) || !data.isSubscribed) {
     return (
         <div className="w-full max-w-2xl mx-auto space-y-6">
             <Card className="shadow-lg">
@@ -154,7 +164,7 @@ Subscribe and start your earning cycle now: ${shareUrl}
                         <IndianRupee className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">₹{data.totalCommissions.toLocaleString()}</div>
+                        <div className="text-2xl font-bold">₹{data.totalCommissions?.toLocaleString() || 0}</div>
                     </CardContent>
                 </Card>
                  <Card>
@@ -163,7 +173,7 @@ Subscribe and start your earning cycle now: ${shareUrl}
                         <Users className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{data.totalReferrals}</div>
+                        <div className="text-2xl font-bold">{data.totalReferrals || 0}</div>
                     </CardContent>
                 </Card>
             </div>
@@ -173,15 +183,15 @@ Subscribe and start your earning cycle now: ${shareUrl}
                     <div className="flex justify-between items-center">
                         <CardTitle>Current Cycle Progress</CardTitle>
                          <div className="flex items-center space-x-2">
-                            <Switch id="auto-renew" checked={autoRenew} onCheckedChange={setAutoRenew} />
+                            <Switch id="auto-renew" checked={data.autoRenew || false} onCheckedChange={handleAutoRenewToggle} />
                             <Label htmlFor="auto-renew" className="flex items-center gap-1.5"><Repeat className="w-4 h-4" /> Enable Auto-Renewal</Label>
                         </div>
                     </div>
                 </CardHeader>
                 <CardContent>
                      <div className="flex items-center gap-4">
-                        <Progress value={(data.cycleProgress / data.cycleGoal) * 100} className="w-full" />
-                        <span className="font-bold text-lg text-primary">{data.cycleProgress}/{data.cycleGoal}</span>
+                        <Progress value={((data.cycleProgress || 0) / (data.cycleGoal || 3)) * 100} className="w-full" />
+                        <span className="font-bold text-lg text-primary">{data.cycleProgress || 0}/{data.cycleGoal || 3}</span>
                     </div>
                     <p className="text-center mt-2 text-muted-foreground">Complete the cycle to earn a bonus and start a new one!</p>
                 </CardContent>
@@ -209,7 +219,7 @@ Subscribe and start your earning cycle now: ${shareUrl}
                                 </TableRow>
                             )) : (
                                 <TableRow>
-                                    <TableCell colSpan={3} className="text-center text-muted-foreground">No referral history yet.</TableCell>
+                                    <TableCell colSpan={3} className="text-center text-muted-foreground h-24">No referral history yet.</TableCell>
                                 </TableRow>
                             )}
                         </TableBody>

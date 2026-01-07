@@ -387,16 +387,14 @@ function MockTestContent() {
 export default function MockTestPage() {
     return (
         <Suspense fallback={
-            <Card className="w-full max-w-3xl text-center p-8 flex flex-col items-center justify-center gap-4">
+            <div className="flex justify-center items-center h-screen">
                 <Loader2 className="w-10 h-10 animate-spin text-primary"/>
-                <CardTitle>Loading Test...</CardTitle>
-                <CardDescription>Preparing your questions. Please wait.</CardDescription>
-            </Card>
+            </div>
         }>
             <ProtectedRoute>
-                <UserLayout>
+                <div className="flex justify-center items-center min-h-screen p-4">
                     <MockTestContent />
-                </UserLayout>
+                </div>
             </ProtectedRoute>
         </Suspense>
     )

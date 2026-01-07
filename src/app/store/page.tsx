@@ -104,7 +104,7 @@ function StorePageContent() {
 
                 for (const ibaCode of ibasToPay) {
                     const q = query(collection(db, "wallets"), where("referralCode", "==", ibaCode));
-                    const ibaQuerySnapshot = await getDocs(q); // Important: This read happens outside the transaction write phase
+                    const ibaQuerySnapshot = await getDocs(q); 
                     if (!ibaQuerySnapshot.empty) {
                         const ibaUserDoc = ibaQuerySnapshot.docs[0];
                         const ibaId = ibaUserDoc.id;
@@ -117,7 +117,7 @@ function StorePageContent() {
                         
                         transaction.set(ibaCommissionTxRef, {
                             user: ibaId, amount: commissionAmount, date: serverTimestamp(),
-                            description: `Commission from ${user.displayName || user.uid.slice(0,5)}`,
+                            description: `Commission from ${user.displayName || user.email}`,
                             status: "Completed", type: "Commission",
                         });
                     }

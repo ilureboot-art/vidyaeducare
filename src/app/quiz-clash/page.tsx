@@ -12,6 +12,7 @@ import { useAuth, useDb } from "@/firebase";
 import { collection, query, where, getDocs, doc, updateDoc, arrayUnion, runTransaction, serverTimestamp } from "firebase/firestore";
 import type { QuizClashTournament } from "@/lib/quiz-clash-data";
 import { Badge } from "@/components/ui/badge";
+import UserLayout from "@/components/UserLayout";
 
 
 function QuizClashPageContent() {
@@ -212,7 +213,9 @@ function QuizClashPageContent() {
 export default function QuizClashPage() {
     return (
         <ProtectedRoute>
-            <QuizClashPageContent />
+            <UserLayout>
+                <QuizClashPageContent />
+            </UserLayout>
         </ProtectedRoute>
     );
 }

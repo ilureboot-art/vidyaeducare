@@ -2,7 +2,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { 
   Card, 
@@ -353,7 +352,7 @@ function WalletPageContent() {
 
           <div className="space-y-4 pt-4">
             <h3 className="font-semibold text-lg text-center">Recent Activity</h3>
-            {transactions && transactions.length > 0 ? (
+            {transactions.length > 0 ? (
                 <div className="space-y-2">
                     {transactions.map((tx) => (
                          <div key={tx.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">

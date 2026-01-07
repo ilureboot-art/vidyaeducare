@@ -5,7 +5,6 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import {
   Dialog,
   DialogContent,
@@ -321,7 +320,9 @@ export default function QuizClashGamePage() {
     return (
         <Suspense fallback={<div className="flex justify-center items-center h-screen bg-primary/90 dark:bg-slate-900"><Loader2 className="animate-spin text-white" size={48} /></div>}>
             <ProtectedRoute>
-                <QuizClashGameContent/>
+                <div className="min-h-screen">
+                    <QuizClashGameContent/>
+                </div>
             </ProtectedRoute>
         </Suspense>
     )

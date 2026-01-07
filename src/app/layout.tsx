@@ -4,7 +4,6 @@
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "next-themes";
-import { usePathname } from 'next/navigation';
 import React from 'react';
 import { FirebaseProvider } from '@/firebase/provider';
 

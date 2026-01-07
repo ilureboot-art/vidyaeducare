@@ -11,6 +11,7 @@ import { useAuth, useDb } from "@/firebase";
 import { doc, getDoc, collection, query, where, getDocs, orderBy, updateDoc, runTransaction, serverTimestamp, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import type { QuizClashTournament } from "@/lib/quiz-clash-data";
+import UserLayout from "@/components/UserLayout";
 
 type Result = {
     userId: string;
@@ -136,64 +137,66 @@ function QuizClashResultsContent() {
     }
     
     return (
-        <div className="w-full max-w-2xl mx-auto space-y-6">
-            <Card className="shadow-lg text-center mt-4">
-                <CardHeader>
-                    <Trophy className="w-16 h-16 mx-auto text-yellow-500"/>
-                    <CardTitle className="text-3xl font-bold text-primary">Final Results</CardTitle>
-                    <CardDescription>{tournament.title} ({tournament.type} Clash)</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    {userResult ? (
-                        <div className="p-6 bg-primary/10 rounded-lg">
-                            <p className="text-muted-foreground">Your Rank</p>
-                            <p className="text-6xl font-bold">#{userResult.rank}</p>
-                            {userResult.prize ? (
-                                <p className="text-2xl font-semibold text-green-600 mt-2">You Won ₹{userResult.prize.toFixed(2)}!</p>
-                            ) : (
-                                <p className="text-lg font-semibold text-muted-foreground mt-2">
-                                    {tournament.type === 'Pro' ? "Better luck next time!" : "Great practice!"}
-                                </p>
-                            )}
-                        </div>
-                    ) : (
-                        <p className="text-muted-foreground">You did not participate in this tournament.</p>
-                    )}
-                </CardContent>
-            </Card>
-            
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><Users/> Leaderboard</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="space-y-2">
-                        {results.slice(0,10).map((res) => (
-                             <div key={res.userId} className={`flex items-center justify-between p-3 rounded-lg border-2 ${getRankColor(res.rank || 0)}`}>
-                                <div className="flex items-center gap-3">
-                                    <div className="font-bold text-lg w-8 text-center">{res.rank || '-'}</div>
-                                    <div>
-                                        <p className="font-semibold">{res.userId === user?.uid ? "You" : res.userName}</p>
-                                        <p className="text-xs text-muted-foreground">Score: {res.score} | Time: {res.timeTaken}s</p>
-                                    </div>
-                                </div>
-                                {res.prize && (
-                                    <div className="font-bold text-green-600 flex items-center gap-2">
-                                        <Award className="w-5 h-5 text-yellow-500" />
-                                        ₹{res.prize.toFixed(2)}
-                                    </div>
+        <UserLayout>
+            <div className="w-full max-w-2xl mx-auto space-y-6">
+                <Card className="shadow-lg text-center mt-4">
+                    <CardHeader>
+                        <Trophy className="w-16 h-16 mx-auto text-yellow-500"/>
+                        <CardTitle className="text-3xl font-bold text-primary">Final Results</CardTitle>
+                        <CardDescription>{tournament.title} ({tournament.type} Clash)</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {userResult ? (
+                            <div className="p-6 bg-primary/10 rounded-lg">
+                                <p className="text-muted-foreground">Your Rank</p>
+                                <p className="text-6xl font-bold">#{userResult.rank}</p>
+                                {userResult.prize ? (
+                                    <p className="text-2xl font-semibold text-green-600 mt-2">You Won ₹{userResult.prize.toFixed(2)}!</p>
+                                ) : (
+                                    <p className="text-lg font-semibold text-muted-foreground mt-2">
+                                        {tournament.type === 'Pro' ? "Better luck next time!" : "Great practice!"}
+                                    </p>
                                 )}
-                             </div>
-                        ))}
-                    </div>
-                </CardContent>
-                <CardFooter>
-                    <Button asChild className="w-full">
-                        <Link href="/quiz-clash">Back to Quiz Clash</Link>
-                    </Button>
-                </CardFooter>
-            </Card>
-        </div>
+                            </div>
+                        ) : (
+                            <p className="text-muted-foreground">You did not participate in this tournament.</p>
+                        )}
+                    </CardContent>
+                </Card>
+                
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><Users/> Leaderboard</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-2">
+                            {results.slice(0,10).map((res) => (
+                                 <div key={res.userId} className={`flex items-center justify-between p-3 rounded-lg border-2 ${getRankColor(res.rank || 0)}`}>
+                                    <div className="flex items-center gap-3">
+                                        <div className="font-bold text-lg w-8 text-center">{res.rank || '-'}</div>
+                                        <div>
+                                            <p className="font-semibold">{res.userId === user?.uid ? "You" : res.userName}</p>
+                                            <p className="text-xs text-muted-foreground">Score: {res.score} | Time: {res.timeTaken}s</p>
+                                        </div>
+                                    </div>
+                                    {res.prize && (
+                                        <div className="font-bold text-green-600 flex items-center gap-2">
+                                            <Award className="w-5 h-5 text-yellow-500" />
+                                            ₹{res.prize.toFixed(2)}
+                                        </div>
+                                    )}
+                                 </div>
+                            ))}
+                        </div>
+                    </CardContent>
+                    <CardFooter>
+                        <Button asChild className="w-full">
+                            <Link href="/quiz-clash">Back to Quiz Clash</Link>
+                        </Button>
+                    </CardFooter>
+                </Card>
+            </div>
+        </UserLayout>
     )
 }
 

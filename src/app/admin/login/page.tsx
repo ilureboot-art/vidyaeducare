@@ -34,7 +34,8 @@ export default function AdminLoginPage() {
   const router = useRouter();
   const auth = useAuthService();
   const db = useDb();
-  const { user, isAdmin } = useAuth(); // Get user and admin status from the central hook
+  
+  const { user, isAdmin } = useAuth(); // We still use this for the initial check
 
   const [email, setEmail] = useState(typeof window !== 'undefined' ? localStorage.getItem('rememberedAdmin') || "" : "");
   const [password, setPassword] = useState("");
@@ -45,13 +46,12 @@ export default function AdminLoginPage() {
   const [setupStatus, setSetupStatus] = useState<'idle' | 'loading' | 'success' | 'error' | 'already_exists'>('idle');
   const [setupError, setSetupError] = useState('');
 
-  // Effect to redirect if already logged in as admin
+  // Redirect if already logged in (e.g., user hits back button)
   useEffect(() => {
     if (user && isAdmin) {
       router.push('/admin/analytics');
     }
   }, [user, isAdmin, router]);
-
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,21 +62,29 @@ export default function AdminLoginPage() {
     setIsLoading(true);
 
     try {
-      // Step 1: Sign in the user
-      await signInWithEmailAndPassword(auth, email, password);
-      
-      // Step 2: Let the `useAuth` hook and ProtectedRoute handle the rest.
-      // The onAuthStateChanged listener in FirebaseProvider will automatically
-      // check for admin status and update the global state.
-      // The ProtectedRoute component will then automatically redirect to the dashboard.
-      if (rememberMe) {
-          localStorage.setItem('rememberedAdmin', email);
+      // Step 1: Sign in the user with Firebase Auth
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const loggedInUser = userCredential.user;
+
+      // Step 2: Directly verify admin status from Firestore
+      const adminDocRef = doc(db, "admins", loggedInUser.uid);
+      const adminDocSnap = await getDoc(adminDocRef);
+
+      if (adminDocSnap.exists() && adminDocSnap.data().status === 'Active') {
+        // User is a valid, active admin.
+        if (rememberMe) {
+            localStorage.setItem('rememberedAdmin', email);
+        } else {
+            localStorage.removeItem('rememberedAdmin');
+        }
+        toast({ title: "Login Successful!", description: "Redirecting to admin dashboard..." });
+        // Step 3: Redirect to the dashboard
+        router.push('/admin/analytics');
       } else {
-          localStorage.removeItem('rememberedAdmin');
+        // User is authenticated but not a valid admin.
+        await signOut(auth); // Log them out immediately
+        throw new Error("You are not a registered admin or your account is inactive.");
       }
-      toast({ title: "Login Successful!", description: "Redirecting to admin dashboard..." });
-      // We no longer need a manual router.push here, as the ProtectedRoute will handle it.
-      
     } catch (error: any) {
        let errorMessage = "An unknown error occurred.";
        if (error.code) { 
@@ -89,6 +97,8 @@ export default function AdminLoginPage() {
             default:
                 errorMessage = error.message;
           }
+       } else {
+         errorMessage = error.message; // For our custom error
        }
        toast({ variant: "destructive", title: "Login Failed", description: errorMessage });
     } finally {
@@ -166,7 +176,6 @@ export default function AdminLoginPage() {
         }
     }
   };
-
 
   return (
     <div className="w-full max-w-md mx-auto flex flex-col items-center justify-center min-h-screen p-4">

@@ -5,82 +5,10 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "next-themes";
 import { usePathname } from 'next/navigation';
-import React, { useEffect, useState } from 'react';
-import { Navbar } from '@/components/Navbar';
-import { ChatWidget } from '@/components/ChatWidget';
-import { AppHeader } from '@/components/AppHeader';
-import { Loader2 } from 'lucide-react';
-import AdminLayout from './admin/layout';
-import { FirebaseProvider, useAuth } from '@/firebase/provider';
+import React from 'react';
+import { FirebaseProvider } from '@/firebase/provider';
 
 const bodyClassName = `font-body antialiased`;
-
-function UserLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const isHomePage = pathname === '/';
-  
-  const { user, loading } = useAuth();
- 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <Loader2 className="animate-spin text-primary" size={32} />
-      </div>
-    );
-  }
-
-  return (
-      <div className="flex flex-col min-h-screen">
-          {!isHomePage && <AppHeader />}
-          <main className={`flex-1 flex flex-col w-full items-center ${isHomePage ? '' : 'p-4 pb-24 pt-20'}`}>
-            {children}
-          </main>
-          <>
-            {!isHomePage && <Navbar />}
-            <ChatWidget />
-          </>
-      </div>
-  );
-}
-
-function AppContent({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const { loading } = useAuth();
-  
-  if (loading) {
-      return (
-          <div className="flex justify-center items-center h-screen">
-              <Loader2 className="animate-spin text-primary" size={32} />
-          </div>
-      );
-  }
-
-  const isAdminRoute = pathname.startsWith('/admin');
-  const isAuthRoute = ['/login', '/signup', '/forgot-password', '/admin-login'].includes(pathname);
-  const isPublicPage = pathname === '/' || pathname === '/how-to-play';
-  
-  // Conditionally render the AdminLayout for admin routes.
-  if (isAdminRoute) {
-    return <AdminLayout>{children}</AdminLayout>;
-  }
-
-  // Render auth routes in a simple centered layout.
-  if (isAuthRoute) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-muted/40">
-        {children}
-      </div>
-    );
-  }
-  
-  // Render public pages without the main user layout wrapper.
-  if (isPublicPage) {
-    return <>{children}</>;
-  }
-
-  // Default to the main UserLayout for all other authenticated user pages.
-  return <UserLayout>{children}</UserLayout>;
-}
 
 export default function RootLayout({
   children,
@@ -105,7 +33,7 @@ export default function RootLayout({
             disableTransitionOnChange
         >
           <FirebaseProvider>
-             <AppContent>{children}</AppContent>
+             {children}
           </FirebaseProvider>
           <Toaster />
         </ThemeProvider>

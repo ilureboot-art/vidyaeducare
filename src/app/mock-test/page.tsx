@@ -21,6 +21,7 @@ import type { ScheduledTest } from "@/lib/test-schedule";
 import { doc, getDoc, setDoc, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useDb } from "@/firebase";
+import UserLayout from "@/components/UserLayout";
 
 const MOCK_TEST_DURATION = 30 * 60; // 30 minutes in seconds
 
@@ -42,7 +43,6 @@ function MockTestContent() {
     const [answers, setAnswers] = useState<{ [key: string]: { en: string; mr: string; } }>({});
     const [score, setScore] = useState(0);
     const [isLiveTest, setIsLiveTest] = useState(false);
-    const [isPrizeEligible, setIsPrizeEligible] = useState(false);
     
     useEffect(() => {
         if (!db) return;
@@ -394,7 +394,9 @@ export default function MockTestPage() {
             </Card>
         }>
             <ProtectedRoute>
-                <MockTestContent />
+                <UserLayout>
+                    <MockTestContent />
+                </UserLayout>
             </ProtectedRoute>
         </Suspense>
     )

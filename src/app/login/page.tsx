@@ -28,6 +28,7 @@ export default function LoginPage() {
   const { user } = useAuth(); // Get user from central hook
 
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -60,7 +61,6 @@ export default function LoginPage() {
         return;
     }
     setIsLoading(true);
-    const password = (e.currentTarget.querySelector('#password') as HTMLInputElement).value;
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
@@ -76,7 +76,6 @@ export default function LoginPage() {
           description: "Welcome back!",
       });
       // The useEffect hook will now handle the redirect to /profile
-      // router.push("/profile");
 
     } catch (error: any) {
        let errorMessage = "An unknown error occurred.";
@@ -134,7 +133,9 @@ export default function LoginPage() {
               <Input 
                 id="password" 
                 type={showPassword ? "text" : "password"}
-                required 
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
               />
                <Button
                 type="button"

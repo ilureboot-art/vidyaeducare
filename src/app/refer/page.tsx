@@ -9,6 +9,7 @@ import { useState, useEffect } from "react";
 import { doc, getDoc, type Firestore } from "firebase/firestore";
 import { useDb, useAuth } from "@/firebase";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import UserLayout from "@/components/UserLayout";
 
 function ReferAndEarnPageContent() {
     const { toast } = useToast();
@@ -140,7 +141,9 @@ Click here to join: ${url}`;
 export default function ReferAndEarnPage() {
     return (
         <ProtectedRoute>
-            <ReferAndEarnPageContent />
+            <UserLayout>
+                <ReferAndEarnPageContent />
+            </UserLayout>
         </ProtectedRoute>
     );
 }

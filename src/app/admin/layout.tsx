@@ -4,7 +4,6 @@
 import { AdminSidebar } from "@/components/AdminSidebar";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { Notifications } from "@/components/admin/Notifications";
-import { usePathname } from 'next/navigation';
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 export default function AdminLayout({
@@ -12,11 +11,9 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
-
-  // The ProtectedRoute logic is now handled by individual pages to prevent layout-based conflicts.
 
   return (
+    <ProtectedRoute adminOnly>
       <SidebarProvider>
         <div className="flex min-h-screen">
           <AdminSidebar />
@@ -34,5 +31,6 @@ export default function AdminLayout({
           </SidebarInset>
         </div>
       </SidebarProvider>
+    </ProtectedRoute>
   );
 }

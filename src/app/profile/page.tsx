@@ -20,6 +20,7 @@ import type { ScheduledTest } from "@/lib/test-schedule";
 import { useAuth, useDb } from "@/firebase";
 import { doc, getDoc, setDoc, collection, getDocs, deleteDoc, updateDoc, query, where, DocumentData, onSnapshot, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import UserLayout from "@/components/UserLayout";
 
 
 function ProfilePageContent() {
@@ -418,9 +419,9 @@ function ProfilePageContent() {
 export default function ProfilePage() {
     return (
         <ProtectedRoute>
-            <ProfilePageContent />
+            <UserLayout>
+                <ProfilePageContent />
+            </UserLayout>
         </ProtectedRoute>
     );
 }
-
-    

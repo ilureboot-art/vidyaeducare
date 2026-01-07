@@ -15,6 +15,7 @@ import type { WalletData } from "@/lib/user-data";
 import { useAuth, useDb } from "@/firebase";
 import { doc, getDoc, runTransaction, collection, serverTimestamp, updateDoc, arrayUnion, query, where, getDocs, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import UserLayout from "@/components/UserLayout";
 
 function StorePageContent() {
   const { toast } = useToast();
@@ -273,7 +274,9 @@ function StorePageContent() {
 export default function StorePage() {
     return (
         <ProtectedRoute>
-            <StorePageContent />
+            <UserLayout>
+                <StorePageContent />
+            </UserLayout>
         </ProtectedRoute>
     )
 }

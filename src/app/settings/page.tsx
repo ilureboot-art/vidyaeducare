@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChevronRight, User, Bell, Palette, FileText, Lock, LifeBuoy } from "lucide-react";
 import ProtectedRoute from '@/components/ProtectedRoute';
+import UserLayout from '@/components/UserLayout';
 
 function SettingsPageContent() {
     const settingsGroups = [
@@ -71,7 +72,9 @@ function SettingsPageContent() {
 export default function SettingsPage() {
     return (
         <ProtectedRoute>
-            <SettingsPageContent />
+            <UserLayout>
+                <SettingsPageContent />
+            </UserLayout>
         </ProtectedRoute>
     )
 }

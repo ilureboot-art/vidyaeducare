@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth, useDb } from "@/firebase";
 import { doc, getDoc, onSnapshot, DocumentData, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import UserLayout from "@/components/UserLayout";
 
 const benefits = [
     { text: "Earn a commission for every referral who subscribes." },
@@ -230,7 +231,9 @@ Subscribe and start your earning cycle now: ${shareUrl}
 export default function ReferBoltPage() {
     return (
         <ProtectedRoute>
-            <ReferBoltPageContent />
+            <UserLayout>
+                <ReferBoltPageContent />
+            </UserLayout>
         </ProtectedRoute>
     );
 }

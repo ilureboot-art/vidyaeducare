@@ -23,6 +23,7 @@ import { format } from "date-fns";
 import { useAuth, useDb } from "@/firebase";
 import { collection, query, where, getDocs, orderBy, onSnapshot, Timestamp, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import UserLayout from "@/components/UserLayout";
 
 const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -182,7 +183,9 @@ function TransactionsPageContent() {
 export default function TransactionsPage() {
     return (
         <ProtectedRoute>
-            <TransactionsPageContent />
+            <UserLayout>
+                <TransactionsPageContent />
+            </UserLayout>
         </ProtectedRoute>
     )
 }

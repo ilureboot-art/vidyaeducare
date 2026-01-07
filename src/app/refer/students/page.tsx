@@ -25,6 +25,7 @@ import { format } from "date-fns";
 import { useAuth, useDb } from "@/firebase";
 import { collection, query, where, getDocs, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import UserLayout from "@/components/UserLayout";
 
 type ClientStatus = "Active" | "Expired";
 
@@ -153,9 +154,11 @@ function StudentAccessPageContent() {
 export default function StudentAccessPage() {
     return (
         <ProtectedRoute>
-            <TooltipProvider>
-                <StudentAccessPageContent />
-            </TooltipProvider>
+            <UserLayout>
+                <TooltipProvider>
+                    <StudentAccessPageContent />
+                </TooltipProvider>
+            </UserLayout>
         </ProtectedRoute>
     );
 }

@@ -26,6 +26,7 @@ import {
 import { useAuth, useDb } from "@/firebase";
 import { doc, getDoc, collection, query, where, getDocs, Timestamp, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import UserLayout from "@/components/UserLayout";
 
 
 const dailyTarget = 5;
@@ -348,9 +349,11 @@ Don't miss out on the best way to prepare for your exams and earn rewards!
 export default function IBADashboardPage() {
     return (
         <ProtectedRoute>
-            <TooltipProvider>
-                <IBADashboardPageContent />
-            </TooltipProvider>
+            <UserLayout>
+                <TooltipProvider>
+                    <IBADashboardPageContent />
+                </TooltipProvider>
+            </UserLayout>
         </ProtectedRoute>
     )
 }

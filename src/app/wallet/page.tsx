@@ -35,6 +35,7 @@ import { format } from "date-fns";
 import { useAuth, useDb } from "@/firebase";
 import { doc, getDoc, collection, addDoc, query, where, orderBy, limit, onSnapshot, serverTimestamp, runTransaction, Timestamp } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import UserLayout from "@/components/UserLayout";
 
 const getStatusBadgeVariant = (status: string) => {
     switch (status.toLowerCase()) {
@@ -398,7 +399,9 @@ function WalletPageContent() {
 export default function WalletPage() {
     return (
         <ProtectedRoute>
-            <WalletPageContent />
+            <UserLayout>
+                <WalletPageContent />
+            </UserLayout>
         </ProtectedRoute>
     );
 }

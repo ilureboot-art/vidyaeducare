@@ -5,7 +5,7 @@ import React, { createContext, useContext, useState, useEffect, useMemo, useCall
 import { onAuthStateChanged, type Auth, type User } from 'firebase/auth';
 import { doc, getDoc, type Firestore } from 'firebase/firestore';
 import { Loader2, AlertTriangle } from 'lucide-react';
-import { initializeFirebaseOnClient } from './client-init'; 
+import { initializeFirebaseOnClient } from './client-init';
 import type { Admin } from '@/lib/admin-data';
 
 // Define the shape of our services and auth state
@@ -96,7 +96,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   }
 
   // Render loading state while services initialize
-  if (!services) {
+  if (!services || authContextValue.loading) {
      return (
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="animate-spin text-primary" size={32} />

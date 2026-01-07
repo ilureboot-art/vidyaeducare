@@ -5,12 +5,23 @@ import { AdminSidebar } from "@/components/AdminSidebar";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { Notifications } from "@/components/admin/Notifications";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import { usePathname } from "next/navigation";
 
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
+
+  // The login page itself doesn't need the full sidebar layout
+  if (pathname === '/admin/login') {
+    return (
+      <div className="min-h-screen">
+        {children}
+      </div>
+    )
+  }
 
   return (
     <ProtectedRoute adminOnly>

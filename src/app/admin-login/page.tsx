@@ -45,11 +45,8 @@ export default function AdminLoginPage() {
   const [setupStatus, setSetupStatus] = useState<'idle' | 'loading' | 'success' | 'error' | 'already_exists'>('idle');
   const [setupError, setSetupError] = useState('');
 
-  // Effect to redirect if already logged in as admin. This is the primary redirect mechanism.
+  // This effect handles the case where an already logged-in admin lands on this page.
   useEffect(() => {
-    // Wait for auth to finish loading before checking.
-    // If the user is an admin, the ProtectedRoute in the admin layout will handle showing the dashboard.
-    // This effect handles the case where an already logged-in admin lands on this page.
     if (!authLoading && user && isAdmin) {
       router.push('/admin/analytics');
     }
@@ -65,12 +62,12 @@ export default function AdminLoginPage() {
     setIsLoading(true);
 
     try {
-      // Step 1: Sign in the user. The `useAuth` hook will handle the rest.
+      // Step 1: Sign in the user. The `useAuth` hook and the ProtectedRoute will handle the rest.
       await signInWithEmailAndPassword(auth, email, password);
       
       // The onAuthStateChanged listener in FirebaseProvider will automatically
       // check for admin status and update the global state.
-      // The useEffect hook on this page will then automatically redirect to the dashboard.
+      // The useEffect hook on this page will then automatically redirect to the dashboard once isAdmin is true.
       if (rememberMe) {
           localStorage.setItem('rememberedAdmin', email);
       } else {

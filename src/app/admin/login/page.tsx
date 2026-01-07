@@ -37,6 +37,7 @@ export default function AdminLoginPage() {
   const { user, isAdmin } = useAuth(); // Get user and admin status from the central hook
 
   const [email, setEmail] = useState(typeof window !== 'undefined' ? localStorage.getItem('rememberedAdmin') || "" : "");
+  const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(typeof window !== 'undefined' ? !!localStorage.getItem('rememberedAdmin') : false);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -44,7 +45,7 @@ export default function AdminLoginPage() {
   const [setupStatus, setSetupStatus] = useState<'idle' | 'loading' | 'success' | 'error' | 'already_exists'>('idle');
   const [setupError, setSetupError] = useState('');
 
-  // Effect to redirect if already logged in as admin
+  // Effect to redirect if already logged in as admin. This is the primary redirect mechanism.
   useEffect(() => {
     if (user && isAdmin) {
       router.push('/admin/analytics');
@@ -59,7 +60,6 @@ export default function AdminLoginPage() {
         return;
     }
     setIsLoading(true);
-    const password = (e.currentTarget.querySelector('#password-login') as HTMLInputElement).value;
 
     try {
       // Step 1: Sign in the user. The `useAuth` hook will handle the rest.
@@ -201,7 +201,7 @@ export default function AdminLoginPage() {
                                       Forgot Password?
                                   </Button>
                                 </div>
-                                <Input id="password-login" type={showPassword ? "text" : "password"} required />
+                                <Input id="password-login" type={showPassword ? "text" : "password"} required value={password} onChange={(e) => setPassword(e.target.value)} />
                                 <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-6 h-7 w-7" onClick={() => setShowPassword(prev => !prev)}>
                                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                 </Button>
@@ -289,5 +289,3 @@ export default function AdminLoginPage() {
     </div>
   );
 }
-
-    

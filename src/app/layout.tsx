@@ -15,14 +15,6 @@ import { FirebaseProvider, useAuth } from '@/firebase/provider';
 
 const bodyClassName = `font-body antialiased`;
 
-function AuthLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex items-center justify-center min-h-screen bg-muted/40">
-        {children}
-    </div>
-  );
-}
-
 function UserLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isHomePage = pathname === '/';
@@ -63,21 +55,26 @@ function AppContent({ children }: { children: React.ReactNode }) {
       );
   }
 
-  const isAdminPage = pathname.startsWith('/admin');
-  const isAdminAuthPage = ['/admin/login', '/admin/setup', '/check-head-admin'].includes(pathname);
-  const isUserAuthPage = ['/login', '/signup', '/forgot-password'].includes(pathname);
-  const isAuthPage = isUserAuthPage || isAdminAuthPage;
+  const isAdminRoute = pathname.startsWith('/admin');
+  const isAuthRoute = ['/login', '/signup', '/forgot-password'].includes(pathname);
   const isPublicPage = pathname === '/' || pathname === '/how-to-play';
 
-  if (isAuthPage) {
-    return <AuthLayout>{children}</AuthLayout>;
-  }
-  if (isAdminPage) {
+  if (isAdminRoute) {
     return <AdminLayout>{children}</AdminLayout>;
   }
+
+  if (isAuthRoute) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-muted/40">
+        {children}
+      </div>
+    );
+  }
+  
   if (isPublicPage) {
     return <>{children}</>;
   }
+
   return <UserLayout>{children}</UserLayout>;
 }
 

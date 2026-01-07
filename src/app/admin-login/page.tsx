@@ -45,7 +45,8 @@ export default function AdminLoginPage() {
   const [setupStatus, setSetupStatus] = useState<'idle' | 'loading' | 'success' | 'error' | 'already_exists'>('idle');
   const [setupError, setSetupError] = useState('');
 
-  // This effect handles the case where an already logged-in admin lands on this page.
+  // This effect handles redirecting an already logged-in admin to the dashboard.
+  // It waits for the auth state to be confirmed before acting.
   useEffect(() => {
     if (!authLoading && user && isAdmin) {
       router.push('/admin/analytics');
@@ -62,12 +63,10 @@ export default function AdminLoginPage() {
     setIsLoading(true);
 
     try {
-      // Step 1: Sign in the user. The `useAuth` hook and the ProtectedRoute will handle the rest.
+      // Step 1: Sign in the user.
       await signInWithEmailAndPassword(auth, email, password);
       
-      // The onAuthStateChanged listener in FirebaseProvider will automatically
-      // check for admin status and update the global state.
-      // The useEffect hook on this page will then automatically redirect to the dashboard once isAdmin is true.
+      // Step 2: The useEffect hook above will now handle the redirect once the auth state is confirmed.
       if (rememberMe) {
           localStorage.setItem('rememberedAdmin', email);
       } else {
@@ -210,9 +209,9 @@ export default function AdminLoginPage() {
                               <Checkbox id="remember-me-admin" checked={rememberMe} onCheckedChange={(checked) => setRememberMe(checked as boolean)} />
                               <Label htmlFor="remember-me-admin" className="text-sm font-normal">Remember me</Label>
                             </div>
-                            <Button type="submit" className="w-full !mt-6" disabled={isLoading || !auth}>
-                                {isLoading || !auth ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                                {auth ? 'Login' : 'Loading...'}
+                            <Button type="submit" className="w-full !mt-6" disabled={isLoading || authLoading || !auth}>
+                                {isLoading || authLoading || !auth ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                                {auth && !authLoading ? 'Login' : 'Loading...'}
                             </Button>
                     </CardContent>
                 </form>

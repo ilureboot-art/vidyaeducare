@@ -39,6 +39,7 @@ import type { Admin, AdminRole } from "@/lib/admin-data";
 import { collection, onSnapshot, doc, setDoc, deleteDoc, updateDoc, getDocs } from "firebase/firestore";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { useAuth, useDb, useAuthService } from "@/firebase";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 const WhatsAppIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-green-500">
@@ -46,7 +47,7 @@ const WhatsAppIcon = () => (
     </svg>
 )
 
-export default function AdminManagementPage() {
+function AdminManagementPageContent() {
   const db = useDb();
   const auth = useAuthService();
   const { user, loading: authLoading, isHeadAdmin } = useAuth();
@@ -514,4 +515,12 @@ export default function AdminManagementPage() {
       </Dialog>
     </div>
   );
+}
+
+export default function AdminManagementPage() {
+    return (
+        <ProtectedRoute adminOnly>
+            <AdminManagementPageContent />
+        </ProtectedRoute>
+    )
 }

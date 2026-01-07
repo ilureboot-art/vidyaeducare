@@ -183,6 +183,8 @@ function AnalyticsPageContent() {
 
 export default function AnalyticsPage() {
     return (
-        <AnalyticsPageContent />
+        <ProtectedRoute adminOnly>
+            <AnalyticsPageContent />
+        </ProtectedRoute>
     )
 }

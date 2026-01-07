@@ -37,6 +37,7 @@ export default function AdminLoginPage() {
   const { user, isAdmin } = useAuth(); // Get user and admin status from the central hook
 
   const [email, setEmail] = useState(typeof window !== 'undefined' ? localStorage.getItem('rememberedAdmin') || "" : "");
+  const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(typeof window !== 'undefined' ? !!localStorage.getItem('rememberedAdmin') : false);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -59,7 +60,6 @@ export default function AdminLoginPage() {
         return;
     }
     setIsLoading(true);
-    const password = (e.currentTarget.querySelector('#password-login') as HTMLInputElement).value;
 
     try {
       // Step 1: Sign in the user
@@ -76,8 +76,6 @@ export default function AdminLoginPage() {
       }
       toast({ title: "Login Successful!", description: "Redirecting to admin dashboard..." });
       // We no longer need a manual router.push here, as the ProtectedRoute will handle it.
-      // A manual check here can cause race conditions.
-      // router.push('/admin/analytics'); // This is now handled by ProtectedRoute
       
     } catch (error: any) {
        let errorMessage = "An unknown error occurred.";
@@ -100,15 +98,14 @@ export default function AdminLoginPage() {
 
   const handleForgotPassword = async () => {
     if (!auth) return;
-    const currentEmail = (document.getElementById('email-login') as HTMLInputElement)?.value || email;
-    if (!currentEmail) {
+    if (!email) {
         toast({ variant: "destructive", title: "Email Required", description: "Enter your email to reset password."});
         return;
     }
     setIsLoading(true);
     try {
-        await sendPasswordResetEmail(auth, currentEmail);
-        toast({ title: "Password Reset Email Sent", description: `A reset link has been sent to ${currentEmail}.`});
+        await sendPasswordResetEmail(auth, email);
+        toast({ title: "Password Reset Email Sent", description: `A reset link has been sent to ${email}.`});
     } catch (error: any) {
         toast({ variant: "destructive", title: "Error Sending Email", description: error.message });
     } finally {
@@ -196,7 +193,7 @@ export default function AdminLoginPage() {
                     <CardContent className="space-y-4">
                             <div className="space-y-2">
                                 <Label htmlFor="email-login">Email Address</Label>
-                                <Input id="email-login" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+                                <Input id="email-login" name="email-login" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
                             </div>
                             <div className="space-y-2 relative">
                                 <div className="flex items-center justify-between">
@@ -205,7 +202,7 @@ export default function AdminLoginPage() {
                                       Forgot Password?
                                   </Button>
                                 </div>
-                                <Input id="password-login" type={showPassword ? "text" : "password"} required />
+                                <Input id="password-login" name="password-login" type={showPassword ? "text" : "password"} required value={password} onChange={(e) => setPassword(e.target.value)}/>
                                 <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-6 h-7 w-7" onClick={() => setShowPassword(prev => !prev)}>
                                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                 </Button>
@@ -293,7 +290,3 @@ export default function AdminLoginPage() {
     </div>
   );
 }
-
-    
-
-    

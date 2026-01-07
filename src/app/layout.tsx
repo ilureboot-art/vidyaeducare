@@ -55,14 +55,16 @@ function AppContent({ children }: { children: React.ReactNode }) {
       );
   }
 
-  const isAdminRoute = pathname.startsWith('/admin');
-  const isAuthRoute = ['/login', '/signup', '/forgot-password'].includes(pathname);
+  const isAdminRoute = pathname.startsWith('/admin') && !pathname.startsWith('/admin-login');
+  const isAuthRoute = ['/login', '/signup', '/forgot-password', '/admin-login'].includes(pathname);
   const isPublicPage = pathname === '/' || pathname === '/how-to-play';
-
+  
+  // Conditionally render the AdminLayout for admin routes.
   if (isAdminRoute) {
     return <AdminLayout>{children}</AdminLayout>;
   }
 
+  // Render auth routes in a simple centered layout.
   if (isAuthRoute) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-muted/40">
@@ -71,10 +73,12 @@ function AppContent({ children }: { children: React.ReactNode }) {
     );
   }
   
+  // Render public pages without the main user layout wrapper.
   if (isPublicPage) {
     return <>{children}</>;
   }
 
+  // Default to the main UserLayout for all other authenticated user pages.
   return <UserLayout>{children}</UserLayout>;
 }
 

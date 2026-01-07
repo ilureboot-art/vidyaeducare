@@ -14,10 +14,8 @@ export default function AdminLayout({
 }) {
   const pathname = usePathname();
 
-  // Don't apply the main admin layout to the auth pages
-  if (pathname === '/admin/login' || pathname === '/admin/setup' || pathname === '/check-head-admin') {
-    return <>{children}</>;
-  }
+  // The login page is no longer under this layout, so the check is removed.
+  // This layout is now fully protected.
 
   return (
     <ProtectedRoute adminOnly>

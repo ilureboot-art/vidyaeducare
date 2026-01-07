@@ -25,7 +25,7 @@ export default function ProtectedRoute({
     // If trying to access an admin-only page
     if (adminOnly) {
       if (!user) {
-        router.replace("/admin/login");
+        router.replace("/admin-login");
         return;
       }
       if (!isAdmin) {
@@ -41,7 +41,7 @@ export default function ProtectedRoute({
     }
     
     // If a logged-in admin somehow lands on the login page, redirect them
-    if (isAdmin && user && pathname === "/admin/login") {
+    if (isAdmin && user && pathname === "/admin-login") {
         router.replace("/admin/analytics");
     }
 

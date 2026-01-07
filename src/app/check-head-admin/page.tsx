@@ -106,7 +106,7 @@ export default function CheckHeadAdminPage() {
             </CardContent>
              <CardFooter className="flex-col gap-4">
                  <p className="text-xs text-muted-foreground">If the details are correct but you still can't log in, the password might be incorrect or the user may not exist in the authentication system.</p>
-                <Link href="/admin/login" className="w-full">
+                <Link href="/admin-login" className="w-full">
                     <Button variant="outline" className="w-full">
                         <ArrowLeft className="mr-2"/>
                         Back to Admin Login

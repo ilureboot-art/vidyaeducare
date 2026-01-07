@@ -55,7 +55,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
       );
   }
 
-  const isAdminRoute = pathname.startsWith('/admin') && !pathname.startsWith('/admin-login');
+  const isAdminRoute = pathname.startsWith('/admin');
   const isAuthRoute = ['/login', '/signup', '/forgot-password', '/admin-login'].includes(pathname);
   const isPublicPage = pathname === '/' || pathname === '/how-to-play';
   

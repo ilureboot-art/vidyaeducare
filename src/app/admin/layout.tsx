@@ -14,7 +14,6 @@ export default function AdminLayout({
 }) {
   const pathname = usePathname();
 
-  // The login page is no longer under this layout, so the check is removed.
   // This layout is now fully protected.
 
   return (

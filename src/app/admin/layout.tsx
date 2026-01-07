@@ -1,11 +1,11 @@
 
 "use client";
 
-import ProtectedRoute from "@/components/ProtectedRoute";
 import { AdminSidebar } from "@/components/AdminSidebar";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { Notifications } from "@/components/admin/Notifications";
 import { usePathname } from 'next/navigation';
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 export default function AdminLayout({
   children,
@@ -14,7 +14,7 @@ export default function AdminLayout({
 }) {
   const pathname = usePathname();
 
-  // This layout is now fully protected.
+  // The ProtectedRoute logic is now handled by individual pages to prevent layout-based conflicts.
 
   return (
     <ProtectedRoute adminOnly>

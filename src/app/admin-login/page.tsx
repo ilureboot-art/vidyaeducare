@@ -44,7 +44,7 @@ export default function AdminLoginPage() {
   const [setupStatus, setSetupStatus] = useState<'idle' | 'loading' | 'success' | 'error' | 'already_exists'>('idle');
   const [setupError, setSetupError] = useState('');
 
-  // Effect to redirect if already logged in as admin.
+  // Effect to redirect if already logged in as admin. This is the primary redirect mechanism.
   useEffect(() => {
     if (user && isAdmin) {
       router.push('/admin/analytics');

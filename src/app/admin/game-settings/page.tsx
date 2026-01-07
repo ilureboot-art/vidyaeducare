@@ -1,9 +1,11 @@
+
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Ban } from "lucide-react";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
-export default function AdminGameSettingsPage() {
+function AdminGameSettingsPageContent() {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Game Settings</h1>
@@ -17,4 +19,12 @@ export default function AdminGameSettingsPage() {
       </Card>
     </div>
   );
+}
+
+export default function AdminGameSettingsPage() {
+    return (
+        <ProtectedRoute adminOnly>
+            <AdminGameSettingsPageContent />
+        </ProtectedRoute>
+    )
 }

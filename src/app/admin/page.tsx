@@ -3,8 +3,9 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, Gamepad2, Users, Wallet } from "lucide-react";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
-export default function AdminDashboardPage() {
+function AdminDashboardPageContent() {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Admin Dashboard</h1>
@@ -74,4 +75,12 @@ export default function AdminDashboardPage() {
        </Card>
     </div>
   );
+}
+
+export default function AdminDashboardPage() {
+    return (
+        <ProtectedRoute adminOnly>
+            <AdminDashboardPageContent />
+        </ProtectedRoute>
+    )
 }

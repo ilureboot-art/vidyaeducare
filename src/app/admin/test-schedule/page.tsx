@@ -25,12 +25,13 @@ import type { TestSet } from "@/lib/question-bank";
 import type { ScheduledTest } from "@/lib/test-schedule";
 import { collection, getDocs, doc, setDoc } from "firebase/firestore";
 import { useDb } from '@/firebase';
+import ProtectedRoute from '@/components/ProtectedRoute';
 
 type TestStatus = 'Live' | 'Upcoming' | 'Completed';
 
 type ScheduledTestWithStatus = ScheduledTest & { status: TestStatus };
 
-export default function TestSchedulePage() {
+function TestSchedulePageContent() {
     const { toast } = useToast();
     const db = useDb();
 
@@ -239,4 +240,12 @@ export default function TestSchedulePage() {
             </Card>
         </div>
     );
+}
+
+export default function TestSchedulePage() {
+    return (
+        <ProtectedRoute adminOnly>
+            <TestSchedulePageContent />
+        </ProtectedRoute>
+    )
 }

@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import type { QuizClashTournament, QuizClashAutoCreateConfig } from "@/lib/quiz-clash-data";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 const initialAutoConfig: QuizClashAutoCreateConfig = {
     enabled: false,
@@ -28,7 +29,7 @@ const initialAutoConfig: QuizClashAutoCreateConfig = {
 };
 
 
-export default function AdminQuizClashPage() {
+function AdminQuizClashPageContent() {
     const { toast } = useToast();
     const db = useDb();
     const [tournaments, setTournaments] = useState<QuizClashTournament[] | null>(null);
@@ -293,4 +294,12 @@ export default function AdminQuizClashPage() {
             </Card>
         </div>
     );
+}
+
+export default function AdminQuizClashPage() {
+    return (
+        <ProtectedRoute adminOnly>
+            <AdminQuizClashPageContent />
+        </ProtectedRoute>
+    )
 }

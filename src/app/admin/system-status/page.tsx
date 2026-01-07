@@ -4,6 +4,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle, AlertTriangle, Server, Database } from "lucide-react";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 // Mock data for system status
 const services = [
@@ -14,7 +15,7 @@ const services = [
   { name: "Authentication Service", status: "Operational", icon: Server },
 ];
 
-export default function SystemStatusPage() {
+function SystemStatusPageContent() {
   const isAllOperational = services.every(s => s.status === "Operational");
 
   return (
@@ -61,4 +62,12 @@ export default function SystemStatusPage() {
       </Card>
     </div>
   );
+}
+
+export default function SystemStatusPage() {
+    return (
+        <ProtectedRoute adminOnly>
+            <SystemStatusPageContent />
+        </ProtectedRoute>
+    )
 }

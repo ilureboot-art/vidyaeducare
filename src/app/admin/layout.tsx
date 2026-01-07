@@ -17,7 +17,6 @@ export default function AdminLayout({
   // The ProtectedRoute logic is now handled by individual pages to prevent layout-based conflicts.
 
   return (
-    <ProtectedRoute adminOnly>
       <SidebarProvider>
         <div className="flex min-h-screen">
           <AdminSidebar />
@@ -35,6 +34,5 @@ export default function AdminLayout({
           </SidebarInset>
         </div>
       </SidebarProvider>
-    </ProtectedRoute>
   );
 }

@@ -7,6 +7,7 @@ import { BarChart, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Line
 import { Users, Gamepad2, IndianRupee, Loader2 } from "lucide-react";
 import { useDb } from "@/firebase";
 import { collection, getDocs, query, where, Timestamp, getCountFromServer } from "firebase/firestore";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 interface ChartData {
     name: string;
@@ -24,7 +25,7 @@ const getLast7Days = () => {
     return dates;
 };
 
-export default function AnalyticsPage() {
+function AnalyticsPageContent() {
   const db = useDb();
   const [activeUsers, setActiveUsers] = useState<number | null>(null);
   const [gamesPlayed, setGamesPlayed] = useState<number | null>(null);
@@ -178,4 +179,12 @@ export default function AnalyticsPage() {
       </div>
     </div>
   );
+}
+
+export default function AnalyticsPage() {
+    return (
+        <ProtectedRoute adminOnly>
+            <AnalyticsPageContent />
+        </ProtectedRoute>
+    )
 }

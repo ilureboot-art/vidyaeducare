@@ -35,6 +35,7 @@ import { useDb } from "@/firebase";
 import { collection, getDocs, doc, setDoc, deleteDoc } from "firebase/firestore";
 import Papa from "papaparse";
 import { generateQuestions, GenerateQuestionsInput } from "@/ai/flows/generate-questions-flow";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 
 const initialQuestionState: Omit<Question, 'id'> = {
@@ -60,7 +61,7 @@ const initialAiInputState: GenerateQuestionsInput = {
     numQuestions: 10,
 };
 
-export default function TestSetManagementPage() {
+function TestSetManagementPageContent() {
   const { toast } = useToast();
   const db = useDb();
   const [testSets, setTestSets] = useState<TestSet[] | null>(null);
@@ -509,4 +510,12 @@ const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
       </Card>
     </div>
   );
+}
+
+export default function TestSetManagementPage() {
+    return (
+        <ProtectedRoute adminOnly>
+            <TestSetManagementPageContent />
+        </ProtectedRoute>
+    )
 }

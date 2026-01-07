@@ -21,6 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from 'date-fns';
 import { useDb } from "@/firebase";
 import { collection, doc, updateDoc, deleteDoc, getDocs } from "firebase/firestore";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 type UserStatus = "Active" | "Banned" | "Inactive";
 type User = {
@@ -36,7 +37,7 @@ const getStatusBadgeVariant = (status: string) => {
     return status === "Active" ? "default" : status === "Banned" ? "destructive" : "secondary";
 }
 
-export default function UserManagementPage() {
+function UserManagementPageContent() {
   const db = useDb();
   const [users, setUsers] = useState<User[] | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -202,4 +203,12 @@ export default function UserManagementPage() {
       </Card>
     </div>
   );
+}
+
+export default function UserManagementPage() {
+    return (
+        <ProtectedRoute adminOnly>
+            <UserManagementPageContent />
+        </ProtectedRoute>
+    )
 }

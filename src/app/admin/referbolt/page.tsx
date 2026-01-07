@@ -9,6 +9,7 @@ import { RefreshCw, Users, IndianRupee, Repeat, Loader2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { useDb } from "@/firebase";
 import { collection, getDocs, query, Timestamp, getCountFromServer } from "firebase/firestore";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 type Cycle = {
   id: string;
@@ -33,7 +34,7 @@ type Referral = {
     status: string;
 }
 
-export default function ReferBoltManagementPage() {
+function ReferBoltManagementPageContent() {
   const db = useDb();
   const [stats, setStats] = useState<Stats | null>(null);
   const [cycles, setCycles] = useState<Cycle[] | null>(null);
@@ -233,4 +234,12 @@ export default function ReferBoltManagementPage() {
       </Card>
     </div>
   );
+}
+
+export default function ReferBoltManagementPage() {
+    return (
+        <ProtectedRoute adminOnly>
+            <ReferBoltManagementPageContent />
+        </ProtectedRoute>
+    )
 }

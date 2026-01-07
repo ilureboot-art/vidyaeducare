@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -9,6 +10,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 const adminFaqs = [
     {
@@ -29,7 +31,7 @@ const adminFaqs = [
     }
 ];
 
-export default function SupportPage() {
+function SupportPageContent() {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Support Center</h1>
@@ -87,4 +89,12 @@ export default function SupportPage() {
       </Card>
     </div>
   );
+}
+
+export default function SupportPage() {
+    return (
+        <ProtectedRoute adminOnly>
+            <SupportPageContent />
+        </ProtectedRoute>
+    )
 }

@@ -12,8 +12,9 @@ import type { AdminPaymentMethods } from "@/lib/user-data";
 import Image from "next/image";
 import { useDb } from "@/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
-export default function PaymentSettingsPage() {
+function PaymentSettingsPageContent() {
     const { toast } = useToast();
     const db = useDb();
     const [methods, setMethods] = useState<AdminPaymentMethods | null>(null);
@@ -162,4 +163,12 @@ export default function PaymentSettingsPage() {
       </form>
     </div>
   );
+}
+
+export default function PaymentSettingsPage() {
+    return (
+        <ProtectedRoute adminOnly>
+            <PaymentSettingsPageContent />
+        </ProtectedRoute>
+    )
 }

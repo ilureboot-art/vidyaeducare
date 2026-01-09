@@ -37,7 +37,6 @@ export default function AdminLoginPage() {
   const { user, isAdmin, loading: authLoading } = useAuth();
 
   const [email, setEmail] = useState(typeof window !== 'undefined' ? localStorage.getItem('rememberedAdmin') || "" : "");
-  const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(typeof window !== 'undefined' ? !!localStorage.getItem('rememberedAdmin') : false);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -45,8 +44,8 @@ export default function AdminLoginPage() {
   const [setupStatus, setSetupStatus] = useState<'idle' | 'loading' | 'success' | 'error' | 'already_exists'>('idle');
   const [setupError, setSetupError] = useState('');
 
-  // This is the definitive redirect logic. It waits for the auth state to settle,
-  // and IF the user is confirmed to be an admin, it redirects to the dashboard.
+  // The redirect is now handled by the ProtectedRoute component.
+  // This effect ensures that if an already logged-in admin lands here, they are sent away.
   useEffect(() => {
     if (!authLoading && user && isAdmin) {
       router.push('/admin/analytics');
@@ -61,6 +60,7 @@ export default function AdminLoginPage() {
         return;
     }
     setIsLoading(true);
+    const password = (e.currentTarget.querySelector('#password-login') as HTMLInputElement).value;
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
@@ -161,7 +161,8 @@ export default function AdminLoginPage() {
     }
   };
 
-  // Prevent flash of login page if user is already an admin and authenticated
+  // Prevent flash of login page if user is already an admin and authenticated.
+  // The ProtectedRoute handles the actual redirect.
   if (user && isAdmin) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -205,7 +206,7 @@ export default function AdminLoginPage() {
                                       Forgot Password?
                                   </Button>
                                 </div>
-                                <Input id="password-login" type={showPassword ? "text" : "password"} required value={password} onChange={(e) => setPassword(e.target.value)} />
+                                <Input id="password-login" type={showPassword ? "text" : "password"} required />
                                 <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-6 h-7 w-7" onClick={() => setShowPassword(prev => !prev)}>
                                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                 </Button>

@@ -16,17 +16,18 @@ export default function AdminLayout({
 }) {
   const pathname = usePathname();
   
-  // The login page is now part of this layout.
-  // We don't want to show the sidebar or header on the login page.
-  if (pathname === "/admin/login") {
-    // The login page itself handles its own logic, and doesn't need the sidebar.
-    // The redirect from login is handled by the login page component itself.
-    return <>{children}</>;
-  }
+  // This layout now wraps all /admin routes, including the login page.
+  // The ProtectedRoute handles logic for all child routes.
+  // We conditionally render the sidebar based on the path.
+  const isLoginPage = pathname === "/admin/login";
 
-  // The rest of the admin panel is protected and gets the full sidebar layout.
   return (
     <ProtectedRoute adminOnly>
+      {isLoginPage ? (
+        // Render only the children (the login page) without any surrounding layout
+        <>{children}</>
+      ) : (
+        // For all other admin pages, render the full dashboard layout
         <SidebarProvider>
           <div className="flex min-h-screen">
             <AdminSidebar />
@@ -44,6 +45,7 @@ export default function AdminLayout({
             </SidebarInset>
           </div>
         </SidebarProvider>
+      )}
     </ProtectedRoute>
   );
 }

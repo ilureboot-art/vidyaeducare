@@ -161,6 +161,15 @@ export default function AdminLoginPage() {
     }
   };
 
+  // Prevent flash of login page if user is already an admin and authenticated
+  if (user && isAdmin) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <Loader2 className="animate-spin text-primary" size={32} />
+        <p className="ml-2">Redirecting to dashboard...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-md mx-auto flex flex-col items-center justify-center min-h-screen p-4">

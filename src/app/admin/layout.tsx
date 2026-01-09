@@ -15,17 +15,16 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const { user, loading, isAdmin } = useAuth();
   
   // The login page is now part of this layout.
   // We don't want to show the sidebar or header on the login page.
   if (pathname === "/admin/login") {
-    // We still need to handle the case where an already logged-in admin lands here.
-    // The login page itself will handle the redirect.
+    // The login page itself handles its own logic, and doesn't need the sidebar.
+    // The redirect from login is handled by the login page component itself.
     return <>{children}</>;
   }
 
-  // The rest of the admin panel is protected.
+  // The rest of the admin panel is protected and gets the full sidebar layout.
   return (
     <ProtectedRoute adminOnly>
         <SidebarProvider>

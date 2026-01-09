@@ -5,7 +5,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "next-themes";
 import React from 'react';
-import { FirebaseProvider } from '@/firebase/provider';
+import { FirebaseClientProvider } from '@/firebase/client-provider';
 
 const bodyClassName = `font-body antialiased`;
 
@@ -31,9 +31,9 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
         >
-          <FirebaseProvider>
+          <FirebaseClientProvider>
              {children}
-          </FirebaseProvider>
+          </FirebaseClientProvider>
           <Toaster />
         </ThemeProvider>
       </body>

@@ -4,11 +4,6 @@ const nextConfig = {
   async redirects() {
     return [
       {
-        source: '/admin-login',
-        destination: '/admin/login',
-        permanent: true,
-      },
-       {
         source: '/admin',
         destination: '/admin/analytics',
         permanent: true,

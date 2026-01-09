@@ -14,15 +14,8 @@ export default function AdminLayout({
 }) {
   const pathname = usePathname();
 
-  // The login page itself is now handled separately and does not use this layout.
-  if (pathname === '/admin/login') {
-    return (
-      <div className="min-h-screen">
-        {children}
-      </div>
-    )
-  }
-
+  // The login page is now completely separate and does not use this layout.
+  // This layout is now purely for the protected admin dashboard area.
   return (
     <ProtectedRoute adminOnly>
         <SidebarProvider>

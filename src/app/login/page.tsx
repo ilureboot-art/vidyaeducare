@@ -179,7 +179,7 @@ export default function LoginPage() {
         </Link>
       </div>
        <div className="text-center text-sm">
-            <Link href="/admin/login" passHref>
+            <Link href="/admin-login" passHref>
                 <Button variant="link" size="sm" className="text-muted-foreground">
                     <Shield className="mr-2"/> Admin Portal
                 </Button>

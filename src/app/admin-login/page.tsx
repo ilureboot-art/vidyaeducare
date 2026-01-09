@@ -45,9 +45,10 @@ export default function AdminLoginPage() {
   const [setupStatus, setSetupStatus] = useState<'idle' | 'loading' | 'success' | 'error' | 'already_exists'>('idle');
   const [setupError, setSetupError] = useState('');
 
-  // This effect handles redirecting an already logged-in admin to the dashboard.
+  // This effect is the definitive fix. It waits for the auth state to settle,
+  // and IF the user is confirmed to be an admin, it redirects to the dashboard.
+  // This prevents race conditions and ensures a smooth redirect after login.
   useEffect(() => {
-    // Wait until authentication is settled
     if (!authLoading) {
       if (user && isAdmin) {
         router.push('/admin/analytics');
@@ -73,7 +74,7 @@ export default function AdminLoginPage() {
           localStorage.removeItem('rememberedAdmin');
       }
       toast({ title: "Login Successful!", description: "Redirecting to admin dashboard..." });
-      // The useEffect will handle redirection once the auth state is confirmed.
+      // The useEffect hook above will handle the redirection reliably.
       
     } catch (error: any) {
        let errorMessage = "An unknown error occurred.";
@@ -209,7 +210,7 @@ export default function AdminLoginPage() {
                             </div>
                             <Button type="submit" className="w-full !mt-6" disabled={isLoading || authLoading || !auth}>
                                 {isLoading || authLoading || !auth ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                                {auth && !authLoading ? 'Login' : 'Loading...'}
+                                {auth && !authLoading ? 'Login' : 'Loading Auth...'}
                             </Button>
                     </CardContent>
                 </form>

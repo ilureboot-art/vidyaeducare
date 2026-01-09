@@ -45,14 +45,11 @@ export default function AdminLoginPage() {
   const [setupStatus, setSetupStatus] = useState<'idle' | 'loading' | 'success' | 'error' | 'already_exists'>('idle');
   const [setupError, setSetupError] = useState('');
 
-  // This effect is the definitive fix. It waits for the auth state to settle,
+  // This is the definitive redirect logic. It waits for the auth state to settle,
   // and IF the user is confirmed to be an admin, it redirects to the dashboard.
-  // This prevents race conditions and ensures a smooth redirect after login.
   useEffect(() => {
-    if (!authLoading) {
-      if (user && isAdmin) {
-        router.push('/admin/analytics');
-      }
+    if (!authLoading && user && isAdmin) {
+      router.push('/admin/analytics');
     }
   }, [user, isAdmin, authLoading, router]);
 
@@ -74,7 +71,7 @@ export default function AdminLoginPage() {
           localStorage.removeItem('rememberedAdmin');
       }
       toast({ title: "Login Successful!", description: "Redirecting to admin dashboard..." });
-      // The useEffect hook above will handle the redirection reliably.
+      // The useEffect hook above will now handle the redirection reliably.
       
     } catch (error: any) {
        let errorMessage = "An unknown error occurred.";
@@ -287,5 +284,3 @@ export default function AdminLoginPage() {
     </div>
   );
 }
-
-    

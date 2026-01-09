@@ -6,6 +6,8 @@ import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/s
 import { Notifications } from "@/components/admin/Notifications";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/firebase";
+import { Loader2 } from "lucide-react";
 
 export default function AdminLayout({
   children,
@@ -13,9 +15,17 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const { user, loading, isAdmin } = useAuth();
+  
+  // The login page is now part of this layout.
+  // We don't want to show the sidebar or header on the login page.
+  if (pathname === "/admin/login") {
+    // We still need to handle the case where an already logged-in admin lands here.
+    // The login page itself will handle the redirect.
+    return <>{children}</>;
+  }
 
-  // The login page is now completely separate and does not use this layout.
-  // This layout is now purely for the protected admin dashboard area.
+  // The rest of the admin panel is protected.
   return (
     <ProtectedRoute adminOnly>
         <SidebarProvider>

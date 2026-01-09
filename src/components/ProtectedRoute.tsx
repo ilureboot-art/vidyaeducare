@@ -18,38 +18,44 @@ export default function ProtectedRoute({
   const pathname = usePathname();
 
   useEffect(() => {
+    // Don't do anything while auth state is loading
     if (loading) {
-      return; 
+      return;
     }
 
-    // If trying to access an admin-only page
+    // --- Admin Route Protection ---
     if (adminOnly) {
+      // If user is not logged in, redirect to admin login page
       if (!user) {
-        // If not logged in, redirect to the correct admin login page.
         router.replace("/admin/login");
         return;
       }
+      
+      // If user is logged in but is not an admin, redirect to user homepage
       if (!isAdmin) {
-        // If logged in but not an admin, send them to the user homepage.
         router.replace("/");
         return;
       }
-      // **NEW LOGIC**: If an admin is already logged in and somehow lands on the login page,
-      // redirect them to the dashboard. This prevents them from getting stuck.
+      
+      // *** CRITICAL FIX ***
+      // If user IS an admin and is currently on the login page,
+      // redirect them to the dashboard. This prevents them from being stuck.
       if (isAdmin && pathname === "/admin/login") {
         router.replace("/admin/analytics");
         return;
       }
-    } else { // For regular protected routes
+    } 
+    // --- Regular User Route Protection ---
+    else {
       if (!user) {
         router.replace("/login");
         return;
       }
     }
-    
   }, [user, loading, isAdmin, adminOnly, router, pathname]);
 
-  // Show a loading spinner while auth state is being determined
+  // Show a loading spinner while auth state is being determined.
+  // This covers the initial load and any flashes during navigation.
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -57,25 +63,25 @@ export default function ProtectedRoute({
       </div>
     );
   }
-  
-  // If an admin is on the login page, show a loader while redirecting to the dashboard.
-  if (isAdmin && pathname === "/admin/login") {
-      return (
-        <div className="flex justify-center items-center h-screen">
-          <Loader2 className="animate-spin text-primary" size={32} />
-          <p className="ml-2">Redirecting to dashboard...</p>
-        </div>
-      );
-  }
 
-  // Prevent rendering children if user is not authorized, to avoid flash of content
-  if ((adminOnly && !isAdmin) || (!adminOnly && !user)) {
+  // If the logic determines a redirect is needed, show a loader
+  // while the router is navigating away. This prevents flashing
+  // the unauthorized content.
+  if (adminOnly && !isAdmin) {
      return (
         <div className="flex justify-center items-center h-screen">
           <Loader2 className="animate-spin text-primary" size={32} />
         </div>
-      )
+      );
   }
-
+   if (!adminOnly && !user) {
+     return (
+        <div className="flex justify-center items-center h-screen">
+          <Loader2 className="animate-spin text-primary" size={32} />
+        </div>
+      );
+  }
+  
+  // If all checks pass, render the children components.
   return <>{children}</>;
 }

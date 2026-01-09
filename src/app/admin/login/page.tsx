@@ -71,7 +71,7 @@ export default function AdminLoginPage() {
           localStorage.removeItem('rememberedAdmin');
       }
       toast({ title: "Login Successful!", description: "Redirecting to admin dashboard..." });
-      // The useEffect hook above will now handle the redirection reliably.
+      // The ProtectedRoute will now handle the redirection reliably.
       
     } catch (error: any) {
        let errorMessage = "An unknown error occurred.";
@@ -161,16 +161,8 @@ export default function AdminLoginPage() {
     }
   };
 
-  // Prevent flash of login page if user is already an admin and authenticated.
-  // The ProtectedRoute handles the actual redirect.
-  if (user && isAdmin) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <Loader2 className="animate-spin text-primary" size={32} />
-        <p className="ml-2">Redirecting to dashboard...</p>
-      </div>
-    );
-  }
+  // The ProtectedRoute handles the loading and redirection states, so we don't need a specific loading return here.
+  // The layout will show the spinner.
 
   return (
     <div className="w-full max-w-md mx-auto flex flex-col items-center justify-center min-h-screen p-4">

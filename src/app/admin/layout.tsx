@@ -14,7 +14,7 @@ export default function AdminLayout({
 }) {
   const pathname = usePathname();
 
-  // The login page itself doesn't need the full sidebar layout
+  // The login page itself is now handled separately and does not use this layout.
   if (pathname === '/admin/login') {
     return (
       <div className="min-h-screen">

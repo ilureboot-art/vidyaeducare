@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,11 +16,14 @@ import { Label } from "@/components/ui/label";
 import { Shield, ArrowLeft, Eye, EyeOff, Loader2, UserPlus, AlertTriangle, CheckCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from "firebase/auth";
 import { doc, setDoc, getDoc, collection, query, where, getDocs, type Firestore, runTransaction, serverTimestamp } from "firebase/firestore";
 import { useAuthService, useDb } from "@/firebase";
 import type { Admin, AdminRole } from "@/lib/admin-data";
+import ProtectedRoute from "@/components/ProtectedRoute";
+
 
 // Pre-defined credentials for the one-time Head Admin setup
 const HEAD_ADMIN_EMAIL = 'admin@vidyaeducare.com';
@@ -28,21 +31,19 @@ const HEAD_ADMIN_PASSWORD = 'password123';
 const HEAD_ADMIN_NAME = 'Main Admin';
 const HEAD_ADMIN_PHONE = '9999999999';
 
-export default function AdminLoginPage() {
+function AdminLoginPageContent() {
   const { toast } = useToast();
+  const router = useRouter();
   const auth = useAuthService();
   const db = useDb();
-
+  
   const [email, setEmail] = useState(typeof window !== 'undefined' ? localStorage.getItem('rememberedAdmin') || "" : "");
   const [rememberMe, setRememberMe] = useState(typeof window !== 'undefined' ? !!localStorage.getItem('rememberedAdmin') : false);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [activeTab, setActiveTab = useState("login");
-  const [setupStatus, setSetupStatus = useState<'idle' | 'loading' | 'success' | 'error' | 'already_exists'>('idle');
-  const [setupError, setSetupError = useState('');
-
-  // NOTE: All redirection logic is now handled by ProtectedRoute.tsx
-  // This page's only responsibility is to authenticate the user.
+  const [activeTab, setActiveTab] = useState("login");
+  const [setupStatus, setSetupStatus] = useState<'idle' | 'loading' | 'success' | 'error' | 'already_exists'>('idle');
+  const [setupError, setSetupError] = useState('');
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,19 +55,15 @@ export default function AdminLoginPage() {
     const password = (e.currentTarget.querySelector('#password-login') as HTMLInputElement).value;
 
     try {
-      // Step 1: Sign in the user.
       await signInWithEmailAndPassword(auth, email, password);
       
-      // Step 2: The onAuthStateChanged listener in FirebaseProvider will automatically
-      // update the global state.
-      // Step 3: The ProtectedRoute component wrapping the layout will now see the
-      // updated auth state and automatically redirect to the dashboard.
       if (rememberMe) {
           localStorage.setItem('rememberedAdmin', email);
       } else {
           localStorage.removeItem('rememberedAdmin');
       }
       toast({ title: "Login Successful!", description: "Redirecting to admin dashboard..." });
+      // Redirection is now handled by ProtectedRoute
       
     } catch (error: any) {
        let errorMessage = "An unknown error occurred.";
@@ -278,5 +275,15 @@ export default function AdminLoginPage() {
       </div>
     </div>
   );
+}
 
-    
+
+export default function AdminLoginPage() {
+    return (
+        // The ProtectedRoute now correctly handles redirection for an already-logged-in admin
+        // trying to access the login page.
+        <ProtectedRoute adminOnly>
+            <AdminLoginPageContent />
+        </ProtectedRoute>
+    );
+}

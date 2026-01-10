@@ -14,8 +14,7 @@ export default function AdminLayout({
 }) {
   const pathname = usePathname();
   
-  // Conditionally render the sidebar based on the path.
-  // The login page will not have the sidebar.
+  // The login page will not have the sidebar or header.
   const isLoginPage = pathname === "/admin/login";
 
   return (

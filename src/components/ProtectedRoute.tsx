@@ -19,30 +19,27 @@ export default function ProtectedRoute({
 
   useEffect(() => {
     if (loading) {
-      return;
+      return; // Wait until authentication state is loaded
     }
 
     if (adminOnly) {
-      // If not an admin, redirect to admin login
+      // If it's an admin-only area
       if (!isAdmin) {
+        // If not an admin, redirect to admin login
         router.replace("/admin/login");
-        return;
-      }
-      
-      // If IS an admin but is on the login page, redirect to dashboard
-      if (isAdmin && pathname === "/admin/login") {
+      } else if (pathname === "/admin/login") {
+        // If an admin is on the login page, redirect them to the dashboard
         router.replace("/admin/analytics");
-        return;
       }
-    } 
-    else { // For regular user routes
+    } else { 
+      // For regular user-protected routes
       if (!user) {
         router.replace("/login");
-        return;
       }
     }
   }, [user, loading, isAdmin, adminOnly, router, pathname]);
 
+  // While loading authentication state, show a spinner.
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -51,8 +48,16 @@ export default function ProtectedRoute({
     );
   }
 
-  // If checks are still running or a redirect is pending, show loader
-  if ((adminOnly && !isAdmin) || (!adminOnly && !user)) {
+  // If checks are still running or a redirect is pending, show a spinner
+  // This prevents a flash of content before redirection.
+  if (adminOnly && (!isAdmin || pathname === "/admin/login")) {
+     return (
+        <div className="flex justify-center items-center h-screen">
+          <Loader2 className="animate-spin text-primary" size={32} />
+        </div>
+      );
+  }
+   if (!adminOnly && !user) {
      return (
         <div className="flex justify-center items-center h-screen">
           <Loader2 className="animate-spin text-primary" size={32} />

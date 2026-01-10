@@ -20,8 +20,9 @@ import { useRouter } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from "firebase/auth";
 import { doc, setDoc, getDoc, collection, query, where, getDocs, type Firestore, runTransaction, serverTimestamp } from "firebase/firestore";
-import { useAuth, useAuthService, useDb } from "@/firebase";
+import { useAuthService, useDb } from "@/firebase";
 import type { Admin, AdminRole } from "@/lib/admin-data";
+import { useAuth } from "@/firebase";
 
 // Pre-defined credentials for the one-time Head Admin setup
 const HEAD_ADMIN_EMAIL = 'admin@vidyaeducare.com';
@@ -34,7 +35,7 @@ export default function AdminLoginPage() {
   const router = useRouter();
   const auth = useAuthService();
   const db = useDb();
-  const { user, isAdmin } = useAuth(); // Get user and admin status from the central hook
+  const { user, isAdmin, loading: authLoading } = useAuth();
 
   const [email, setEmail] = useState(typeof window !== 'undefined' ? localStorage.getItem('rememberedAdmin') || "" : "");
   const [rememberMe, setRememberMe] = useState(typeof window !== 'undefined' ? !!localStorage.getItem('rememberedAdmin') : false);
@@ -46,10 +47,10 @@ export default function AdminLoginPage() {
 
   // Effect to redirect if already logged in as admin
   useEffect(() => {
-    if (user && isAdmin) {
+    if (!authLoading && user && isAdmin) {
       router.push('/admin/analytics');
     }
-  }, [user, isAdmin, router]);
+  }, [user, isAdmin, authLoading, router]);
 
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -62,22 +63,14 @@ export default function AdminLoginPage() {
     const password = (e.currentTarget.querySelector('#password-login') as HTMLInputElement).value;
 
     try {
-      // Step 1: Sign in the user
       await signInWithEmailAndPassword(auth, email, password);
       
-      // Step 2: Let the `useAuth` hook and ProtectedRoute handle the rest.
-      // The onAuthStateChanged listener in FirebaseProvider will automatically
-      // check for admin status and update the global state.
-      // The ProtectedRoute component will then automatically redirect to the dashboard.
       if (rememberMe) {
           localStorage.setItem('rememberedAdmin', email);
       } else {
           localStorage.removeItem('rememberedAdmin');
       }
       toast({ title: "Login Successful!", description: "Redirecting to admin dashboard..." });
-      // We no longer need a manual router.push here, as the ProtectedRoute will handle it.
-      // A manual check here can cause race conditions.
-      // router.push('/admin/analytics'); // This is now handled by ProtectedRoute
       
     } catch (error: any) {
        let errorMessage = "An unknown error occurred.";
@@ -214,9 +207,9 @@ export default function AdminLoginPage() {
                               <Checkbox id="remember-me-admin" checked={rememberMe} onCheckedChange={(checked) => setRememberMe(checked as boolean)} />
                               <Label htmlFor="remember-me-admin" className="text-sm font-normal">Remember me</Label>
                             </div>
-                            <Button type="submit" className="w-full !mt-6" disabled={isLoading || !auth}>
-                                {isLoading || !auth ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                                {auth ? 'Login' : 'Loading...'}
+                            <Button type="submit" className="w-full !mt-6" disabled={isLoading || !auth || authLoading}>
+                                {isLoading || authLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                                {auth && !authLoading ? 'Login' : 'Loading...'}
                             </Button>
                     </CardContent>
                 </form>
@@ -293,5 +286,3 @@ export default function AdminLoginPage() {
     </div>
   );
 }
-
-    

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,7 +34,7 @@ export default function AdminLoginPage() {
   const router = useRouter();
   const auth = useAuthService();
   const db = useDb();
-  const { user, isAdmin, loading } = useAuth(); // Get user and admin status from the central hook
+  const { loading } = useAuth(); // Only need loading state
 
   const [email, setEmail] = useState(typeof window !== 'undefined' ? localStorage.getItem('rememberedAdmin') || "" : "");
   const [rememberMe, setRememberMe] = useState(typeof window !== 'undefined' ? !!localStorage.getItem('rememberedAdmin') : false);
@@ -44,13 +44,8 @@ export default function AdminLoginPage() {
   const [setupStatus, setSetupStatus] = useState<'idle' | 'loading' | 'success' | 'error' | 'already_exists'>('idle');
   const [setupError, setSetupError] = useState('');
 
-  // Effect to redirect if already logged in as admin
-  useEffect(() => {
-    if (!loading && user && isAdmin) {
-      router.push('/admin/analytics');
-    }
-  }, [user, isAdmin, loading, router]);
-
+  // REDIRECTION LOGIC IS REMOVED FROM THIS PAGE.
+  // It is now handled entirely by ProtectedRoute.tsx to prevent race conditions.
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,13 +57,13 @@ export default function AdminLoginPage() {
     const password = (e.currentTarget.querySelector('#password-login') as HTMLInputElement).value;
 
     try {
-      // Step 1: Sign in the user
+      // Step 1: Sign in the user.
       await signInWithEmailAndPassword(auth, email, password);
       
-      // The `useAuth` hook and the useEffect above will handle the rest.
-      // The onAuthStateChanged listener in FirebaseProvider will automatically
+      // Step 2: The onAuthStateChanged listener in FirebaseProvider will automatically
       // check for admin status and update the global state.
-      // The useEffect will then see the updated state and redirect.
+      // Step 3: The ProtectedRoute component wrapping the layout will now see the
+      // updated auth state and automatically redirect to the dashboard.
       if (rememberMe) {
           localStorage.setItem('rememberedAdmin', email);
       } else {
@@ -121,7 +116,6 @@ export default function AdminLoginPage() {
     setSetupStatus('loading');
     
     try {
-        // 1. Check if Head Admin already exists to prevent duplicates.
         const headAdminQuery = query(collection(db, "admins"), where("role", "==", "Head Admin"));
         const headAdminSnapshot = await getDocs(headAdminQuery);
         if (!headAdminSnapshot.empty) {
@@ -129,11 +123,9 @@ export default function AdminLoginPage() {
           return;
         }
 
-        // 2. Create the user with the main auth instance.
         const userCredential = await createUserWithEmailAndPassword(auth, HEAD_ADMIN_EMAIL, HEAD_ADMIN_PASSWORD);
         const user = userCredential.user;
 
-        // 3. Run all database writes in a single, atomic transaction using the MAIN db connection.
         await runTransaction(db, async (transaction) => {
             const adminDocRef = doc(db, "admins", user.uid);
             transaction.set(adminDocRef, {
@@ -211,7 +203,7 @@ export default function AdminLoginPage() {
                               <Checkbox id="remember-me-admin" checked={rememberMe} onCheckedChange={(checked) => setRememberMe(checked as boolean)} />
                               <Label htmlFor="remember-me-admin" className="text-sm font-normal">Remember me</Label>
                             </div>
-                            <Button type="submit" className="w-full !mt-6" disabled={isLoading || !auth}>
+                            <Button type="submit" className="w-full !mt-6" disabled={isLoading || !auth || loading}>
                                 {isLoading || !auth || loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                                 {auth && !loading ? 'Login' : 'Loading...'}
                             </Button>

@@ -23,11 +23,14 @@ export default function ProtectedRoute({
     }
 
     if (adminOnly) {
-      // Logic for admin-only routes
+      // This is an admin-only area.
       if (!user || !isAdmin) {
-        // If not an admin, redirect to the main user login page.
-        // The admin login is a separate concern.
-        router.replace("/login");
+        // If not an admin, redirect to the admin login page.
+        router.replace("/admin/login");
+      } else if (user && isAdmin && pathname === "/admin/login") {
+        // CRITICAL FIX: If an authenticated admin lands on the login page,
+        // redirect them to the dashboard immediately.
+        router.replace("/admin/analytics");
       }
     } else { 
       // For regular user-protected routes
@@ -37,7 +40,7 @@ export default function ProtectedRoute({
     }
   }, [user, loading, isAdmin, adminOnly, router, pathname]);
 
-  // While loading authentication state, show a spinner.
+  // While loading authentication state, show a global spinner.
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -46,11 +49,22 @@ export default function ProtectedRoute({
     );
   }
 
-  // If checks are still running or a redirect is pending, show a spinner.
-  // This prevents flashing the content of a protected page before the redirect happens.
-  if ((adminOnly && (!user || !isAdmin)) || (!adminOnly && !user)) {
+  // If we are protecting an admin route and the user is not an admin, show a spinner
+  // while the redirect is in progress. This prevents flashing the content.
+  if (adminOnly && (!user || !isAdmin)) {
      return (
         <div className="flex justify-center items-center h-screen">
+          <p>Redirecting to login...</p>
+          <Loader2 className="animate-spin text-primary" size={32} />
+        </div>
+      );
+  }
+
+  // Same for regular protected routes.
+  if (!adminOnly && !user) {
+     return (
+        <div className="flex justify-center items-center h-screen">
+          <p>Redirecting to login...</p>
           <Loader2 className="animate-spin text-primary" size={32} />
         </div>
       );

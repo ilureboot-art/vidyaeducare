@@ -1,6 +1,7 @@
 
 "use client";
 
+import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { 
@@ -59,7 +60,8 @@ const deprecatedNavItems = [
     { href: "/admin/game-settings", label: "Game Settings", icon: Ban },
 ]
 
-export function AdminSidebar() {
+// Using React.memo to prevent unnecessary re-renders during navigation
+export const AdminSidebar = React.memo(function AdminSidebar() {
   const pathname = usePathname();
 
   return (
@@ -76,7 +78,7 @@ export function AdminSidebar() {
                     const isActive = item.href === '/admin' ? pathname === item.href : pathname.startsWith(item.href);
                     return (
                         <SidebarMenuItem key={item.href}>
-                            <Link href={item.href}>
+                            <Link href={item.href} prefetch={true}>
                                 <SidebarMenuButton tooltip={item.label} isActive={isActive}>
                                     <item.icon/>
                                     <span>{item.label}</span>
@@ -89,7 +91,7 @@ export function AdminSidebar() {
                     const isActive = pathname.startsWith(item.href);
                     return (
                         <SidebarMenuItem key={item.href}>
-                            <Link href={item.href}>
+                            <Link href={item.href} prefetch={true}>
                                 <SidebarMenuButton tooltip={item.label} isActive={isActive} className="text-muted-foreground line-through">
                                     <item.icon/>
                                     <span>{item.label}</span>
@@ -122,8 +124,4 @@ export function AdminSidebar() {
         </SidebarFooter>
     </Sidebar>
   );
-}
-
-    
-
-    
+});

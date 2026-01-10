@@ -2,7 +2,7 @@
 "use client";
 
 import { useAuth } from "@/firebase";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
 
@@ -15,6 +15,7 @@ export default function ProtectedRoute({
 }) {
   const { user, loading, isAdmin } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (loading) {
@@ -22,8 +23,10 @@ export default function ProtectedRoute({
     }
 
     if (adminOnly) {
-      if (!isAdmin) {
-        // If not an admin, redirect to main login page
+      // Logic for admin-only routes
+      if (!user || !isAdmin) {
+        // If not an admin, redirect to the main user login page.
+        // The admin login is a separate concern.
         router.replace("/login");
       }
     } else { 
@@ -32,7 +35,7 @@ export default function ProtectedRoute({
         router.replace("/login");
       }
     }
-  }, [user, loading, isAdmin, adminOnly, router]);
+  }, [user, loading, isAdmin, adminOnly, router, pathname]);
 
   // While loading authentication state, show a spinner.
   if (loading) {
@@ -43,8 +46,9 @@ export default function ProtectedRoute({
     );
   }
 
-  // If checks are still running or a redirect is pending, show a spinner
-  if ((adminOnly && !isAdmin) || (!adminOnly && !user)) {
+  // If checks are still running or a redirect is pending, show a spinner.
+  // This prevents flashing the content of a protected page before the redirect happens.
+  if ((adminOnly && (!user || !isAdmin)) || (!adminOnly && !user)) {
      return (
         <div className="flex justify-center items-center h-screen">
           <Loader2 className="animate-spin text-primary" size={32} />

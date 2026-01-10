@@ -18,35 +18,24 @@ export default function ProtectedRoute({
   const pathname = usePathname();
 
   useEffect(() => {
-    // Don't do anything while auth state is loading
     if (loading) {
       return;
     }
 
-    // --- Admin Route Protection ---
     if (adminOnly) {
-      // If user is not logged in, redirect to admin login page
-      if (!user) {
+      // If not an admin, redirect to admin login
+      if (!isAdmin) {
         router.replace("/admin/login");
         return;
       }
       
-      // If user is logged in but is not an admin, redirect to user homepage
-      if (!isAdmin) {
-        router.replace("/");
-        return;
-      }
-      
-      // *** CRITICAL FIX ***
-      // If user IS an admin and is currently on the login page,
-      // redirect them to the dashboard. This prevents them from being stuck.
+      // If IS an admin but is on the login page, redirect to dashboard
       if (isAdmin && pathname === "/admin/login") {
         router.replace("/admin/analytics");
         return;
       }
     } 
-    // --- Regular User Route Protection ---
-    else {
+    else { // For regular user routes
       if (!user) {
         router.replace("/login");
         return;
@@ -54,8 +43,6 @@ export default function ProtectedRoute({
     }
   }, [user, loading, isAdmin, adminOnly, router, pathname]);
 
-  // Show a loading spinner while auth state is being determined.
-  // This covers the initial load and any flashes during navigation.
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -64,17 +51,8 @@ export default function ProtectedRoute({
     );
   }
 
-  // If the logic determines a redirect is needed, show a loader
-  // while the router is navigating away. This prevents flashing
-  // the unauthorized content.
-  if (adminOnly && !isAdmin) {
-     return (
-        <div className="flex justify-center items-center h-screen">
-          <Loader2 className="animate-spin text-primary" size={32} />
-        </div>
-      );
-  }
-   if (!adminOnly && !user) {
+  // If checks are still running or a redirect is pending, show loader
+  if ((adminOnly && !isAdmin) || (!adminOnly && !user)) {
      return (
         <div className="flex justify-center items-center h-screen">
           <Loader2 className="animate-spin text-primary" size={32} />

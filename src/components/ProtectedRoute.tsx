@@ -2,7 +2,7 @@
 "use client";
 
 import { useAuth } from "@/firebase";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
 
@@ -15,7 +15,6 @@ export default function ProtectedRoute({
 }) {
   const { user, loading, isAdmin } = useAuth();
   const router = useRouter();
-  const pathname = usePathname();
 
   useEffect(() => {
     if (loading) {
@@ -23,13 +22,9 @@ export default function ProtectedRoute({
     }
 
     if (adminOnly) {
-      // If it's an admin-only area
       if (!isAdmin) {
-        // If not an admin, redirect to admin login
-        router.replace("/admin/login");
-      } else if (pathname === "/admin/login") {
-        // If an admin is on the login page, redirect them to the dashboard
-        router.replace("/admin/analytics");
+        // If not an admin, redirect to main login page
+        router.replace("/login");
       }
     } else { 
       // For regular user-protected routes
@@ -37,7 +32,7 @@ export default function ProtectedRoute({
         router.replace("/login");
       }
     }
-  }, [user, loading, isAdmin, adminOnly, router, pathname]);
+  }, [user, loading, isAdmin, adminOnly, router]);
 
   // While loading authentication state, show a spinner.
   if (loading) {
@@ -49,15 +44,7 @@ export default function ProtectedRoute({
   }
 
   // If checks are still running or a redirect is pending, show a spinner
-  // This prevents a flash of content before redirection.
-  if (adminOnly && (!isAdmin || pathname === "/admin/login")) {
-     return (
-        <div className="flex justify-center items-center h-screen">
-          <Loader2 className="animate-spin text-primary" size={32} />
-        </div>
-      );
-  }
-   if (!adminOnly && !user) {
+  if ((adminOnly && !isAdmin) || (!adminOnly && !user)) {
      return (
         <div className="flex justify-center items-center h-screen">
           <Loader2 className="animate-spin text-primary" size={32} />

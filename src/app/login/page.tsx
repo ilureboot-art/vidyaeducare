@@ -24,8 +24,8 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 export default function LoginPage() {
   const { toast } = useToast();
   const router = useRouter();
-  const auth = useAuthService();
-  const { user } = useAuth(); // Get user from central hook
+  const authService = useAuthService();
+  const { user, isAdmin, loading: authLoading } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -33,14 +33,20 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
-  const isFirebaseReady = !!auth;
+  const isFirebaseReady = !!authService;
 
-  // Effect to redirect if already logged in
   useEffect(() => {
+    // This effect handles redirection AFTER the user state is confirmed.
+    if (authLoading) return; // Wait for auth state to be loaded
+
     if (user) {
-      router.push("/profile");
+        if (isAdmin) {
+            router.push("/admin/analytics");
+        } else {
+            router.push("/profile");
+        }
     }
-  }, [user, router]);
+  }, [user, isAdmin, authLoading, router]);
 
   useEffect(() => {
     const rememberedEmail = localStorage.getItem('rememberedUser');
@@ -63,7 +69,10 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      // The onAuthStateChanged listener in FirebaseProvider will automatically
+      // handle the user and admin state updates. This component just needs to
+      // perform the sign-in. The useEffect hook above will handle redirection.
+      await signInWithEmailAndPassword(authService, email, password);
 
       if (rememberMe) {
         localStorage.setItem('rememberedUser', email);
@@ -73,9 +82,8 @@ export default function LoginPage() {
 
       toast({
           title: "Login Successful!",
-          description: "Welcome back!",
+          description: "Redirecting...",
       });
-      // The useEffect hook will now handle the redirect to /profile
 
     } catch (error: any) {
        let errorMessage = "An unknown error occurred.";
@@ -106,7 +114,7 @@ export default function LoginPage() {
         <h1 className="text-4xl font-bold text-primary flex items-center gap-2 justify-center">
             <Gamepad2 className="w-10 h-10" /> Vidya EduCare
         </h1>
-        <p className="text-muted-foreground">Welcome back! Please login to your account.</p>
+        <p className="text-muted-foreground">Login to your User or Admin account.</p>
       </div>
       <Card className="w-full">
         <form onSubmit={handleLogin}>
@@ -165,9 +173,9 @@ export default function LoginPage() {
             </div>
           </CardContent>
           <CardFooter className="flex-col gap-4">
-            <Button className="w-full" type="submit" disabled={isLoading || !isFirebaseReady}>
-                {isLoading || !isFirebaseReady ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                {isFirebaseReady ? 'Login' : 'Loading...'}
+            <Button className="w-full" type="submit" disabled={isLoading || authLoading || !isFirebaseReady}>
+                {isLoading || authLoading || !isFirebaseReady ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                {isFirebaseReady && !authLoading ? 'Login' : 'Loading Auth...'}
             </Button>
           </CardFooter>
         </form>
@@ -179,9 +187,9 @@ export default function LoginPage() {
         </Link>
       </div>
        <div className="text-center text-sm">
-            <Link href="/admin/login" passHref>
+            <Link href="/admin/setup" passHref>
                 <Button variant="link" size="sm" className="text-muted-foreground">
-                    <Shield className="mr-2"/> Admin Portal
+                    <Shield className="mr-2"/> Admin Setup Tool
                 </Button>
             </Link>
       </div>

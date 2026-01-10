@@ -16,11 +16,10 @@ import { Label } from "@/components/ui/label";
 import { Shield, ArrowLeft, Eye, EyeOff, Loader2, UserPlus, AlertTriangle, CheckCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { useRouter } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from "firebase/auth";
 import { doc, setDoc, getDoc, collection, query, where, getDocs, type Firestore, runTransaction, serverTimestamp } from "firebase/firestore";
-import { useAuth, useAuthService, useDb } from "@/firebase";
+import { useAuthService, useDb } from "@/firebase";
 import type { Admin, AdminRole } from "@/lib/admin-data";
 
 // Pre-defined credentials for the one-time Head Admin setup
@@ -31,21 +30,19 @@ const HEAD_ADMIN_PHONE = '9999999999';
 
 export default function AdminLoginPage() {
   const { toast } = useToast();
-  const router = useRouter();
   const auth = useAuthService();
   const db = useDb();
-  const { loading } = useAuth(); // Only need loading state
 
   const [email, setEmail] = useState(typeof window !== 'undefined' ? localStorage.getItem('rememberedAdmin') || "" : "");
   const [rememberMe, setRememberMe] = useState(typeof window !== 'undefined' ? !!localStorage.getItem('rememberedAdmin') : false);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState("login");
-  const [setupStatus, setSetupStatus] = useState<'idle' | 'loading' | 'success' | 'error' | 'already_exists'>('idle');
-  const [setupError, setSetupError] = useState('');
+  const [activeTab, setActiveTab = useState("login");
+  const [setupStatus, setSetupStatus = useState<'idle' | 'loading' | 'success' | 'error' | 'already_exists'>('idle');
+  const [setupError, setSetupError = useState('');
 
-  // REDIRECTION LOGIC IS REMOVED FROM THIS PAGE.
-  // It is now handled entirely by ProtectedRoute.tsx to prevent race conditions.
+  // NOTE: All redirection logic is now handled by ProtectedRoute.tsx
+  // This page's only responsibility is to authenticate the user.
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,7 +58,7 @@ export default function AdminLoginPage() {
       await signInWithEmailAndPassword(auth, email, password);
       
       // Step 2: The onAuthStateChanged listener in FirebaseProvider will automatically
-      // check for admin status and update the global state.
+      // update the global state.
       // Step 3: The ProtectedRoute component wrapping the layout will now see the
       // updated auth state and automatically redirect to the dashboard.
       if (rememberMe) {
@@ -203,9 +200,9 @@ export default function AdminLoginPage() {
                               <Checkbox id="remember-me-admin" checked={rememberMe} onCheckedChange={(checked) => setRememberMe(checked as boolean)} />
                               <Label htmlFor="remember-me-admin" className="text-sm font-normal">Remember me</Label>
                             </div>
-                            <Button type="submit" className="w-full !mt-6" disabled={isLoading || !auth || loading}>
-                                {isLoading || !auth || loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                                {auth && !loading ? 'Login' : 'Loading...'}
+                            <Button type="submit" className="w-full !mt-6" disabled={isLoading || !auth}>
+                                {isLoading || !auth ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                                {auth ? 'Login' : 'Loading...'}
                             </Button>
                     </CardContent>
                 </form>
@@ -281,4 +278,5 @@ export default function AdminLoginPage() {
       </div>
     </div>
   );
-}
+
+    

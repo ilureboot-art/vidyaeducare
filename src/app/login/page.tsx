@@ -41,9 +41,9 @@ export default function LoginPage() {
 
     if (user) {
         if (isAdmin) {
-            router.push("/admin/analytics");
+            router.replace("/admin/analytics");
         } else {
-            router.push("/profile");
+            router.replace("/profile");
         }
     }
   }, [user, isAdmin, authLoading, router]);
@@ -187,9 +187,9 @@ export default function LoginPage() {
         </Link>
       </div>
        <div className="text-center text-sm">
-            <Link href="/admin/setup" passHref>
+            <Link href="/admin/login" passHref>
                 <Button variant="link" size="sm" className="text-muted-foreground">
-                    <Shield className="mr-2"/> Admin Setup Tool
+                    <Shield className="mr-2"/> Admin Login
                 </Button>
             </Link>
       </div>

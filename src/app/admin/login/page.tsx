@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,7 +22,6 @@ import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswor
 import { doc, setDoc, getDoc, collection, query, where, getDocs, type Firestore, runTransaction, serverTimestamp } from "firebase/firestore";
 import { useAuthService, useDb } from "@/firebase";
 import type { Admin, AdminRole } from "@/lib/admin-data";
-import { useAuth } from "@/firebase";
 
 // Pre-defined credentials for the one-time Head Admin setup
 const HEAD_ADMIN_EMAIL = 'admin@vidyaeducare.com';
@@ -35,7 +34,6 @@ export default function AdminLoginPage() {
   const router = useRouter();
   const auth = useAuthService();
   const db = useDb();
-  const { user, isAdmin, loading: authLoading } = useAuth();
 
   const [email, setEmail] = useState(typeof window !== 'undefined' ? localStorage.getItem('rememberedAdmin') || "" : "");
   const [rememberMe, setRememberMe] = useState(typeof window !== 'undefined' ? !!localStorage.getItem('rememberedAdmin') : false);
@@ -44,14 +42,6 @@ export default function AdminLoginPage() {
   const [activeTab, setActiveTab] = useState("login");
   const [setupStatus, setSetupStatus] = useState<'idle' | 'loading' | 'success' | 'error' | 'already_exists'>('idle');
   const [setupError, setSetupError] = useState('');
-
-  // Effect to redirect if already logged in as admin
-  useEffect(() => {
-    if (!authLoading && user && isAdmin) {
-      router.push('/admin/analytics');
-    }
-  }, [user, isAdmin, authLoading, router]);
-
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,7 +60,10 @@ export default function AdminLoginPage() {
       } else {
           localStorage.removeItem('rememberedAdmin');
       }
-      toast({ title: "Login Successful!", description: "Redirecting to admin dashboard..." });
+      toast({ title: "Login Successful!", description: "Redirecting to your dashboard..." });
+      // The redirection is now handled by the /login page's logic
+      // to avoid race conditions.
+      router.push('/login');
       
     } catch (error: any) {
        let errorMessage = "An unknown error occurred.";
@@ -207,9 +200,9 @@ export default function AdminLoginPage() {
                               <Checkbox id="remember-me-admin" checked={rememberMe} onCheckedChange={(checked) => setRememberMe(checked as boolean)} />
                               <Label htmlFor="remember-me-admin" className="text-sm font-normal">Remember me</Label>
                             </div>
-                            <Button type="submit" className="w-full !mt-6" disabled={isLoading || !auth || authLoading}>
-                                {isLoading || authLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                                {auth && !authLoading ? 'Login' : 'Loading...'}
+                            <Button type="submit" className="w-full !mt-6" disabled={isLoading || !auth}>
+                                {isLoading || !auth ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                                {auth ? 'Login' : 'Loading...'}
                             </Button>
                     </CardContent>
                 </form>

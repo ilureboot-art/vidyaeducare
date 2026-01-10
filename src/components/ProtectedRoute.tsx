@@ -27,10 +27,6 @@ export default function ProtectedRoute({
       if (!user || !isAdmin) {
         // If not an admin, redirect to the admin login page.
         router.replace("/admin/login");
-      } else if (user && isAdmin && pathname === "/admin/login") {
-        // CRITICAL FIX: If an authenticated admin lands on the login page,
-        // redirect them to the dashboard immediately.
-        router.replace("/admin/analytics");
       }
     } else { 
       // For regular user-protected routes

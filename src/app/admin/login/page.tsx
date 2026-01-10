@@ -20,10 +20,8 @@ import { useRouter } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from "firebase/auth";
 import { doc, setDoc, getDoc, collection, query, where, getDocs, type Firestore, runTransaction, serverTimestamp } from "firebase/firestore";
-import { useAuthService, useDb } from "@/firebase";
+import { useAuth, useAuthService, useDb } from "@/firebase";
 import type { Admin, AdminRole } from "@/lib/admin-data";
-import ProtectedRoute from "@/components/ProtectedRoute";
-
 
 // Pre-defined credentials for the one-time Head Admin setup
 const HEAD_ADMIN_EMAIL = 'admin@vidyaeducare.com';
@@ -31,12 +29,13 @@ const HEAD_ADMIN_PASSWORD = 'password123';
 const HEAD_ADMIN_NAME = 'Main Admin';
 const HEAD_ADMIN_PHONE = '9999999999';
 
-function AdminLoginPageContent() {
+export default function AdminLoginPage() {
   const { toast } = useToast();
   const router = useRouter();
   const auth = useAuthService();
   const db = useDb();
-  
+  const { user, isAdmin } = useAuth(); // Get user and admin status from the central hook
+
   const [email, setEmail] = useState(typeof window !== 'undefined' ? localStorage.getItem('rememberedAdmin') || "" : "");
   const [rememberMe, setRememberMe] = useState(typeof window !== 'undefined' ? !!localStorage.getItem('rememberedAdmin') : false);
   const [showPassword, setShowPassword] = useState(false);
@@ -44,6 +43,14 @@ function AdminLoginPageContent() {
   const [activeTab, setActiveTab] = useState("login");
   const [setupStatus, setSetupStatus] = useState<'idle' | 'loading' | 'success' | 'error' | 'already_exists'>('idle');
   const [setupError, setSetupError] = useState('');
+
+  // Effect to redirect if already logged in as admin
+  useEffect(() => {
+    if (user && isAdmin) {
+      router.push('/admin/analytics');
+    }
+  }, [user, isAdmin, router]);
+
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,15 +62,22 @@ function AdminLoginPageContent() {
     const password = (e.currentTarget.querySelector('#password-login') as HTMLInputElement).value;
 
     try {
+      // Step 1: Sign in the user
       await signInWithEmailAndPassword(auth, email, password);
       
+      // Step 2: Let the `useAuth` hook and ProtectedRoute handle the rest.
+      // The onAuthStateChanged listener in FirebaseProvider will automatically
+      // check for admin status and update the global state.
+      // The ProtectedRoute component will then automatically redirect to the dashboard.
       if (rememberMe) {
           localStorage.setItem('rememberedAdmin', email);
       } else {
           localStorage.removeItem('rememberedAdmin');
       }
       toast({ title: "Login Successful!", description: "Redirecting to admin dashboard..." });
-      // Redirection is now handled by ProtectedRoute
+      // We no longer need a manual router.push here, as the ProtectedRoute will handle it.
+      // A manual check here can cause race conditions.
+      // router.push('/admin/analytics'); // This is now handled by ProtectedRoute
       
     } catch (error: any) {
        let errorMessage = "An unknown error occurred.";
@@ -110,6 +124,7 @@ function AdminLoginPageContent() {
     setSetupStatus('loading');
     
     try {
+        // 1. Check if Head Admin already exists to prevent duplicates.
         const headAdminQuery = query(collection(db, "admins"), where("role", "==", "Head Admin"));
         const headAdminSnapshot = await getDocs(headAdminQuery);
         if (!headAdminSnapshot.empty) {
@@ -117,9 +132,11 @@ function AdminLoginPageContent() {
           return;
         }
 
+        // 2. Create the user with the main auth instance.
         const userCredential = await createUserWithEmailAndPassword(auth, HEAD_ADMIN_EMAIL, HEAD_ADMIN_PASSWORD);
         const user = userCredential.user;
 
+        // 3. Run all database writes in a single, atomic transaction using the MAIN db connection.
         await runTransaction(db, async (transaction) => {
             const adminDocRef = doc(db, "admins", user.uid);
             transaction.set(adminDocRef, {
@@ -277,13 +294,4 @@ function AdminLoginPageContent() {
   );
 }
 
-
-export default function AdminLoginPage() {
-    return (
-        // The ProtectedRoute now correctly handles redirection for an already-logged-in admin
-        // trying to access the login page.
-        <ProtectedRoute adminOnly>
-            <AdminLoginPageContent />
-        </ProtectedRoute>
-    );
-}
+    

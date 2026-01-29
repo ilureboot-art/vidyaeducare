@@ -22,9 +22,8 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 
 export default function LoginPage() {
   const { toast } = useToast();
-  const router = useRouter();
   const authService = useAuthService();
-  const { user, isAdmin, loading: authLoading } = useAuth();
+  const { loading: authLoading } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -33,19 +32,6 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   
   const isFirebaseReady = !!authService;
-
-  useEffect(() => {
-    // This effect handles redirection AFTER the user state is confirmed.
-    if (authLoading) return; // Wait for auth state to be loaded
-
-    if (user) {
-        if (isAdmin) {
-            router.replace("/admin/analytics");
-        } else {
-            router.replace("/profile");
-        }
-    }
-  }, [user, isAdmin, authLoading, router]);
 
   useEffect(() => {
     const rememberedEmail = localStorage.getItem('rememberedUser');
@@ -69,8 +55,7 @@ export default function LoginPage() {
 
     try {
       // The onAuthStateChanged listener in FirebaseProvider will automatically
-      // handle the user and admin state updates. This component just needs to
-      // perform the sign-in. The useEffect hook above will handle redirection.
+      // handle the user and admin state updates, and the provider itself now handles redirection.
       await signInWithEmailAndPassword(authService, email, password);
 
       if (rememberMe) {

@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
@@ -7,6 +6,7 @@ import { doc, getDoc, type Firestore } from 'firebase/firestore';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { initializeFirebaseOnClient } from './client-init';
 import type { Admin } from '@/lib/admin-data';
+import { usePathname, useRouter } from 'next/navigation';
 
 // Define the shape of our services and auth state
 interface FirebaseServices {
@@ -36,6 +36,9 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   });
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  const router = useRouter();
+  const pathname = usePathname();
 
   // Effect to initialize Firebase when the provider mounts
   useEffect(() => {
@@ -83,6 +86,39 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     loading: isAuthLoading || !services,
   }), [authState, isAuthLoading, services]);
 
+  // New Effect to handle all post-login redirection logic
+  useEffect(() => {
+    if (authContextValue.loading) {
+      return; // Do nothing until authentication state is fully resolved
+    }
+
+    const isAuthPage = pathname === '/login' || pathname === '/signup' || pathname === '/admin/login';
+    
+    if (authContextValue.user) {
+      // User is logged in
+      if (authContextValue.isAdmin) {
+        // User is an Admin
+        if (isAuthPage || !pathname.startsWith('/admin')) {
+          router.replace('/admin/analytics');
+        }
+      } else {
+        // User is a regular user
+        if (isAuthPage || pathname.startsWith('/admin')) {
+          router.replace('/profile');
+        }
+      }
+    } else {
+      // User is not logged in
+      if (pathname.startsWith('/admin') && !isAuthPage) {
+        router.replace('/admin/login');
+      } else if (!isAuthPage && pathname !== '/' && pathname !== '/how-to-play' ) {
+        // Add any other public pages here
+        // router.replace('/login');
+      }
+    }
+
+  }, [authContextValue.loading, authContextValue.user, authContextValue.isAdmin, pathname, router]);
+
   // Render error state
   if (error) {
     return (
@@ -96,7 +132,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   }
 
   // Render loading state while services initialize
-  if (!services || authContextValue.loading) {
+  if (authContextValue.loading) {
      return (
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="animate-spin text-primary" size={32} />

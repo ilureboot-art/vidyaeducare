@@ -1,8 +1,7 @@
-
 "use client";
 
 import { useAuth } from "@/firebase";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
 
@@ -15,7 +14,6 @@ export default function ProtectedRoute({
 }) {
   const { user, loading, isAdmin } = useAuth();
   const router = useRouter();
-  const pathname = usePathname();
 
   useEffect(() => {
     if (loading) {
@@ -25,16 +23,18 @@ export default function ProtectedRoute({
     if (adminOnly) {
       // This is an admin-only area.
       if (!user || !isAdmin) {
-        // If not an admin, redirect to the admin login page.
-        router.replace("/admin/login");
+        // Redirection is now handled by the central FirebaseProvider
+        // This just prevents rendering the children if the state is wrong
+        return;
       }
     } else { 
       // For regular user-protected routes
       if (!user) {
-        router.replace("/login");
+         // Redirection is now handled by the central FirebaseProvider
+        return;
       }
     }
-  }, [user, loading, isAdmin, adminOnly, router, pathname]);
+  }, [user, loading, isAdmin, adminOnly, router]);
 
   // While loading authentication state, show a global spinner.
   if (loading) {
@@ -45,25 +45,12 @@ export default function ProtectedRoute({
     );
   }
 
-  // If we are protecting an admin route and the user is not an admin, show a spinner
-  // while the redirect is in progress. This prevents flashing the content.
+  // If the conditions aren't met, return null while the provider handles the redirect.
   if (adminOnly && (!user || !isAdmin)) {
-     return (
-        <div className="flex justify-center items-center h-screen">
-          <p>Redirecting to login...</p>
-          <Loader2 className="animate-spin text-primary" size={32} />
-        </div>
-      );
+     return null;
   }
-
-  // Same for regular protected routes.
   if (!adminOnly && !user) {
-     return (
-        <div className="flex justify-center items-center h-screen">
-          <p>Redirecting to login...</p>
-          <Loader2 className="animate-spin text-primary" size={32} />
-        </div>
-      );
+     return null;
   }
   
   // If all checks pass, render the children components.

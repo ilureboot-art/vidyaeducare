@@ -24,6 +24,7 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read, write: if isOwner(userId);
+      allow list: if isHeadAdmin();
     }
 
     match /wallets/{userId} {
@@ -38,6 +39,8 @@ service cloud.firestore {
     match /transactions/{txId} {
         // Users can read their own transactions
         allow read: if request.auth != null && get(/databases/$(database)/documents/transactions/$(txId)).data.user == request.auth.uid;
+        // Admins can list all transactions for analytics
+        allow list: if isHeadAdmin();
         // Users can create their own transactions (e.g., deposit/withdrawal requests)
         allow create: if request.auth != null && request.resource.data.user == request.auth.uid;
         // Only Admins can update status (e.g., from Pending to Completed)

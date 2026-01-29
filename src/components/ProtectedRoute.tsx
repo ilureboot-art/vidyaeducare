@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useAuth } from "@/firebase";
@@ -15,27 +16,6 @@ export default function ProtectedRoute({
   const { user, loading, isAdmin } = useAuth();
   const router = useRouter();
 
-  useEffect(() => {
-    if (loading) {
-      return; // Wait until authentication state is loaded
-    }
-
-    if (adminOnly) {
-      // This is an admin-only area.
-      if (!user || !isAdmin) {
-        // Redirection is now handled by the central FirebaseProvider
-        // This just prevents rendering the children if the state is wrong
-        return;
-      }
-    } else { 
-      // For regular user-protected routes
-      if (!user) {
-         // Redirection is now handled by the central FirebaseProvider
-        return;
-      }
-    }
-  }, [user, loading, isAdmin, adminOnly, router]);
-
   // While loading authentication state, show a global spinner.
   if (loading) {
     return (
@@ -45,14 +25,23 @@ export default function ProtectedRoute({
     );
   }
 
-  // If the conditions aren't met, return null while the provider handles the redirect.
-  if (adminOnly && (!user || !isAdmin)) {
-     return null;
-  }
-  if (!adminOnly && !user) {
-     return null;
+  // --- Gatekeeping Logic ---
+  // If we are here, loading is false. Now, we decide if we should render children.
+  // Redirection is now fully handled by the central FirebaseProvider.
+  
+  if (adminOnly) {
+    // For admin-only routes
+    if (user && isAdmin) {
+      return <>{children}</>; // Access granted for admin
+    }
+  } else {
+    // For regular user-protected routes
+    if (user) {
+      return <>{children}</>; // Access granted for any logged-in user
+    }
   }
   
-  // If all checks pass, render the children components.
-  return <>{children}</>;
+  // If access is not granted, render nothing. The FirebaseProvider is already
+  // handling the redirection, so we just prevent the protected content from flashing.
+  return null;
 }

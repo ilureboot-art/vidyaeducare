@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
@@ -82,42 +83,51 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
   // Memoize the context values to prevent unnecessary re-renders
   const authContextValue = useMemo(() => ({
-    ...authState,
+    user: authState.user,
+    isAdmin: authState.isAdmin,
+    isHeadAdmin: authState.isHeadAdmin,
     loading: isAuthLoading || !services,
   }), [authState, isAuthLoading, services]);
 
-  // New Effect to handle all post-login redirection logic
-  useEffect(() => {
-    if (authContextValue.loading) {
-      return; // Do nothing until authentication state is fully resolved
-    }
+  // Centralized redirection logic
+   useEffect(() => {
+    const { user, isAdmin, loading } = authContextValue;
+    if (loading) return; // Wait for auth state to be fully resolved
 
-    const isAuthPage = pathname === '/login' || pathname === '/signup' || pathname === '/admin/login';
-    
-    if (authContextValue.user) {
-      // User is logged in
-      if (authContextValue.isAdmin) {
-        // User is an Admin
-        if (isAuthPage || !pathname.startsWith('/admin')) {
+    const isUserAuthPage = pathname === '/login' || pathname === '/signup';
+    const isAdminAuthPage = pathname === '/admin/login';
+    const isAdminArea = pathname.startsWith('/admin/');
+
+    if (user) {
+      // --- User is LOGGED IN ---
+      if (isAdmin) {
+        // User is an ADMIN
+        // If admin is on any user-facing auth page or the admin login page, redirect to dashboard
+        if (isUserAuthPage || isAdminAuthPage) {
           router.replace('/admin/analytics');
         }
       } else {
-        // User is a regular user
-        if (isAuthPage || pathname.startsWith('/admin')) {
+        // User is a REGULAR USER
+        // If a regular user tries to access any admin page, send them to the user login (they might need to log out first)
+        if (isAdminArea) {
+          router.replace('/login'); 
+        } 
+        // If a regular user is on a user auth page, send them to their profile
+        else if (isUserAuthPage) {
           router.replace('/profile');
         }
       }
     } else {
-      // User is not logged in
-      if (pathname.startsWith('/admin') && !isAuthPage) {
+      // --- User is NOT LOGGED IN ---
+      // If an unauthenticated user tries to access a protected admin page, send to admin login
+      if (isAdminArea && !isAdminAuthPage) {
         router.replace('/admin/login');
-      } else if (!isAuthPage && pathname !== '/' && pathname !== '/how-to-play' ) {
-        // Add any other public pages here
-        // router.replace('/login');
       }
+      // Note: Regular protected pages are handled by the <ProtectedRoute> component itself,
+      // which will redirect to /login if there's no user.
     }
+  }, [authContextValue, pathname, router]);
 
-  }, [authContextValue.loading, authContextValue.user, authContextValue.isAdmin, pathname, router]);
 
   // Render error state
   if (error) {
@@ -131,7 +141,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Render loading state while services initialize
+  // Render loading state while services initialize or auth is checked
   if (authContextValue.loading) {
      return (
       <div className="flex justify-center items-center h-screen">

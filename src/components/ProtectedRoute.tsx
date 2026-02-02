@@ -16,8 +16,29 @@ export default function ProtectedRoute({
   const { user, loading, isAdmin } = useAuth();
   const router = useRouter();
 
-  // While loading authentication state, show a global spinner.
-  if (loading) {
+  useEffect(() => {
+    // Don't do anything while the auth state is loading.
+    if (loading) {
+      return;
+    }
+
+    // If loading is complete and there's no user, redirect to the correct login page.
+    if (!user) {
+      const targetPath = adminOnly ? '/admin/login' : '/login';
+      router.replace(targetPath);
+      return;
+    }
+
+    // If this is an admin-only route and the logged-in user is not an admin,
+    // redirect them away to their user profile.
+    if (adminOnly && !isAdmin) {
+      router.replace('/profile');
+    }
+  }, [loading, user, isAdmin, adminOnly, router]);
+
+  // While loading, or if conditions for rendering children are not met yet
+  // (e.g., redirect is imminent), show a loading spinner.
+  if (loading || !user || (adminOnly && !isAdmin)) {
     return (
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="animate-spin text-primary" size={32} />
@@ -25,23 +46,6 @@ export default function ProtectedRoute({
     );
   }
 
-  // --- Gatekeeping Logic ---
-  // If we are here, loading is false. Now, we decide if we should render children.
-  // Redirection is now fully handled by the central FirebaseProvider.
-  
-  if (adminOnly) {
-    // For admin-only routes
-    if (user && isAdmin) {
-      return <>{children}</>; // Access granted for admin
-    }
-  } else {
-    // For regular user-protected routes
-    if (user) {
-      return <>{children}</>; // Access granted for any logged-in user
-    }
-  }
-  
-  // If access is not granted, render nothing. The FirebaseProvider is already
-  // handling the redirection, so we just prevent the protected content from flashing.
-  return null;
+  // If all checks pass (user exists and has the correct role), render the protected content.
+  return <>{children}</>;
 }

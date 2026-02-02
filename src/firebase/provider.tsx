@@ -101,31 +101,26 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     if (user) {
       // --- User is LOGGED IN ---
       if (isAdmin) {
-        // User is an ADMIN
-        // If admin is on any user-facing auth page or the admin login page, redirect to dashboard
-        if (isUserAuthPage || isAdminAuthPage) {
+        // User is an ADMIN.
+        // If an admin is on a user auth page, redirect to dashboard.
+        if (isUserAuthPage) {
           router.replace('/admin/analytics');
         }
       } else {
         // User is a REGULAR USER
-        // If a regular user tries to access any admin page, send them to the user login (they might need to log out first)
+        // If a regular user tries to access any admin page, send them to their user profile page.
         if (isAdminArea) {
-          router.replace('/login'); 
+          router.replace('/profile'); 
         } 
-        // If a regular user is on a user auth page, send them to their profile
+        // If a logged-in regular user is on a user auth page, send them to their profile
         else if (isUserAuthPage) {
           router.replace('/profile');
         }
       }
-    } else {
-      // --- User is NOT LOGGED IN ---
-      // If an unauthenticated user tries to access a protected admin page, send to admin login
-      if (isAdminArea && !isAdminAuthPage) {
-        router.replace('/admin/login');
-      }
-      // Note: Regular protected pages are handled by the <ProtectedRoute> component itself,
-      // which will redirect to /login if there's no user.
     }
+    // Note: Redirection for unauthenticated users on protected routes
+    // is now handled by the <ProtectedRoute> component itself.
+    
   }, [authContextValue, pathname, router]);
 
 

@@ -1,10 +1,9 @@
 
-
 "use client";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { BookOpen, Trophy, Users, LogIn, Share2, Quote } from "lucide-react";
+import { BookOpen, Trophy, Users, LogIn, Share2, Quote, User, Shield } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
@@ -103,7 +102,10 @@ Start your journey to success now: ${url}
                       <Link href="/how-to-play">Learn More</Link>
                   </Button>
                   <Button asChild size="lg" variant="outline">
-                      <Link href="/login"><LogIn className="mr-2"/> Login</Link>
+                      <Link href="/login"><User className="mr-2"/> Player Login</Link>
+                  </Button>
+                  <Button asChild size="lg" variant="outline">
+                      <Link href="/admin/login"><Shield className="mr-2"/> Admin Login</Link>
                   </Button>
               </div>
           </div>

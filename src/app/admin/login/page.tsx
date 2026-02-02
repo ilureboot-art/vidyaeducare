@@ -16,10 +16,9 @@ import { Label } from "@/components/ui/label";
 import { Shield, ArrowLeft, Eye, EyeOff, Loader2, UserPlus, AlertTriangle, CheckCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { useRouter } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from "firebase/auth";
-import { doc, setDoc, getDoc, collection, query, where, getDocs, type Firestore, runTransaction, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, getDocs, collection, query, where, runTransaction } from "firebase/firestore";
 import { useAuthService, useDb } from "@/firebase";
 import type { Admin, AdminRole } from "@/lib/admin-data";
 
@@ -31,7 +30,6 @@ const HEAD_ADMIN_PHONE = '9999999999';
 
 export default function AdminLoginPage() {
   const { toast } = useToast();
-  const router = useRouter();
   const auth = useAuthService();
   const db = useDb();
 
@@ -277,3 +275,5 @@ export default function AdminLoginPage() {
     </div>
   );
 }
+
+    

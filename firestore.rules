@@ -8,92 +8,104 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == userId;
     }
 
+    // Simplified role check for better performance and reliability
+    function isAdmin() {
+      return request.auth != null && 
+             exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
     function isHeadAdmin() {
-      return request.auth != null && exists(/databases/$(database)/documents/admins/$(request.auth.uid)) &&
+      return request.auth != null && 
              get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'Head Admin';
     }
 
     match /admins/{userId} {
-      // Allow any authenticated user to read the admins collection to verify roles.
-      // Write access remains restricted, so this is secure.
       allow read: if request.auth != null;
-      allow list, update, delete: if isHeadAdmin();
-      // Lock down creation to only Head Admins
-      allow create: if isHeadAdmin();
+      allow create, update, delete, list: if isHeadAdmin();
     }
 
     match /users/{userId} {
       allow read, write: if isOwner(userId);
-      allow list: if isHeadAdmin();
+      allow list: if isAdmin();
     }
 
     match /wallets/{userId} {
-      allow read, write: if isOwner(userId);
+      allow read, write: if isOwner(userId) || isAdmin();
     }
 
     match /students/{studentId} {
-      // Allow parent to read/write their own students
-      allow read, write: if request.auth != null && get(/databases/$(database)/documents/students/$(studentId)).data.parentId == request.auth.uid;
+      allow read, write: if request.auth != null && (
+        resource == null || resource.data.parentId == request.auth.uid || isAdmin()
+      );
     }
     
     match /transactions/{txId} {
-        // Users can read their own transactions
-        allow read: if request.auth != null && get(/databases/$(database)/documents/transactions/$(txId)).data.user == request.auth.uid;
-        // Admins can list all transactions for analytics
-        allow list: if isHeadAdmin();
-        // Users can create their own transactions (e.g., deposit/withdrawal requests)
+        allow read: if request.auth != null && (
+          resource == null || resource.data.user == request.auth.uid || isAdmin()
+        );
+        allow list: if isAdmin();
         allow create: if request.auth != null && request.resource.data.user == request.auth.uid;
-        // Only Admins can update status (e.g., from Pending to Completed)
         allow update: if isHeadAdmin();
     }
 
     match /chats/{userId} {
-      allow read, write: if isOwner(userId);
+      allow read, write: if isOwner(userId) || isAdmin();
       match /messages/{messageId} {
-        allow read, write: if isOwner(userId);
+        allow read, write: if isOwner(userId) || isAdmin();
       }
     }
 
     match /configs/{configId} {
-      allow read: if true; // Configs are public
+      allow read: if true;
       allow write: if isHeadAdmin();
     }
 
     match /activationCodes/{userId} {
-        allow read, write: if isOwner(userId);
+        allow read, write: if isOwner(userId) || isAdmin();
     }
 
     match /testSets/{testSetId} {
-        allow read: if true; // Test questions are public
+        allow read: if true;
         allow write: if isHeadAdmin();
     }
 
     match /scheduledTests/{testId} {
-        allow read: if true; // Schedule is public
+        allow read: if true;
         allow write: if isHeadAdmin();
     }
 
     match /testResults/{resultId} {
-        // A user can write their own test result
-        allow create: if request.auth != null && request.resource.data.studentId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.students;
-        // Only the user who owns the student can read the result.
-        allow read: if request.auth != null && get(/databases/$(database)/documents/testResults/$(resultId)).data.studentId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.students;
+        allow create: if request.auth != null;
+        allow read: if request.auth != null && (resource.data.studentId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.students || isAdmin());
     }
 
     match /leaderboard/{resultId} {
-        allow read: if true; // Leaderboard is public
-        // Users can write their own results to the leaderboard
+        allow read: if true;
         allow write: if request.auth != null; 
     }
 
     match /quizClashTournaments/{tournamentId} {
         allow read: if true;
-        allow write: if isHeadAdmin() || request.auth != null; // Admins can create, users can update by registering
+        allow write: if isAdmin() || request.auth != null;
     }
 
     match /quizClashResults/{resultId} {
         allow read: if true;
-        allow write: if request.auth != null; // Users can write their own results
+        allow write: if request.auth != null;
+    }
+    
+    match /notifications/{notifId} {
+        allow read: if request.auth != null && (resource.data.userId == request.auth.uid || (resource.data.userId == 'admin' && isAdmin()));
+        allow write: if isAdmin();
+    }
+    
+    match /referbolt/{userId} {
+        allow read, write: if isOwner(userId) || isAdmin();
+    }
+    
+    match /clients/{clientId} {
+        allow read: if request.auth != null && (resource.data.referrerId == request.auth.uid || isAdmin());
+        allow write: if isAdmin();
     }
   }
 }

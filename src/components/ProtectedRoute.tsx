@@ -17,35 +17,23 @@ export default function ProtectedRoute({
   const router = useRouter();
 
   useEffect(() => {
-    // Don't do anything while the auth state is loading.
-    if (loading) {
-      return;
-    }
-
-    // If loading is complete and there's no user, redirect to the correct login page.
-    if (!user) {
+    // Redirection is now primarily handled by FirebaseProvider for a unified experience.
+    // This component acts as a secondary safety gate and loading boundary.
+    if (!loading && !user) {
       const targetPath = adminOnly ? '/admin/login' : '/login';
       router.replace(targetPath);
-      return;
     }
+  }, [loading, user, adminOnly, router]);
 
-    // If this is an admin-only route and the logged-in user is not an admin,
-    // redirect them away to their user profile.
-    if (adminOnly && !isAdmin) {
-      router.replace('/profile');
-    }
-  }, [loading, user, isAdmin, adminOnly, router]);
-
-  // While loading, or if conditions for rendering children are not met yet
-  // (e.g., redirect is imminent), show a loading spinner.
+  // If loading, or if we need a redirect, show a spinner that matches the provider's style
   if (loading || !user || (adminOnly && !isAdmin)) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        <Loader2 className="animate-spin text-primary" size={32} />
+      <div className="flex flex-col justify-center items-center h-[80vh] space-y-4">
+        <Loader2 className="animate-spin text-primary h-10 w-10" />
+        <p className="text-muted-foreground text-sm font-medium">Securing session...</p>
       </div>
     );
   }
 
-  // If all checks pass (user exists and has the correct role), render the protected content.
   return <>{children}</>;
 }

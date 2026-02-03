@@ -9,7 +9,6 @@ import { initializeFirebaseOnClient } from './client-init';
 import type { Admin } from '@/lib/admin-data';
 import { usePathname, useRouter } from 'next/navigation';
 
-// Define the shape of our services and auth state
 interface FirebaseServices {
     auth: Auth;
     db: Firestore;
@@ -22,12 +21,10 @@ interface AuthState {
   isHeadAdmin: boolean;
 }
 
-// Create contexts to hold the services and auth state
 const AuthServiceContext = createContext<Auth | undefined>(undefined);
 const DbContext = createContext<Firestore | undefined>(undefined);
 const AuthContext = createContext<AuthState | undefined>(undefined);
 
-// The main provider component
 export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   const [services, setServices] = useState<FirebaseServices | null>(null);
   const [authState, setAuthState] = useState<Omit<AuthState, 'loading'>>({
@@ -41,7 +38,6 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  // Effect to initialize Firebase when the provider mounts
   useEffect(() => {
     initializeFirebaseOnClient()
       .then(setServices)
@@ -68,20 +64,20 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     setIsAuthLoading(false);
   }, []);
 
-  // Effect to listen for authentication state changes
   useEffect(() => {
     if (!services) return;
 
     const { auth, db } = services;
-    setIsAuthLoading(true);
     const unsubscribe = onAuthStateChanged(auth, (user) => {
+      // Don't set loading back to true if we already have a user and just refresh
+      // Only set it true on initial load or logout/login events
+      setIsAuthLoading(true);
       checkAdminStatus(user, db);
     });
 
     return () => unsubscribe();
   }, [services, checkAdminStatus]);
 
-  // Memoize the context values to prevent unnecessary re-renders
   const authContextValue = useMemo(() => ({
     user: authState.user,
     isAdmin: authState.isAdmin,
@@ -89,42 +85,33 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     loading: isAuthLoading || !services,
   }), [authState, isAuthLoading, services]);
 
-  // Centralized redirection logic
    useEffect(() => {
     const { user, isAdmin, loading } = authContextValue;
-    if (loading) return; // Wait for auth state to be fully resolved
+    if (loading) return; 
 
     const isUserAuthPage = pathname === '/login' || pathname === '/signup';
     const isAdminAuthPage = pathname === '/admin/login';
     const isAdminArea = pathname.startsWith('/admin/');
 
     if (user) {
-      // --- User is LOGGED IN ---
       if (isAdmin) {
-        // User is an ADMIN.
-        // If an admin is on a user auth page, redirect to dashboard.
-        if (isUserAuthPage) {
+        // Correctly route logged-in admins
+        if (isUserAuthPage || pathname === '/') {
           router.replace('/admin/analytics');
         }
       } else {
-        // User is a REGULAR USER
-        // If a regular user tries to access any admin page, send them to their user profile page.
-        if (isAdminArea) {
+        // Correctly route logged-in regular users
+        if (isAdminArea && !isAdminAuthPage) {
           router.replace('/profile'); 
         } 
-        // If a logged-in regular user is on a user auth page, send them to their profile
-        else if (isUserAuthPage) {
+        else if (isUserAuthPage || pathname === '/') {
           router.replace('/profile');
         }
       }
     }
-    // Note: Redirection for unauthenticated users on protected routes
-    // is now handled by the <ProtectedRoute> component itself.
-    
   }, [authContextValue, pathname, router]);
 
 
-  // Render error state
   if (error) {
     return (
         <div className="flex flex-col gap-4 justify-center items-center h-screen bg-destructive text-destructive-foreground p-4 text-center">
@@ -136,17 +123,15 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Render loading state while services initialize or auth is checked
   if (authContextValue.loading) {
      return (
-      <div className="flex justify-center items-center h-screen">
-        <Loader2 className="animate-spin text-primary" size={32} />
-        <p className="ml-2">Connecting to services...</p>
+      <div className="flex flex-col items-center justify-center h-screen space-y-4">
+        <Loader2 className="animate-spin text-primary h-12 w-12" />
+        <p className="text-muted-foreground font-medium">Vidya EduCare is loading...</p>
       </div>
     );
   }
 
-  // Render the provider tree with the application
   return (
     <AuthContext.Provider value={authContextValue}>
       <DbContext.Provider value={services.db}>
@@ -158,7 +143,6 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-// Custom hooks to access the contexts
 export const useAuth = (): AuthState => {
   const context = useContext(AuthContext);
   if (context === undefined) {

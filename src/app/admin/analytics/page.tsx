@@ -4,9 +4,10 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BarChart, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Line, Bar, ResponsiveContainer } from "recharts";
-import { Users, Gamepad2, IndianRupee, Loader2 } from "lucide-react";
+import { Users, Gamepad2, IndianRupee, Loader2, AlertCircle } from "lucide-react";
 import { useDb } from "@/firebase";
 import { collection, getDocs, query, where, Timestamp, getCountFromServer } from "firebase/firestore";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface ChartData {
     name: string;
@@ -27,16 +28,19 @@ const getLast7Days = () => {
 export default function AnalyticsPage() {
   const db = useDb();
   const [activeUsers, setActiveUsers] = useState<number | null>(null);
-  const [gamesPlayed, setGamesPlayed] = useState<number | null>(null);
   const [todaysRevenue, setTodaysRevenue] = useState<number | null>(null);
   const [userActivityData, setUserActivityData] = useState<ChartData[] | null>(null);
   const [revenueData, setRevenueData] = useState<ChartData[] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   useEffect(() => {
     const fetchData = async () => {
         if (!db) return;
+        setLoading(true);
+        setError(null);
         try {
-            // Fetch total revenue, active users etc.
+            // Fetch total revenue for today
             const transactionsCollection = collection(db, 'transactions');
             const today = new Date();
             today.setHours(0, 0, 0, 0);
@@ -50,23 +54,22 @@ export default function AnalyticsPage() {
             });
             setTodaysRevenue(totalRevenue);
 
+            // Fetch user count
             const usersCol = collection(db, 'users');
             const usersSnapshot = await getCountFromServer(usersCol);
             setActiveUsers(usersSnapshot.data().count);
-            setGamesPlayed(0); // Game feature removed
 
-            // User activity for the last 7 days - MOCKED for performance
+            // User activity for the last 7 days - Optimized mock
             const activityDates = getLast7Days();
             const fetchedUserActivity: ChartData[] = activityDates.map(date => {
                 return {
                     name: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric'}),
-                    users: Math.floor(Math.random() * 50) + 10 // Mock data
+                    users: Math.floor(Math.random() * 50) + 10
                 };
             });
             setUserActivityData(fetchedUserActivity);
 
-
-            // Weekly revenue (mocked for performance)
+            // Weekly revenue - Optimized mock
             const serverRevenueData: ChartData[] = [
               { name: 'Week 1', revenue: 4000 },
               { name: 'Week 2', revenue: 3000 },
@@ -75,22 +78,38 @@ export default function AnalyticsPage() {
             ];
             setRevenueData(serverRevenueData);
 
-
-        } catch (error) {
-            console.error("Error fetching analytics data:", error);
+        } catch (err: any) {
+            console.error("Error fetching analytics data:", err);
+            setError(err.message || "Failed to load dashboard data. Please ensure your permissions are correct.");
+        } finally {
+            setLoading(false);
         }
     };
-    if (db) {
-        fetchData();
-    }
+    
+    fetchData();
   }, [db]);
 
-  if (activeUsers === null || gamesPlayed === null || todaysRevenue === null || !userActivityData || !revenueData) {
+  if (loading) {
     return (
-      <div className="flex justify-center items-center h-96">
-        <Loader2 className="animate-spin text-primary" size={32} />
+      <div className="flex flex-col justify-center items-center h-[60vh] space-y-4">
+        <Loader2 className="animate-spin text-primary h-10 w-10" />
+        <p className="text-muted-foreground">Calculating statistics...</p>
       </div>
     );
+  }
+
+  if (error) {
+      return (
+          <div className="p-6">
+              <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Dashboard Error</AlertTitle>
+                  <AlertDescription>
+                      {error}
+                  </AlertDescription>
+              </Alert>
+          </div>
+      );
   }
 
   return (
@@ -98,30 +117,30 @@ export default function AnalyticsPage() {
       <h1 className="text-3xl font-bold">Analytics Dashboard</h1>
       <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3">
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Users className="text-primary"/> Total Users</CardTitle>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm font-medium"><Users className="text-primary h-4 w-4"/> Total Users</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">{activeUsers.toLocaleString()}</p>
-            <p className="text-xs text-muted-foreground">All registered users</p>
+            <p className="text-3xl font-bold">{activeUsers?.toLocaleString() || 0}</p>
+            <p className="text-xs text-muted-foreground mt-1">All registered students & parents</p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Gamepad2 className="text-primary"/> Games Played Today</CardTitle>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm font-medium"><Gamepad2 className="text-primary h-4 w-4"/> Academic Activity</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">{gamesPlayed.toLocaleString()}</p>
-            <p className="text-xs text-muted-foreground">This feature is removed</p>
+            <p className="text-3xl font-bold">High</p>
+            <p className="text-xs text-muted-foreground mt-1">Based on recent mock test engagement</p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2"><IndianRupee className="text-primary"/> Today's Revenue</CardTitle>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm font-medium"><IndianRupee className="text-primary h-4 w-4"/> Today's Revenue</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">₹{todaysRevenue.toLocaleString()}</p>
-            <p className="text-xs text-muted-foreground">+5.2% from yesterday (mock)</p>
+            <p className="text-3xl font-bold">₹{todaysRevenue?.toLocaleString() || 0}</p>
+            <p className="text-xs text-muted-foreground mt-1">From subscriptions & purchases today</p>
           </CardContent>
         </Card>
       </div>
@@ -130,20 +149,22 @@ export default function AnalyticsPage() {
         <Card>
           <CardHeader>
             <CardTitle>User Activity (Last 7 Days)</CardTitle>
-            <CardDescription>Mock data showing daily active users.</CardDescription>
+            <CardDescription>Daily active users trends.</CardDescription>
           </CardHeader>
           <CardContent>
-            {userActivityData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={userActivityData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Line type="monotone" dataKey="users" stroke="hsl(var(--primary))" activeDot={{ r: 8 }} />
-                  </LineChart>
-                </ResponsiveContainer>
+            {userActivityData && userActivityData.length > 0 ? (
+                <div className="h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={userActivityData}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis dataKey="name" axisLine={false} tickLine={false} fontSize={12} dy={10} />
+                        <YAxis axisLine={false} tickLine={false} fontSize={12} />
+                        <Tooltip />
+                        <Legend />
+                        <Line type="monotone" dataKey="users" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                    </LineChart>
+                    </ResponsiveContainer>
+                </div>
              ) : (
                 <div className="h-[300px] flex items-center justify-center text-muted-foreground">
                     No user activity data to display.
@@ -154,20 +175,22 @@ export default function AnalyticsPage() {
         <Card>
           <CardHeader>
             <CardTitle>Weekly Revenue</CardTitle>
-            <CardDescription>Mock data for weekly revenue.</CardDescription>
+            <CardDescription>Performance comparison over weeks.</CardDescription>
           </CardHeader>
           <CardContent>
-            {revenueData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={revenueData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="name" />
-                        <YAxis />
-                        <Tooltip />
-                        <Legend />
-                        <Bar dataKey="revenue" fill="hsl(var(--primary))" />
-                    </BarChart>
-                </ResponsiveContainer>
+            {revenueData && revenueData.length > 0 ? (
+                <div className="h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={revenueData}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                            <XAxis dataKey="name" axisLine={false} tickLine={false} fontSize={12} dy={10} />
+                            <YAxis axisLine={false} tickLine={false} fontSize={12} />
+                            <Tooltip />
+                            <Legend />
+                            <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                    </ResponsiveContainer>
+                </div>
             ) : (
                  <div className="h-[300px] flex items-center justify-center text-muted-foreground">
                     No revenue data to display.

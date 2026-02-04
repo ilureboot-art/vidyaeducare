@@ -42,27 +42,24 @@ export default function AdminLoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!auth || !db) {
-        toast({ variant: "destructive", title: "Login Failed", description: "Auth service not ready. Please try again." });
+    if (!auth) {
+        toast({ variant: "destructive", title: "Login Failed", description: "Auth service not ready." });
         return;
     }
     setIsLoading(true);
     const password = (e.currentTarget.querySelector('#password-login') as HTMLInputElement).value;
 
     try {
-      // Step 1: Sign in the user
+      // Step 1: Just authenticate. Redirection is handled centrally by FirebaseProvider.
       await signInWithEmailAndPassword(auth, email, password);
       
-      // Step 2: Update preferences
       if (rememberMe) {
           localStorage.setItem('rememberedAdmin', email);
       } else {
           localStorage.removeItem('rememberedAdmin');
       }
       
-      // Note: We don't perform manual redirection here. 
-      // The FirebaseProvider is the single source of truth for auth-based routing.
-      toast({ title: "Login Successful!", description: "Authorizing your admin access..." });
+      toast({ title: "Login Successful!", description: "Authorizing your admin session..." });
       
     } catch (error: any) {
        let errorMessage = "An unknown error occurred.";
@@ -71,7 +68,7 @@ export default function AdminLoginPage() {
             case 'auth/user-not-found':
             case 'auth/wrong-password':
             case 'auth/invalid-credential':
-                errorMessage = "Invalid email or password. Please check your credentials and try again.";
+                errorMessage = "Invalid email or password. Please check your credentials.";
                 break;
             default:
                 errorMessage = error.message;
@@ -103,13 +100,12 @@ export default function AdminLoginPage() {
 
   const handleCreateHeadAdmin = async () => {
     if (!db || !auth) {
-        toast({ variant: "destructive", title: "Setup Failed", description: "Database service not ready." });
+        toast({ variant: "destructive", title: "Setup Failed", description: "Services not ready." });
         return;
     }
     setSetupStatus('loading');
     
     try {
-        // 1. Check if Head Admin already exists to prevent duplicates.
         const headAdminQuery = query(collection(db, "admins"), where("role", "==", "Head Admin"));
         const headAdminSnapshot = await getDocs(headAdminQuery);
         if (!headAdminSnapshot.empty) {
@@ -117,11 +113,9 @@ export default function AdminLoginPage() {
           return;
         }
 
-        // 2. Create the user with the main auth instance.
         const userCredential = await createUserWithEmailAndPassword(auth, HEAD_ADMIN_EMAIL, HEAD_ADMIN_PASSWORD);
         const user = userCredential.user;
 
-        // 3. Run all database writes in a single, atomic transaction using the MAIN db connection.
         await runTransaction(db, async (transaction) => {
             const adminDocRef = doc(db, "admins", user.uid);
             transaction.set(adminDocRef, {
@@ -168,7 +162,7 @@ export default function AdminLoginPage() {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="login">Login</TabsTrigger>
-                <TabsTrigger value="signup">Head Admin Setup</TabsTrigger>
+                <TabsTrigger value="signup">Setup</TabsTrigger>
             </TabsList>
             <TabsContent value="login">
                 <form onSubmit={handleLogin}>
@@ -186,7 +180,7 @@ export default function AdminLoginPage() {
                             <div className="space-y-2 relative">
                                 <div className="flex items-center justify-between">
                                   <Label htmlFor="password-login">Password</Label>
-                                  <Button type="button" variant="link" className="px-0 h-auto text-xs" onClick={handleForgotPassword} disabled={isLoading || !auth}>
+                                  <Button type="button" variant="link" className="px-0 h-auto text-xs" onClick={handleForgotPassword} disabled={isLoading}>
                                       Forgot Password?
                                   </Button>
                                 </div>
@@ -200,7 +194,7 @@ export default function AdminLoginPage() {
                               <Label htmlFor="remember-me-admin" className="text-sm font-normal">Remember me</Label>
                             </div>
                             <Button type="submit" className="w-full !mt-6" disabled={isLoading || !auth}>
-                                {isLoading || !auth ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                                 {auth ? 'Login' : 'Loading...'}
                             </Button>
                     </CardContent>
@@ -210,13 +204,13 @@ export default function AdminLoginPage() {
                 <CardHeader>
                     <CardTitle>Head Admin Setup</CardTitle>
                     <CardDescription>
-                        Use this one-time tool to create the first Head Admin account for the application.
+                        One-time tool to create the primary administrator account.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4 text-center">
                     {setupStatus === 'idle' && (
                         <Button onClick={handleCreateHeadAdmin} className="w-full" disabled={isLoading || !auth}>
-                           {isLoading || !auth ? <Loader2 className="mr-2 animate-spin"/> : <UserPlus className="mr-2"/>}
+                           {isLoading ? <Loader2 className="mr-2 animate-spin"/> : <UserPlus className="mr-2"/>}
                             Create Head Admin Account
                         </Button>
                     )}
@@ -231,9 +225,9 @@ export default function AdminLoginPage() {
                         <div className="space-y-3 text-left p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
                             <div className="flex items-center gap-2">
                                <CheckCircle className="text-green-600"/>
-                               <h3 className="font-semibold">Head Admin Created Successfully!</h3>
+                               <h3 className="font-semibold">Success!</h3>
                             </div>
-                            <p className="text-xs text-muted-foreground">You can now log in using these credentials. Please change the password after your first login.</p>
+                            <p className="text-xs text-muted-foreground">You can now log in using these credentials:</p>
                              <div className="text-sm">
                                 <p><strong>Email:</strong> {HEAD_ADMIN_EMAIL}</p>
                                 <p><strong>Password:</strong> {HEAD_ADMIN_PASSWORD}</p>
@@ -245,9 +239,9 @@ export default function AdminLoginPage() {
                         <div className="space-y-2 text-left p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
                            <div className="flex items-center gap-2">
                                <AlertTriangle className="text-yellow-600"/>
-                               <h3 className="font-semibold">Head Admin Already Exists</h3>
+                               <h3 className="font-semibold">Head Admin Exists</h3>
                            </div>
-                           <p className="text-sm text-muted-foreground">The system already has a Head Admin. No action was taken. Please proceed to the Login tab.</p>
+                           <p className="text-sm text-muted-foreground">The system already has an admin. Please log in.</p>
                         </div>
                     )}
 
@@ -255,7 +249,7 @@ export default function AdminLoginPage() {
                         <div className="space-y-2 text-left p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
                             <div className="flex items-center gap-2">
                                <AlertTriangle className="text-red-600"/>
-                               <h3 className="font-semibold">An Error Occurred</h3>
+                               <h3 className="font-semibold">Error</h3>
                            </div>
                            <p className="text-sm text-muted-foreground">{setupError}</p>
                         </div>
@@ -269,9 +263,9 @@ export default function AdminLoginPage() {
         </Tabs>
       </Card>
       <div className="mt-4 text-center text-sm">
-        <Link href="/login" passHref>
+        <Link href="/" passHref>
             <Button variant="ghost" size="sm">
-                <ArrowLeft className="mr-2"/> Back to Player Login
+                <ArrowLeft className="mr-2"/> Back to Homepage
             </Button>
         </Link>
       </div>

@@ -8,7 +8,7 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == userId;
     }
 
-    // Simplified role check for better performance and reliability
+    // Role check for admins
     function isAdmin() {
       return request.auth != null && 
              exists(/databases/$(database)/documents/admins/$(request.auth.uid));

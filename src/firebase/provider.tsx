@@ -52,8 +52,10 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
         const adminDocRef = doc(db, "admins", user.uid);
         const adminDocSnap = await getDoc(adminDocRef);
         const adminData = adminDocSnap.exists() ? adminDocSnap.data() as Admin : null;
+        
         const isAdmin = !!adminData && adminData.status === 'Active';
         const isHeadAdmin = isAdmin && adminData.role === 'Head Admin';
+        
         setAuthState({ user, isAdmin, isHeadAdmin });
       } catch (e) {
         console.error("Error checking admin status:", e);
@@ -70,6 +72,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
     const { auth, db } = services;
     const unsubscribe = onAuthStateChanged(auth, (user) => {
+      // When auth state changes, we mark as loading until the role check is done
       setIsAuthLoading(true);
       checkAdminStatus(user, db);
     });
@@ -84,11 +87,11 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     loading: isAuthLoading || !services,
   }), [authState, isAuthLoading, services]);
 
-   useEffect(() => {
+  // Unified, Centralized Redirection Logic
+  useEffect(() => {
     const { user, isAdmin, loading } = authContextValue;
     if (loading) return; 
 
-    // Define categories of pages
     const isUserAuthPage = pathname === '/login' || pathname === '/signup';
     const isAdminAuthPage = pathname === '/admin/login';
     const isRoot = pathname === '/';
@@ -115,7 +118,6 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     }
   }, [authContextValue, pathname, router]);
 
-
   if (error) {
     return (
         <div className="flex flex-col gap-4 justify-center items-center h-screen bg-destructive text-destructive-foreground p-4 text-center">
@@ -131,7 +133,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
      return (
       <div className="flex flex-col items-center justify-center h-screen space-y-4">
         <Loader2 className="animate-spin text-primary h-12 w-12" />
-        <p className="text-muted-foreground font-medium">Vidya EduCare is securing your session...</p>
+        <p className="text-muted-foreground font-medium italic tracking-wide">Vidya EduCare is checking your credentials...</p>
       </div>
     );
   }

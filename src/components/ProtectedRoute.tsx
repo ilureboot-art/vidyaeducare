@@ -18,27 +18,29 @@ export default function ProtectedRoute({
   const pathname = usePathname();
 
   useEffect(() => {
-    // Redirection is now primarily handled by the central FirebaseProvider.
-    // This component acts as a local gatekeeper to ensure users aren't seeing
-    // content they shouldn't while the provider's logic resolves.
-    if (!loading && !user) {
+    if (loading) return;
+
+    if (!user) {
+      // Not logged in: send to correct login gate
       const targetPath = adminOnly ? '/admin/login' : '/login';
       router.replace(targetPath);
+    } else if (adminOnly && !isAdmin) {
+      // Logged in but not an admin: forcefully remove from admin area
+      router.replace('/profile');
     }
-  }, [loading, user, adminOnly, router]);
+  }, [loading, user, isAdmin, adminOnly, router]);
 
-  // While checking auth state, show a clean loader
+  // While checking auth state or database role, show a loader
   if (loading) {
     return (
       <div className="flex flex-col justify-center items-center h-[80vh] space-y-4">
         <Loader2 className="animate-spin text-primary h-10 w-10" />
-        <p className="text-muted-foreground text-sm font-medium">Securing session...</p>
+        <p className="text-muted-foreground text-sm font-medium">Verifying access rights...</p>
       </div>
     );
   }
 
-  // If user is not authenticated, or they try to access admin area without permissions,
-  // return null. The FirebaseProvider will handle the redirect.
+  // Final rendering logic: only render if authorized
   if (!user || (adminOnly && !isAdmin)) {
     return null;
   }

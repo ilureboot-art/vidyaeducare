@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -14,9 +15,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Gamepad2, Shield, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Gamepad2, Eye, EyeOff, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useRouter } from "next/navigation";
 import { useAuthService, useAuth } from "@/firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
 
@@ -54,8 +54,6 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      // The onAuthStateChanged listener in FirebaseProvider will automatically
-      // handle the user and admin state updates, and the provider itself now handles redirection.
       await signInWithEmailAndPassword(authService, email, password);
 
       if (rememberMe) {
@@ -65,8 +63,8 @@ export default function LoginPage() {
       }
 
       toast({
-          title: "Login Successful!",
-          description: "Redirecting...",
+          title: "Authorized",
+          description: "Syncing your student profile...",
       });
 
     } catch (error: any) {
@@ -76,7 +74,7 @@ export default function LoginPage() {
             case 'auth/user-not-found':
             case 'auth/wrong-password':
             case 'auth/invalid-credential':
-                errorMessage = "Invalid email or password. Please check your credentials and try again.";
+                errorMessage = "Invalid credentials. Please check your email and password.";
                 break;
             default:
                 errorMessage = error.message;
@@ -98,14 +96,14 @@ export default function LoginPage() {
         <h1 className="text-4xl font-bold text-primary flex items-center gap-2 justify-center">
             <Gamepad2 className="w-10 h-10" /> Vidya EduCare
         </h1>
-        <p className="text-muted-foreground">Login to your User or Admin account.</p>
+        <p className="text-muted-foreground">Player Login Portal</p>
       </div>
       <Card className="w-full">
         <form onSubmit={handleLogin}>
           <CardHeader>
-            <CardTitle>Login</CardTitle>
+            <CardTitle>Sign In</CardTitle>
             <CardDescription>
-              Enter your email and password to log in.
+              Access your students and mock tests.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -137,7 +135,7 @@ export default function LoginPage() {
                 onClick={() => setShowPassword(prev => !prev)}
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                <span className="sr-only">Toggle password visibility</span>
+                <span className="sr-only">Toggle visibility</span>
               </Button>
             </div>
              <div className="flex items-center justify-between">
@@ -158,24 +156,16 @@ export default function LoginPage() {
           </CardContent>
           <CardFooter className="flex-col gap-4">
             <Button className="w-full" type="submit" disabled={isLoading || authLoading || !isFirebaseReady}>
-                {isLoading || authLoading || !isFirebaseReady ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                {isFirebaseReady && !authLoading ? 'Login' : 'Loading Auth...'}
+                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : 'Login'}
             </Button>
           </CardFooter>
         </form>
       </Card>
       <div className="text-center text-sm">
-        Don't have an account?{" "}
+        Need an account?{" "}
         <Link href="/signup" passHref>
-            <Button variant="link" className="px-1">Sign up</Button>
+            <Button variant="link" className="px-1">Create Account</Button>
         </Link>
-      </div>
-       <div className="text-center text-sm">
-            <Link href="/admin/login" passHref>
-                <Button variant="link" size="sm" className="text-muted-foreground">
-                    <Shield className="mr-2"/> Admin Login
-                </Button>
-            </Link>
       </div>
     </div>
   );

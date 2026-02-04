@@ -59,13 +59,13 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       const adminDocSnap = await getDoc(adminDocRef);
       const adminData = adminDocSnap.exists() ? adminDocSnap.data() as Admin : null;
       
-      const isAdmin = !!adminData && adminData.status === 'Active';
+      const isAdmin = !!adminData && (adminData.status === 'Active' || adminData.role === 'Head Admin');
       const isHeadAdmin = isAdmin && adminData.role === 'Head Admin';
       
       setAuthState({ user, isAdmin, isHeadAdmin });
     } catch (e) {
       console.error("Error checking admin status:", e);
-      // Fallback to user status if the check fails (e.g. permission denied)
+      // Fallback to safe state
       setAuthState({ user, isAdmin: false, isHeadAdmin: false });
     } finally {
       setIsAuthLoading(false);
@@ -91,7 +91,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     loading: isAuthLoading || !services,
   }), [authState, isAuthLoading, services]);
 
-  // STRICT ROLE-BASED ROUTING (Absolute Isolation)
+  // ABSOLUTE ROLE-BASED ROUTING (Strict Isolation)
   useEffect(() => {
     const { user, isAdmin, loading } = authContextValue;
     if (loading) return; 
@@ -101,27 +101,25 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     const isRoot = pathname === '/';
     const isLandingOrAuthPage = isUserAuthPage || isAdminAuthPage || isRoot;
     
-    // Explicitly identify admin-only routes
     const isAdminArea = pathname === '/admin' || pathname.startsWith('/admin/');
 
     if (user) {
       if (isAdmin) {
-        // ADMINS: If they are anywhere EXCEPT the admin dashboard area, force them there immediately.
-        // This prevents them from accessing user-facing pages like /profile or /wallet.
-        if (isLandingOrAuthPage || !isAdminArea) {
+        // ADMINS: Force away from user-facing pages and auth pages
+        if (!isAdminArea || isLandingOrAuthPage) {
           router.replace('/admin/analytics');
         }
       } else {
-        // USERS: If they attempt to access the admin area OR stay on landing/auth pages, send to player area.
+        // USERS: Prevent access to admin area and force away from auth pages
         if (isAdminArea || isLandingOrAuthPage) {
           router.replace('/profile');
         }
       }
     } else {
-        // GUESTS: Protect the areas.
+        // GUESTS: Redirect to appropriate login based on target area
         if (isAdminArea) {
             router.replace('/admin/login');
-        } else if (pathname === '/profile' || pathname === '/wallet' || pathname === '/store' || pathname === '/transactions') {
+        } else if (pathname === '/profile' || pathname === '/wallet' || pathname === '/store' || pathname === '/transactions' || pathname === '/refer' || pathname === '/iba/dashboard') {
             router.replace('/login');
         }
     }
@@ -138,8 +136,6 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // The loading screen is active until the role check is completed.
-  // This prevents the "flash" of unauthorized content.
   if (authContextValue.loading) {
      return (
       <div className="flex flex-col items-center justify-center h-screen space-y-4">

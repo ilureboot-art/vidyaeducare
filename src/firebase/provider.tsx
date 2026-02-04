@@ -54,7 +54,6 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      // Direct lookup in the admins collection to verify role
       const adminDocRef = doc(db, "admins", user.uid);
       const adminDocSnap = await getDoc(adminDocRef);
       const adminData = adminDocSnap.exists() ? adminDocSnap.data() as Admin : null;
@@ -65,7 +64,6 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       setAuthState({ user, isAdmin, isHeadAdmin });
     } catch (e) {
       console.error("Error checking admin status:", e);
-      // Fallback to safe state
       setAuthState({ user, isAdmin: false, isHeadAdmin: false });
     } finally {
       setIsAuthLoading(false);
@@ -96,30 +94,28 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     const { user, isAdmin, loading } = authContextValue;
     if (loading) return; 
 
-    const isUserAuthPage = pathname === '/login' || pathname === '/signup' || pathname === '/forgot-password';
-    const isAdminAuthPage = pathname === '/admin/login';
-    const isRoot = pathname === '/';
-    const isLandingOrAuthPage = isUserAuthPage || isAdminAuthPage || isRoot;
-    
-    const isAdminArea = pathname === '/admin' || pathname.startsWith('/admin/');
+    const isAdminArea = pathname.startsWith('/admin');
+    const isAuthPage = pathname === '/login' || pathname === '/signup' || pathname === '/admin/login' || pathname === '/forgot-password';
+    const isPublicLanding = pathname === '/';
 
     if (user) {
       if (isAdmin) {
-        // ADMINS: Force away from user-facing pages and auth pages
-        if (!isAdminArea || isLandingOrAuthPage) {
+        // ADMINS: Force into Admin area if on landing or user-facing pages
+        if (!isAdminArea || isAuthPage) {
           router.replace('/admin/analytics');
         }
       } else {
-        // USERS: Prevent access to admin area and force away from auth pages
-        if (isAdminArea || isLandingOrAuthPage) {
+        // REGULAR USERS: Prevent access to Admin area and force to Profile if on auth pages
+        if (isAdminArea || isAuthPage) {
           router.replace('/profile');
         }
       }
     } else {
-        // GUESTS: Redirect to appropriate login based on target area
+        // GUESTS: Protect private routes
+        const isPrivateRoute = pathname === '/profile' || pathname === '/wallet' || pathname === '/store' || pathname === '/transactions' || pathname === '/refer' || pathname === '/iba/dashboard';
         if (isAdminArea) {
             router.replace('/admin/login');
-        } else if (pathname === '/profile' || pathname === '/wallet' || pathname === '/store' || pathname === '/transactions' || pathname === '/refer' || pathname === '/iba/dashboard') {
+        } else if (isPrivateRoute) {
             router.replace('/login');
         }
     }
@@ -140,7 +136,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
      return (
       <div className="flex flex-col items-center justify-center h-screen space-y-4">
         <Loader2 className="animate-spin text-primary h-12 w-12" />
-        <p className="text-muted-foreground font-medium italic tracking-wide">Vidya EduCare is securing your session...</p>
+        <p className="text-muted-foreground font-medium italic tracking-wide">Securing session...</p>
       </div>
     );
   }

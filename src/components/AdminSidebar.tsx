@@ -3,7 +3,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { 
     LayoutDashboard, 
     Users, 
@@ -21,7 +21,6 @@ import {
     UserCog,
     Bell,
     BookCopy,
-    BrainCircuit,
     Calendar,
     Ban,
     Puzzle
@@ -35,7 +34,8 @@ import {
     SidebarMenuButton,
     SidebarFooter,
 } from "@/components/ui/sidebar";
-
+import { useAuthService } from "@/firebase";
+import { signOut } from "firebase/auth";
 
 const adminNavItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -56,13 +56,16 @@ const adminNavItems = [
   { href: "/admin/support", label: "Support", icon: LifeBuoy },
 ];
 
-const deprecatedNavItems = [
-    { href: "/admin/game-settings", label: "Game Settings", icon: Ban },
-]
-
-// Using React.memo to prevent unnecessary re-renders during navigation
 export const AdminSidebar = React.memo(function AdminSidebar() {
   const pathname = usePathname();
+  const auth = useAuthService();
+  const router = useRouter();
+
+  const handleSignOut = async () => {
+    if (!auth) return;
+    await signOut(auth);
+    router.push('/admin/login');
+  };
 
   return (
     <Sidebar collapsible="icon">
@@ -87,38 +90,15 @@ export const AdminSidebar = React.memo(function AdminSidebar() {
                         </SidebarMenuItem>
                     );
                 })}
-                 {deprecatedNavItems.map((item) => {
-                    const isActive = pathname.startsWith(item.href);
-                    return (
-                        <SidebarMenuItem key={item.href}>
-                            <Link href={item.href} prefetch={true}>
-                                <SidebarMenuButton tooltip={item.label} isActive={isActive} className="text-muted-foreground line-through">
-                                    <item.icon/>
-                                    <span>{item.label}</span>
-                                </SidebarMenuButton>
-                            </Link>
-                        </SidebarMenuItem>
-                    );
-                })}
             </SidebarMenu>
         </SidebarContent>
         <SidebarFooter>
             <SidebarMenu>
                  <SidebarMenuItem>
-                    <Link href="/">
-                        <SidebarMenuButton tooltip="Exit Admin">
-                                <Home />
-                                <span>Back to App</span>
-                        </SidebarMenuButton>
-                    </Link>
-                </SidebarMenuItem>
-                 <SidebarMenuItem>
-                    <Link href="/login">
-                        <SidebarMenuButton tooltip="Sign Out">
-                                <LogOut />
-                                <span>Sign Out</span>
-                        </SidebarMenuButton>
-                    </Link>
+                    <SidebarMenuButton tooltip="Sign Out" onClick={handleSignOut} className="text-destructive hover:text-destructive hover:bg-destructive/10">
+                        <LogOut />
+                        <span>Sign Out</span>
+                    </SidebarMenuButton>
                 </SidebarMenuItem>
             </SidebarMenu>
         </SidebarFooter>

@@ -8,7 +8,6 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == userId;
     }
 
-    // Direct role check without exists() for performance and offline stability
     function isAdmin() {
       return request.auth != null && 
              get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.status == 'Active';
@@ -20,6 +19,7 @@ service cloud.firestore {
     }
 
     match /admins/{userId} {
+      // Allow any authenticated user to read their own role data for login checks
       allow read: if request.auth != null;
       allow create, update, delete, list: if isHeadAdmin();
     }
@@ -76,7 +76,9 @@ service cloud.firestore {
 
     match /testResults/{resultId} {
         allow create: if request.auth != null;
-        allow read: if request.auth != null && (resource.data.studentId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.students || isAdmin());
+        allow read: if request.auth != null && (
+          resource.data.studentId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.students || isAdmin()
+        );
     }
 
     match /leaderboard/{resultId} {

@@ -17,7 +17,7 @@ import { Shield, ArrowLeft, Eye, EyeOff, Loader2, UserPlus, AlertTriangle, Check
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from "firebase/auth";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "firebase/auth";
 import { doc, getDocs, collection, query, where, runTransaction } from "firebase/firestore";
 import { useAuthService, useDb } from "@/firebase";
 
@@ -40,14 +40,12 @@ export default function AdminLoginPage() {
   const [setupError, setSetupError] = useState('');
 
   // NOTE: Redirection is now handled centrally by FirebaseProvider.
-  // This page only handles authentication.
+  // This page only handles authentication to prevent race conditions.
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!auth) {
-        toast({ variant: "destructive", title: "Login Failed", description: "Auth service not ready." });
-        return;
-    }
+    if (!auth) return;
+    
     setIsLoading(true);
     const password = (e.currentTarget.querySelector('#password-login') as HTMLInputElement).value;
 
@@ -60,7 +58,7 @@ export default function AdminLoginPage() {
           localStorage.removeItem('rememberedAdmin');
       }
       
-      toast({ title: "Login Successful!", description: "Authorizing your admin session..." });
+      toast({ title: "Authorized", description: "Loading admin dashboard..." });
       
     } catch (error: any) {
        let errorMessage = "An unknown error occurred.";
@@ -69,7 +67,7 @@ export default function AdminLoginPage() {
             case 'auth/user-not-found':
             case 'auth/wrong-password':
             case 'auth/invalid-credential':
-                errorMessage = "Invalid email or password. Please check your credentials.";
+                errorMessage = "Invalid credentials. Please try again.";
                 break;
             default:
                 errorMessage = error.message;
@@ -81,29 +79,8 @@ export default function AdminLoginPage() {
     }
   };
 
-  const handleForgotPassword = async () => {
-    if (!auth) return;
-    const currentEmail = (document.getElementById('email-login') as HTMLInputElement)?.value || email;
-    if (!currentEmail) {
-        toast({ variant: "destructive", title: "Email Required", description: "Enter your email to reset password."});
-        return;
-    }
-    setIsLoading(true);
-    try {
-        await sendPasswordResetEmail(auth, currentEmail);
-        toast({ title: "Password Reset Email Sent", description: `A reset link has been sent to ${currentEmail}.`});
-    } catch (error: any) {
-        toast({ variant: "destructive", title: "Error Sending Email", description: error.message });
-    } finally {
-        setIsLoading(false);
-    }
-  };
-
   const handleCreateHeadAdmin = async () => {
-    if (!db || !auth) {
-        toast({ variant: "destructive", title: "Setup Failed", description: "Services not ready." });
-        return;
-    }
+    if (!db || !auth) return;
     setSetupStatus('loading');
     
     try {
@@ -143,7 +120,6 @@ export default function AdminLoginPage() {
         if (error.code === 'auth/email-already-in-use') {
             setSetupStatus('already_exists');
         } else {
-            console.error("Head Admin creation failed:", error);
             setSetupError(error.message);
             setSetupStatus('error');
         }
@@ -178,12 +154,7 @@ export default function AdminLoginPage() {
                                 <Input id="email-login" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
                             </div>
                             <div className="space-y-2 relative">
-                                <div className="flex items-center justify-between">
-                                  <Label htmlFor="password-login">Password</Label>
-                                  <Button type="button" variant="link" className="px-0 h-auto text-xs" onClick={handleForgotPassword} disabled={isLoading}>
-                                      Forgot Password?
-                                  </Button>
-                                </div>
+                                <Label htmlFor="password-login">Password</Label>
                                 <Input id="password-login" type={showPassword ? "text" : "password"} required />
                                 <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-6 h-7 w-7" onClick={() => setShowPassword(prev => !prev)}>
                                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -194,8 +165,7 @@ export default function AdminLoginPage() {
                               <Label htmlFor="remember-me-admin" className="text-sm font-normal">Remember me</Label>
                             </div>
                             <Button type="submit" className="w-full !mt-6" disabled={isLoading || !auth}>
-                                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                                {auth ? 'Login' : 'Loading...'}
+                                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : 'Login'}
                             </Button>
                     </CardContent>
                 </form>

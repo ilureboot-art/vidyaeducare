@@ -64,7 +64,6 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       setAuthState({ user, isAdmin, isHeadAdmin });
     } catch (e) {
       console.error("Error checking admin status:", e);
-      // Fallback to non-admin if check fails
       setAuthState({ user, isAdmin: false, isHeadAdmin: false });
     } finally {
       setIsAuthLoading(false);
@@ -90,7 +89,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     loading: isAuthLoading || !services,
   }), [authState, isAuthLoading, services]);
 
-  // CENTRAL REDIRECTION LOGIC
+  // CENTRALIZED REDIRECTION LOGIC
   useEffect(() => {
     const { user, isAdmin, loading } = authContextValue;
     if (loading) return; 
@@ -103,7 +102,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
     if (user) {
       if (isAdmin) {
-        // If an Admin lands on a non-admin page or root, send them to dashboard
+        // If an Admin is on a non-admin page, send them to dashboard
         if (isLandingOrAuthPage || !isAdminArea) {
           router.replace('/admin/analytics');
         }
@@ -113,9 +112,6 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
           router.replace('/profile');
         }
       }
-    } else {
-        // Unauthenticated users are handled by ProtectedRoute component locally,
-        // but we can ensure they aren't stuck in some weird states here if needed.
     }
   }, [authContextValue, pathname, router]);
 
@@ -134,7 +130,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
      return (
       <div className="flex flex-col items-center justify-center h-screen space-y-4">
         <Loader2 className="animate-spin text-primary h-12 w-12" />
-        <p className="text-muted-foreground font-medium italic tracking-wide">Vidya EduCare is checking your credentials...</p>
+        <p className="text-muted-foreground font-medium italic tracking-wide">Vidya EduCare is securing your session...</p>
       </div>
     );
   }

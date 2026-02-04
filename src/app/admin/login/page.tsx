@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,9 +18,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from "firebase/auth";
-import { doc, setDoc, getDocs, collection, query, where, runTransaction } from "firebase/firestore";
+import { doc, getDocs, collection, query, where, runTransaction } from "firebase/firestore";
 import { useAuthService, useDb } from "@/firebase";
-import type { Admin, AdminRole } from "@/lib/admin-data";
 
 // Pre-defined credentials for the one-time Head Admin setup
 const HEAD_ADMIN_EMAIL = 'admin@vidyaeducare.com';
@@ -51,15 +50,19 @@ export default function AdminLoginPage() {
     const password = (e.currentTarget.querySelector('#password-login') as HTMLInputElement).value;
 
     try {
-      // The onAuthStateChanged listener in FirebaseProvider will detect the change and handle redirection.
+      // Step 1: Sign in the user
       await signInWithEmailAndPassword(auth, email, password);
       
+      // Step 2: Update preferences
       if (rememberMe) {
           localStorage.setItem('rememberedAdmin', email);
       } else {
           localStorage.removeItem('rememberedAdmin');
       }
-      toast({ title: "Login Successful!", description: "Redirecting to admin dashboard..." });
+      
+      // Note: We don't perform manual redirection here. 
+      // The FirebaseProvider is the single source of truth for auth-based routing.
+      toast({ title: "Login Successful!", description: "Authorizing your admin access..." });
       
     } catch (error: any) {
        let errorMessage = "An unknown error occurred.";
@@ -275,5 +278,3 @@ export default function AdminLoginPage() {
     </div>
   );
 }
-
-    

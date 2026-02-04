@@ -51,8 +51,9 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       try {
         const adminDocRef = doc(db, "admins", user.uid);
         const adminDocSnap = await getDoc(adminDocRef);
-        const isAdmin = adminDocSnap.exists() && adminDocSnap.data().status === 'Active';
-        const isHeadAdmin = isAdmin && (adminDocSnap.data() as Admin).role === 'Head Admin';
+        const adminData = adminDocSnap.exists() ? adminDocSnap.data() as Admin : null;
+        const isAdmin = !!adminData && adminData.status === 'Active';
+        const isHeadAdmin = isAdmin && adminData.role === 'Head Admin';
         setAuthState({ user, isAdmin, isHeadAdmin });
       } catch (e) {
         console.error("Error checking admin status:", e);
@@ -69,8 +70,6 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
     const { auth, db } = services;
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      // Don't set loading back to true if we already have a user and just refresh
-      // Only set it true on initial load or logout/login events
       setIsAuthLoading(true);
       checkAdminStatus(user, db);
     });
@@ -89,22 +88,27 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     const { user, isAdmin, loading } = authContextValue;
     if (loading) return; 
 
+    // Define categories of pages
     const isUserAuthPage = pathname === '/login' || pathname === '/signup';
     const isAdminAuthPage = pathname === '/admin/login';
-    const isAdminArea = pathname.startsWith('/admin/');
+    const isRoot = pathname === '/';
+    const isAnyAuthPage = isUserAuthPage || isAdminAuthPage || isRoot;
+    const isAdminArea = pathname.startsWith('/admin/') && !isAdminAuthPage;
 
     if (user) {
       if (isAdmin) {
-        // Correctly route logged-in admins
-        if (isUserAuthPage || pathname === '/') {
+        // Logged in as Admin: Redirect away from ANY login/auth page or the landing page
+        if (isAnyAuthPage) {
           router.replace('/admin/analytics');
         }
       } else {
-        // Correctly route logged-in regular users
-        if (isAdminArea && !isAdminAuthPage) {
-          router.replace('/profile'); 
-        } 
-        else if (isUserAuthPage || pathname === '/') {
+        // Logged in as Regular User: 
+        // 1. Redirect away from admin areas
+        if (isAdminArea) {
+          router.replace('/profile');
+        }
+        // 2. Redirect away from any login/auth page or landing page
+        else if (isAnyAuthPage) {
           router.replace('/profile');
         }
       }
@@ -127,15 +131,15 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
      return (
       <div className="flex flex-col items-center justify-center h-screen space-y-4">
         <Loader2 className="animate-spin text-primary h-12 w-12" />
-        <p className="text-muted-foreground font-medium">Vidya EduCare is loading...</p>
+        <p className="text-muted-foreground font-medium">Vidya EduCare is securing your session...</p>
       </div>
     );
   }
 
   return (
     <AuthContext.Provider value={authContextValue}>
-      <DbContext.Provider value={services.db}>
-        <AuthServiceContext.Provider value={services.auth}>
+      <DbContext.Provider value={services?.db}>
+        <AuthServiceContext.Provider value={services?.auth}>
             {children}
         </AuthServiceContext.Provider>
       </DbContext.Provider>

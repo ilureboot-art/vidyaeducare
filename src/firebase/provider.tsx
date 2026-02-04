@@ -54,6 +54,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
+      // Direct lookup in the admins collection to verify role
       const adminDocRef = doc(db, "admins", user.uid);
       const adminDocSnap = await getDoc(adminDocRef);
       const adminData = adminDocSnap.exists() ? adminDocSnap.data() as Admin : null;
@@ -64,6 +65,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       setAuthState({ user, isAdmin, isHeadAdmin });
     } catch (e) {
       console.error("Error checking admin status:", e);
+      // Fallback to user status if the check fails (e.g. permission denied)
       setAuthState({ user, isAdmin: false, isHeadAdmin: false });
     } finally {
       setIsAuthLoading(false);
@@ -89,32 +91,34 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     loading: isAuthLoading || !services,
   }), [authState, isAuthLoading, services]);
 
-  // CENTRALIZED REDIRECTION & ROLE ACCESS CONTROL
-  // This is the "Sorting Hat" that keeps Users and Admins in their respective areas.
+  // STRICT ROLE-BASED ROUTING (Absolute Isolation)
   useEffect(() => {
     const { user, isAdmin, loading } = authContextValue;
     if (loading) return; 
 
-    const isUserAuthPage = pathname === '/login' || pathname === '/signup';
+    const isUserAuthPage = pathname === '/login' || pathname === '/signup' || pathname === '/forgot-password';
     const isAdminAuthPage = pathname === '/admin/login';
     const isRoot = pathname === '/';
     const isLandingOrAuthPage = isUserAuthPage || isAdminAuthPage || isRoot;
-    const isAdminArea = pathname.startsWith('/admin/') && !isAdminAuthPage;
+    
+    // Explicitly identify admin-only routes
+    const isAdminArea = pathname === '/admin' || pathname.startsWith('/admin/');
 
     if (user) {
       if (isAdmin) {
-        // ADMINS: If on a landing/auth page or a user-only page, send to admin dashboard
+        // ADMINS: If they are anywhere EXCEPT the admin dashboard area, force them there immediately.
+        // This prevents them from accessing user-facing pages like /profile or /wallet.
         if (isLandingOrAuthPage || !isAdminArea) {
           router.replace('/admin/analytics');
         }
       } else {
-        // USERS: If trying to access admin area or landing/auth pages, send to user profile
+        // USERS: If they attempt to access the admin area OR stay on landing/auth pages, send to player area.
         if (isAdminArea || isLandingOrAuthPage) {
           router.replace('/profile');
         }
       }
     } else {
-        // GUESTS: If trying to access protected areas, send to appropriate login
+        // GUESTS: Protect the areas.
         if (isAdminArea) {
             router.replace('/admin/login');
         } else if (pathname === '/profile' || pathname === '/wallet' || pathname === '/store' || pathname === '/transactions') {
@@ -134,6 +138,8 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     );
   }
 
+  // The loading screen is active until the role check is completed.
+  // This prevents the "flash" of unauthorized content.
   if (authContextValue.loading) {
      return (
       <div className="flex flex-col items-center justify-center h-screen space-y-4">

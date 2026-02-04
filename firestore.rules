@@ -4,24 +4,33 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    function isOwner(userId) {
-      return request.auth != null && request.auth.uid == userId;
+    // Core helper functions for security
+    function isAuthenticated() {
+      return request.auth != null;
     }
 
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Direct check against the admins collection for high-performance role verification
     function isAdmin() {
-      return request.auth != null && 
+      return isAuthenticated() && 
              get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.status == 'Active';
     }
 
     function isHeadAdmin() {
-      return request.auth != null && 
+      return isAuthenticated() && 
              get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'Head Admin';
     }
 
     match /admins/{userId} {
-      // Allow any authenticated user to read their own role data for login checks
-      allow read: if request.auth != null;
-      allow create, update, delete, list: if isHeadAdmin();
+      // CRITICAL: Allow users to read their own admin doc to verify their role during login.
+      // This MUST be a 'get' rather than a 'list' for privacy.
+      allow get: if isOwner(userId);
+      
+      // Full management only for Head Admins
+      allow read, write: if isHeadAdmin();
     }
 
     match /users/{userId} {
@@ -34,17 +43,17 @@ service cloud.firestore {
     }
 
     match /students/{studentId} {
-      allow read, write: if request.auth != null && (
+      allow read, write: if isAuthenticated() && (
         resource == null || resource.data.parentId == request.auth.uid || isAdmin()
       );
     }
     
     match /transactions/{txId} {
-        allow read: if request.auth != null && (
+        allow read: if isAuthenticated() && (
           resource == null || resource.data.user == request.auth.uid || isAdmin()
         );
         allow list: if isAdmin();
-        allow create: if request.auth != null && request.resource.data.user == request.auth.uid;
+        allow create: if isAuthenticated() && request.resource.data.user == request.auth.uid;
         allow update: if isHeadAdmin();
     }
 
@@ -75,29 +84,29 @@ service cloud.firestore {
     }
 
     match /testResults/{resultId} {
-        allow create: if request.auth != null;
-        allow read: if request.auth != null && (
+        allow create: if isAuthenticated();
+        allow read: if isAuthenticated() && (
           resource.data.studentId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.students || isAdmin()
         );
     }
 
     match /leaderboard/{resultId} {
         allow read: if true;
-        allow write: if request.auth != null; 
+        allow write: if isAuthenticated(); 
     }
 
     match /quizClashTournaments/{tournamentId} {
         allow read: if true;
-        allow write: if isAdmin() || request.auth != null;
+        allow write: if isAdmin();
     }
 
     match /quizClashResults/{resultId} {
         allow read: if true;
-        allow write: if request.auth != null;
+        allow write: if isAuthenticated();
     }
     
     match /notifications/{notifId} {
-        allow read: if request.auth != null && (resource.data.userId == request.auth.uid || (resource.data.userId == 'admin' && isAdmin()));
+        allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || (resource.data.userId == 'admin' && isAdmin()));
         allow write: if isAdmin();
     }
     
@@ -106,7 +115,7 @@ service cloud.firestore {
     }
     
     match /clients/{clientId} {
-        allow read: if request.auth != null && (resource.data.referrerId == request.auth.uid || isAdmin());
+        allow read: if isAuthenticated() && (resource.data.referrerId == request.auth.uid || isAdmin());
         allow write: if isAdmin();
     }
   }

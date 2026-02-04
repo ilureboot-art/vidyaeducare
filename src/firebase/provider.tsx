@@ -90,6 +90,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   }), [authState, isAuthLoading, services]);
 
   // CENTRALIZED REDIRECTION & ROLE ACCESS CONTROL
+  // This is the "Sorting Hat" that keeps Users and Admins in their respective areas.
   useEffect(() => {
     const { user, isAdmin, loading } = authContextValue;
     if (loading) return; 
@@ -102,13 +103,12 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
     if (user) {
       if (isAdmin) {
-        // ADMINS: If on a non-admin page, send to admin dashboard
+        // ADMINS: If on a landing/auth page or a user-only page, send to admin dashboard
         if (isLandingOrAuthPage || !isAdminArea) {
           router.replace('/admin/analytics');
         }
       } else {
-        // USERS: If trying to access admin area or landing pages, send to user profile
-        // This explicitly REMOVES user access to the Admin area
+        // USERS: If trying to access admin area or landing/auth pages, send to user profile
         if (isAdminArea || isLandingOrAuthPage) {
           router.replace('/profile');
         }
@@ -117,7 +117,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
         // GUESTS: If trying to access protected areas, send to appropriate login
         if (isAdminArea) {
             router.replace('/admin/login');
-        } else if (pathname === '/profile' || pathname === '/wallet' || pathname === '/store') {
+        } else if (pathname === '/profile' || pathname === '/wallet' || pathname === '/store' || pathname === '/transactions') {
             router.replace('/login');
         }
     }

@@ -6,6 +6,10 @@ import { useRouter, usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
 
+/**
+ * A component that wraps protected routes to ensure proper authentication
+ * and role-based access control.
+ */
 export default function ProtectedRoute({
   children,
   adminOnly = false,
@@ -15,22 +19,24 @@ export default function ProtectedRoute({
 }) {
   const { user, loading, isAdmin } = useAuth();
   const router = useRouter();
-  const pathname = usePathname();
 
   useEffect(() => {
     if (loading) return;
 
     if (!user) {
-      // Not logged in: send to correct login gate
+      // 1. Not logged in: Send to appropriate login page
       const targetPath = adminOnly ? '/admin/login' : '/login';
       router.replace(targetPath);
     } else if (adminOnly && !isAdmin) {
-      // Logged in but not an admin: forcefully remove from admin area
+      // 2. Logged in but not an admin trying to access admin pages: Force out
       router.replace('/profile');
+    } else if (!adminOnly && isAdmin) {
+      // 3. Admin trying to access regular user pages: Force to admin area
+      router.replace('/admin/analytics');
     }
   }, [loading, user, isAdmin, adminOnly, router]);
 
-  // While checking auth state or database role, show a loader
+  // Show a clean loading state while verifying permissions
   if (loading) {
     return (
       <div className="flex flex-col justify-center items-center h-[80vh] space-y-4">
@@ -40,10 +46,10 @@ export default function ProtectedRoute({
     );
   }
 
-  // Final rendering logic: only render if authorized
-  if (!user || (adminOnly && !isAdmin)) {
-    return null;
-  }
+  // Final barrier: Only render children if the role perfectly matches requirements
+  if (!user) return null;
+  if (adminOnly && !isAdmin) return null;
+  if (!adminOnly && isAdmin) return null;
 
   return <>{children}</>;
 }

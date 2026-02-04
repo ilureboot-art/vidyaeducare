@@ -21,7 +21,6 @@ import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswor
 import { doc, getDocs, collection, query, where, runTransaction } from "firebase/firestore";
 import { useAuthService, useDb } from "@/firebase";
 
-// Pre-defined credentials for the one-time Head Admin setup
 const HEAD_ADMIN_EMAIL = 'admin@vidyaeducare.com';
 const HEAD_ADMIN_PASSWORD = 'password123';
 const HEAD_ADMIN_NAME = 'Main Admin';
@@ -50,7 +49,6 @@ export default function AdminLoginPage() {
     const password = (e.currentTarget.querySelector('#password-login') as HTMLInputElement).value;
 
     try {
-      // Step 1: Just authenticate. Redirection is handled centrally by FirebaseProvider.
       await signInWithEmailAndPassword(auth, email, password);
       
       if (rememberMe) {
@@ -148,7 +146,6 @@ export default function AdminLoginPage() {
         }
     }
   };
-
 
   return (
     <div className="w-full max-w-md mx-auto flex flex-col items-center justify-center min-h-screen p-4">

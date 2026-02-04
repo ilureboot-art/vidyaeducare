@@ -72,7 +72,6 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
     const { auth, db } = services;
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      // When auth state changes, we mark as loading until the role check is done
       setIsAuthLoading(true);
       checkAdminStatus(user, db);
     });
@@ -87,7 +86,6 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     loading: isAuthLoading || !services,
   }), [authState, isAuthLoading, services]);
 
-  // Unified, Centralized Redirection Logic
   useEffect(() => {
     const { user, isAdmin, loading } = authContextValue;
     if (loading) return; 
@@ -95,23 +93,16 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     const isUserAuthPage = pathname === '/login' || pathname === '/signup';
     const isAdminAuthPage = pathname === '/admin/login';
     const isRoot = pathname === '/';
-    const isAnyAuthPage = isUserAuthPage || isAdminAuthPage || isRoot;
+    const isLandingOrAuthPage = isUserAuthPage || isAdminAuthPage || isRoot;
     const isAdminArea = pathname.startsWith('/admin/') && !isAdminAuthPage;
 
     if (user) {
       if (isAdmin) {
-        // Logged in as Admin: Redirect away from ANY login/auth page or the landing page
-        if (isAnyAuthPage) {
+        if (isLandingOrAuthPage) {
           router.replace('/admin/analytics');
         }
       } else {
-        // Logged in as Regular User: 
-        // 1. Redirect away from admin areas
-        if (isAdminArea) {
-          router.replace('/profile');
-        }
-        // 2. Redirect away from any login/auth page or landing page
-        else if (isAnyAuthPage) {
+        if (isAdminArea || isLandingOrAuthPage) {
           router.replace('/profile');
         }
       }

@@ -18,15 +18,16 @@ export default function ProtectedRoute({
   const pathname = usePathname();
 
   useEffect(() => {
-    // This component only handles REDIRECTION AWAY if not logged in.
-    // Redirection TOWARDS the dashboard is handled by FirebaseProvider.
+    // Redirection is now primarily handled by the central FirebaseProvider.
+    // This component acts as a local gatekeeper to ensure users aren't seeing
+    // content they shouldn't while the provider's logic resolves.
     if (!loading && !user) {
       const targetPath = adminOnly ? '/admin/login' : '/login';
       router.replace(targetPath);
     }
   }, [loading, user, adminOnly, router]);
 
-  // If we are waiting for auth status
+  // While checking auth state, show a clean loader
   if (loading) {
     return (
       <div className="flex flex-col justify-center items-center h-[80vh] space-y-4">
@@ -36,8 +37,8 @@ export default function ProtectedRoute({
     );
   }
 
-  // Final gate: If user is authenticated but doesn't have permissions, show nothing
-  // (the FirebaseProvider will eventually redirect them)
+  // If user is not authenticated, or they try to access admin area without permissions,
+  // return null. The FirebaseProvider will handle the redirect.
   if (!user || (adminOnly && !isAdmin)) {
     return null;
   }

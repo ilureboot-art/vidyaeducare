@@ -39,6 +39,9 @@ export default function AdminLoginPage() {
   const [setupStatus, setSetupStatus] = useState<'idle' | 'loading' | 'success' | 'error' | 'already_exists'>('idle');
   const [setupError, setSetupError] = useState('');
 
+  // NOTE: Redirection is now handled centrally by FirebaseProvider.
+  // This page only handles authentication.
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!auth) {

@@ -47,24 +47,28 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const checkAdminStatus = useCallback(async (user: User | null, db: Firestore) => {
-    if (user) {
-      try {
-        const adminDocRef = doc(db, "admins", user.uid);
-        const adminDocSnap = await getDoc(adminDocRef);
-        const adminData = adminDocSnap.exists() ? adminDocSnap.data() as Admin : null;
-        
-        const isAdmin = !!adminData && adminData.status === 'Active';
-        const isHeadAdmin = isAdmin && adminData.role === 'Head Admin';
-        
-        setAuthState({ user, isAdmin, isHeadAdmin });
-      } catch (e) {
-        console.error("Error checking admin status:", e);
-        setAuthState({ user, isAdmin: false, isHeadAdmin: false });
-      }
-    } else {
+    if (!user) {
       setAuthState({ user: null, isAdmin: false, isHeadAdmin: false });
+      setIsAuthLoading(false);
+      return;
     }
-    setIsAuthLoading(false);
+
+    try {
+      const adminDocRef = doc(db, "admins", user.uid);
+      const adminDocSnap = await getDoc(adminDocRef);
+      const adminData = adminDocSnap.exists() ? adminDocSnap.data() as Admin : null;
+      
+      const isAdmin = !!adminData && adminData.status === 'Active';
+      const isHeadAdmin = isAdmin && adminData.role === 'Head Admin';
+      
+      setAuthState({ user, isAdmin, isHeadAdmin });
+    } catch (e) {
+      console.error("Error checking admin status:", e);
+      // Fallback to non-admin if check fails
+      setAuthState({ user, isAdmin: false, isHeadAdmin: false });
+    } finally {
+      setIsAuthLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -86,6 +90,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     loading: isAuthLoading || !services,
   }), [authState, isAuthLoading, services]);
 
+  // CENTRAL REDIRECTION LOGIC
   useEffect(() => {
     const { user, isAdmin, loading } = authContextValue;
     if (loading) return; 
@@ -98,14 +103,19 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
     if (user) {
       if (isAdmin) {
-        if (isLandingOrAuthPage) {
+        // If an Admin lands on a non-admin page or root, send them to dashboard
+        if (isLandingOrAuthPage || !isAdminArea) {
           router.replace('/admin/analytics');
         }
       } else {
+        // If a regular user tries to access admin area or landing pages, send them to profile
         if (isAdminArea || isLandingOrAuthPage) {
           router.replace('/profile');
         }
       }
+    } else {
+        // Unauthenticated users are handled by ProtectedRoute component locally,
+        // but we can ensure they aren't stuck in some weird states here if needed.
     }
   }, [authContextValue, pathname, router]);
 

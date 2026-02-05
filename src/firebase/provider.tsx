@@ -89,33 +89,33 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     loading: isAuthLoading || !services,
   }), [authState, isAuthLoading, services]);
 
-  // ABSOLUTE ROLE-BASED ROUTING (Strict Isolation)
+  // CENTRALIZED GLOBAL ROUTING
   useEffect(() => {
     const { user, isAdmin, loading } = authContextValue;
     if (loading) return; 
 
     const isAdminArea = pathname.startsWith('/admin');
-    const isAuthPage = pathname === '/login' || pathname === '/signup' || pathname === '/admin/login' || pathname === '/forgot-password';
+    const isAuthPage = ['/login', '/signup', '/admin/login', '/forgot-password'].includes(pathname);
     const isPublicLanding = pathname === '/';
 
     if (user) {
       if (isAdmin) {
-        // ADMINS: Force into Admin area if on landing or user-facing pages
+        // ADMINS: Strictly isolated to /admin area
         if (!isAdminArea || isAuthPage) {
           router.replace('/admin/analytics');
         }
       } else {
-        // REGULAR USERS: Prevent access to Admin area and force to Profile if on auth pages
+        // PLAYERS: Strictly isolated to user-facing area
         if (isAdminArea || isAuthPage) {
           router.replace('/profile');
         }
       }
     } else {
         // GUESTS: Protect private routes
-        const isPrivateRoute = pathname === '/profile' || pathname === '/wallet' || pathname === '/store' || pathname === '/transactions' || pathname === '/refer' || pathname === '/iba/dashboard';
-        if (isAdminArea) {
+        const privateUserRoutes = ['/profile', '/wallet', '/store', '/transactions', '/refer', '/iba/dashboard', '/quiz-clash', '/leaderboard'];
+        if (isAdminArea && pathname !== '/admin/login') {
             router.replace('/admin/login');
-        } else if (isPrivateRoute) {
+        } else if (privateUserRoutes.includes(pathname)) {
             router.replace('/login');
         }
     }
@@ -136,7 +136,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
      return (
       <div className="flex flex-col items-center justify-center h-screen space-y-4">
         <Loader2 className="animate-spin text-primary h-12 w-12" />
-        <p className="text-muted-foreground font-medium italic tracking-wide">Securing session...</p>
+        <p className="text-muted-foreground font-medium italic tracking-wide">Connecting to Vidya EduCare...</p>
       </div>
     );
   }

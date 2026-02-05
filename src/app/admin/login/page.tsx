@@ -55,11 +55,14 @@ export default function AdminLoginPage() {
       }
       
       toast({ title: "Authorized", description: "Verifying administrative privileges..." });
+      // Redirection is handled centrally by FirebaseProvider
       
     } catch (error: any) {
        let errorMessage = "Access Denied.";
        if (error.code === 'auth/invalid-credential') {
            errorMessage = "Invalid admin credentials.";
+       } else if (error.message) {
+           errorMessage = error.message;
        }
        toast({ variant: "destructive", title: "Login Failed", description: errorMessage });
     } finally {
@@ -143,10 +146,12 @@ export default function AdminLoginPage() {
                             </div>
                             <div className="space-y-2 relative">
                                 <Label htmlFor="password-login">Secure Password</Label>
-                                <Input id="password-login" type={showPassword ? "text" : "password"} required />
-                                <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-6 h-7 w-7" onClick={() => setShowPassword(prev => !prev)}>
-                                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                </Button>
+                                <div className="relative">
+                                    <Input id="password-login" type={showPassword ? "text" : "password"} required />
+                                    <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1 h-8 w-8" onClick={() => setShowPassword(prev => !prev)}>
+                                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                    </Button>
+                                </div>
                             </div>
                             <div className="flex items-center space-x-2">
                               <Checkbox id="remember-me-admin" checked={rememberMe} onCheckedChange={(checked) => setRememberMe(checked as boolean)} />

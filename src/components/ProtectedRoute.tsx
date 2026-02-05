@@ -2,13 +2,12 @@
 "use client";
 
 import { useAuth } from "@/firebase";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
 
 /**
- * A component that wraps protected routes to ensure proper authentication
- * and role-based access control.
+ * A component that acts as a pure rendering barrier.
+ * Redirection logic is handled globally by FirebaseProvider
+ * to prevent race conditions and loops.
  */
 export default function ProtectedRoute({
   children,
@@ -18,20 +17,6 @@ export default function ProtectedRoute({
   adminOnly?: boolean;
 }) {
   const { user, loading, isAdmin } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (loading) return;
-
-    if (!user) {
-      const targetPath = adminOnly ? '/admin/login' : '/login';
-      router.replace(targetPath);
-    } else if (adminOnly && !isAdmin) {
-      router.replace('/profile');
-    } else if (!adminOnly && isAdmin) {
-      router.replace('/admin/analytics');
-    }
-  }, [loading, user, isAdmin, adminOnly, router]);
 
   if (loading) {
     return (
@@ -42,7 +27,8 @@ export default function ProtectedRoute({
     );
   }
 
-  // Barrier: Only render if role matches
+  // Pure Barrier: If state is wrong, render nothing. 
+  // FirebaseProvider will handle moving the user to the right page.
   if (!user) return null;
   if (adminOnly && !isAdmin) return null;
   if (!adminOnly && isAdmin) return null;

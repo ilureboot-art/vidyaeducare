@@ -14,9 +14,12 @@ service cloud.firestore {
     }
 
     // Direct check against the admins collection for high-performance role verification
+    // Allows Head Admin role to pass even if status isn't explicitly 'Active'
     function isAdmin() {
-      return isAuthenticated() && 
-             get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.status == 'Active';
+      return isAuthenticated() && (
+             get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.status == 'Active' ||
+             get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'Head Admin'
+      );
     }
 
     function isHeadAdmin() {
@@ -26,7 +29,6 @@ service cloud.firestore {
 
     match /admins/{userId} {
       // CRITICAL: Allow users to read their own admin doc to verify their role during login.
-      // This MUST be a 'get' rather than a 'list' for privacy.
       allow get: if isOwner(userId);
       
       // Full management only for Head Admins

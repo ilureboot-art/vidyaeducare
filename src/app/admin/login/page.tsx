@@ -43,7 +43,8 @@ export default function AdminLoginPage() {
           localStorage.removeItem('rememberedAdmin');
       }
       
-      toast({ title: "Authorized", description: "Verifying administrative privileges..." });
+      toast({ title: "Authorized", description: "Syncing administrative workspace..." });
+      // Redirection is handled globally by FirebaseProvider
       
     } catch (error: any) {
        let errorMessage = "Access Denied.";
@@ -51,25 +52,24 @@ export default function AdminLoginPage() {
            errorMessage = "Invalid admin credentials.";
        }
        toast({ variant: "destructive", title: "Login Failed", description: errorMessage });
-    } finally {
-        setIsLoading(false);
+       setIsLoading(false);
     }
   };
 
   return (
     <div className="w-full max-w-md mx-auto flex flex-col items-center justify-center min-h-screen p-4">
       <div className="text-center space-y-2 mb-4">
-        <h1 className="text-4xl font-bold text-primary flex items-center gap-2 justify-center">
-            <Shield className="w-10 h-10" /> Admin Portal
+        <h1 className="text-4xl font-bold text-primary flex items-center gap-2 justify-center tracking-tighter">
+            <Shield className="w-10 h-10" /> ADMIN PORTAL
         </h1>
-        <p className="text-muted-foreground">System Administration Access</p>
+        <p className="text-muted-foreground font-medium uppercase text-xs tracking-widest">Vidya EduCare Management</p>
       </div>
-      <Card className="w-full shadow-xl">
+      <Card className="w-full shadow-2xl border-primary/10">
         <form onSubmit={handleLogin}>
             <CardHeader>
-                <CardTitle>Admin Login</CardTitle>
+                <CardTitle>Sign In</CardTitle>
                 <CardDescription>
-                    Enter secure credentials to access the console.
+                    Access the system administration console.
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -90,8 +90,8 @@ export default function AdminLoginPage() {
                         <Checkbox id="remember-me-admin" checked={rememberMe} onCheckedChange={(checked) => setRememberMe(checked as boolean)} />
                         <Label htmlFor="remember-me-admin" className="text-sm font-normal">Stay logged in</Label>
                     </div>
-                    <Button type="submit" className="w-full !mt-6" disabled={isLoading || !auth}>
-                        {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : 'Enter Dashboard'}
+                    <Button type="submit" className="w-full !mt-6 py-6 text-lg font-bold" disabled={isLoading || !auth}>
+                        {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin"/> : 'ENTER DASHBOARD'}
                     </Button>
             </CardContent>
         </form>

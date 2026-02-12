@@ -2,9 +2,9 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { onAuthStateChanged, type Auth, type User } from 'firebase/auth';
+import { onAuthStateChanged, type Auth, type User, signOut } from 'firebase/auth';
 import { doc, getDoc, type Firestore } from 'firebase/firestore';
-import { Loader2, AlertTriangle } from 'lucide-react';
+import { Loader2, AlertTriangle, Shield } from 'lucide-react';
 import { getFirebaseServices } from './client-init';
 import type { Admin } from '@/lib/admin-data';
 import { usePathname, useRouter } from 'next/navigation';
@@ -20,7 +20,7 @@ const AuthServiceContext = createContext<Auth | undefined>(undefined);
 const DbContext = createContext<Firestore | undefined>(undefined);
 const AuthContext = createContext<AuthState | undefined>(undefined);
 
-// In-memory cache to prevent redundant Firestore fetches during a single session
+// Persistent role cache for the session
 let sessionRoleCache: { uid: string; isAdmin: boolean; isHeadAdmin: boolean } | null = null;
 
 export function FirebaseProvider({ children }: { children: React.ReactNode }) {
@@ -32,40 +32,28 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     }
   });
 
-  const [authState, setAuthState] = useState<Omit<AuthState, 'loading'>>({
+  const [authState, setAuthState] = useState<AuthState>({
     user: null,
+    loading: true,
     isAdmin: false,
     isHeadAdmin: false,
   });
-  const [isAuthLoading, setIsAuthLoading] = useState(true);
+
   const [error, setError] = useState<string | null>(null);
-  
   const router = useRouter();
   const pathname = usePathname();
-  const roleCheckInProgress = useRef(false);
+  const lastPathRef = useRef<string>("");
+  const isRedirectingRef = useRef(false);
 
-  const checkAdminStatus = useCallback(async (user: User | null, db: Firestore) => {
+  const resolveUserRole = useCallback(async (user: User | null, db: Firestore) => {
     if (!user) {
       sessionRoleCache = null;
-      setAuthState({ user: null, isAdmin: false, isHeadAdmin: false });
-      setIsAuthLoading(false);
-      return;
+      return { isAdmin: false, isHeadAdmin: false };
     }
 
-    // Use cache if available for this specific user
     if (sessionRoleCache && sessionRoleCache.uid === user.uid) {
-      setAuthState({ 
-        user, 
-        isAdmin: sessionRoleCache.isAdmin, 
-        isHeadAdmin: sessionRoleCache.isHeadAdmin 
-      });
-      setIsAuthLoading(false);
-      return;
+      return { isAdmin: sessionRoleCache.isAdmin, isHeadAdmin: sessionRoleCache.isHeadAdmin };
     }
-
-    // Prevent multiple concurrent checks but don't hang if one is in progress
-    if (roleCheckInProgress.current) return;
-    roleCheckInProgress.current = true;
 
     try {
       const adminDocRef = doc(db, "admins", user.uid);
@@ -75,97 +63,98 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       const isAdmin = !!adminData && (adminData.status === 'Active' || adminData.role === 'Head Admin');
       const isHeadAdmin = isAdmin && adminData.role === 'Head Admin';
       
-      // Update cache
       sessionRoleCache = { uid: user.uid, isAdmin, isHeadAdmin };
-      
-      setAuthState({ user, isAdmin, isHeadAdmin });
+      return { isAdmin, isHeadAdmin };
     } catch (e) {
-      console.error("Error checking admin status:", e);
-      setAuthState({ user, isAdmin: false, isHeadAdmin: false });
-    } finally {
-      setIsAuthLoading(false);
-      roleCheckInProgress.current = false;
+      console.error("Role resolution error:", e);
+      return { isAdmin: false, isHeadAdmin: false };
     }
   }, []);
 
   useEffect(() => {
     if (!services) {
-        setError("Firebase services failed to initialize.");
+        setError("Firebase failed to initialize. Check environment variables.");
         return;
     }
 
     const { auth, db } = services;
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      // If user changed or we don't have a record yet, verify status
-      if (!authState.user || authState.user.uid !== user?.uid) {
-        setIsAuthLoading(true);
-        checkAdminStatus(user, db);
-      } else {
-        setIsAuthLoading(false);
-      }
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      const roles = await resolveUserRole(user, db);
+      setAuthState({
+        user,
+        isAdmin: roles.isAdmin,
+        isHeadAdmin: roles.isHeadAdmin,
+        loading: false,
+      });
     });
 
     return () => unsubscribe();
-  }, [services, checkAdminStatus, authState.user]);
+  }, [services, resolveUserRole]);
 
-  const authContextValue = useMemo(() => ({
-    user: authState.user,
-    isAdmin: authState.isAdmin,
-    isHeadAdmin: authState.isHeadAdmin,
-    loading: isAuthLoading,
-  }), [authState, isAuthLoading]);
-
-  // Centralized Global Routing - The "Sorting Hat"
+  // The Centralized "Sorting Hat" Routing Engine
   useEffect(() => {
-    const { user, isAdmin, loading } = authContextValue;
-    if (loading) return; 
+    if (authState.loading || isRedirectingRef.current) return;
 
+    const { user, isAdmin } = authState;
     const isAdminArea = pathname.startsWith('/admin');
-    const isAuthPage = ['/login', '/signup', '/admin/login', '/forgot-password'].includes(pathname);
+    const isAuthPage = ['/login', '/signup', '/admin/login', '/forgot-password', '/admin/setup'].includes(pathname);
     const isPublicPage = pathname === '/' || pathname === '/how-to-play';
+
+    let targetPath: string | null = null;
 
     if (user) {
       if (isAdmin) {
-        // Force admins to stay in the admin portal
+        // Admins are forced to the Admin Portal
         if (!isAdminArea || isAuthPage) {
-          router.replace('/admin/analytics');
+          targetPath = '/admin/analytics';
         }
       } else {
-        // Force users out of admin areas and auth pages
+        // Students are barred from Admin areas and Auth pages
         if (isAdminArea || isAuthPage) {
-          router.replace('/profile');
+          targetPath = '/profile';
         }
       }
     } else {
-        // Handle unauthenticated redirection
-        const privateUserRoutes = ['/profile', '/wallet', '/store', '/transactions', '/refer', '/iba', '/leaderboard', '/settings', '/quiz-clash', '/mock-test'];
-        const isPrivateRoute = privateUserRoutes.some(route => pathname === route || pathname.startsWith(route + '/'));
-        
-        // After logout or when unauthenticated, redirect private attempts to home page
-        if ((isAdminArea && pathname !== '/admin/login') || isPrivateRoute) {
-            router.replace('/');
-        }
+      // Unauthenticated users are sent to Home if they try to access private routes
+      const privateRoutes = ['/profile', '/wallet', '/store', '/transactions', '/refer', '/iba', '/leaderboard', '/settings', '/quiz-clash', '/mock-test'];
+      const isPrivate = privateRoutes.some(route => pathname === route || pathname.startsWith(route + '/')) || (isAdminArea && pathname !== '/admin/login');
+      
+      if (isPrivate) {
+        targetPath = '/';
+      }
     }
-  }, [authContextValue, pathname, router]);
+
+    if (targetPath && targetPath !== pathname && targetPath !== lastPathRef.current) {
+      isRedirectingRef.current = true;
+      lastPathRef.current = targetPath;
+      router.replace(targetPath);
+      // Reset redirection flag after a short delay to allow Next.js to complete the move
+      setTimeout(() => { isRedirectingRef.current = false; }, 500);
+    }
+  }, [authState, pathname, router]);
+
+  const authContextValue = useMemo(() => authState, [authState]);
 
   if (error) {
     return (
         <div className="flex flex-col gap-4 justify-center items-center h-screen bg-destructive text-destructive-foreground p-4 text-center">
             <AlertTriangle className="w-12 h-12" />
-            <h1 className="text-2xl font-bold">Application Error</h1>
+            <h1 className="text-2xl font-bold">System Configuration Error</h1>
             <p className="text-sm bg-black/20 p-2 rounded-md font-mono">{error}</p>
         </div>
     );
   }
 
-  // High-performance loading screen
-  if (authContextValue.loading) {
+  if (authState.loading) {
      return (
-      <div className="flex flex-col items-center justify-center h-screen space-y-4 bg-background text-center p-4">
-        <Loader2 className="animate-spin text-primary h-12 w-12" />
-        <div className="space-y-1">
-            <p className="text-lg font-bold text-primary">Vidya EduCare</p>
-            <p className="text-muted-foreground text-sm font-medium animate-pulse">Syncing your secure session...</p>
+      <div className="flex flex-col items-center justify-center h-screen space-y-6 bg-background text-center p-4">
+        <div className="relative">
+            <Shield className="w-16 h-16 text-primary animate-pulse" />
+            <Loader2 className="absolute inset-0 w-16 h-16 text-primary/30 animate-spin" />
+        </div>
+        <div className="space-y-2">
+            <p className="text-xl font-black text-primary tracking-tighter uppercase">Vidya EduCare</p>
+            <p className="text-muted-foreground text-sm font-medium tracking-wide">Establishing secure connection...</p>
         </div>
       </div>
     );

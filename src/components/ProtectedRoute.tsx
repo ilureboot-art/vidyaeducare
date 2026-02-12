@@ -4,9 +4,8 @@
 import { useAuth } from "@/firebase";
 
 /**
- * A high-performance gatekeeper component.
- * It leverages the pre-resolved auth state from FirebaseProvider
- * to render content immediately without redundant loading states.
+ * A secondary security barrier that works in tandem with the FirebaseProvider.
+ * It prevents restricted UI from rendering for even a single frame.
  */
 export default function ProtectedRoute({
   children,
@@ -17,12 +16,10 @@ export default function ProtectedRoute({
 }) {
   const { user, loading, isAdmin } = useAuth();
 
-  // If the global provider is still loading, we do nothing.
-  // The FirebaseProvider handles its own full-screen loader.
+  // Wait for the central provider to resolve
   if (loading) return null;
 
-  // Pure Security Barrier: If role requirements are not met, render nothing.
-  // The central redirection logic in FirebaseProvider will handle moving the user.
+  // Enforce access rules synchronously
   if (!user) return null;
   if (adminOnly && !isAdmin) return null;
   if (!adminOnly && isAdmin) return null;

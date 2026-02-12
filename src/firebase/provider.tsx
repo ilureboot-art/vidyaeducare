@@ -104,12 +104,20 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
     if (user) {
       if (isAdmin) {
-        // Admins are forced to the Admin Portal
-        if (!isAdminArea || isAuthPage) {
+        // Admin Logic:
+        // 1. If logging in (on auth page), go to Home as requested.
+        if (isAuthPage) {
+          targetPath = '/';
+        }
+        // 2. If trying to access student-only secure pages, go to Admin Dashboard.
+        const isStudentSecurePage = ['/profile', '/mock-test', '/wallet', '/store', '/transactions', '/iba'].some(p => pathname.startsWith(p));
+        if (isStudentSecurePage) {
           targetPath = '/admin/analytics';
         }
+        // 3. Admin is ALLOWED on public pages (/) and admin area.
       } else {
-        // Students are barred from Admin areas and Auth pages
+        // Student Logic: 
+        // 1. Barred from Admin areas and Auth pages.
         if (isAdminArea || isAuthPage) {
           targetPath = '/profile';
         }

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,24 +33,10 @@ export default function LoginPage() {
   
   const isFirebaseReady = !!authService;
 
-  useEffect(() => {
-    const rememberedEmail = localStorage.getItem('rememberedUser');
-    if (rememberedEmail) {
-      setEmail(rememberedEmail);
-      setRememberMe(true);
-    }
-  }, []);
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isFirebaseReady) {
-        toast({
-            variant: "destructive",
-            title: "Login Failed",
-            description: "Authentication service is not ready. Please wait a moment and try again.",
-        });
-        return;
-    }
+    if (!isFirebaseReady) return;
+    
     setIsLoading(true);
 
     try {
@@ -63,22 +49,14 @@ export default function LoginPage() {
       }
 
       toast({
-          title: "Authorized",
+          title: "Access Granted",
           description: "Syncing your student profile...",
       });
 
     } catch (error: any) {
-       let errorMessage = "An unknown error occurred.";
-       if (error.code) { 
-          switch(error.code) {
-            case 'auth/user-not-found':
-            case 'auth/wrong-password':
-            case 'auth/invalid-credential':
-                errorMessage = "Invalid credentials. Please check your email and password.";
-                break;
-            default:
-                errorMessage = error.message;
-          }
+       let errorMessage = "Invalid credentials.";
+       if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+           errorMessage = "Please check your email and password.";
        }
         toast({
             variant: "destructive",

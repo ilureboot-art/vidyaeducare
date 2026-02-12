@@ -12,31 +12,20 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Shield, Eye, EyeOff, Loader2, UserPlus, AlertTriangle, CheckCircle } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Shield, Eye, EyeOff, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "firebase/auth";
-import { doc, getDocs, collection, query, where, runTransaction } from "firebase/firestore";
-import { useAuthService, useDb } from "@/firebase";
-
-const HEAD_ADMIN_EMAIL = 'admin@vidyaeducare.com';
-const HEAD_ADMIN_PASSWORD = 'password123';
-const HEAD_ADMIN_NAME = 'Main Admin';
-const HEAD_ADMIN_PHONE = '9999999999';
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { useAuthService } from "@/firebase";
 
 export default function AdminLoginPage() {
   const { toast } = useToast();
   const auth = useAuthService();
-  const db = useDb();
 
-  const [email, setEmail] = useState(typeof window !== 'undefined' ? localStorage.getItem('rememberedAdmin') || "" : "");
-  const [rememberMe, setRememberMe] = useState(typeof window !== 'undefined' ? !!localStorage.getItem('rememberedAdmin') : false);
+  const [email, setEmail] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState("login");
-  const [setupStatus, setSetupStatus] = useState<'idle' | 'loading' | 'success' | 'error' | 'already_exists'>('idle');
-  const [setupError, setSetupError] = useState('');
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,65 +44,15 @@ export default function AdminLoginPage() {
       }
       
       toast({ title: "Authorized", description: "Verifying administrative privileges..." });
-      // Redirection is handled centrally by FirebaseProvider
       
     } catch (error: any) {
        let errorMessage = "Access Denied.";
        if (error.code === 'auth/invalid-credential') {
            errorMessage = "Invalid admin credentials.";
-       } else if (error.message) {
-           errorMessage = error.message;
        }
        toast({ variant: "destructive", title: "Login Failed", description: errorMessage });
     } finally {
         setIsLoading(false);
-    }
-  };
-
-  const handleCreateHeadAdmin = async () => {
-    if (!db || !auth) return;
-    setSetupStatus('loading');
-    
-    try {
-        const headAdminQuery = query(collection(db, "admins"), where("role", "==", "Head Admin"));
-        const headAdminSnapshot = await getDocs(headAdminQuery);
-        if (!headAdminSnapshot.empty) {
-          setSetupStatus('already_exists');
-          return;
-        }
-
-        const userCredential = await createUserWithEmailAndPassword(auth, HEAD_ADMIN_EMAIL, HEAD_ADMIN_PASSWORD);
-        const user = userCredential.user;
-
-        await runTransaction(db, async (transaction) => {
-            const adminDocRef = doc(db, "admins", user.uid);
-            transaction.set(adminDocRef, {
-                name: HEAD_ADMIN_NAME, email: HEAD_ADMIN_EMAIL, phone: HEAD_ADMIN_PHONE,
-                role: "Head Admin", status: "Active", joinDate: new Date().toISOString(),
-            });
-
-            const userDocRef = doc(db, "users", user.uid);
-            transaction.set(userDocRef, {
-              id: user.uid, name: HEAD_ADMIN_NAME, email: HEAD_ADMIN_EMAIL, phone: HEAD_ADMIN_PHONE,
-              joinDate: new Date().toISOString(), status: "Active",
-            });
-
-            const walletDocRef = doc(db, "wallets", user.uid);
-            transaction.set(walletDocRef, {
-              balance: 0, coins: 0, referralCode: `REF${user.uid.slice(0, 6).toUpperCase()}`
-            });
-        });
-        
-        await signOut(auth);
-        setSetupStatus('success');
-
-    } catch (error: any) {
-        if (error.code === 'auth/email-already-in-use') {
-            setSetupStatus('already_exists');
-        } else {
-            setSetupError(error.message);
-            setSetupStatus('error');
-        }
     }
   };
 
@@ -125,105 +64,37 @@ export default function AdminLoginPage() {
         </h1>
         <p className="text-muted-foreground">System Administration Access</p>
       </div>
-      <Card className="w-full">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="login">Login</TabsTrigger>
-                <TabsTrigger value="signup">Setup</TabsTrigger>
-            </TabsList>
-            <TabsContent value="login">
-                <form onSubmit={handleLogin}>
-                    <CardHeader>
-                        <CardTitle>Admin Login</CardTitle>
-                        <CardDescription>
-                            Enter secure credentials to access the console.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="email-login">Admin Email</Label>
-                                <Input id="email-login" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-                            </div>
-                            <div className="space-y-2 relative">
-                                <Label htmlFor="password-login">Secure Password</Label>
-                                <div className="relative">
-                                    <Input id="password-login" type={showPassword ? "text" : "password"} required />
-                                    <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1 h-8 w-8" onClick={() => setShowPassword(prev => !prev)}>
-                                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                    </Button>
-                                </div>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <Checkbox id="remember-me-admin" checked={rememberMe} onCheckedChange={(checked) => setRememberMe(checked as boolean)} />
-                              <Label htmlFor="remember-me-admin" className="text-sm font-normal">Stay logged in</Label>
-                            </div>
-                            <Button type="submit" className="w-full !mt-6" disabled={isLoading || !auth}>
-                                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : 'Enter Dashboard'}
+      <Card className="w-full shadow-xl">
+        <form onSubmit={handleLogin}>
+            <CardHeader>
+                <CardTitle>Admin Login</CardTitle>
+                <CardDescription>
+                    Enter secure credentials to access the console.
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="email-login">Admin Email</Label>
+                        <Input id="email-login" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+                    </div>
+                    <div className="space-y-2 relative">
+                        <Label htmlFor="password-login">Secure Password</Label>
+                        <div className="relative">
+                            <Input id="password-login" type={showPassword ? "text" : "password"} required />
+                            <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1 h-8 w-8" onClick={() => setShowPassword(prev => !prev)}>
+                                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                             </Button>
-                    </CardContent>
-                </form>
-            </TabsContent>
-            <TabsContent value="signup">
-                <CardHeader>
-                    <CardTitle>Head Admin Setup</CardTitle>
-                    <CardDescription>
-                        Initial configuration for the primary administrator account.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4 text-center">
-                    {setupStatus === 'idle' && (
-                        <Button onClick={handleCreateHeadAdmin} className="w-full" disabled={isLoading || !auth}>
-                           {isLoading ? <Loader2 className="mr-2 animate-spin"/> : <UserPlus className="mr-2"/>}
-                            Create Head Admin Account
-                        </Button>
-                    )}
-
-                    {setupStatus === 'loading' && (
-                        <Button disabled className="w-full">
-                            <Loader2 className="mr-2 animate-spin"/> Processing...
-                        </Button>
-                    )}
-
-                    {setupStatus === 'success' && (
-                        <div className="space-y-3 text-left p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                            <div className="flex items-center gap-2">
-                               <CheckCircle className="text-green-600"/>
-                               <h3 className="font-semibold">Setup Complete!</h3>
-                            </div>
-                            <p className="text-xs text-muted-foreground">Use these credentials to log in:</p>
-                             <div className="text-sm">
-                                <p><strong>Email:</strong> {HEAD_ADMIN_EMAIL}</p>
-                                <p><strong>Password:</strong> {HEAD_ADMIN_PASSWORD}</p>
-                            </div>
                         </div>
-                    )}
-                    
-                    {setupStatus === 'already_exists' && (
-                        <div className="space-y-2 text-left p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                           <div className="flex items-center gap-2">
-                               <AlertTriangle className="text-yellow-600"/>
-                               <h3 className="font-semibold">Admin Already Configured</h3>
-                           </div>
-                           <p className="text-sm text-muted-foreground">The system already has a primary administrator.</p>
-                        </div>
-                    )}
-
-                     {setupStatus === 'error' && (
-                        <div className="space-y-2 text-left p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                            <div className="flex items-center gap-2">
-                               <AlertTriangle className="text-red-600"/>
-                               <h3 className="font-semibold">Config Error</h3>
-                           </div>
-                           <p className="text-sm text-muted-foreground">{setupError}</p>
-                        </div>
-                    )}
-                    
-                    {setupStatus !== 'loading' && setupStatus !== 'idle' && (
-                        <Button variant="outline" onClick={() => setActiveTab('login')} className="w-full">Go to Login</Button>
-                    )}
-                </CardContent>
-            </TabsContent>
-        </Tabs>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <Checkbox id="remember-me-admin" checked={rememberMe} onCheckedChange={(checked) => setRememberMe(checked as boolean)} />
+                        <Label htmlFor="remember-me-admin" className="text-sm font-normal">Stay logged in</Label>
+                    </div>
+                    <Button type="submit" className="w-full !mt-6" disabled={isLoading || !auth}>
+                        {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : 'Enter Dashboard'}
+                    </Button>
+            </CardContent>
+        </form>
       </Card>
     </div>
   );

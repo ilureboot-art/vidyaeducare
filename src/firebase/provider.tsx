@@ -63,6 +63,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    // Prevent multiple concurrent checks but don't hang if one is in progress
     if (roleCheckInProgress.current) return;
     roleCheckInProgress.current = true;
 
@@ -95,7 +96,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
     const { auth, db } = services;
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      // Only set loading to true if the user changed or we don't have a role yet
+      // If user changed or we don't have a record yet, verify status
       if (!authState.user || authState.user.uid !== user?.uid) {
         setIsAuthLoading(true);
         checkAdminStatus(user, db);
@@ -121,6 +122,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
     const isAdminArea = pathname.startsWith('/admin');
     const isAuthPage = ['/login', '/signup', '/admin/login', '/forgot-password'].includes(pathname);
+    const isPublicPage = pathname === '/' || pathname === '/how-to-play';
 
     if (user) {
       if (isAdmin) {
@@ -136,13 +138,12 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       }
     } else {
         // Handle unauthenticated redirection
-        const privateUserRoutes = ['/profile', '/wallet', '/store', '/transactions', '/refer', '/iba/dashboard', '/quiz-clash', '/leaderboard', '/settings'];
+        const privateUserRoutes = ['/profile', '/wallet', '/store', '/transactions', '/refer', '/iba', '/leaderboard', '/settings', '/quiz-clash', '/mock-test'];
         const isPrivateRoute = privateUserRoutes.some(route => pathname === route || pathname.startsWith(route + '/'));
         
-        if (isAdminArea && pathname !== '/admin/login') {
-            router.replace('/admin/login');
-        } else if (isPrivateRoute) {
-            router.replace('/login');
+        // After logout or when unauthenticated, redirect private attempts to home page
+        if ((isAdminArea && pathname !== '/admin/login') || isPrivateRoute) {
+            router.replace('/');
         }
     }
   }, [authContextValue, pathname, router]);
@@ -160,9 +161,12 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   // High-performance loading screen
   if (authContextValue.loading) {
      return (
-      <div className="flex flex-col items-center justify-center h-screen space-y-4 bg-background">
-        <Loader2 className="animate-spin text-primary h-10 w-10" />
-        <p className="text-muted-foreground text-sm font-medium animate-pulse">Syncing Vidya EduCare...</p>
+      <div className="flex flex-col items-center justify-center h-screen space-y-4 bg-background text-center p-4">
+        <Loader2 className="animate-spin text-primary h-12 w-12" />
+        <div className="space-y-1">
+            <p className="text-lg font-bold text-primary">Vidya EduCare</p>
+            <p className="text-muted-foreground text-sm font-medium animate-pulse">Syncing your secure session...</p>
+        </div>
       </div>
     );
   }

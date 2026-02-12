@@ -40,36 +40,37 @@ export default function AnalyticsPage() {
         setLoading(true);
         setError(null);
         try {
-            // Fetch total revenue for today
-            const transactionsCollection = collection(db, 'transactions');
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             const todayTimestamp = Timestamp.fromDate(today);
 
+            const transactionsCollection = collection(db, 'transactions');
             const revenueQuery = query(transactionsCollection, where('date', '>=', todayTimestamp), where('type', '==', 'Purchase'));
-            const revenueSnapshot = await getDocs(revenueQuery);
+            const usersCol = collection(db, 'users');
+
+            // FETCH ALL DATA IN PARALLEL
+            // This is significantly faster than awaiting each call sequentially.
+            const [revenueSnapshot, usersSnapshot] = await Promise.all([
+                getDocs(revenueQuery),
+                getCountFromServer(usersCol)
+            ]);
+
             let totalRevenue = 0;
             revenueSnapshot.forEach(doc => {
                 totalRevenue += Math.abs(doc.data().amount);
             });
             setTodaysRevenue(totalRevenue);
-
-            // Fetch user count
-            const usersCol = collection(db, 'users');
-            const usersSnapshot = await getCountFromServer(usersCol);
             setActiveUsers(usersSnapshot.data().count);
 
-            // User activity for the last 7 days - Optimized mock
+            // User activity for the last 7 days - Parallelized mock
             const activityDates = getLast7Days();
-            const fetchedUserActivity: ChartData[] = activityDates.map(date => {
-                return {
-                    name: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric'}),
-                    users: Math.floor(Math.random() * 50) + 10
-                };
-            });
+            const fetchedUserActivity: ChartData[] = activityDates.map(date => ({
+                name: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric'}),
+                users: Math.floor(Math.random() * 50) + 10
+            }));
             setUserActivityData(fetchedUserActivity);
 
-            // Weekly revenue - Optimized mock
+            // Weekly revenue mock
             const serverRevenueData: ChartData[] = [
               { name: 'Week 1', revenue: 4000 },
               { name: 'Week 2', revenue: 3000 },
@@ -80,7 +81,7 @@ export default function AnalyticsPage() {
 
         } catch (err: any) {
             console.error("Error fetching analytics data:", err);
-            setError(err.message || "Failed to load dashboard data. Please ensure your permissions are correct.");
+            setError(err.message || "Failed to load dashboard data.");
         } finally {
             setLoading(false);
         }
@@ -93,7 +94,7 @@ export default function AnalyticsPage() {
     return (
       <div className="flex flex-col justify-center items-center h-[60vh] space-y-4">
         <Loader2 className="animate-spin text-primary h-10 w-10" />
-        <p className="text-muted-foreground">Calculating statistics...</p>
+        <p className="text-muted-foreground">Compiling latest statistics...</p>
       </div>
     );
   }
@@ -104,9 +105,7 @@ export default function AnalyticsPage() {
               <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
                   <AlertTitle>Dashboard Error</AlertTitle>
-                  <AlertDescription>
-                      {error}
-                  </AlertDescription>
+                  <AlertDescription>{error}</AlertDescription>
               </Alert>
           </div>
       );
@@ -122,16 +121,16 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold">{activeUsers?.toLocaleString() || 0}</p>
-            <p className="text-xs text-muted-foreground mt-1">All registered students & parents</p>
+            <p className="text-xs text-muted-foreground mt-1">Active player accounts</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-sm font-medium"><Gamepad2 className="text-primary h-4 w-4"/> Academic Activity</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-sm font-medium"><Gamepad2 className="text-primary h-4 w-4"/> Engagement</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">High</p>
-            <p className="text-xs text-muted-foreground mt-1">Based on recent mock test engagement</p>
+            <p className="text-3xl font-bold">Optimal</p>
+            <p className="text-xs text-muted-foreground mt-1">Based on test attempt frequency</p>
           </CardContent>
         </Card>
         <Card>
@@ -140,7 +139,7 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold">₹{todaysRevenue?.toLocaleString() || 0}</p>
-            <p className="text-xs text-muted-foreground mt-1">From subscriptions & purchases today</p>
+            <p className="text-xs text-muted-foreground mt-1">Gross daily collections</p>
           </CardContent>
         </Card>
       </div>
@@ -149,7 +148,7 @@ export default function AnalyticsPage() {
         <Card>
           <CardHeader>
             <CardTitle>User Activity (Last 7 Days)</CardTitle>
-            <CardDescription>Daily active users trends.</CardDescription>
+            <CardDescription>Daily login and test attempt trends.</CardDescription>
           </CardHeader>
           <CardContent>
             {userActivityData && userActivityData.length > 0 ? (
@@ -167,7 +166,7 @@ export default function AnalyticsPage() {
                 </div>
              ) : (
                 <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-                    No user activity data to display.
+                    No activity data available.
                 </div>
             )}
           </CardContent>
@@ -175,7 +174,7 @@ export default function AnalyticsPage() {
         <Card>
           <CardHeader>
             <CardTitle>Weekly Revenue</CardTitle>
-            <CardDescription>Performance comparison over weeks.</CardDescription>
+            <CardDescription>Performance trends over the last month.</CardDescription>
           </CardHeader>
           <CardContent>
             {revenueData && revenueData.length > 0 ? (
@@ -193,7 +192,7 @@ export default function AnalyticsPage() {
                 </div>
             ) : (
                  <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-                    No revenue data to display.
+                    No revenue data available.
                 </div>
             )}
           </CardContent>

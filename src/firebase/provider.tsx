@@ -5,14 +5,9 @@ import React, { createContext, useContext, useState, useEffect, useMemo, useCall
 import { onAuthStateChanged, type Auth, type User } from 'firebase/auth';
 import { doc, getDoc, type Firestore } from 'firebase/firestore';
 import { Loader2, AlertTriangle } from 'lucide-react';
-import { initializeFirebaseOnClient } from './client-init';
+import { getFirebaseServices } from './client-init';
 import type { Admin } from '@/lib/admin-data';
 import { usePathname, useRouter } from 'next/navigation';
-
-interface FirebaseServices {
-    auth: Auth;
-    db: Firestore;
-}
 
 interface AuthState {
   user: User | null;
@@ -26,7 +21,15 @@ const DbContext = createContext<Firestore | undefined>(undefined);
 const AuthContext = createContext<AuthState | undefined>(undefined);
 
 export function FirebaseProvider({ children }: { children: React.ReactNode }) {
-  const [services, setServices] = useState<FirebaseServices | null>(null);
+  // Initialize services once at the top level
+  const [services] = useState(() => {
+    try {
+      return getFirebaseServices();
+    } catch (e) {
+      return null;
+    }
+  });
+
   const [authState, setAuthState] = useState<Omit<AuthState, 'loading'>>({
     user: null,
     isAdmin: false,
@@ -37,14 +40,6 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   
   const router = useRouter();
   const pathname = usePathname();
-
-  useEffect(() => {
-    initializeFirebaseOnClient()
-      .then(setServices)
-      .catch((err) => {
-        setError(err.message || "An unknown error occurred during Firebase initialization.");
-      });
-  }, []);
 
   const checkAdminStatus = useCallback(async (user: User | null, db: Firestore) => {
     if (!user) {
@@ -71,7 +66,10 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!services) return;
+    if (!services) {
+        setError("Firebase services failed to initialize.");
+        return;
+    }
 
     const { auth, db } = services;
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -86,36 +84,37 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     user: authState.user,
     isAdmin: authState.isAdmin,
     isHeadAdmin: authState.isHeadAdmin,
-    loading: isAuthLoading || !services,
-  }), [authState, isAuthLoading, services]);
+    loading: isAuthLoading,
+  }), [authState, isAuthLoading]);
 
-  // CENTRALIZED GLOBAL ROUTING
+  // Centralized Global Routing with strict role separation
   useEffect(() => {
     const { user, isAdmin, loading } = authContextValue;
     if (loading) return; 
 
     const isAdminArea = pathname.startsWith('/admin');
     const isAuthPage = ['/login', '/signup', '/admin/login', '/forgot-password'].includes(pathname);
-    const isPublicLanding = pathname === '/';
 
     if (user) {
       if (isAdmin) {
-        // ADMINS: Strictly isolated to /admin area
+        // ADMINS: Must stay in /admin area
         if (!isAdminArea || isAuthPage) {
           router.replace('/admin/analytics');
         }
       } else {
-        // PLAYERS: Strictly isolated to user-facing area
+        // PLAYERS: Must stay in user area
         if (isAdminArea || isAuthPage) {
           router.replace('/profile');
         }
       }
     } else {
         // GUESTS: Protect private routes
-        const privateUserRoutes = ['/profile', '/wallet', '/store', '/transactions', '/refer', '/iba/dashboard', '/quiz-clash', '/leaderboard'];
+        const privateUserRoutes = ['/profile', '/wallet', '/store', '/transactions', '/refer', '/iba/dashboard', '/quiz-clash', '/leaderboard', '/settings'];
+        const isPrivateRoute = privateUserRoutes.some(route => pathname === route || pathname.startsWith(route + '/'));
+        
         if (isAdminArea && pathname !== '/admin/login') {
             router.replace('/admin/login');
-        } else if (privateUserRoutes.includes(pathname)) {
+        } else if (isPrivateRoute) {
             router.replace('/login');
         }
     }
@@ -126,7 +125,6 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
         <div className="flex flex-col gap-4 justify-center items-center h-screen bg-destructive text-destructive-foreground p-4 text-center">
             <AlertTriangle className="w-12 h-12" />
             <h1 className="text-2xl font-bold">Application Error</h1>
-            <p>Could not initialize Firebase. The application cannot continue.</p>
             <p className="text-sm bg-black/20 p-2 rounded-md font-mono">{error}</p>
         </div>
     );
@@ -136,7 +134,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
      return (
       <div className="flex flex-col items-center justify-center h-screen space-y-4">
         <Loader2 className="animate-spin text-primary h-12 w-12" />
-        <p className="text-muted-foreground font-medium italic tracking-wide">Connecting to Vidya EduCare...</p>
+        <p className="text-muted-foreground font-medium italic tracking-wide">Syncing session...</p>
       </div>
     );
   }
@@ -154,16 +152,9 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
 export const useAuth = (): AuthState => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within a FirebaseProvider');
-  }
+  if (context === undefined) throw new Error('useAuth must be used within a FirebaseProvider');
   return context;
 };
 
-export const useDb = (): Firestore | undefined => {
-  return useContext(DbContext);
-};
-
-export const useAuthService = (): Auth | undefined => {
-    return useContext(AuthServiceContext);
-};
+export const useDb = (): Firestore | undefined => useContext(DbContext);
+export const useAuthService = (): Auth | undefined => useContext(AuthServiceContext);

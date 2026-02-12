@@ -3,10 +3,14 @@ import { initializeApp, getApp, getApps, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
 
-// This function is the new single point of entry for client-side Firebase initialization.
-// It ensures that we fetch a valid configuration before attempting to initialize the app.
-export async function initializeFirebaseOnClient(): Promise<{ app: FirebaseApp; auth: Auth; db: Firestore; }> {
-  // If the app is already initialized, return the existing services.
+/**
+ * Synchronously initializes Firebase services.
+ * Using synchronous initialization with process.env ensures that the app 
+ * doesn't wait for a configuration fetch on every load, significantly 
+ * speeding up the "Connecting..." phase.
+ */
+export function getFirebaseServices(): { app: FirebaseApp; auth: Auth; db: Firestore; } {
+  // If the app is already initialized, return the existing services immediately.
   if (getApps().length > 0) {
     const app = getApp();
     const auth = getAuth(app);
@@ -15,7 +19,6 @@ export async function initializeFirebaseOnClient(): Promise<{ app: FirebaseApp; 
   }
 
   // Construct the Firebase config from environment variables
-  // This is a more direct and reliable method for Next.js apps.
   const firebaseConfig = {
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
     authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -25,15 +28,13 @@ export async function initializeFirebaseOnClient(): Promise<{ app: FirebaseApp; 
     appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
   };
 
-
   if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
-    const errorMessage = "Firebase environment variables are not set. Please check your NEXT_PUBLIC_FIREBASE_* variables.";
+    const errorMessage = "Firebase environment variables are not set. Check your NEXT_PUBLIC_FIREBASE_* variables.";
     console.error(errorMessage);
     throw new Error(errorMessage);
   }
 
   try {
-    // Initialize the app with the config from environment variables.
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
@@ -41,7 +42,6 @@ export async function initializeFirebaseOnClient(): Promise<{ app: FirebaseApp; 
     return { app, auth, db };
   } catch (error) {
     console.error("Firebase client initialization failed:", error);
-    // Propagate the error to be handled by the UI.
     throw error;
   }
 }

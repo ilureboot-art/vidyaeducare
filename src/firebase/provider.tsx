@@ -102,7 +102,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     loading: isAuthLoading,
   }), [authState, isAuthLoading]);
 
-  // Centralized Global Routing
+  // Centralized Global Routing - The "Sorting Hat"
   useEffect(() => {
     const { user, isAdmin, loading } = authContextValue;
     if (loading) return; 
@@ -112,21 +112,26 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
     if (user) {
       if (isAdmin) {
+        // Force admins to stay in the admin portal
         if (!isAdminArea || isAuthPage) {
           router.replace('/admin/analytics');
         }
       } else {
+        // Force users out of admin areas and auth pages
         if (isAdminArea || isAuthPage) {
           router.replace('/profile');
         }
       }
     } else {
+        // Handle unauthenticated redirection
         const privateUserRoutes = ['/profile', '/wallet', '/store', '/transactions', '/refer', '/iba/dashboard', '/quiz-clash', '/leaderboard', '/settings'];
         const isPrivateRoute = privateUserRoutes.some(route => pathname === route || pathname.startsWith(route + '/'));
         
         if (isAdminArea && pathname !== '/admin/login') {
+            // If logged out from an admin page, go to admin login
             router.replace('/admin/login');
         } else if (isPrivateRoute) {
+            // If logged out from a player page, go to player login
             router.replace('/login');
         }
     }

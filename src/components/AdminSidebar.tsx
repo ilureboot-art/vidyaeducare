@@ -3,7 +3,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { 
     LayoutDashboard, 
     Users, 
@@ -17,12 +17,10 @@ import {
     MessageSquare,
     ShoppingCart,
     Landmark,
-    Home,
     UserCog,
     Bell,
     BookCopy,
     Calendar,
-    Ban,
     Puzzle
 } from "lucide-react";
 import {
@@ -38,8 +36,7 @@ import { useAuthService } from "@/firebase";
 import { signOut } from "firebase/auth";
 
 const adminNavItems = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/admin/analytics", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/notifications", label: "Notifications", icon: Bell },
   { href: "/admin/users", label: "User Management", icon: Users },
   { href: "/admin/transactions", label: "Transactions", icon: CreditCard },
@@ -59,18 +56,17 @@ const adminNavItems = [
 export const AdminSidebar = React.memo(function AdminSidebar() {
   const pathname = usePathname();
   const auth = useAuthService();
-  const router = useRouter();
 
   const handleSignOut = async () => {
     if (!auth) return;
+    // The FirebaseProvider handles the redirection based on the current path
     await signOut(auth);
-    router.push('/admin/login');
   };
 
   return (
     <Sidebar collapsible="icon">
         <SidebarHeader>
-            <Link href="/admin" className="flex items-center gap-2 font-bold text-primary text-lg">
+            <Link href="/admin/analytics" className="flex items-center gap-2 font-bold text-primary text-lg">
                 <Shield className="w-6 h-6" />
                 <span className="group-data-[collapsible=icon]:hidden">Vidya EduCare</span>
             </Link>
@@ -78,7 +74,7 @@ export const AdminSidebar = React.memo(function AdminSidebar() {
         <SidebarContent>
             <SidebarMenu>
                 {adminNavItems.map((item) => {
-                    const isActive = item.href === '/admin' ? pathname === item.href : pathname.startsWith(item.href);
+                    const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
                     return (
                         <SidebarMenuItem key={item.href}>
                             <Link href={item.href} prefetch={true}>

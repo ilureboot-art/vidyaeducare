@@ -1,3 +1,4 @@
+
 # Vidya EduCare - Admin & User Platform
 
 This is a comprehensive NextJS application for Vidya EduCare, combining academic mock tests with a rewarding referral system.
@@ -6,6 +7,12 @@ This is a comprehensive NextJS application for Vidya EduCare, combining academic
 - **Login URL**: `/admin/login`
 - **Email**: `admin@vidyaeducare.com`
 - **Password**: `password123`
+
+## Player Credentials (Test Account)
+- **Login URL**: `/login`
+- **Email**: `student@vidyaeducare.com`
+- **Password**: `password123`
+- *Note: Use the "Create Test Student" tool at `/admin/setup` if this account doesn't exist.*
 
 ## Admin Account Features
 

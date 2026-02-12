@@ -30,9 +30,10 @@ function ProfilePageContent() {
     const db = useDb();
     
     const [parentProfile, setParentProfile] = useState<DocumentData | null>(null);
-    const [students, setStudents] = useState<StudentProfile[] | null>(null);
-    const [validCodes, setValidCodes] = useState<string[] | null>(null);
-    const [allScheduledTests, setAllScheduledTests] = useState<ScheduledTest[] | null>(null);
+    const [students, setStudents] = useState<StudentProfile[]>([]);
+    const [validCodes, setValidCodes] = useState<string[]>([]);
+    const [allScheduledTests, setAllScheduledTests] = useState<ScheduledTest[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     
     const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
     const [activationCode, setActivationCode] = useState("");
@@ -44,27 +45,41 @@ function ProfilePageContent() {
 
     useEffect(() => {
         if (user && db) {
+            setIsLoading(true);
+            
+            // Parent Profile Listener
             const unsubParent = onSnapshot(doc(db, "users", user.uid), (doc) => {
                 if (doc.exists()) setParentProfile(doc.data());
+                // We consider the initial basic load complete when we have the parent profile
+                setIsLoading(false);
+            }, (err) => {
+                console.error("Error loading parent profile:", err);
+                setIsLoading(false);
             });
 
+            // Students Listener
             const q = query(collection(db, "students"), where("parentId", "==", user.uid));
             const unsubStudents = onSnapshot(q, (snapshot) => {
                 const studentList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentProfile));
                 setStudents(studentList);
             });
 
-
+            // Activation Codes Listener
             const unsubCodes = onSnapshot(doc(db, "activationCodes", user.uid), (doc) => {
                 setValidCodes(doc.exists() ? doc.data().codes : []);
             });
             
+            // Tests Fetch
             const fetchTests = async () => {
-                const testsSnapshot = await getDocs(collection(db, "scheduledTests"));
-                const testsList = testsSnapshot.docs.map(doc => doc.data() as ScheduledTest);
-                setAllScheduledTests(testsList);
+                try {
+                    const testsSnapshot = await getDocs(collection(db, "scheduledTests"));
+                    const testsList = testsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ScheduledTest));
+                    setAllScheduledTests(testsList);
+                } catch (e) {
+                    console.error("Error fetching tests:", e);
+                }
             };
-            if(db) fetchTests();
+            fetchTests();
 
             return () => {
                 unsubParent();
@@ -75,7 +90,6 @@ function ProfilePageContent() {
     }, [user, db]);
 
     const handleVerifyCode = () => {
-        if (!validCodes) return;
         if (validCodes.includes(activationCode)) {
             setIsCodeVerified(true);
             toast({ title: "Code Verified!", description: "You can now add the student's details." });
@@ -86,7 +100,7 @@ function ProfilePageContent() {
     
     const handleAddStudent = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        if (!students || !validCodes || !user || !db) return;
+        if (!user || !db) return;
 
         const formData = new FormData(e.currentTarget);
         const studentName = formData.get('name') as string;
@@ -134,7 +148,7 @@ function ProfilePageContent() {
     }
     
     const handleDeleteStudent = async (studentId: string) => {
-        if (!students || !user || !db) return;
+        if (!db) return;
         try {
             await deleteDoc(doc(db, "students", studentId));
             toast({ title: "Student Removed", description: "The student profile has been deleted." });
@@ -145,7 +159,6 @@ function ProfilePageContent() {
     }
     
     const openTestDialog = (student: StudentProfile) => {
-        if (!allScheduledTests) return;
         setSelectedStudentForTest(student);
         const tests = allScheduledTests.filter(test => test.board === student.academic.board && test.standard === student.academic.standard);
         const sortedTests = tests.sort((a,b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
@@ -161,7 +174,7 @@ function ProfilePageContent() {
         router.push(`/mock-test?studentId=${selectedStudentForTest.id}&testId=${test.id}&isLive=${isLive}`);
     }
 
-  if (!students || !validCodes || !allScheduledTests || !parentProfile) {
+  if (isLoading || !parentProfile) {
     return (
         <div className="w-full max-w-5xl mx-auto flex items-center justify-center h-96">
             <Loader2 className="animate-spin text-primary" size={32} />
@@ -203,7 +216,7 @@ function ProfilePageContent() {
                         <Calendar className="w-5 h-5 text-muted-foreground"/>
                         <div>
                             <p className="text-xs text-muted-foreground">Member Since</p>
-                            <p className="font-medium">{format(new Date(parentProfile.joinDate), 'P')}</p>
+                            <p className="font-medium">{parentProfile.joinDate ? format(new Date(parentProfile.joinDate), 'P') : 'N/A'}</p>
                         </div>
                     </div>
                 </div>
@@ -301,7 +314,7 @@ function ProfilePageContent() {
                  <div className="space-y-4">
                      <h3 className="font-semibold flex items-center gap-2 text-muted-foreground"><GraduationCap size={16}/> Academic Details</h3>
                      <div className="space-y-2 text-sm pl-2 border-l-2">
-                        <p><strong>D.O.B:</strong> {format(new Date(student.dob), 'P')}</p>
+                        <p><strong>D.O.B:</strong> {student.dob ? format(new Date(student.dob), 'P') : 'N/A'}</p>
                         <p><strong>Standard:</strong> {student.academic.standard}</p>
                         <p><strong>Board:</strong> {student.academic.board}</p>
                         <p><strong>Stream:</strong> {student.academic.stream}</p>
@@ -313,19 +326,19 @@ function ProfilePageContent() {
                     <div className="grid grid-cols-3 gap-2 text-center my-4">
                          <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
                             <p className="text-xs text-muted-foreground">Avg. Score</p>
-                            <p className="text-xl font-bold">{student.stats.avgScore.toFixed(0)}%</p>
+                            <p className="text-xl font-bold">{(student.stats?.avgScore || 0).toFixed(0)}%</p>
                         </div>
                         <div className="p-2 bg-green-100 dark:bg-green-900/50 rounded-lg">
                             <p className="text-xs text-muted-foreground">Highest</p>
-                            <p className="text-xl font-bold">{student.stats.performance.length > 0 ? Math.max(...student.stats.performance.map(p => p.score)) : 0}%</p>
+                            <p className="text-xl font-bold">{student.stats?.performance?.length > 0 ? Math.max(...student.stats.performance.map(p => p.score)) : 0}%</p>
                         </div>
                         <div className="p-2 bg-pink-100 dark:bg-pink-900/50 rounded-lg">
                             <p className="text-xs text-muted-foreground">Tests Taken</p>
-                            <p className="text-xl font-bold">{student.stats.testsTaken}</p>
+                            <p className="text-xl font-bold">{student.stats?.testsTaken || 0}</p>
                         </div>
                     </div>
                      <div className="h-40 pr-0">
-                        {student.stats.performance && student.stats.performance.length > 0 ? (
+                        {student.stats?.performance && student.stats.performance.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={student.stats.performance} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                                 <CartesianGrid strokeDasharray="3 3" />

@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { onAuthStateChanged, type Auth, type User } from 'firebase/auth';
 import { doc, getDoc, type Firestore } from 'firebase/firestore';
 import { Loader2, AlertTriangle } from 'lucide-react';
@@ -21,7 +21,6 @@ const DbContext = createContext<Firestore | undefined>(undefined);
 const AuthContext = createContext<AuthState | undefined>(undefined);
 
 export function FirebaseProvider({ children }: { children: React.ReactNode }) {
-  // Initialize services once at the top level
   const [services] = useState(() => {
     try {
       return getFirebaseServices();
@@ -40,6 +39,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   
   const router = useRouter();
   const pathname = usePathname();
+  const roleCheckInProgress = useRef(false);
 
   const checkAdminStatus = useCallback(async (user: User | null, db: Firestore) => {
     if (!user) {
@@ -47,6 +47,19 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       setIsAuthLoading(false);
       return;
     }
+
+    if (roleCheckInProgress.current) return;
+    roleCheckInProgress.current = true;
+
+    // Safety timeout for the database check to prevent infinite spinning
+    const timeout = setTimeout(() => {
+        if (roleCheckInProgress.current) {
+            console.warn("Admin check timed out, defaulting to User role.");
+            setAuthState({ user, isAdmin: false, isHeadAdmin: false });
+            setIsAuthLoading(false);
+            roleCheckInProgress.current = false;
+        }
+    }, 5000);
 
     try {
       const adminDocRef = doc(db, "admins", user.uid);
@@ -61,7 +74,9 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       console.error("Error checking admin status:", e);
       setAuthState({ user, isAdmin: false, isHeadAdmin: false });
     } finally {
+      clearTimeout(timeout);
       setIsAuthLoading(false);
+      roleCheckInProgress.current = false;
     }
   }, []);
 
@@ -87,7 +102,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     loading: isAuthLoading,
   }), [authState, isAuthLoading]);
 
-  // Centralized Global Routing with strict role separation
+  // Centralized Global Routing
   useEffect(() => {
     const { user, isAdmin, loading } = authContextValue;
     if (loading) return; 
@@ -97,18 +112,15 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
     if (user) {
       if (isAdmin) {
-        // ADMINS: Must stay in /admin area
         if (!isAdminArea || isAuthPage) {
           router.replace('/admin/analytics');
         }
       } else {
-        // PLAYERS: Must stay in user area
         if (isAdminArea || isAuthPage) {
           router.replace('/profile');
         }
       }
     } else {
-        // GUESTS: Protect private routes
         const privateUserRoutes = ['/profile', '/wallet', '/store', '/transactions', '/refer', '/iba/dashboard', '/quiz-clash', '/leaderboard', '/settings'];
         const isPrivateRoute = privateUserRoutes.some(route => pathname === route || pathname.startsWith(route + '/'));
         
@@ -134,7 +146,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
      return (
       <div className="flex flex-col items-center justify-center h-screen space-y-4">
         <Loader2 className="animate-spin text-primary h-12 w-12" />
-        <p className="text-muted-foreground font-medium italic tracking-wide">Syncing session...</p>
+        <p className="text-muted-foreground font-medium italic tracking-wide">Syncing Vidya EduCare session...</p>
       </div>
     );
   }

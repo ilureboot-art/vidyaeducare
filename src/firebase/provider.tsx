@@ -20,7 +20,7 @@ const AuthServiceContext = createContext<Auth | undefined>(undefined);
 const DbContext = createContext<Firestore | undefined>(undefined);
 const AuthContext = createContext<AuthState | undefined>(undefined);
 
-// Persistent role cache for the session
+// Persistent role cache for the session to prevent flashes
 let sessionRoleCache: { uid: string; isAdmin: boolean; isHeadAdmin: boolean } | null = null;
 
 export function FirebaseProvider({ children }: { children: React.ReactNode }) {
@@ -91,33 +91,30 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     return () => unsubscribe();
   }, [services, resolveUserRole]);
 
-  // The Centralized "Sorting Hat" Routing Engine
+  // The Centralized Routing Engine
   useEffect(() => {
     if (authState.loading || isRedirectingRef.current) return;
 
     const { user, isAdmin } = authState;
     const isAdminArea = pathname.startsWith('/admin');
     const isAuthPage = ['/login', '/signup', '/admin/login', '/forgot-password', '/admin/setup'].includes(pathname);
-    const isPublicPage = pathname === '/' || pathname === '/how-to-play';
-
+    
     let targetPath: string | null = null;
 
     if (user) {
       if (isAdmin) {
-        // Admin Logic:
-        // 1. If logging in (on auth page), go to Home as requested.
+        // Admin is logging in -> send to Admin Dashboard
         if (isAuthPage) {
-          targetPath = '/';
+          targetPath = '/admin/analytics';
         }
-        // 2. If trying to access student-only secure pages, go to Admin Dashboard.
+        // Admin is trying to access student-only pages -> send to Admin Dashboard
         const isStudentSecurePage = ['/profile', '/mock-test', '/wallet', '/store', '/transactions', '/iba'].some(p => pathname.startsWith(p));
         if (isStudentSecurePage) {
           targetPath = '/admin/analytics';
         }
-        // 3. Admin is ALLOWED on public pages (/) and admin area.
+        // Note: Admin is ALLOWED on the Home page (/) and other public landing pages.
       } else {
-        // Student Logic: 
-        // 1. Barred from Admin areas and Auth pages.
+        // Student is on an admin page or auth page -> send to Profile
         if (isAdminArea || isAuthPage) {
           targetPath = '/profile';
         }
@@ -162,7 +159,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
         </div>
         <div className="space-y-2">
             <p className="text-xl font-black text-primary tracking-tighter uppercase">Vidya EduCare</p>
-            <p className="text-muted-foreground text-sm font-medium tracking-wide">Establishing secure connection...</p>
+            <p className="text-muted-foreground text-sm font-medium tracking-wide">Verifying secure session...</p>
         </div>
       </div>
     );

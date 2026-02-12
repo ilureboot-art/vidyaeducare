@@ -20,6 +20,9 @@ const AuthServiceContext = createContext<Auth | undefined>(undefined);
 const DbContext = createContext<Firestore | undefined>(undefined);
 const AuthContext = createContext<AuthState | undefined>(undefined);
 
+// In-memory cache to prevent redundant Firestore fetches during a single session
+let sessionRoleCache: { uid: string; isAdmin: boolean; isHeadAdmin: boolean } | null = null;
+
 export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   const [services] = useState(() => {
     try {
@@ -43,23 +46,25 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
   const checkAdminStatus = useCallback(async (user: User | null, db: Firestore) => {
     if (!user) {
+      sessionRoleCache = null;
       setAuthState({ user: null, isAdmin: false, isHeadAdmin: false });
+      setIsAuthLoading(false);
+      return;
+    }
+
+    // Use cache if available for this specific user
+    if (sessionRoleCache && sessionRoleCache.uid === user.uid) {
+      setAuthState({ 
+        user, 
+        isAdmin: sessionRoleCache.isAdmin, 
+        isHeadAdmin: sessionRoleCache.isHeadAdmin 
+      });
       setIsAuthLoading(false);
       return;
     }
 
     if (roleCheckInProgress.current) return;
     roleCheckInProgress.current = true;
-
-    // Safety timeout for the database check to prevent infinite spinning
-    const timeout = setTimeout(() => {
-        if (roleCheckInProgress.current) {
-            console.warn("Admin check timed out, defaulting to User role.");
-            setAuthState({ user, isAdmin: false, isHeadAdmin: false });
-            setIsAuthLoading(false);
-            roleCheckInProgress.current = false;
-        }
-    }, 5000);
 
     try {
       const adminDocRef = doc(db, "admins", user.uid);
@@ -69,12 +74,14 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       const isAdmin = !!adminData && (adminData.status === 'Active' || adminData.role === 'Head Admin');
       const isHeadAdmin = isAdmin && adminData.role === 'Head Admin';
       
+      // Update cache
+      sessionRoleCache = { uid: user.uid, isAdmin, isHeadAdmin };
+      
       setAuthState({ user, isAdmin, isHeadAdmin });
     } catch (e) {
       console.error("Error checking admin status:", e);
       setAuthState({ user, isAdmin: false, isHeadAdmin: false });
     } finally {
-      clearTimeout(timeout);
       setIsAuthLoading(false);
       roleCheckInProgress.current = false;
     }
@@ -88,12 +95,17 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
     const { auth, db } = services;
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setIsAuthLoading(true);
-      checkAdminStatus(user, db);
+      // Only set loading to true if the user changed or we don't have a role yet
+      if (!authState.user || authState.user.uid !== user?.uid) {
+        setIsAuthLoading(true);
+        checkAdminStatus(user, db);
+      } else {
+        setIsAuthLoading(false);
+      }
     });
 
     return () => unsubscribe();
-  }, [services, checkAdminStatus]);
+  }, [services, checkAdminStatus, authState.user]);
 
   const authContextValue = useMemo(() => ({
     user: authState.user,
@@ -128,10 +140,8 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
         const isPrivateRoute = privateUserRoutes.some(route => pathname === route || pathname.startsWith(route + '/'));
         
         if (isAdminArea && pathname !== '/admin/login') {
-            // If logged out from an admin page, go to admin login
             router.replace('/admin/login');
         } else if (isPrivateRoute) {
-            // If logged out from a player page, go to player login
             router.replace('/login');
         }
     }
@@ -147,11 +157,12 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     );
   }
 
+  // High-performance loading screen
   if (authContextValue.loading) {
      return (
-      <div className="flex flex-col items-center justify-center h-screen space-y-4">
-        <Loader2 className="animate-spin text-primary h-12 w-12" />
-        <p className="text-muted-foreground font-medium italic tracking-wide">Syncing Vidya EduCare session...</p>
+      <div className="flex flex-col items-center justify-center h-screen space-y-4 bg-background">
+        <Loader2 className="animate-spin text-primary h-10 w-10" />
+        <p className="text-muted-foreground text-sm font-medium animate-pulse">Syncing Vidya EduCare...</p>
       </div>
     );
   }

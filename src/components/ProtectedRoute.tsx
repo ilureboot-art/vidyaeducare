@@ -2,12 +2,11 @@
 "use client";
 
 import { useAuth } from "@/firebase";
-import { Loader2 } from "lucide-react";
 
 /**
- * A component that acts as a pure rendering barrier.
- * Redirection logic is handled globally by FirebaseProvider
- * to prevent race conditions and loops.
+ * A high-performance gatekeeper component.
+ * It leverages the pre-resolved auth state from FirebaseProvider
+ * to render content immediately without redundant loading states.
  */
 export default function ProtectedRoute({
   children,
@@ -18,17 +17,12 @@ export default function ProtectedRoute({
 }) {
   const { user, loading, isAdmin } = useAuth();
 
-  if (loading) {
-    return (
-      <div className="flex flex-col justify-center items-center h-[80vh] space-y-4">
-        <Loader2 className="animate-spin text-primary h-10 w-10" />
-        <p className="text-muted-foreground text-sm font-medium">Verifying access...</p>
-      </div>
-    );
-  }
+  // If the global provider is still loading, we do nothing.
+  // The FirebaseProvider handles its own full-screen loader.
+  if (loading) return null;
 
-  // Pure Barrier: If state is wrong, render nothing. 
-  // FirebaseProvider will handle moving the user to the right page.
+  // Pure Security Barrier: If role requirements are not met, render nothing.
+  // The central redirection logic in FirebaseProvider will handle moving the user.
   if (!user) return null;
   if (adminOnly && !isAdmin) return null;
   if (!adminOnly && isAdmin) return null;

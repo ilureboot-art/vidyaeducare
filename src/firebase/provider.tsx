@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
@@ -19,7 +20,7 @@ const AuthServiceContext = createContext<Auth | undefined>(undefined);
 const DbContext = createContext<Firestore | undefined>(undefined);
 const AuthContext = createContext<AuthState | undefined>(undefined);
 
-// HIGH-PERFORMANCE CACHING UTILS
+// HIGH-PERFORMANCE SESSION CACHING
 const getCachedRole = (uid: string) => {
     if (typeof window === 'undefined') return null;
     const cached = sessionStorage.getItem(`ve_role_${uid}`);
@@ -96,18 +97,27 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     if (!services) return;
 
     const { auth, db } = services;
+    
+    // Safety Timeout: Force resolution if auth takes > 5 seconds
+    const safetyTimer = setTimeout(() => {
+        setAuthState(prev => prev.loading ? { ...prev, loading: false } : prev);
+    }, 5000);
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) {
+          clearRoleCache();
           setAuthState({ user: null, loading: false, isAdmin: false, isHeadAdmin: false });
           return;
       }
 
       const cached = getCachedRole(user.uid);
       if (cached) {
+          // Instant Load from Cache
           setAuthState({ user, loading: false, ...cached });
-          resolveUserRole(user, db).then(freshRoles => {
-              if (JSON.stringify(freshRoles) !== JSON.stringify(cached)) {
-                  setAuthState(prev => ({ ...prev, ...freshRoles }));
+          // Update in background
+          resolveUserRole(user, db).then(fresh => {
+              if (JSON.stringify(fresh) !== JSON.stringify(cached)) {
+                  setAuthState(prev => ({ ...prev, ...fresh }));
               }
           });
       } else {
@@ -116,12 +126,15 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+        unsubscribe();
+        clearTimeout(safetyTimer);
+    };
   }, [services, resolveUserRole]);
 
-  // DETERMINISTIC ROUTING ENGINE (Synchronized)
+  // DETERMINISTIC ROUTING ENGINE
   useEffect(() => {
-    if (authState.loading || isRedirecting.current) return;
+    if (authState.loading) return;
 
     const { user, isAdmin } = authState;
     const isAdminArea = pathname.startsWith('/admin');
@@ -132,8 +145,8 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
     if (user) {
       if (isAdmin) {
-        // ADMINS: Forcefully stay in Admin Dashboard if trying to access student pages or home
-        if (isAuthRoute || (!isAdminArea && !isPublicRoute) || pathname === '/') {
+        // ADMINS: Forcefully stay in Admin Dashboard. No student pages allowed.
+        if (isAuthRoute || (!isAdminArea && !isPublicRoute)) {
           targetPath = '/admin/analytics';
         }
       } else {
@@ -149,23 +162,30 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    if (targetPath && targetPath !== pathname) {
+    if (targetPath && targetPath !== pathname && !isRedirecting.current) {
       isRedirecting.current = true;
       router.replace(targetPath);
-      setTimeout(() => { isRedirecting.current = false; }, 800);
+      // Reset flag after transition
+      const timer = setTimeout(() => { isRedirecting.current = false; }, 500);
+      return () => clearTimeout(timer);
     }
   }, [authState, pathname, router]);
 
   const authContextValue = useMemo(() => authState, [authState]);
 
-  // Prevent shell leakage during transition
+  // PREVENT SHELL LEAKAGE
   const isAdminArea = pathname.startsWith('/admin');
+  const isAuthRoute = ['/login', '/signup', '/admin/login', '/forgot-password', '/admin/setup'].includes(pathname);
+  const isPublicRoute = ['/', '/how-to-play'].includes(pathname);
+
   const roleMismatch = authState.user && (
-    (authState.isAdmin && !isAdminArea && pathname !== '/' && pathname !== '/how-to-play') ||
+    (authState.isAdmin && !isAdminArea && !isPublicRoute) ||
     (!authState.isAdmin && isAdminArea)
   );
 
-  if (authState.loading || roleMismatch || isRedirecting.current) {
+  const shouldBlock = authState.loading || roleMismatch || isRedirecting.current;
+
+  if (shouldBlock) {
      return (
       <div className="flex flex-col items-center justify-center h-screen space-y-6 bg-background text-center p-4">
         <div className="relative">

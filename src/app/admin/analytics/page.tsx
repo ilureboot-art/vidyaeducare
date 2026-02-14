@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -57,7 +58,7 @@ export default function AnalyticsPage() {
           const usersCol = collection(db, 'users');
           const resultsCol = collection(db, 'testResults');
 
-          // HIGH SPEED EXECUTION: Database calls run in parallel
+          // HIGH SPEED EXECUTION: Database calls run in parallel to minimize wait time
           const [revenueSnapshot, usersCountRes, resultsCountRes] = await Promise.all([
               getDocs(revenueQuery),
               getCountFromServer(usersCol),
@@ -67,22 +68,24 @@ export default function AnalyticsPage() {
           let totalRevenue = 0;
           revenueSnapshot.forEach(doc => {
               const amount = doc.data().amount;
-              // Purchases are stored as negative amounts in user wallets but positive for platform revenue
-              if (amount < 0) totalRevenue += Math.abs(amount);
+              // Deposits are positive amounts in transactions for revenue
+              if (doc.data().type === 'deposit' || amount > 0) totalRevenue += Math.abs(amount);
           });
           
           setTodaysRevenue(totalRevenue);
-          setActiveUsers(usersCountRes.data().count);
+          const totalUsersCount = usersCountRes.data().count;
+          setActiveUsers(totalUsersCount);
           setTestVolume(resultsCountRes.data().count);
 
           // User growth trends (Last 7 Days)
           const activityDates = getLast7Days();
           const fetchedUserActivity: ChartData[] = activityDates.map(date => ({
               name: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric'}),
-              users: Math.floor(Math.random() * 10) + (activeUsers ? Math.floor(activeUsers / 10) : 5)
+              users: Math.floor(Math.random() * 5) + (totalUsersCount ? Math.floor(totalUsersCount / 20) : 2)
           }));
           setUserActivityData(fetchedUserActivity);
 
+          // Static revenue forecast for visualization
           setRevenueData([
             { name: 'Mon', revenue: 4000 },
             { name: 'Tue', revenue: 3000 },
@@ -100,15 +103,15 @@ export default function AnalyticsPage() {
           setLoading(false);
           setRefreshing(false);
       }
-  }, [db, activeUsers]);
+  }, [db]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if(db) fetchData();
+  }, [db, fetchData]);
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center h-96 space-y-4">
+      <div className="flex flex-col items-center justify-center h-[60vh] space-y-4">
         <Loader2 className="animate-spin text-primary" size={40} />
         <p className="text-muted-foreground animate-pulse font-medium">Aggregating Business Intelligence...</p>
       </div>
@@ -152,7 +155,7 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold tracking-tight">{activeUsers?.toLocaleString() || 0}</p>
-            <p className="text-xs text-muted-foreground mt-1">Growth: +12% this month</p>
+            <p className="text-xs text-muted-foreground mt-1">Total active accounts</p>
           </CardContent>
         </Card>
         <Card className="hover:shadow-md transition-shadow">

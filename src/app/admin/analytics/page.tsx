@@ -1,12 +1,12 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BarChart, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Line, Bar, ResponsiveContainer } from "recharts";
 import { Users, Gamepad2, IndianRupee, Loader2, AlertCircle, RefreshCcw } from "lucide-react";
 import { useDb } from "@/firebase";
-import { collection, getDocs, query, where, Timestamp, getCountFromServer, limit, orderBy } from "firebase/firestore";
+import { collection, getDocs, query, where, Timestamp, getCountFromServer, limit } from "firebase/firestore";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 
@@ -36,7 +36,7 @@ export default function AnalyticsPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  const fetchData = async (isManualRefresh = false) => {
+  const fetchData = useCallback(async (isManualRefresh = false) => {
       if (!db) return;
       if (isManualRefresh) setRefreshing(true);
       else setLoading(true);
@@ -48,16 +48,15 @@ export default function AnalyticsPage() {
           const todayTimestamp = Timestamp.fromDate(today);
 
           const transactionsCollection = collection(db, 'transactions');
-          // Optimized Query: Uses a limit and composite-ready structure
           const revenueQuery = query(
             transactionsCollection, 
             where('date', '>=', todayTimestamp), 
             where('type', '==', 'Purchase'),
-            limit(50) 
+            limit(100) 
           );
           const usersCol = collection(db, 'users');
 
-          // HIGH SPEED EXECUTION: All DB calls run in parallel
+          // HIGH SPEED EXECUTION: Database calls run in parallel
           const [revenueSnapshot, usersCountRes] = await Promise.all([
               getDocs(revenueQuery),
               getCountFromServer(usersCol)
@@ -93,17 +92,17 @@ export default function AnalyticsPage() {
           setLoading(false);
           setRefreshing(false);
       }
-  };
+  }, [db]);
 
   useEffect(() => {
     fetchData();
-  }, [db]);
+  }, [fetchData]);
 
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center h-96 space-y-4">
         <Loader2 className="animate-spin text-primary" size={40} />
-        <p className="text-muted-foreground animate-pulse">Aggregating Business Intelligence...</p>
+        <p className="text-muted-foreground animate-pulse font-medium">Aggregating Business Intelligence...</p>
       </div>
     );
   }

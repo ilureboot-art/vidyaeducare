@@ -102,16 +102,14 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       // DETERMINISTIC LOAD: Stay in 'loading' state until role is confirmed
       const cached = getCachedRoles();
       if (cached) {
-          // If we have a cache, use it immediately to speed up the transition
           setAuthState({ user, loading: false, ...cached });
-          // But verify in background
+          // Background verification to keep cache fresh
           resolveUserRole(user, db).then(fresh => {
               if (JSON.stringify(fresh) !== JSON.stringify(cached)) {
                   setAuthState(prev => ({ ...prev, ...fresh }));
               }
           });
       } else {
-          // If no cache, block the UI until we are certain of the role
           const roles = await resolveUserRole(user, db);
           setAuthState({ user, loading: false, ...roles });
       }
@@ -137,8 +135,9 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
     if (user) {
       if (isAdmin) {
-        // ADMINS: Kept in Dashboard. Allowed on public home page.
-        if (isAuthRoute || isStudentArea) {
+        // ADMINS: Forcefully kept in Admin Panel. 
+        // We prevent them from visiting the root '/' to avoid "auto-logout" sensation.
+        if (isAuthRoute || isStudentArea || pathname === '/') {
           targetPath = '/admin/analytics';
         }
       } else {
@@ -157,8 +156,8 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     if (targetPath && targetPath !== pathname) {
       isRedirecting.current = true;
       router.replace(targetPath);
-      // Brief delay to allow the browser to process the push before allowing another redirect
-      setTimeout(() => { isRedirecting.current = false; }, 500);
+      // Short lockout to prevent rapid-fire redirects during browser URL updates
+      setTimeout(() => { isRedirecting.current = false; }, 800);
     }
   }, [authState, pathname, router]);
 

@@ -58,7 +58,7 @@ export default function AnalyticsPage() {
             where('status', '==', 'Completed')
           );
 
-          // PERFORMANCE OPTIMIZATION: Parallel execution of queries
+          // PERFORMANCE OPTIMIZATION: Truly parallel execution
           const [revenueSnapshot, usersCountRes, resultsCountRes] = await Promise.all([
               getDocs(revenueQuery),
               getCountFromServer(usersCol),

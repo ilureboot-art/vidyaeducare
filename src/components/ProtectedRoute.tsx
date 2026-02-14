@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useAuth } from "@/firebase";
@@ -17,16 +18,17 @@ export default function ProtectedRoute({
   const { user, loading, isAdmin } = useAuth();
   const pathname = usePathname();
 
-  // The provider handles the loading screen and core redirection.
-  // This guard simply prevents mismatched content from mounting during the state resolve.
+  // The provider handles the core state resolve.
   if (loading) return null;
 
   if (!user) return null;
   
   if (adminOnly) {
+    // Block non-admins from admin zones
     if (!isAdmin) return null;
   } else {
-    // Prevent administrators from rendering student layouts
+    // CRITICAL: Block administrators from player-only pages.
+    // This prevents the student layout (header/navbar) from leaking into the admin session.
     if (isAdmin && !pathname.startsWith('/admin')) return null;
   }
 

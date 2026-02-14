@@ -2,7 +2,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { onAuthStateChanged, type Auth, type User, signOut } from 'firebase/auth';
+import { onAuthStateChanged, type Auth, type User } from 'firebase/auth';
 import { doc, getDoc, type Firestore } from 'firebase/firestore';
 import { Loader2, Shield } from 'lucide-react';
 import { getFirebaseServices } from './client-init';
@@ -42,7 +42,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
   const router = useRouter();
   const pathname = usePathname();
-  const routingInProgress = useRef(false);
+  const isRedirecting = useRef(false);
 
   const resolveUserRole = useCallback(async (user: User | null, db: Firestore) => {
     if (!user) {
@@ -91,49 +91,62 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     return () => unsubscribe();
   }, [services, resolveUserRole]);
 
-  // Unified Global Routing Engine
+  // Exhaustive Global Routing Engine
   useEffect(() => {
-    if (authState.loading || routingInProgress.current) return;
+    if (authState.loading || isRedirecting.current) return;
 
     const { user, isAdmin } = authState;
     const isAdminArea = pathname.startsWith('/admin');
-    const isAuthPage = ['/login', '/signup', '/admin/login', '/forgot-password'].includes(pathname);
-    const isProtectedStudentPage = ['/profile', '/wallet', '/store', '/transactions', '/iba', '/quiz-clash', '/mock-test', '/settings', '/leaderboard'].some(p => pathname.startsWith(p));
+    const isPublicRoute = ['/', '/how-to-play', '/mcq_template.csv'].includes(pathname);
+    const isAuthRoute = ['/login', '/signup', '/admin/login', '/forgot-password'].includes(pathname);
+    
+    // Logic: Everything that isn't admin area or public/auth is considered "Student Area"
+    const isStudentArea = !isAdminArea && !isPublicRoute && !isAuthRoute;
     
     let targetPath: string | null = null;
 
     if (user) {
       if (isAdmin) {
-        // Admins go to Dashboard if they try to access student area or login pages
-        // They are allowed to stay on the public Home page (/)
-        if (isAuthPage || isProtectedStudentPage) {
+        // Admins go to Dashboard if they are in Student area or Auth area
+        if (isStudentArea || isAuthRoute) {
           targetPath = '/admin/analytics';
         }
       } else {
-        // Students are barred from Admin areas and Auth pages
-        if (isAdminArea || isAuthPage) {
+        // Students go to Profile if they are in Admin area or Auth area
+        if (isAdminArea || isAuthRoute) {
           targetPath = '/profile';
         }
       }
     } else {
-      // Unauthenticated users are sent to Home from any private area
-      const isPrivate = (isAdminArea && pathname !== '/admin/login') || isProtectedStudentPage;
-      if (isPrivate) {
+      // Unauthenticated: Keep on Public/Auth routes, otherwise send to Home
+      if (!isPublicRoute && !isAuthRoute) {
         targetPath = '/';
       }
     }
 
     if (targetPath && targetPath !== pathname) {
-      routingInProgress.current = true;
+      isRedirecting.current = true;
       router.replace(targetPath);
-      // Reset ref after a short delay to allow the new pathname to register
-      setTimeout(() => { routingInProgress.current = false; }, 500);
+      // Stability delay to allow the router to commit the change
+      setTimeout(() => { isRedirecting.current = false; }, 1000);
     }
   }, [authState, pathname, router]);
 
   const authContextValue = useMemo(() => authState, [authState]);
 
-  if (authState.loading) {
+  // PREVENT SHELL LEAKAGE: 
+  // If we are currently redirecting an admin away from a student page, 
+  // or vice versa, don't render children yet.
+  const isAdminArea = pathname.startsWith('/admin');
+  const isAuthOrPublic = ['/', '/login', '/signup', '/admin/login', '/forgot-password', '/how-to-play'].includes(pathname);
+  const isStudentArea = !isAdminArea && !isAuthOrPublic;
+
+  const roleMismatch = authState.user && (
+    (authState.isAdmin && isStudentArea) ||
+    (!authState.isAdmin && isAdminArea)
+  );
+
+  if (authState.loading || roleMismatch) {
      return (
       <div className="flex flex-col items-center justify-center h-screen space-y-6 bg-background text-center p-4">
         <div className="relative">
@@ -142,7 +155,9 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
         </div>
         <div className="space-y-2">
             <p className="text-xl font-black text-primary tracking-tighter uppercase">Vidya EduCare</p>
-            <p className="text-muted-foreground text-sm font-medium tracking-wide">Securing Administrative Workspace...</p>
+            <p className="text-muted-foreground text-sm font-medium tracking-wide">
+                {roleMismatch ? "Synchronizing Workspace..." : "Securing Administrative Environment..."}
+            </p>
         </div>
       </div>
     );

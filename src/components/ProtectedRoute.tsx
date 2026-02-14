@@ -19,10 +19,15 @@ export default function ProtectedRoute({
   // Wait for the central provider to resolve
   if (loading) return null;
 
-  // Enforce access rules synchronously
+  // Enforce access rules synchronously to prevent flash of wrong content
   if (!user) return null;
-  if (adminOnly && !isAdmin) return null;
-  if (!adminOnly && isAdmin) return null;
+  
+  if (adminOnly) {
+    if (!isAdmin) return null;
+  } else {
+    // If it's a student route, Admins should be barred
+    if (isAdmin) return null;
+  }
 
   return <>{children}</>;
 }

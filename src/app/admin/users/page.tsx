@@ -14,22 +14,23 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, UserPlus, MoreHorizontal, Trash2, Loader2 } from "lucide-react";
+import { Search, UserPlus, MoreHorizontal, Trash2, Loader2, Users as UsersIcon } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { format } from 'date-fns';
 import { useDb } from "@/firebase";
-import { collection, doc, updateDoc, deleteDoc, getDocs } from "firebase/firestore";
+import { collection, doc, updateDoc, deleteDoc, getDocs, query, where } from "firebase/firestore";
 
 type UserStatus = "Active" | "Banned" | "Inactive";
-type User = {
+type UserWithStats = {
   id: string;
   name: string;
   email: string;
   joinDate: string;
   status: UserStatus;
-  wallet: number;
+  wallet?: number;
+  studentCount?: number;
 };
 
 const getStatusBadgeVariant = (status: string) => {
@@ -38,7 +39,7 @@ const getStatusBadgeVariant = (status: string) => {
 
 export default function UserManagementPage() {
   const db = useDb();
-  const [users, setUsers] = useState<User[] | null>(null);
+  const [users, setUsers] = useState<UserWithStats[] | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
   
@@ -46,7 +47,27 @@ export default function UserManagementPage() {
     if (!db) return;
     const usersCollection = collection(db, "users");
     const userSnapshot = await getDocs(usersCollection);
-    const userList = userSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
+    
+    const userList = await Promise.all(userSnapshot.docs.map(async (userDoc) => {
+        const userData = userDoc.data();
+        const userId = userDoc.id;
+        
+        // Fetch wallet balance
+        const walletDoc = await getDocs(query(collection(db, "wallets"), where("__name__", "==", userId)));
+        const walletBalance = !walletDoc.empty ? walletDoc.docs[0].data().balance : 0;
+        
+        // Fetch student count
+        const studentsQuery = query(collection(db, "students"), where("parentId", "==", userId));
+        const studentsSnapshot = await getDocs(studentsQuery);
+        
+        return { 
+            id: userId, 
+            ...userData, 
+            wallet: walletBalance,
+            studentCount: studentsSnapshot.size
+        } as UserWithStats;
+    }));
+    
     setUsers(userList);
   };
 
@@ -108,9 +129,9 @@ export default function UserManagementPage() {
       <h1 className="text-3xl font-bold">User Management</h1>
       <Card>
         <CardHeader>
-          <CardTitle>All Players</CardTitle>
+          <CardTitle>All Players (Parents)</CardTitle>
           <CardDescription>
-            View, manage, and take action on player accounts.
+            View, manage, and track player accounts and their students.
           </CardDescription>
           <div className="flex items-center justify-between pt-4">
             <div className="relative w-full max-w-sm">
@@ -122,9 +143,8 @@ export default function UserManagementPage() {
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
             </div>
-            <Button>
-              <UserPlus className="mr-2 h-4 w-4" />
-              Add User
+            <Button variant="outline" onClick={() => fetchUsers()}>
+              Refresh List
             </Button>
           </div>
         </CardHeader>
@@ -132,8 +152,9 @@ export default function UserManagementPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>User</TableHead>
+                <TableHead>User (Parent)</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead className="text-center">Students</TableHead>
                 <TableHead>Join Date</TableHead>
                 <TableHead className="text-right">Wallet Balance</TableHead>
                 <TableHead className="text-center">Actions</TableHead>
@@ -159,6 +180,12 @@ export default function UserManagementPage() {
                       {user.status}
                     </Badge>
                   </TableCell>
+                  <TableCell className="text-center">
+                    <Badge variant="outline" className="flex items-center gap-1 justify-center w-12 mx-auto">
+                        <UsersIcon className="w-3 h-3" />
+                        {user.studentCount || 0}
+                    </Badge>
+                  </TableCell>
                   <TableCell>{format(new Date(user.joinDate), 'P')}</TableCell>
                   <TableCell className="text-right font-medium">₹{user.wallet?.toFixed(2) || '0.00'}</TableCell>
                   <TableCell className="text-center">
@@ -171,8 +198,7 @@ export default function UserManagementPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem>View Profile</DropdownMenuItem>
-                        <DropdownMenuItem>Edit Wallet</DropdownMenuItem>
+                        <DropdownMenuItem>View Stats</DropdownMenuItem>
                         {user.status !== "Banned" && (
                             <DropdownMenuItem className="text-yellow-600 focus:text-yellow-500" onClick={() => handleStatusChange(user.id, "Banned")}>
                                 Ban User
@@ -193,7 +219,7 @@ export default function UserManagementPage() {
                 </TableRow>
               )) : (
                  <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground h-24">No users found.</TableCell>
+                    <TableCell colSpan={6} className="text-center text-muted-foreground h-24">No users found.</TableCell>
                 </TableRow>
               )}
             </TableBody>

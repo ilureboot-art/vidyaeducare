@@ -41,7 +41,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
   const router = useRouter();
   const pathname = usePathname();
-  const isRedirectingRef = useRef(false);
+  const isRedirectingRef = useRef<string | null>(null);
 
   const resolveUserRole = useCallback(async (user: User | null, db: Firestore) => {
     if (!user) {
@@ -90,18 +90,20 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
   // Centralized Routing Engine - Optimized for speed and loop prevention
   useEffect(() => {
-    if (authState.loading || isRedirectingRef.current) return;
+    if (authState.loading) return;
 
     const { user, isAdmin } = authState;
     const isAdminArea = pathname.startsWith('/admin');
-    const isAuthPage = ['/login', '/signup', '/admin/login', '/forgot-password', '/admin/setup'].includes(pathname);
-    const isProtectedStudentPage = ['/profile', '/wallet', '/store', '/transactions', '/iba', '/quiz-clash', '/mock-test'].some(p => pathname.startsWith(p));
+    // Auth pages that should redirect if logged in
+    const isAuthPage = ['/login', '/signup', '/admin/login', '/forgot-password'].includes(pathname);
+    // Student pages that admins cannot visit
+    const isProtectedStudentPage = ['/profile', '/wallet', '/store', '/transactions', '/iba', '/quiz-clash', '/mock-test', '/settings', '/leaderboard'].some(p => pathname.startsWith(p));
     
     let targetPath: string | null = null;
 
     if (user) {
       if (isAdmin) {
-        // Admins go to Dashboard from Login or Student areas
+        // Admins go to Dashboard if they try to access student area or login pages
         if (isAuthPage || isProtectedStudentPage) {
           targetPath = '/admin/analytics';
         }
@@ -113,16 +115,21 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       }
     } else {
       // Unauthenticated users are sent to Home from any private area
-      const isPrivate = isAdminArea || isProtectedStudentPage || pathname === '/settings' || pathname === '/leaderboard';
-      if (isPrivate && pathname !== '/admin/login') {
+      // Admin area (except login page itself) and all student protected pages
+      const isPrivate = (isAdminArea && pathname !== '/admin/login') || isProtectedStudentPage;
+      if (isPrivate) {
         targetPath = '/';
       }
     }
 
+    // Direct redirection logic with debouncing ref
     if (targetPath && targetPath !== pathname) {
-      isRedirectingRef.current = true;
+      if (isRedirectingRef.current === targetPath) return;
+      isRedirectingRef.current = targetPath;
       router.replace(targetPath);
-      setTimeout(() => { isRedirectingRef.current = false; }, 500);
+    } else {
+      // Clear the ref if we are on a valid page
+      isRedirectingRef.current = null;
     }
   }, [authState, pathname, router]);
 
@@ -137,7 +144,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
         </div>
         <div className="space-y-2">
             <p className="text-xl font-black text-primary tracking-tighter uppercase">Vidya EduCare</p>
-            <p className="text-muted-foreground text-sm font-medium tracking-wide">Syncing Workspace...</p>
+            <p className="text-muted-foreground text-sm font-medium tracking-wide">Securing Session...</p>
         </div>
       </div>
     );

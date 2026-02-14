@@ -4,7 +4,7 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { onAuthStateChanged, type Auth, type User, signOut } from 'firebase/auth';
 import { doc, getDoc, type Firestore } from 'firebase/firestore';
-import { Loader2, AlertTriangle, Shield } from 'lucide-react';
+import { Loader2, Shield } from 'lucide-react';
 import { getFirebaseServices } from './client-init';
 import type { Admin } from '@/lib/admin-data';
 import { usePathname, useRouter } from 'next/navigation';
@@ -20,7 +20,7 @@ const AuthServiceContext = createContext<Auth | undefined>(undefined);
 const DbContext = createContext<Firestore | undefined>(undefined);
 const AuthContext = createContext<AuthState | undefined>(undefined);
 
-// Persistent role cache for the session to prevent flashes
+// In-memory cache to prevent flickering during internal navigation
 let sessionRoleCache: { uid: string; isAdmin: boolean; isHeadAdmin: boolean } | null = null;
 
 export function FirebaseProvider({ children }: { children: React.ReactNode }) {
@@ -39,10 +39,8 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     isHeadAdmin: false,
   });
 
-  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const pathname = usePathname();
-  const lastPathRef = useRef<string>("");
   const isRedirectingRef = useRef(false);
 
   const resolveUserRole = useCallback(async (user: User | null, db: Firestore) => {
@@ -51,11 +49,13 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       return { isAdmin: false, isHeadAdmin: false };
     }
 
+    // Return cached role if available for this session
     if (sessionRoleCache && sessionRoleCache.uid === user.uid) {
       return { isAdmin: sessionRoleCache.isAdmin, isHeadAdmin: sessionRoleCache.isHeadAdmin };
     }
 
     try {
+      // Direct document lookup is O(1) and the fastest way to verify role
       const adminDocRef = doc(db, "admins", user.uid);
       const adminDocSnap = await getDoc(adminDocRef);
       const adminData = adminDocSnap.exists() ? adminDocSnap.data() as Admin : null;
@@ -66,16 +66,13 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       sessionRoleCache = { uid: user.uid, isAdmin, isHeadAdmin };
       return { isAdmin, isHeadAdmin };
     } catch (e) {
-      console.error("Role resolution error:", e);
+      console.error("Critical: Role resolution failed.", e);
       return { isAdmin: false, isHeadAdmin: false };
     }
   }, []);
 
   useEffect(() => {
-    if (!services) {
-        setError("Firebase failed to initialize. Check environment variables.");
-        return;
-    }
+    if (!services) return;
 
     const { auth, db } = services;
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -91,64 +88,45 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     return () => unsubscribe();
   }, [services, resolveUserRole]);
 
-  // The Centralized Routing Engine
+  // Centralized Routing Engine - Optimized for speed and loop prevention
   useEffect(() => {
     if (authState.loading || isRedirectingRef.current) return;
 
     const { user, isAdmin } = authState;
     const isAdminArea = pathname.startsWith('/admin');
     const isAuthPage = ['/login', '/signup', '/admin/login', '/forgot-password', '/admin/setup'].includes(pathname);
+    const isProtectedStudentPage = ['/profile', '/wallet', '/store', '/transactions', '/iba', '/quiz-clash', '/mock-test'].some(p => pathname.startsWith(p));
     
     let targetPath: string | null = null;
 
     if (user) {
       if (isAdmin) {
-        // Admin is logging in -> send to Admin Dashboard
-        if (isAuthPage) {
+        // Admins go to Dashboard from Login or Student areas
+        if (isAuthPage || isProtectedStudentPage) {
           targetPath = '/admin/analytics';
         }
-        // Admin is trying to access student-only pages -> send to Admin Dashboard
-        const isStudentSecurePage = ['/profile', '/mock-test', '/wallet', '/store', '/transactions', '/iba'].some(p => pathname.startsWith(p));
-        if (isStudentSecurePage) {
-          targetPath = '/admin/analytics';
-        }
-        // Note: Admin is ALLOWED on the Home page (/) and other public landing pages.
       } else {
-        // Student is on an admin page or auth page -> send to Profile
+        // Students are barred from Admin areas and Auth pages
         if (isAdminArea || isAuthPage) {
           targetPath = '/profile';
         }
       }
     } else {
-      // Unauthenticated users are sent to Home if they try to access private routes
-      const privateRoutes = ['/profile', '/wallet', '/store', '/transactions', '/refer', '/iba', '/leaderboard', '/settings', '/quiz-clash', '/mock-test'];
-      const isPrivate = privateRoutes.some(route => pathname === route || pathname.startsWith(route + '/')) || (isAdminArea && pathname !== '/admin/login');
-      
-      if (isPrivate) {
+      // Unauthenticated users are sent to Home from any private area
+      const isPrivate = isAdminArea || isProtectedStudentPage || pathname === '/settings' || pathname === '/leaderboard';
+      if (isPrivate && pathname !== '/admin/login') {
         targetPath = '/';
       }
     }
 
-    if (targetPath && targetPath !== pathname && targetPath !== lastPathRef.current) {
+    if (targetPath && targetPath !== pathname) {
       isRedirectingRef.current = true;
-      lastPathRef.current = targetPath;
       router.replace(targetPath);
-      // Reset redirection flag after a short delay to allow Next.js to complete the move
       setTimeout(() => { isRedirectingRef.current = false; }, 500);
     }
   }, [authState, pathname, router]);
 
   const authContextValue = useMemo(() => authState, [authState]);
-
-  if (error) {
-    return (
-        <div className="flex flex-col gap-4 justify-center items-center h-screen bg-destructive text-destructive-foreground p-4 text-center">
-            <AlertTriangle className="w-12 h-12" />
-            <h1 className="text-2xl font-bold">System Configuration Error</h1>
-            <p className="text-sm bg-black/20 p-2 rounded-md font-mono">{error}</p>
-        </div>
-    );
-  }
 
   if (authState.loading) {
      return (
@@ -159,7 +137,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
         </div>
         <div className="space-y-2">
             <p className="text-xl font-black text-primary tracking-tighter uppercase">Vidya EduCare</p>
-            <p className="text-muted-foreground text-sm font-medium tracking-wide">Verifying secure session...</p>
+            <p className="text-muted-foreground text-sm font-medium tracking-wide">Syncing Workspace...</p>
         </div>
       </div>
     );

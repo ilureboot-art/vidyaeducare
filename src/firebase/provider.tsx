@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
@@ -34,7 +33,6 @@ const setCachedRole = (uid: string, roles: { isAdmin: boolean; isHeadAdmin: bool
 
 const clearRoleCache = () => {
     if (typeof window === 'undefined') return;
-    // Clear all roles to ensure clean session state
     Object.keys(sessionStorage).forEach(key => {
         if (key.startsWith('ve_role_')) sessionStorage.removeItem(key);
     });
@@ -50,7 +48,6 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     }
   });
 
-  // OPTIMISTIC INITIALIZATION: Avoid loading screen if session exists
   const [authState, setAuthState] = useState<AuthState>(() => {
       return {
         user: null,
@@ -70,12 +67,8 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       return { isAdmin: false, isHeadAdmin: false };
     }
 
-    // Attempt instant cache hit
     const cached = getCachedRole(user.uid);
-    if (cached) {
-        // Return cached immediately but refresh in background if needed
-        return cached;
-    }
+    if (cached) return cached;
 
     try {
       const adminDocRef = doc(db, "admins", user.uid);
@@ -94,7 +87,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       setCachedRole(user.uid, roles);
       return roles;
     } catch (e) {
-      console.error("Role resolution failed.", e);
+      console.error("Role resolution failed:", e);
       return { isAdmin: false, isHeadAdmin: false };
     }
   }, []);
@@ -109,11 +102,9 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
           return;
       }
 
-      // Check cache first for zero-delay transition
       const cached = getCachedRole(user.uid);
       if (cached) {
           setAuthState({ user, loading: false, ...cached });
-          // Re-verify in background to ensure security
           resolveUserRole(user, db).then(freshRoles => {
               if (JSON.stringify(freshRoles) !== JSON.stringify(cached)) {
                   setAuthState(prev => ({ ...prev, ...freshRoles }));
@@ -128,33 +119,32 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     return () => unsubscribe();
   }, [services, resolveUserRole]);
 
-  // DETERMINISTIC ROUTING ENGINE (High Speed)
+  // DETERMINISTIC ROUTING ENGINE (Synchronized)
   useEffect(() => {
     if (authState.loading || isRedirecting.current) return;
 
     const { user, isAdmin } = authState;
     const isAdminArea = pathname.startsWith('/admin');
-    const isAuthRoute = ['/login', '/signup', '/admin/login', '/forgot-password'].includes(pathname);
-    const isPublicArea = ['/', '/how-to-play'].includes(pathname);
+    const isAuthRoute = ['/login', '/signup', '/admin/login', '/forgot-password', '/admin/setup'].includes(pathname);
+    const isPublicRoute = ['/', '/how-to-play'].includes(pathname);
     
     let targetPath: string | null = null;
 
     if (user) {
       if (isAdmin) {
-        // Admins: Redirect away from Student-only zones and Auth pages
-        // Allow public area but prioritize the dashboard home
-        if (isAuthRoute || (!isAdminArea && !isPublicArea)) {
+        // ADMINS: Forcefully stay in Admin Dashboard if trying to access student pages or home
+        if (isAuthRoute || (!isAdminArea && !isPublicRoute) || pathname === '/') {
           targetPath = '/admin/analytics';
         }
       } else {
-        // Students: Strictly barred from Admin Panel and Auth pages
+        // STUDENTS: Barred from admin panel and auth pages
         if (isAdminArea || isAuthRoute) {
           targetPath = '/profile';
         }
       }
     } else {
-      // Unauthenticated: Only allowed on Public areas and Auth routes
-      if (!isPublicArea && !isAuthRoute) {
+      // UNAUTHENTICATED: Only allowed on public/auth routes
+      if (!isPublicRoute && !isAuthRoute) {
         targetPath = '/';
       }
     }
@@ -162,21 +152,20 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     if (targetPath && targetPath !== pathname) {
       isRedirecting.current = true;
       router.replace(targetPath);
-      // Brief timeout to allow the router to stabilize before releasing the lock
-      setTimeout(() => { isRedirecting.current = false; }, 500);
+      setTimeout(() => { isRedirecting.current = false; }, 800);
     }
   }, [authState, pathname, router]);
 
   const authContextValue = useMemo(() => authState, [authState]);
 
-  // BOUNDARY ENFORCEMENT: Prevent rendering mismatched layouts
+  // Prevent shell leakage during transition
   const isAdminArea = pathname.startsWith('/admin');
   const roleMismatch = authState.user && (
     (authState.isAdmin && !isAdminArea && pathname !== '/' && pathname !== '/how-to-play') ||
     (!authState.isAdmin && isAdminArea)
   );
 
-  if (authState.loading || roleMismatch) {
+  if (authState.loading || roleMismatch || isRedirecting.current) {
      return (
       <div className="flex flex-col items-center justify-center h-screen space-y-6 bg-background text-center p-4">
         <div className="relative">
@@ -186,7 +175,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
         <div className="space-y-2">
             <p className="text-xl font-black text-primary tracking-tighter uppercase">Vidya EduCare</p>
             <p className="text-muted-foreground text-sm font-medium tracking-wide">
-                {roleMismatch ? "Securing Workspace boundaries..." : "Verifying Administrative Permissions..."}
+                {roleMismatch ? "Securing Workspace Boundaries..." : "Verifying Administrative Permissions..."}
             </p>
         </div>
       </div>

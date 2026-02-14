@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useAuth } from "@/firebase";
@@ -18,18 +17,16 @@ export default function ProtectedRoute({
   const { user, loading, isAdmin } = useAuth();
   const pathname = usePathname();
 
-  // Wait for the central provider to resolve identity and role
+  // The provider handles the loading screen and core redirection.
+  // This guard simply prevents mismatched content from mounting during the state resolve.
   if (loading) return null;
 
-  // If identity is missing, provide no output (Provider handles redirect)
   if (!user) return null;
   
   if (adminOnly) {
-    // If it's an admin route, regular users are strictly barred
     if (!isAdmin) return null;
   } else {
-    // If it's a student route, Admins are strictly barred to prevent shell leakage
-    // Admins must remain in the /admin/* environment
+    // Prevent administrators from rendering student layouts
     if (isAdmin && !pathname.startsWith('/admin')) return null;
   }
 

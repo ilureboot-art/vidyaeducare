@@ -5,7 +5,7 @@ import { useAuth } from "@/firebase";
 import { usePathname } from "next/navigation";
 
 /**
- * A secondary security barrier that works in tandem with the FirebaseProvider.
+ * A strict security barrier that works in tandem with the FirebaseProvider.
  * It prevents restricted UI from rendering for even a single frame.
  */
 export default function ProtectedRoute({
@@ -18,19 +18,19 @@ export default function ProtectedRoute({
   const { user, loading, isAdmin } = useAuth();
   const pathname = usePathname();
 
-  // Wait for the central provider to resolve
+  // Wait for the central provider to resolve identity and role
   if (loading) return null;
 
-  // Enforce access rules synchronously to prevent flash of wrong content
+  // If identity is missing, provide no output (Provider handles redirect)
   if (!user) return null;
   
   if (adminOnly) {
-    // If it's an admin route, regular users should be barred
+    // If it's an admin route, regular users are strictly barred
     if (!isAdmin) return null;
   } else {
-    // If it's a student route, Admins should be barred to prevent shell leakage
-    // Special exception for the public home page if wrapped in UserLayout
-    if (isAdmin && pathname !== '/') return null;
+    // If it's a student route, Admins are strictly barred to prevent shell leakage
+    // Admins must remain in the /admin/* environment
+    if (isAdmin && !pathname.startsWith('/admin')) return null;
   }
 
   return <>{children}</>;

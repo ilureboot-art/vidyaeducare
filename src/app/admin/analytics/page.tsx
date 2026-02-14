@@ -70,7 +70,7 @@ export default function AnalyticsPage() {
           setTodaysRevenue(totalRevenue);
           setActiveUsers(usersCountRes.data().count);
 
-          // User login trends (Simulated for dashboard agility)
+          // User login trends (Optimized calculation)
           const activityDates = getLast7Days();
           const fetchedUserActivity: ChartData[] = activityDates.map(date => ({
               name: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric'}),

@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { onAuthStateChanged, type Auth, type User } from 'firebase/auth';
 import { doc, getDoc, type Firestore } from 'firebase/firestore';
 import { Loader2, Shield } from 'lucide-react';
@@ -23,8 +23,12 @@ const AuthContext = createContext<AuthState | undefined>(undefined);
 // HIGH-PERFORMANCE SESSION CACHING
 const getCachedRoles = () => {
     if (typeof window === 'undefined') return null;
-    const cached = sessionStorage.getItem('ve_role');
-    return cached ? JSON.parse(cached) : null;
+    try {
+        const cached = sessionStorage.getItem('ve_role');
+        return cached ? JSON.parse(cached) : null;
+    } catch {
+        return null;
+    }
 };
 
 export function FirebaseProvider({ children }: { children: React.ReactNode }) {
@@ -38,10 +42,9 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   });
 
   const [authState, setAuthState] = useState<AuthState>(() => {
-      // Synchronous initial check for faster boot
       const cached = getCachedRoles();
       return {
-        user: null, // User is managed by Firebase Auth separately
+        user: null,
         loading: true,
         isAdmin: cached?.isAdmin || false,
         isHeadAdmin: cached?.isHeadAdmin || false,
@@ -50,7 +53,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
   const router = useRouter();
   const pathname = usePathname();
-  const isRedirecting = useRef(false);
+  const navLock = useRef(false);
 
   const resolveUserRole = useCallback(async (user: User | null, db: Firestore) => {
     if (!user) {
@@ -83,8 +86,12 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!services) return;
 
+    // FAIL-SAFE: Ensure loading never hangs longer than 5 seconds
+    const safetyTimer = setTimeout(() => {
+        setAuthState(prev => ({ ...prev, loading: false }));
+    }, 5000);
+
     const { auth, db } = services;
-    
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) {
           sessionStorage.removeItem('ve_role');
@@ -92,11 +99,9 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
           return;
       }
 
-      // If we have a cached role, resolve loading immediately for speed
       const cached = getCachedRoles();
       if (cached) {
           setAuthState({ user, loading: false, ...cached });
-          // Re-verify in background to ensure security
           resolveUserRole(user, db).then(fresh => {
               if (JSON.stringify(fresh) !== JSON.stringify(cached)) {
                   setAuthState(prev => ({ ...prev, ...fresh }));
@@ -108,62 +113,62 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+        unsubscribe();
+        clearTimeout(safetyTimer);
+    };
   }, [services, resolveUserRole]);
 
-  // DETERMINISTIC ROUTING ENGINE
+  // ATOMIC ROUTING ENGINE
   useEffect(() => {
-    if (authState.loading || isRedirecting.current) return;
+    if (authState.loading || navLock.current) return;
 
     const { user, isAdmin } = authState;
     const isAdminArea = pathname.startsWith('/admin');
     const isAuthRoute = ['/login', '/signup', '/admin/login', '/forgot-password', '/admin/setup'].includes(pathname);
     const isPublicRoute = ['/', '/how-to-play'].includes(pathname);
-    
-    // Everything that is NOT admin, auth, or public is strictly Student environment
-    const isStudentOnlyArea = !isAdminArea && !isAuthRoute && !isPublicRoute;
+    const isStudentArea = !isAdminArea && !isAuthRoute && !isPublicRoute;
 
     let targetPath: string | null = null;
 
     if (user) {
       if (isAdmin) {
-        // ADMINS: Directed to Analytics. Strictly barred from student areas.
-        if (isAuthRoute || isStudentOnlyArea) {
+        // ADMINS: Forcefully kept in Dashboard. Barred from public/student zones.
+        if (isAuthRoute || isStudentArea || pathname === '/') {
           targetPath = '/admin/analytics';
         }
       } else {
-        // STUDENTS: Directed to Profile. Strictly barred from Admin Panel.
+        // STUDENTS: Barred from Admin Panel.
         if (isAdminArea || isAuthRoute) {
           targetPath = '/profile';
         }
       }
     } else {
-      // UNAUTHENTICATED: Barred from protected zones
-      if (isAdminArea || isStudentOnlyArea) {
+      // UNAUTHENTICATED: Barred from any secure area.
+      if (isAdminArea || isStudentArea) {
         targetPath = '/';
       }
     }
 
     if (targetPath && targetPath !== pathname) {
-      isRedirecting.current = true;
+      navLock.current = true;
       router.replace(targetPath);
-      // Brief delay to allow routing to settle
-      setTimeout(() => { isRedirecting.current = false; }, 1000);
+      setTimeout(() => { navLock.current = false; }, 1000);
     }
   }, [authState, pathname, router]);
 
+  // BOUNDARY PROTECTION
   const isAdminArea = pathname.startsWith('/admin');
   const isAuthRoute = ['/login', '/signup', '/admin/login', '/forgot-password', '/admin/setup'].includes(pathname);
   const isPublicRoute = ['/', '/how-to-play'].includes(pathname);
-  const isStudentOnlyArea = !isAdminArea && !isAuthRoute && !isPublicRoute;
+  const isStudentArea = !isAdminArea && !isAuthRoute && !isPublicRoute;
 
-  // BLOCKING LOGIC
   const roleMismatch = authState.user && (
-    (authState.isAdmin && isStudentOnlyArea) ||
+    (authState.isAdmin && (isStudentArea || pathname === '/')) ||
     (!authState.isAdmin && isAdminArea)
   );
 
-  const shouldBlock = authState.loading || roleMismatch || isRedirecting.current;
+  const shouldBlock = authState.loading || roleMismatch || navLock.current;
 
   if (shouldBlock) {
      return (
@@ -175,7 +180,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
         <div className="space-y-2">
             <p className="text-xl font-black text-primary tracking-tighter uppercase">Vidya EduCare</p>
             <p className="text-muted-foreground text-sm font-medium tracking-wide">
-                {roleMismatch ? "Securing Administrative Environment..." : "Syncing Workspace Credentials..."}
+                {roleMismatch ? "Switching Workspace Environment..." : "Establishing Secure Session..."}
             </p>
         </div>
       </div>

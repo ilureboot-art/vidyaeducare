@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { BarChart, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Line, Bar, ResponsiveContainer } from "recharts";
 import { Users, IndianRupee, Loader2, AlertCircle, RefreshCcw, BookOpen } from "lucide-react";
 import { useDb } from "@/firebase";
-import { collection, getDocs, query, where, Timestamp, getCountFromServer, limit, orderBy } from "firebase/firestore";
+import { collection, getDocs, query, where, Timestamp, getCountFromServer } from "firebase/firestore";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 
@@ -48,17 +48,17 @@ export default function AnalyticsPage() {
           today.setHours(0, 0, 0, 0);
           const todayTimestamp = Timestamp.fromDate(today);
 
-          const transactionsCollection = collection(db, 'transactions');
-          const revenueQuery = query(
-            transactionsCollection, 
-            where('date', '>=', todayTimestamp), 
-            where('status', '==', 'Completed')
-          );
-          
+          const transactionsCol = collection(db, 'transactions');
           const usersCol = collection(db, 'users');
           const resultsCol = collection(db, 'testResults');
 
-          // HIGH SPEED EXECUTION: Database calls run in parallel to minimize wait time
+          const revenueQuery = query(
+            transactionsCol, 
+            where('date', '>=', todayTimestamp), 
+            where('status', '==', 'Completed')
+          );
+
+          // PARALLEL DATA FETCHING: Executes all queries simultaneously
           const [revenueSnapshot, usersCountRes, resultsCountRes] = await Promise.all([
               getDocs(revenueQuery),
               getCountFromServer(usersCol),
@@ -68,7 +68,6 @@ export default function AnalyticsPage() {
           let totalRevenue = 0;
           revenueSnapshot.forEach(doc => {
               const amount = doc.data().amount;
-              // Deposits are positive amounts in transactions for revenue
               if (doc.data().type === 'deposit' || amount > 0) totalRevenue += Math.abs(amount);
           });
           
@@ -77,7 +76,6 @@ export default function AnalyticsPage() {
           setActiveUsers(totalUsersCount);
           setTestVolume(resultsCountRes.data().count);
 
-          // User growth trends (Last 7 Days)
           const activityDates = getLast7Days();
           const fetchedUserActivity: ChartData[] = activityDates.map(date => ({
               name: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric'}),
@@ -85,7 +83,6 @@ export default function AnalyticsPage() {
           }));
           setUserActivityData(fetchedUserActivity);
 
-          // Static revenue forecast for visualization
           setRevenueData([
             { name: 'Mon', revenue: 4000 },
             { name: 'Tue', revenue: 3000 },

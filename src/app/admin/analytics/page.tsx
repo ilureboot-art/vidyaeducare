@@ -58,7 +58,7 @@ export default function AnalyticsPage() {
             where('status', '==', 'Completed')
           );
 
-          // PARALLEL DATA FETCHING: Executes all queries simultaneously
+          // PERFORMANCE OPTIMIZATION: Parallel execution of queries
           const [revenueSnapshot, usersCountRes, resultsCountRes] = await Promise.all([
               getDocs(revenueQuery),
               getCountFromServer(usersCol),
@@ -67,8 +67,10 @@ export default function AnalyticsPage() {
 
           let totalRevenue = 0;
           revenueSnapshot.forEach(doc => {
-              const amount = doc.data().amount;
-              if (doc.data().type === 'deposit' || amount > 0) totalRevenue += Math.abs(amount);
+              const data = doc.data();
+              if (data.type === 'deposit' || data.amount > 0) {
+                  totalRevenue += Math.abs(data.amount);
+              }
           });
           
           setTodaysRevenue(totalRevenue);
@@ -95,7 +97,7 @@ export default function AnalyticsPage() {
 
       } catch (err: any) {
           console.error("Dashboard Sync Error:", err);
-          setError("Failed to sync real-time analytics. Please check your internet connection.");
+          setError("Failed to sync real-time analytics. Please check your connection.");
       } finally {
           setLoading(false);
           setRefreshing(false);
@@ -110,7 +112,7 @@ export default function AnalyticsPage() {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] space-y-4">
         <Loader2 className="animate-spin text-primary" size={40} />
-        <p className="text-muted-foreground animate-pulse font-medium">Aggregating Business Intelligence...</p>
+        <p className="text-muted-foreground animate-pulse font-medium">Populating Admin Dashboard...</p>
       </div>
     );
   }
@@ -120,7 +122,7 @@ export default function AnalyticsPage() {
           <div className="p-6">
               <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Synchronization Latency</AlertTitle>
+                  <AlertTitle>Connection Latency</AlertTitle>
                   <AlertDescription className="flex items-center justify-between">
                     {error}
                     <Button variant="outline" size="sm" onClick={() => fetchData()} className="ml-4">Retry Sync</Button>
@@ -134,12 +136,12 @@ export default function AnalyticsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-            <h1 className="text-3xl font-bold tracking-tight text-primary">Analytics Dashboard</h1>
-            <p className="text-muted-foreground text-sm">Real-time overview of Vidya EduCare performance.</p>
+            <h1 className="text-3xl font-bold tracking-tight text-primary">Admin Overview</h1>
+            <p className="text-muted-foreground text-sm">Real-time business intelligence for Vidya EduCare.</p>
         </div>
         <Button variant="outline" size="sm" onClick={() => fetchData(true)} disabled={refreshing}>
           <RefreshCcw className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-          {refreshing ? 'Syncing...' : 'Refresh Data'}
+          {refreshing ? 'Refreshing...' : 'Refresh Stats'}
         </Button>
       </div>
 
@@ -152,29 +154,29 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold tracking-tight">{activeUsers?.toLocaleString() || 0}</p>
-            <p className="text-xs text-muted-foreground mt-1">Total active accounts</p>
+            <p className="text-xs text-muted-foreground mt-1">Active player accounts</p>
           </CardContent>
         </Card>
         <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-widest">
-              <BookOpen className="text-primary h-4 w-4"/> Test Completions
+              <BookOpen className="text-primary h-4 w-4"/> Academic Activity
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold tracking-tight">{testVolume?.toLocaleString() || 0}</p>
-            <p className="text-xs text-muted-foreground mt-1">Cumulative mock tests taken</p>
+            <p className="text-xs text-muted-foreground mt-1">Total mock tests completed</p>
           </CardContent>
         </Card>
         <Card className="hover:shadow-md transition-shadow border-primary/20 bg-primary/[0.02]">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-widest">
-              <IndianRupee className="text-primary h-4 w-4"/> Today's Revenue
+              <IndianRupee className="text-primary h-4 w-4"/> Revenue Today
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold tracking-tight text-primary">₹{todaysRevenue?.toLocaleString() || 0}</p>
-            <p className="text-xs text-muted-foreground mt-1">Settled purchase volume today</p>
+            <p className="text-xs text-muted-foreground mt-1">Settled purchase volume</p>
           </CardContent>
         </Card>
       </div>
@@ -182,7 +184,7 @@ export default function AnalyticsPage() {
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Platform Growth</CardTitle>
+            <CardTitle>Growth Trend</CardTitle>
             <CardDescription>Daily new user registrations (Last 7 Days)</CardDescription>
           </CardHeader>
           <CardContent>
@@ -203,8 +205,8 @@ export default function AnalyticsPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Collection Forecast</CardTitle>
-            <CardDescription>Weekly revenue performance analysis</CardDescription>
+            <CardTitle>Revenue Forecast</CardTitle>
+            <CardDescription>Weekly settlement analysis</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-[300px] w-full">

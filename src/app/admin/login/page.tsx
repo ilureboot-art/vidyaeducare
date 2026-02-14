@@ -43,8 +43,8 @@ export default function AdminLoginPage() {
           localStorage.removeItem('rememberedAdmin');
       }
       
-      toast({ title: "Authorized", description: "Syncing administrative workspace..." });
-      // Redirection is handled globally by FirebaseProvider
+      toast({ title: "Authorized", description: "Verifying administrative permissions..." });
+      // Redirection is handled globally by FirebaseProvider once the role is confirmed
       
     } catch (error: any) {
        let errorMessage = "Access Denied.";

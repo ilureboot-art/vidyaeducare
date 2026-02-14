@@ -20,7 +20,6 @@ const AuthServiceContext = createContext<Auth | undefined>(undefined);
 const DbContext = createContext<Firestore | undefined>(undefined);
 const AuthContext = createContext<AuthState | undefined>(undefined);
 
-// HIGH-PERFORMANCE SESSION CACHING
 const getCachedRoles = () => {
     if (typeof window === 'undefined') return null;
     try {
@@ -86,7 +85,6 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!services) return;
 
-    // FAIL-SAFE: Ensure loading screen clears eventually
     const safetyTimer = setTimeout(() => {
         setAuthState(prev => ({ ...prev, loading: false }));
     }, 5000);
@@ -99,11 +97,9 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
           return;
       }
 
-      // DETERMINISTIC LOAD: Stay in 'loading' state until role is confirmed
       const cached = getCachedRoles();
       if (cached) {
           setAuthState({ user, loading: false, ...cached });
-          // Background verification to keep cache fresh
           resolveUserRole(user, db).then(fresh => {
               if (JSON.stringify(fresh) !== JSON.stringify(cached)) {
                   setAuthState(prev => ({ ...prev, ...fresh }));
@@ -121,23 +117,21 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     };
   }, [services, resolveUserRole]);
 
-  // STABILIZED ROUTING ENGINE
   useEffect(() => {
     if (authState.loading || isRedirecting.current) return;
 
     const { user, isAdmin } = authState;
     const isAdminArea = pathname.startsWith('/admin');
     const isAuthRoute = ['/login', '/signup', '/admin/login', '/forgot-password', '/admin/setup'].includes(pathname);
-    const isPublicRoute = ['/', '/how-to-play'].includes(pathname);
-    const isStudentArea = !isAdminArea && !isAuthRoute && !isPublicRoute;
-
+    const isPublicRoute = ['/how-to-play'].includes(pathname); // Root '/' handled separately
+    
     let targetPath: string | null = null;
 
     if (user) {
       if (isAdmin) {
-        // ADMINS: Forcefully kept in Admin Panel. 
-        // We prevent them from visiting the root '/' to avoid "auto-logout" sensation.
-        if (isAuthRoute || isStudentArea || pathname === '/') {
+        // ADMINS: Forcefully kept in Admin Panel workspace.
+        // We redirect them from '/' to dashboard to avoid "auto-logout" sensation.
+        if (isAuthRoute || pathname === '/' || (!isAdminArea && !isPublicRoute)) {
           targetPath = '/admin/analytics';
         }
       } else {
@@ -147,8 +141,8 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
         }
       }
     } else {
-      // UNAUTHENTICATED: Barred from secure areas.
-      if (isAdminArea || isStudentArea) {
+      // GUESTS: Barred from secure areas.
+      if (isAdminArea || (!isAuthRoute && !isPublicRoute && pathname !== '/')) {
         targetPath = '/';
       }
     }
@@ -156,12 +150,12 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     if (targetPath && targetPath !== pathname) {
       isRedirecting.current = true;
       router.replace(targetPath);
-      // Short lockout to prevent rapid-fire redirects during browser URL updates
-      setTimeout(() => { isRedirecting.current = false; }, 800);
+      // Immediate reset of redirecting flag once next.js navigation is initiated
+      const timer = setTimeout(() => { isRedirecting.current = false; }, 500);
+      return () => clearTimeout(timer);
     }
   }, [authState, pathname, router]);
 
-  // FULL-SCREEN LOADING OVERLAY
   if (authState.loading) {
      return (
       <div className="flex flex-col items-center justify-center h-screen space-y-6 bg-background text-center p-4">

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,7 @@ import { format } from "date-fns";
 import type { StudentProfile } from "@/lib/student-data";
 import type { ScheduledTest } from "@/lib/test-schedule";
 import { useAuth, useDb } from "@/firebase";
-import { doc, getDoc, setDoc, collection, getDocs, deleteDoc, updateDoc, query, where, DocumentData, onSnapshot, type Firestore } from "firebase/firestore";
+import { doc, getDoc, setDoc, collection, getDocs, deleteDoc, updateDoc, query, where, DocumentData, onSnapshot } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import UserLayout from "@/components/UserLayout";
 
@@ -32,7 +32,6 @@ function ProfilePageContent() {
     const [parentProfile, setParentProfile] = useState<DocumentData | null>(null);
     const [students, setStudents] = useState<StudentProfile[]>([]);
     const [validCodes, setValidCodes] = useState<string[]>([]);
-    const [allScheduledTests, setAllScheduledTests] = useState<ScheduledTest[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     
     const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
@@ -42,6 +41,7 @@ function ProfilePageContent() {
     const [isTestDialogOpen, setIsTestDialogOpen] = useState(false);
     const [selectedStudentForTest, setSelectedStudentForTest] = useState<StudentProfile | null>(null);
     const [availableTests, setAvailableTests] = useState<ScheduledTest[]>([]);
+    const [isLoadingTests, setIsLoadingTests] = useState(false);
 
     useEffect(() => {
         if (user && db) {
@@ -50,7 +50,6 @@ function ProfilePageContent() {
             // Parent Profile Listener
             const unsubParent = onSnapshot(doc(db, "users", user.uid), (doc) => {
                 if (doc.exists()) setParentProfile(doc.data());
-                // We consider the initial basic load complete when we have the parent profile
                 setIsLoading(false);
             }, (err) => {
                 console.error("Error loading parent profile:", err);
@@ -69,18 +68,6 @@ function ProfilePageContent() {
                 setValidCodes(doc.exists() ? doc.data().codes : []);
             });
             
-            // Tests Fetch
-            const fetchTests = async () => {
-                try {
-                    const testsSnapshot = await getDocs(collection(db, "scheduledTests"));
-                    const testsList = testsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ScheduledTest));
-                    setAllScheduledTests(testsList);
-                } catch (e) {
-                    console.error("Error fetching tests:", e);
-                }
-            };
-            fetchTests();
-
             return () => {
                 unsubParent();
                 unsubStudents();
@@ -158,12 +145,28 @@ function ProfilePageContent() {
         }
     }
     
-    const openTestDialog = (student: StudentProfile) => {
+    const openTestDialog = async (student: StudentProfile) => {
+        if (!db) return;
         setSelectedStudentForTest(student);
-        const tests = allScheduledTests.filter(test => test.board === student.academic.board && test.standard === student.academic.standard);
-        const sortedTests = tests.sort((a,b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
-        setAvailableTests(sortedTests);
         setIsTestDialogOpen(true);
+        setIsLoadingTests(true);
+        
+        try {
+            const q = query(
+                collection(db, "scheduledTests"), 
+                where("board", "==", student.academic.board),
+                where("standard", "==", student.academic.standard)
+            );
+            const snapshot = await getDocs(q);
+            const tests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ScheduledTest));
+            const sortedTests = tests.sort((a,b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
+            setAvailableTests(sortedTests);
+        } catch (e) {
+            console.error("Error fetching tests:", e);
+            toast({ variant: 'destructive', title: "Error", description: "Could not load tests." });
+        } finally {
+            setIsLoadingTests(false);
+        }
     };
     
     const handleStartTest = (test: ScheduledTest) => {
@@ -389,7 +392,9 @@ function ProfilePageContent() {
                     <DialogDescription>Select a test from the list to begin. Completed tests can be taken for practice.</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-2 pt-4 max-h-[60vh] overflow-y-auto">
-                    {availableTests.length > 0 ? (
+                    {isLoadingTests ? (
+                        <div className="flex justify-center py-8"><Loader2 className="animate-spin" /></div>
+                    ) : availableTests.length > 0 ? (
                         availableTests.map(test => {
                             const now = new Date();
                             const testDate = new Date(test.dateTime);

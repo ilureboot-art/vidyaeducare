@@ -119,22 +119,21 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     };
   }, [services, resolveUserRole]);
 
-  // Unified Redirection Engine
+  // Unified Redirection Engine with Mutex Lock
   useEffect(() => {
     if (authState.loading) return;
 
     const { user, isAdmin } = authState;
     const isAdminArea = pathname.startsWith('/admin');
     const isAuthRoute = ['/login', '/signup', '/admin/login', '/forgot-password', '/admin/setup'].includes(pathname);
-    const isPublicRoute = ['/how-to-play'].includes(pathname);
+    const isPublicRoute = ['/how-to-play', '/'].includes(pathname);
     
     let targetPath: string | null = null;
 
     if (user) {
       if (isAdmin) {
         // ADMINS: Forcefully kept in Dashboard workspace.
-        // Clicking "/" or brand links returns them to Analytics.
-        if (isAuthRoute || pathname === '/' || (!isAdminArea && !isPublicRoute)) {
+        if (isAuthRoute || !isAdminArea && !isPublicRoute) {
           targetPath = '/admin/analytics';
         }
       } else {

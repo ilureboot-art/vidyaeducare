@@ -52,7 +52,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
   const router = useRouter();
   const pathname = usePathname();
-  const isRedirecting = useRef(false);
+  const navigationLock = useRef<string | null>(null);
 
   const resolveUserRole = useCallback(async (user: User | null, db: Firestore) => {
     if (!user) {
@@ -85,6 +85,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!services) return;
 
+    // Safety timeout to prevent indefinite loading hang
     const safetyTimer = setTimeout(() => {
         setAuthState(prev => ({ ...prev, loading: false }));
     }, 5000);
@@ -100,6 +101,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       const cached = getCachedRoles();
       if (cached) {
           setAuthState({ user, loading: false, ...cached });
+          // Sync background refresh
           resolveUserRole(user, db).then(fresh => {
               if (JSON.stringify(fresh) !== JSON.stringify(cached)) {
                   setAuthState(prev => ({ ...prev, ...fresh }));
@@ -117,20 +119,21 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     };
   }, [services, resolveUserRole]);
 
+  // Unified Redirection Engine
   useEffect(() => {
-    if (authState.loading || isRedirecting.current) return;
+    if (authState.loading) return;
 
     const { user, isAdmin } = authState;
     const isAdminArea = pathname.startsWith('/admin');
     const isAuthRoute = ['/login', '/signup', '/admin/login', '/forgot-password', '/admin/setup'].includes(pathname);
-    const isPublicRoute = ['/how-to-play'].includes(pathname); // Root '/' handled separately
+    const isPublicRoute = ['/how-to-play'].includes(pathname);
     
     let targetPath: string | null = null;
 
     if (user) {
       if (isAdmin) {
-        // ADMINS: Forcefully kept in Admin Panel workspace.
-        // We redirect them from '/' to dashboard to avoid "auto-logout" sensation.
+        // ADMINS: Forcefully kept in Dashboard workspace.
+        // Clicking "/" or brand links returns them to Analytics.
         if (isAuthRoute || pathname === '/' || (!isAdminArea && !isPublicRoute)) {
           targetPath = '/admin/analytics';
         }
@@ -147,11 +150,13 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    if (targetPath && targetPath !== pathname) {
-      isRedirecting.current = true;
+    // Apply Navigation Mutex to prevent "Scrolling" reload loops
+    if (targetPath && targetPath !== pathname && navigationLock.current !== targetPath) {
+      navigationLock.current = targetPath;
       router.replace(targetPath);
-      // Immediate reset of redirecting flag once next.js navigation is initiated
-      const timer = setTimeout(() => { isRedirecting.current = false; }, 500);
+      
+      // Release lock after navigation is likely processed
+      const timer = setTimeout(() => { navigationLock.current = null; }, 1000);
       return () => clearTimeout(timer);
     }
   }, [authState, pathname, router]);
@@ -164,7 +169,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
             <Loader2 className="absolute inset-0 w-16 h-16 text-primary/30 animate-spin" />
         </div>
         <div className="space-y-2">
-            <p className="text-xl font-black text-primary tracking-tighter uppercase">Vidya EduCare</p>
+            <p className="text-xl font-black text-primary tracking-tighter uppercase italic">Vidya EduCare</p>
             <p className="text-muted-foreground text-sm font-medium tracking-wide">Syncing Workspace Credentials...</p>
         </div>
       </div>

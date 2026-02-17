@@ -1,12 +1,12 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { User, Mail, Calendar, Phone, Edit, GraduationCap, Trash2, PlusCircle, BookOpen, Loader2, BarChart2 } from "lucide-react";
+import { User, Mail, Calendar, Phone, Edit, GraduationCap, Trash2, PlusCircle, BookOpen, Loader2, BarChart2, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -136,6 +136,8 @@ function ProfilePageContent() {
     
     const handleDeleteStudent = async (studentId: string) => {
         if (!db) return;
+        if (!confirm("Are you sure you want to remove this student profile?")) return;
+        
         try {
             await deleteDoc(doc(db, "students", studentId));
             toast({ title: "Student Removed", description: "The student profile has been deleted." });
@@ -177,57 +179,67 @@ function ProfilePageContent() {
         router.push(`/mock-test?studentId=${selectedStudentForTest.id}&testId=${test.id}&isLive=${isLive}`);
     }
 
-  if (isLoading || !parentProfile) {
+  if (isLoading) {
     return (
-        <div className="w-full max-w-5xl mx-auto flex items-center justify-center h-96">
-            <Loader2 className="animate-spin text-primary" size={32} />
+        <div className="w-full max-w-5xl mx-auto flex flex-col items-center justify-center h-96 space-y-4">
+            <Loader2 className="animate-spin text-primary" size={40} />
+            <p className="text-muted-foreground animate-pulse font-medium">Syncing Academic Workspace...</p>
         </div>
     );
   }
 
   return (
     <div className="w-full max-w-5xl mx-auto space-y-8">
-        <Card>
-            <CardHeader>
-                <CardTitle className="text-2xl flex items-center gap-2"><User /> Parent Profile</CardTitle>
-                <CardDescription>Your account details.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                        <User className="w-5 h-5 text-muted-foreground"/>
-                        <div>
-                            <p className="text-xs text-muted-foreground">Name</p>
-                            <p className="font-medium">{parentProfile.name}</p>
+        {parentProfile ? (
+            <Card className="border-primary/10 shadow-sm">
+                <CardHeader>
+                    <CardTitle className="text-2xl flex items-center gap-2"><User className="text-primary" /> Parent Profile</CardTitle>
+                    <CardDescription>Your primary account details and communication preferences.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                            <User className="w-5 h-5 text-primary"/>
+                            <div>
+                                <p className="text-[10px] uppercase font-bold text-muted-foreground">Account Holder</p>
+                                <p className="font-semibold">{parentProfile.name}</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                            <Mail className="w-5 h-5 text-primary"/>
+                            <div>
+                                <p className="text-[10px] uppercase font-bold text-muted-foreground">Email ID</p>
+                                <p className="font-semibold">{parentProfile.email}</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                            <Phone className="w-5 h-5 text-primary"/>
+                            <div>
+                                <p className="text-[10px] uppercase font-bold text-muted-foreground">WhatsApp Number</p>
+                                <p className="font-semibold">{parentProfile.phone || 'Not Provided'}</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                            <Calendar className="w-5 h-5 text-primary"/>
+                            <div>
+                                <p className="text-[10px] uppercase font-bold text-muted-foreground">Member Since</p>
+                                <p className="font-semibold">{parentProfile.joinDate ? format(new Date(parentProfile.joinDate), 'PP') : 'N/A'}</p>
+                            </div>
                         </div>
                     </div>
-                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                        <Mail className="w-5 h-5 text-muted-foreground"/>
-                        <div>
-                            <p className="text-xs text-muted-foreground">Email</p>
-                            <p className="font-medium">{parentProfile.email}</p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                        <Phone className="w-5 h-5 text-muted-foreground"/>
-                        <div>
-                            <p className="text-xs text-muted-foreground">WhatsApp Number</p>
-                            <p className="font-medium">{parentProfile.phone}</p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                        <Calendar className="w-5 h-5 text-muted-foreground"/>
-                        <div>
-                            <p className="text-xs text-muted-foreground">Member Since</p>
-                            <p className="font-medium">{parentProfile.joinDate ? format(new Date(parentProfile.joinDate), 'P') : 'N/A'}</p>
-                        </div>
-                    </div>
-                </div>
-            </CardContent>
-        </Card>
+                </CardContent>
+            </Card>
+        ) : (
+            <Card className="border-yellow-200 bg-yellow-50 dark:bg-yellow-900/20">
+                <CardContent className="flex items-center gap-3 p-4">
+                    <AlertCircle className="text-yellow-600" />
+                    <p className="text-sm text-yellow-700 dark:text-yellow-400 font-medium">Your primary profile data is being initialized. You can still manage students below.</p>
+                </CardContent>
+            </Card>
+        )}
 
-        <div className="flex justify-between items-center">
-             <h1 className="text-3xl font-bold">My Students</h1>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+             <h1 className="text-3xl font-bold tracking-tight">My Students</h1>
              <Dialog open={isAddStudentOpen} onOpenChange={(isOpen) => {
                  setIsAddStudentOpen(isOpen);
                  if (!isOpen) {
@@ -236,7 +248,7 @@ function ProfilePageContent() {
                  }
              }}>
                 <DialogTrigger asChild>
-                    <Button><PlusCircle className="mr-2"/> Add New Student</Button>
+                    <Button size="lg" className="shadow-md"><PlusCircle className="mr-2 h-5 w-5"/> Add New Student</Button>
                 </DialogTrigger>
                 <DialogContent>
                     <DialogHeader>
@@ -255,7 +267,8 @@ function ProfilePageContent() {
                                     id="activationCode" 
                                     value={activationCode} 
                                     onChange={(e) => setActivationCode(e.target.value)}
-                                    placeholder="Enter code from store purchase"
+                                    placeholder="e.g., PROD-123456"
+                                    className="font-mono"
                                 />
                             </div>
                             <Button className="w-full" onClick={handleVerifyCode} disabled={!activationCode.trim()}>Verify Code</Button>
@@ -264,7 +277,7 @@ function ProfilePageContent() {
                        <form className="space-y-4" onSubmit={handleAddStudent}>
                            <div className="space-y-2">
                                <Label htmlFor="name">Student's Full Name</Label>
-                               <Input id="name" name="name" required/>
+                               <Input id="name" name="name" required placeholder="Enter student's name"/>
                            </div>
                            <div className="space-y-2">
                                <Label htmlFor="dob">Date of Birth</Label>
@@ -273,19 +286,39 @@ function ProfilePageContent() {
                            <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="standard">Standard</Label>
-                                    <Select name="standard" required><SelectTrigger><SelectValue placeholder="Select..."/></SelectTrigger><SelectContent>{[...Array(12)].map((_,i) => <SelectItem key={i+1} value={`${i+1}th`}>{i+1}th</SelectItem>)}</SelectContent></Select>
+                                    <Select name="standard" required>
+                                        <SelectTrigger><SelectValue placeholder="Select..."/></SelectTrigger>
+                                        <SelectContent>
+                                            {[...Array(12)].map((_,i) => <SelectItem key={i+1} value={`${i+1}th`}>{i+1}th</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="board">Board</Label>
-                                    <Select name="board" required><SelectTrigger><SelectValue placeholder="Select..."/></SelectTrigger><SelectContent><SelectItem value="CBSE">CBSE</SelectItem><SelectItem value="ICSE">ICSE</SelectItem><SelectItem value="SSC">SSC</SelectItem></SelectContent></Select>
+                                    <Select name="board" required>
+                                        <SelectTrigger><SelectValue placeholder="Select..."/></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="CBSE">CBSE</SelectItem>
+                                            <SelectItem value="ICSE">ICSE</SelectItem>
+                                            <SelectItem value="SSC">SSC</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                            </div>
                            <div className="space-y-2">
                                <Label htmlFor="stream">Stream</Label>
-                               <Select name="stream" required><SelectTrigger><SelectValue placeholder="Select..."/></SelectTrigger><SelectContent><SelectItem value="Science">Science</SelectItem><SelectItem value="Commerce">Commerce</SelectItem><SelectItem value="Arts">Arts</SelectItem><SelectItem value="General">General</SelectItem></SelectContent></Select>
+                               <Select name="stream" required>
+                                   <SelectTrigger><SelectValue placeholder="Select..."/></SelectTrigger>
+                                   <SelectContent>
+                                       <SelectItem value="Science">Science</SelectItem>
+                                       <SelectItem value="Commerce">Commerce</SelectItem>
+                                       <SelectItem value="Arts">Arts</SelectItem>
+                                       <SelectItem value="General">General</SelectItem>
+                                   </SelectContent>
+                               </Select>
                            </div>
                            <DialogFooter>
-                               <Button type="submit">Create Profile</Button>
+                               <Button type="submit" className="w-full sm:w-auto">Create Student Profile</Button>
                            </DialogFooter>
                        </form>
                     )}
@@ -293,107 +326,136 @@ function ProfilePageContent() {
              </Dialog>
         </div>
 
-       {students.map(student => (
-         <Card key={student.id} className="shadow-lg relative group overflow-hidden">
-            <CardHeader className="flex flex-row items-start justify-between gap-4 bg-muted/30 p-4">
-                <div className="flex items-center gap-4">
-                    <Avatar className="w-20 h-20 border-4 border-primary/20">
-                        <AvatarImage src={student.avatarUrl} alt={student.name} data-ai-hint="profile avatar" />
-                        <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                        <CardTitle className="text-2xl font-bold text-primary">
-                            <span>{student.name}</span>
-                        </CardTitle>
-                        <CardDescription>ID: {student.id}</CardDescription>
-                    </div>
-                </div>
-                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                     <Button variant="outline" size="icon"><Edit className="w-4 h-4"/></Button>
-                     <Button variant="destructive" size="icon" onClick={() => handleDeleteStudent(student.id)}><Trash2 className="w-4 h-4"/></Button>
-                </div>
-            </CardHeader>
-            <CardContent className="p-4 grid md:grid-cols-2 gap-6">
-                 <div className="space-y-4">
-                     <h3 className="font-semibold flex items-center gap-2 text-muted-foreground"><GraduationCap size={16}/> Academic Details</h3>
-                     <div className="space-y-2 text-sm pl-2 border-l-2">
-                        <p><strong>D.O.B:</strong> {student.dob ? format(new Date(student.dob), 'P') : 'N/A'}</p>
-                        <p><strong>Standard:</strong> {student.academic.standard}</p>
-                        <p><strong>Board:</strong> {student.academic.board}</p>
-                        <p><strong>Stream:</strong> {student.academic.stream}</p>
-                        <p><strong>Language:</strong> {student.academic.language}</p>
-                     </div>
-                </div>
-                <div>
-                     <h3 className="font-semibold flex items-center gap-2 text-muted-foreground"><BarChart2 size={16}/> Performance Analytics</h3>
-                    <div className="grid grid-cols-3 gap-2 text-center my-4">
-                         <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
-                            <p className="text-xs text-muted-foreground">Avg. Score</p>
-                            <p className="text-xl font-bold">{(student.stats?.avgScore || 0).toFixed(0)}%</p>
-                        </div>
-                        <div className="p-2 bg-green-100 dark:bg-green-900/50 rounded-lg">
-                            <p className="text-xs text-muted-foreground">Highest</p>
-                            <p className="text-xl font-bold">{student.stats?.performance?.length > 0 ? Math.max(...student.stats.performance.map(p => p.score)) : 0}%</p>
-                        </div>
-                        <div className="p-2 bg-pink-100 dark:bg-pink-900/50 rounded-lg">
-                            <p className="text-xs text-muted-foreground">Tests Taken</p>
-                            <p className="text-xl font-bold">{student.stats?.testsTaken || 0}</p>
-                        </div>
-                    </div>
-                     <div className="h-40 pr-0">
-                        {student.stats?.performance && student.stats.performance.length > 0 ? (
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={student.stats.performance} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="name" fontSize={10} tickLine={false} axisLine={false} interval={0} />
-                                <YAxis fontSize={12} domain={[0, 100]} />
-                                <Tooltip
-                                    contentStyle={{
-                                        background: "hsl(var(--background))",
-                                        border: "1px solid hsl(var(--border))",
-                                        borderRadius: "var(--radius)",
-                                    }}
-                                    labelStyle={{ fontWeight: 'bold' }}
-                                    formatter={(value) => [`${value}%`, "Score"]}
-                                />
-                                <Bar dataKey="score" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                            </BarChart>
-                        </ResponsiveContainer>
-                        ) : (
-                            <div className="flex items-center justify-center h-full text-sm text-muted-foreground bg-muted/20 rounded-lg">
-                                No performance data yet.
+       <div className="grid gap-6">
+        {students.length > 0 ? students.map(student => (
+            <Card key={student.id} className="shadow-lg relative group overflow-hidden border-none ring-1 ring-border">
+                <CardHeader className="flex flex-row items-start justify-between gap-4 bg-muted/30 p-6">
+                    <div className="flex items-center gap-5">
+                        <Avatar className="w-20 h-20 border-4 border-background shadow-md">
+                            <AvatarImage src={student.avatarUrl} alt={student.name} data-ai-hint="student avatar" />
+                            <AvatarFallback className="bg-primary/10 text-primary text-2xl font-bold">{student.name.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                            <CardTitle className="text-2xl font-bold text-primary tracking-tight">
+                                {student.name}
+                            </CardTitle>
+                            <div className="flex items-center gap-2 mt-1">
+                                <Badge variant="secondary" className="font-mono text-[10px]">{student.id}</Badge>
+                                <span className="text-xs text-muted-foreground">• {student.academic.board} Board</span>
                             </div>
-                        )}
-                     </div>
-                </div>
-            </CardContent>
-            <CardFooter className="p-4 bg-muted/30">
-                 <Button className="w-full" onClick={() => openTestDialog(student)}>
-                    <BookOpen className="mr-2"/>
-                    View & Start Available Tests
-                </Button>
-            </CardFooter>
-        </Card>
-       ))}
-
-       {students.length === 0 && (
-           <Card>
-               <CardContent className="text-center p-12">
-                   <p className="text-muted-foreground">No student profiles found.</p>
-                   <p className="text-muted-foreground">Purchase a subscription in the store to get an activation code, then add a student.</p>
-               </CardContent>
-           </Card>
-       )}
+                        </div>
+                    </div>
+                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button variant="outline" size="icon" className="h-8 w-8"><Edit className="w-4 h-4"/></Button>
+                        <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => handleDeleteStudent(student.id)}><Trash2 className="w-4 h-4"/></Button>
+                    </div>
+                </CardHeader>
+                <CardContent className="p-6 grid md:grid-cols-2 gap-8">
+                    <div className="space-y-6">
+                        <div>
+                            <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2 mb-3">
+                                <GraduationCap size={14}/> Academic Profile
+                            </h3>
+                            <div className="grid grid-cols-2 gap-y-3 text-sm">
+                                <p><span className="text-muted-foreground">Standard:</span> <span className="font-semibold">{student.academic.standard}</span></p>
+                                <p><span className="text-muted-foreground">Stream:</span> <span className="font-semibold">{student.academic.stream}</span></p>
+                                <p><span className="text-muted-foreground">Language:</span> <span className="font-semibold">{student.academic.language}</span></p>
+                                <p><span className="text-muted-foreground">D.O.B:</span> <span className="font-semibold">{student.dob ? format(new Date(student.dob), 'PP') : 'N/A'}</span></p>
+                            </div>
+                        </div>
+                        <div className="pt-4 border-t border-dashed">
+                            <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">Skill Badges</h3>
+                            <div className="flex flex-wrap gap-2">
+                                {student.badges?.length > 0 ? student.badges.map(b => (
+                                    <Badge key={b} variant="outline" className="bg-primary/5 text-primary border-primary/20">{b}</Badge>
+                                )) : <p className="text-xs text-muted-foreground">No badges earned yet.</p>}
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2 mb-3">
+                            <BarChart2 size={14}/> Performance Analytics
+                        </h3>
+                        <div className="grid grid-cols-3 gap-3 text-center mb-6">
+                            <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800">
+                                <p className="text-[10px] font-bold text-blue-600 uppercase">Avg</p>
+                                <p className="text-xl font-bold text-blue-700">{(student.stats?.avgScore || 0).toFixed(0)}%</p>
+                            </div>
+                            <div className="p-2 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-100 dark:border-green-800">
+                                <p className="text-[10px] font-bold text-green-600 uppercase">Max</p>
+                                <p className="text-xl font-bold text-green-700">{student.stats?.performance?.length > 0 ? Math.max(...student.stats.performance.map(p => p.score)) : 0}%</p>
+                            </div>
+                            <div className="p-2 bg-pink-50 dark:bg-pink-900/20 rounded-xl border border-pink-100 dark:border-pink-800">
+                                <p className="text-[10px] font-bold text-pink-600 uppercase">Tests</p>
+                                <p className="text-xl font-bold text-pink-700">{student.stats?.testsTaken || 0}</p>
+                            </div>
+                        </div>
+                        <div className="h-40 w-full">
+                            {student.stats?.performance && student.stats.performance.length > 0 ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={student.stats.performance} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.1} />
+                                    <XAxis dataKey="name" fontSize={10} tickLine={false} axisLine={false} hide />
+                                    <YAxis fontSize={10} domain={[0, 100]} axisLine={false} tickLine={false} />
+                                    <Tooltip
+                                        contentStyle={{
+                                            background: "hsl(var(--background))",
+                                            border: "1px solid hsl(var(--border))",
+                                            borderRadius: "var(--radius)",
+                                            fontSize: '12px'
+                                        }}
+                                        formatter={(value) => [`${value}%`, "Score"]}
+                                    />
+                                    <Bar dataKey="score" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                            ) : (
+                                <div className="flex items-center justify-center h-full text-xs text-muted-foreground bg-muted/20 rounded-xl border border-dashed">
+                                    No performance data recorded.
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </CardContent>
+                <CardFooter className="p-6 bg-muted/10 border-t">
+                    <Button className="w-full py-6 text-lg font-bold shadow-sm" onClick={() => openTestDialog(student)}>
+                        <BookOpen className="mr-2 h-5 w-5"/>
+                        View & Start Academic Tests
+                    </Button>
+                </CardFooter>
+            </Card>
+        )) : (
+            <Card className="border-dashed border-2">
+                <CardContent className="text-center p-16 space-y-4">
+                    <div className="bg-muted w-16 h-16 rounded-full flex items-center justify-center mx-auto">
+                        <UsersIcon className="text-muted-foreground w-8 h-8" />
+                    </div>
+                    <div>
+                        <p className="text-lg font-bold">No Student Profiles Found</p>
+                        <p className="text-sm text-muted-foreground max-w-xs mx-auto">Purchase a subscription in the store to get an activation code, then add a student to begin their journey.</p>
+                    </div>
+                    <Button asChild variant="outline">
+                        <Link href="/store">Go to Store</Link>
+                    </Button>
+                </CardContent>
+            </Card>
+        )}
+       </div>
        
        <Dialog open={isTestDialogOpen} onOpenChange={setIsTestDialogOpen}>
-            <DialogContent>
+            <DialogContent className="max-w-md">
                 <DialogHeader>
-                    <DialogTitle>Available Tests for {selectedStudentForTest?.name}</DialogTitle>
-                    <DialogDescription>Select a test from the list to begin. Completed tests can be taken for practice.</DialogDescription>
+                    <DialogTitle>Tests for {selectedStudentForTest?.name}</DialogTitle>
+                    <DialogDescription>
+                        Showing tests for {selectedStudentForTest?.academic.board} {selectedStudentForTest?.academic.standard}.
+                    </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-2 pt-4 max-h-[60vh] overflow-y-auto">
+                <div className="space-y-3 pt-4 max-h-[60vh] overflow-y-auto pr-2">
                     {isLoadingTests ? (
-                        <div className="flex justify-center py-8"><Loader2 className="animate-spin" /></div>
+                        <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                            <Loader2 className="animate-spin text-primary" size={32} />
+                            <p className="text-xs text-muted-foreground">Syncing question bank...</p>
+                        </div>
                     ) : availableTests.length > 0 ? (
                         availableTests.map(test => {
                             const now = new Date();
@@ -401,22 +463,25 @@ function ProfilePageContent() {
                             const isCompleted = testDate < now;
 
                             return (
-                                <div key={test.id} className="flex items-center justify-between p-3 rounded-lg border">
-                                    <div>
-                                        <p className="font-semibold">{test.testSetName}</p>
-                                        <p className="text-sm text-muted-foreground">{format(testDate, "PPP p")}</p>
+                                <div key={test.id} className="flex items-center justify-between p-4 rounded-xl border bg-card hover:border-primary/50 transition-colors">
+                                    <div className="space-y-1">
+                                        <p className="font-bold text-sm leading-none">{test.testSetName}</p>
+                                        <p className="text-[10px] text-muted-foreground font-medium">{format(testDate, "PPP p")}</p>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <Badge variant={isCompleted ? "secondary" : "default"}>
+                                        <Badge variant={isCompleted ? "secondary" : "default"} className="text-[9px] uppercase tracking-tighter">
                                             {isCompleted ? "Practice" : "Live"}
                                         </Badge>
-                                        <Button onClick={() => handleStartTest(test)}>Start Test</Button>
+                                        <Button size="sm" onClick={() => handleStartTest(test)}>Start</Button>
                                     </div>
                                 </div>
                             )
                         })
                     ) : (
-                        <p className="text-center text-muted-foreground py-4">No tests available for this student's board and standard.</p>
+                        <div className="text-center py-12 space-y-2">
+                            <BookOpen className="w-10 h-10 text-muted-foreground mx-auto opacity-20" />
+                            <p className="text-sm text-muted-foreground font-medium">No tests available for this standard yet.</p>
+                        </div>
                     )}
                 </div>
             </DialogContent>
@@ -435,3 +500,4 @@ export default function ProfilePage() {
         </ProtectedRoute>
     );
 }
+import Link from "next/link";

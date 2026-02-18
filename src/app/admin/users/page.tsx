@@ -89,7 +89,8 @@ export default function UserManagementPage() {
       setIsDetailsOpen(true);
 
       try {
-          // Fetch Wallet and Students in parallel for the selected user only
+          // PERFORMANCE: Fetch Wallet and Students in parallel for the selected user only
+          // Prevents N+1 query problem by loading details only on interaction
           const studentsQuery = query(collection(db, "students"), where("parentId", "==", parent.id));
           const walletRef = doc(db, "wallets", parent.id);
           

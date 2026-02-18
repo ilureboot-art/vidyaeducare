@@ -20,6 +20,7 @@ const AuthServiceContext = createContext<Auth | undefined>(undefined);
 const DbContext = createContext<Firestore | undefined>(undefined);
 const AuthContext = createContext<AuthState | undefined>(undefined);
 
+// Synchronous helper to get cached roles from storage
 const getCachedRoles = () => {
     if (typeof window === 'undefined') return null;
     try {
@@ -40,6 +41,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     }
   });
 
+  // INITIAL STATE: Optimistically use cached roles to minimize "Verifying permissions" screen time
   const [authState, setAuthState] = useState<AuthState>(() => {
       const cached = getCachedRoles();
       return {
@@ -85,7 +87,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!services) return;
 
-    // Safety timeout to prevent indefinite loading hang
+    // PERFORMANCE: 5-second safety resolution to prevent indefinite loading hang
     const safetyTimer = setTimeout(() => {
         setAuthState(prev => ({ ...prev, loading: false }));
     }, 5000);
@@ -98,16 +100,18 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
           return;
       }
 
+      // If we have cached roles, resolve loading state immediately using them
       const cached = getCachedRoles();
       if (cached) {
           setAuthState({ user, loading: false, ...cached });
-          // Sync background refresh
+          // Background sync to ensure cache is still valid
           resolveUserRole(user, db).then(fresh => {
               if (JSON.stringify(fresh) !== JSON.stringify(cached)) {
                   setAuthState(prev => ({ ...prev, ...fresh }));
               }
           });
       } else {
+          // No cache: Perform a one-time block to determine role correctly
           const roles = await resolveUserRole(user, db);
           setAuthState({ user, loading: false, ...roles });
       }
@@ -119,7 +123,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     };
   }, [services, resolveUserRole]);
 
-  // Unified Redirection Engine with Mutex Lock
+  // Unified Redirection Engine with Mutex Lock to prevent "Scrolling" reload loops
   useEffect(() => {
     if (authState.loading) return;
 
@@ -133,8 +137,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     if (user) {
       if (isAdmin) {
         // ADMINS: Forcefully locked into the Dashboard workspace.
-        // They are strictly barred from the public home page while logged in
-        // to prevent the "automatic logout" sensation.
+        // Prevent "Fake Logout" sensation by barring access to Guest Home while logged in.
         if (!isAdminArea) {
           targetPath = '/admin/analytics';
         }
@@ -145,18 +148,18 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
         }
       }
     } else {
-      // GUESTS: Barred from secure areas.
+      // GUESTS: Barred from all secure workspaces.
       if (isAdminArea || (!isAuthRoute && !isPublicRoute && pathname !== '/')) {
         targetPath = '/';
       }
     }
 
-    // Apply Navigation Mutex to prevent "Scrolling" reload loops
+    // Apply Navigation Mutex to prevent flickering reload loops
     if (targetPath && targetPath !== pathname && navigationLock.current !== targetPath) {
       navigationLock.current = targetPath;
       router.replace(targetPath);
       
-      // Release lock after navigation is likely processed
+      // Clear lock after a reasonable delay to allow the path change to register
       const timer = setTimeout(() => { navigationLock.current = null; }, 1000);
       return () => clearTimeout(timer);
     }

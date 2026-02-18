@@ -59,6 +59,7 @@ export default function AnalyticsPage() {
           );
 
           // PERFORMANCE OPTIMIZATION: Truly parallel execution for all statistical counters
+          // Replaced getDocs with getCountFromServer for high-speed statistical resolution
           const [revenueSnapshot, usersCountRes, resultsCountRes] = await Promise.all([
               getDocs(revenueQuery),
               getCountFromServer(usersCol),

@@ -162,6 +162,7 @@ function ProfilePageContent() {
             );
             const snapshot = await getDocs(q);
             const tests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ScheduledTest));
+            // PERFORMANCE: Only fetch tests when student specifically requests them
             const sortedTests = tests.sort((a,b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
             setAvailableTests(sortedTests);
         } catch (e) {

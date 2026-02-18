@@ -3,11 +3,12 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { BookOpen, Trophy, Users, LogIn, Share2, Quote, User, Shield } from "lucide-react";
+import { BookOpen, Trophy, Users, LogIn, Share2, Quote, User, Shield, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { useAuth } from "@/firebase";
 
 const features = [
   {
@@ -51,6 +52,7 @@ const testimonials = [
 
 export default function HomePage() {
   const { toast } = useToast();
+  const { user, isAdmin } = useAuth();
 
   const handleShare = async () => {
     const url = window.location.origin;
@@ -94,20 +96,32 @@ Start your journey to success now: ${url}
           <div>
               <h1 className="text-4xl lg:text-6xl font-bold text-primary tracking-tighter">Welcome to Vidya Educare</h1>
               <p className="text-lg md:text-xl text-muted-foreground mt-4">The ultimate platform combining academic excellence with rewarding opportunities to make learning impactful.</p>
-              <div className="mt-8 flex gap-2 md:gap-4 justify-center md:justify-start flex-wrap">
-                  <Button asChild size="lg">
-                      <Link href="/signup"><LogIn className="mr-2"/> Join for Free</Link>
-                  </Button>
-                  <Button asChild size="lg" variant="secondary">
-                      <Link href="/how-to-play">Learn More</Link>
-                  </Button>
-                  <Button asChild size="lg" variant="outline">
-                      <Link href="/login"><User className="mr-2"/> Player Login</Link>
-                  </Button>
-                  <Button asChild size="lg" variant="outline">
-                      <Link href="/admin/login"><Shield className="mr-2"/> Admin Login</Link>
-                  </Button>
-              </div>
+              
+              {user ? (
+                  <div className="mt-8">
+                      <Button asChild size="lg" className="px-8 py-6 text-lg font-bold shadow-xl">
+                          <Link href={isAdmin ? "/admin/analytics" : "/profile"}>
+                              ENTER YOUR WORKSPACE <ArrowRight className="ml-2" />
+                          </Link>
+                      </Button>
+                      <p className="mt-2 text-sm text-muted-foreground">Logged in as {user.email}</p>
+                  </div>
+              ) : (
+                  <div className="mt-8 flex gap-2 md:gap-4 justify-center md:justify-start flex-wrap">
+                      <Button asChild size="lg">
+                          <Link href="/signup"><LogIn className="mr-2"/> Join for Free</Link>
+                      </Button>
+                      <Button asChild size="lg" variant="secondary">
+                          <Link href="/how-to-play">Learn More</Link>
+                      </Button>
+                      <Button asChild size="lg" variant="outline">
+                          <Link href="/login"><User className="mr-2"/> Player Login</Link>
+                      </Button>
+                      <Button asChild size="lg" variant="outline">
+                          <Link href="/admin/login"><Shield className="mr-2"/> Admin Login</Link>
+                      </Button>
+                  </div>
+              )}
           </div>
           <div>
               <Image src="https://picsum.photos/seed/1/600/400" width={600} height={400} alt="Promotional image for Vidya EduCare" className="rounded-lg shadow-xl" data-ai-hint="students learning" />
@@ -217,9 +231,15 @@ Start your journey to success now: ${url}
             <h2 className="text-3xl md:text-4xl font-bold">Ready to Get Started?</h2>
             <p className="mt-4 max-w-2xl mx-auto">Join thousands of users who are acing their exams and winning rewards. Sign up today and get an instant welcome bonus!</p>
             <div className="mt-8 flex gap-2 md:gap-4 justify-center flex-wrap">
-                <Button asChild size="lg" variant="secondary" className="text-primary hover:bg-white/90">
-                    <Link href="/signup">Create Your Account</Link>
-                </Button>
+                {user ? (
+                    <Button asChild size="lg" variant="secondary" className="text-primary hover:bg-white/90">
+                        <Link href={isAdmin ? "/admin/analytics" : "/profile"}>Return to Workspace</Link>
+                    </Button>
+                ) : (
+                    <Button asChild size="lg" variant="secondary" className="text-primary hover:bg-white/90">
+                        <Link href="/signup">Create Your Account</Link>
+                    </Button>
+                )}
                 <Button size="lg" variant="ghost" onClick={handleShare}>
                     <Share2 className="mr-2"/> Share with Friends
                   </Button>

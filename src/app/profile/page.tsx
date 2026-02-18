@@ -7,7 +7,7 @@ import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { User, Mail, Calendar, Phone, Edit, GraduationCap, Trash2, PlusCircle, BookOpen, Loader2, BarChart2, AlertCircle, Users as UsersIcon } from "lucide-react";
+import { User, Mail, Calendar, Phone, Edit, GraduationCap, Trash2, PlusCircle, BookOpen, Loader2, BarChart2, AlertCircle, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -430,7 +430,7 @@ function ProfilePageContent() {
             <Card className="border-dashed border-2">
                 <CardContent className="text-center p-16 space-y-4">
                     <div className="bg-muted w-16 h-16 rounded-full flex items-center justify-center mx-auto">
-                        <UsersIcon className="text-muted-foreground w-8 h-8" />
+                        <Users className="text-muted-foreground w-8 h-8" />
                     </div>
                     <div>
                         <p className="text-lg font-bold">No Student Profiles Found</p>

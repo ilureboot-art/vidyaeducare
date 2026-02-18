@@ -3,10 +3,11 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { User, Mail, Calendar, Phone, Edit, GraduationCap, Trash2, PlusCircle, BookOpen, Loader2, BarChart2, AlertCircle } from "lucide-react";
+import { User, Mail, Calendar, Phone, Edit, GraduationCap, Trash2, PlusCircle, BookOpen, Loader2, BarChart2, AlertCircle, Users as UsersIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -500,4 +501,3 @@ export default function ProfilePage() {
         </ProtectedRoute>
     );
 }
-import Link from "next/link";

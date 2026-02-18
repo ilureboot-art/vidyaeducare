@@ -126,19 +126,21 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     const { user, isAdmin } = authState;
     const isAdminArea = pathname.startsWith('/admin');
     const isAuthRoute = ['/login', '/signup', '/admin/login', '/forgot-password', '/admin/setup'].includes(pathname);
-    const isPublicRoute = ['/how-to-play', '/'].includes(pathname);
+    const isPublicRoute = ['/how-to-play'].includes(pathname);
     
     let targetPath: string | null = null;
 
     if (user) {
       if (isAdmin) {
-        // ADMINS: Forcefully kept in Dashboard workspace.
-        if (isAuthRoute || !isAdminArea && !isPublicRoute) {
+        // ADMINS: Forcefully locked into the Dashboard workspace.
+        // They are strictly barred from the public home page while logged in
+        // to prevent the "automatic logout" sensation.
+        if (!isAdminArea) {
           targetPath = '/admin/analytics';
         }
       } else {
-        // STUDENTS: Barred from Admin Panel.
-        if (isAdminArea || isAuthRoute) {
+        // STUDENTS: Barred from Admin Panel and redirected from Auth/Home to Profile.
+        if (isAdminArea || isAuthRoute || pathname === '/') {
           targetPath = '/profile';
         }
       }

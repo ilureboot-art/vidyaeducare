@@ -20,7 +20,6 @@ const AuthServiceContext = createContext<Auth | undefined>(undefined);
 const DbContext = createContext<Firestore | undefined>(undefined);
 const AuthContext = createContext<AuthState | undefined>(undefined);
 
-// Synchronous helper to get cached roles from storage to prevent "flicker"
 const getCachedRoles = () => {
     if (typeof window === 'undefined') return null;
     try {
@@ -41,7 +40,6 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     }
   });
 
-  // INITIAL STATE: Prioritize cache to eliminate "Verifying permissions" screen on refresh
   const [authState, setAuthState] = useState<AuthState>(() => {
       const cached = getCachedRoles();
       return {
@@ -87,7 +85,6 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!services) return;
 
-    // PERFORMANCE: Fail-safe timer to prevent indefinite loading hang
     const safetyTimer = setTimeout(() => {
         setAuthState(prev => ({ ...prev, loading: false }));
     }, 5000);
@@ -100,11 +97,9 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
           return;
       }
 
-      // Handle immediate resolution if cache exists
       const cached = getCachedRoles();
       if (cached) {
           setAuthState({ user, loading: false, ...cached });
-          // Refresh role in background to ensure security
           resolveUserRole(user, db).then(fresh => {
               if (JSON.stringify(fresh) !== JSON.stringify(cached)) {
                   setAuthState(prev => ({ ...prev, ...fresh }));
@@ -122,42 +117,38 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     };
   }, [services, resolveUserRole]);
 
-  // REDIRECTION ENGINE: Deterministic Mutex Lock to stop "scrolling" reloads
   useEffect(() => {
     if (authState.loading) return;
 
     const { user, isAdmin } = authState;
-    const isAdminArea = pathname.startsWith('/admin');
-    const isAuthRoute = ['/login', '/signup', '/admin/login', '/forgot-password', '/admin/setup'].includes(pathname);
-    const isPublicRoute = ['/how-to-play', '/'].includes(pathname);
+    const cleanPath = pathname.endsWith('/') && pathname !== '/' ? pathname.slice(0, -1) : pathname;
+    const isAdminArea = cleanPath.startsWith('/admin');
+    const isAuthRoute = ['/login', '/signup', '/admin/login', '/forgot-password', '/admin/setup'].includes(cleanPath);
+    const isPublicRoute = ['/how-to-play', '/'].includes(cleanPath);
     
     let targetPath: string | null = null;
 
     if (user) {
       if (isAdmin) {
-        // ADMINS: Locked into Dashboard. Redirect if straying to guest/student zones.
         if (!isAdminArea) {
           targetPath = '/admin/analytics';
         }
       } else {
-        // STUDENTS: Locked into Student workspace.
-        if (isAdminArea || isAuthRoute || pathname === '/') {
+        if (isAdminArea || isAuthRoute || cleanPath === '/') {
           targetPath = '/profile';
         }
       }
     } else {
-      // GUESTS: Barred from secure zones.
       if (isAdminArea || (!isAuthRoute && !isPublicRoute)) {
         targetPath = '/';
       }
     }
 
-    // Atomic Navigation Mutex
-    if (targetPath && targetPath !== pathname && navigationLock.current !== targetPath) {
+    if (targetPath && targetPath !== cleanPath && navigationLock.current !== targetPath) {
       navigationLock.current = targetPath;
       router.replace(targetPath);
       
-      const timer = setTimeout(() => { navigationLock.current = null; }, 1000);
+      const timer = setTimeout(() => { navigationLock.current = null; }, 1500);
       return () => clearTimeout(timer);
     }
   }, [authState, pathname, router]);
@@ -171,7 +162,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
         </div>
         <div className="space-y-2">
             <p className="text-xl font-black text-primary tracking-tighter uppercase italic">Vidya EduCare</p>
-            <p className="text-muted-foreground text-sm font-medium tracking-wide">Syncing Workspace Credentials...</p>
+            <p className="text-muted-foreground text-sm font-medium tracking-wide">Establishing Secure Session...</p>
         </div>
       </div>
     );

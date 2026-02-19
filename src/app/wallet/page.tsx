@@ -38,14 +38,10 @@ import UserLayout from "@/components/UserLayout";
 
 const getStatusBadgeVariant = (status: string) => {
     switch (status.toLowerCase()) {
-        case 'completed':
-            return 'default';
-        case 'pending':
-            return 'secondary';
-        case 'rejected':
-            return 'destructive';
-        default:
-            return 'outline';
+        case 'completed': return 'default';
+        case 'pending': return 'secondary';
+        case 'rejected': return 'destructive';
+        default: return 'outline';
     }
 }
 
@@ -69,31 +65,19 @@ function WalletPageContent() {
 
   useEffect(() => {
     if (user && db) {
-        // Fetch admin payment methods
         const paymentMethodsRef = doc(db, "configs", "paymentMethods");
         const unsubPaymentMethods = onSnapshot(paymentMethodsRef, (doc) => {
-            if (doc.exists()) {
-                setAdminPaymentMethods(doc.data() as AdminPaymentMethods);
-            }
+            if (doc.exists()) setAdminPaymentMethods(doc.data() as AdminPaymentMethods);
         });
 
-        // Fetch wallet data
         const walletRef = doc(db, "wallets", user.uid);
         const unsubWallet = onSnapshot(walletRef, (doc) => {
-            if (doc.exists()) {
-                setWalletInfo(doc.data() as WalletInfo);
-            } else {
-                 setWalletInfo({
-                    balance: 0,
-                    coins: 0,
-                    referralCode: `REF${user.uid.slice(0,6).toUpperCase()}`
-                });
-            }
+            if (doc.exists()) setWalletInfo(doc.data() as WalletInfo);
+            else setWalletInfo({ balance: 0, coins: 0, referralCode: `REF${user.uid.slice(0,6).toUpperCase()}` });
         });
 
-        // Fetch recent transactions
         const txsRef = collection(db, "transactions");
-        const q = query(txsRef, where("user", "==", user.uid), orderBy("date", "desc"), limit(5));
+        const q = query(txsRef, where("user", "==", user.uid), orderBy("date", "desc"), limit(10));
         const unsubTransactions = onSnapshot(q, (querySnapshot) => {
             const transactionList: Transaction[] = querySnapshot.docs.map(d => {
                 const data = d.data();
@@ -114,68 +98,37 @@ function WalletPageContent() {
   const handleAddFunds = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!user || !db) return;
-
     const form = event.currentTarget;
     const amount = parseFloat((form.elements.namedItem('amount-add') as HTMLInputElement).value);
     const txnId = (form.elements.namedItem('txnId') as HTMLInputElement).value;
+    if (!amount || !txnId) return;
 
-    if (!amount || !txnId) {
-        toast({ variant: 'destructive', title: 'Missing Information', description: 'Please fill out all fields.'});
-        return;
-    }
-
-    const newTransaction = {
-        type: 'deposit',
-        description: 'Fund Deposit Request',
-        amount: amount,
-        date: serverTimestamp(),
-        status: 'Pending',
-        referenceId: txnId,
-        user: user.uid,
-    };
-    
     try {
-        await addDoc(collection(db, "transactions"), newTransaction);
-        toast({
-          title: "Request Submitted",
-          description: "Your fund deposit request has been sent for admin approval.",
+        await addDoc(collection(db, "transactions"), {
+            type: 'deposit',
+            description: 'Fund Deposit Request',
+            amount: amount,
+            date: serverTimestamp(),
+            status: 'Pending',
+            referenceId: txnId,
+            user: user.uid,
         });
+        toast({ title: "Request Submitted", description: "Your fund deposit request has been sent for approval." });
         setAddFundsOpen(false);
         form.reset();
     } catch(error) {
-        console.error("Error submitting deposit request:", error);
-        toast({ variant: 'destructive', title: "Error", description: "Could not submit your request."});
+        toast({ variant: 'destructive', title: "Error", description: "Could not submit request."});
     }
   }
   
   const handleWithdraw = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!walletInfo || !user || !db) return;
-
     const form = event.currentTarget;
     const amount = parseFloat((form.elements.namedItem('amount-withdraw') as HTMLInputElement).value);
     const upiId = (form.elements.namedItem('upiId') as HTMLInputElement).value;
-    
-    if (!amount || !upiId) {
-        toast({ variant: 'destructive', title: 'Missing Information', description: 'Please fill out all fields.'});
-        return;
-    }
-
-    if (amount > walletInfo.balance) {
-        toast({
-            variant: "destructive",
-            title: "Insufficient Balance",
-            description: "You cannot withdraw more than your available balance.",
-        });
-        return;
-    }
-
-    if (amount < 200) {
-        toast({
-            variant: "destructive",
-            title: "Invalid Amount",
-            description: "Minimum withdrawal amount is ₹200.",
-        });
+    if (!amount || !upiId || amount > walletInfo.balance || amount < 200) {
+        toast({ variant: 'destructive', title: "Invalid Request", description: "Check balance and minimum amount (₹200)." });
         return;
     }
     
@@ -183,50 +136,23 @@ function WalletPageContent() {
         await runTransaction(db, async (transaction) => {
             const walletRef = doc(db, "wallets", user.uid);
             const walletDoc = await transaction.get(walletRef);
-
-            if (!walletDoc.exists()) {
-                throw new Error("Wallet not found.");
-            }
-            
+            if (!walletDoc.exists()) throw new Error("Wallet not found.");
             const currentBalance = walletDoc.data().balance;
-            if (amount > currentBalance) {
-                throw new Error("Insufficient balance.");
-            }
-
-            // Deduct amount from wallet immediately
             transaction.update(walletRef, { balance: currentBalance - amount });
-
-            const newWithdrawalRequest = {
-                type: 'withdrawal',
-                description: 'Withdrawal Request',
-                amount: -amount,
-                date: serverTimestamp(),
-                status: 'Pending',
-                paymentMethod: upiId,
-                user: user.uid,
-            };
-            
-            // Use a new document reference for the transaction
             const newTxRef = doc(collection(db, "transactions"));
-            transaction.set(newTxRef, newWithdrawalRequest);
+            transaction.set(newTxRef, { type: 'withdrawal', description: 'Withdrawal Request', amount: -amount, date: serverTimestamp(), status: 'Pending', paymentMethod: upiId, user: user.uid });
         });
-
-        toast({
-          title: "Request Submitted",
-          description: `Your withdrawal request for ₹${amount} has been sent for admin approval.`,
-        });
+        toast({ title: "Request Submitted", description: `Withdrawal request for ₹${amount} sent.` });
         setWithdrawOpen(false);
         form.reset();
-
     } catch(error: any) {
-        console.error("Error submitting withdrawal request:", error);
-        toast({ variant: 'destructive', title: "Error", description: error.message || "Could not submit your request."});
+        toast({ variant: 'destructive', title: "Error", description: error.message });
     }
   }
 
   if (!walletInfo || !transactions || !adminPaymentMethods) {
     return (
-      <div className="w-full max-w-2xl mx-auto space-y-6 flex justify-center items-center h-96">
+      <div className="w-full max-w-2xl mx-auto flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />
       </div>
     );
@@ -237,27 +163,20 @@ function WalletPageContent() {
       <Card className="shadow-lg">
         <CardHeader className="text-center">
           <CardTitle className="text-3xl font-bold text-primary">My Wallet</CardTitle>
-          <CardDescription>Your balance and recent activity.</CardDescription>
+          <CardDescription>Secure balance management.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 gap-4">
-              <Card className="text-center p-6 bg-primary/10">
-                <p className="text-sm font-medium text-primary">CASH BALANCE</p>
-                <p className="text-5xl font-bold text-primary">₹{walletInfo.balance.toFixed(2)}</p>
-              </Card>
-          </div>
+          <Card className="text-center p-6 bg-primary/10 border-none shadow-inner">
+            <p className="text-sm font-medium text-primary">AVAILABLE CASH</p>
+            <p className="text-5xl font-bold text-primary">₹{walletInfo.balance.toFixed(2)}</p>
+          </Card>
           <div className="grid grid-cols-2 gap-4">
             <Dialog open={addFundsOpen} onOpenChange={setAddFundsOpen}>
               <DialogTrigger asChild>
-                <Button size="lg" variant="outline"><PlusCircle className="mr-2"/> Add Funds</Button>
+                <Button size="lg" variant="outline" className="h-14"><PlusCircle className="mr-2"/> Add Funds</Button>
               </DialogTrigger>
               <DialogContent className="max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Add Funds</DialogTitle>
-                  <DialogDescription>
-                    Send payment to one of the admin methods below and enter the transaction ID to confirm.
-                  </DialogDescription>
-                </DialogHeader>
+                <DialogHeader><DialogTitle>Add Funds</DialogTitle></DialogHeader>
                 <div className="space-y-4 pt-2 max-h-[70vh] overflow-y-auto pr-2">
                     <Tabs defaultValue="upi" className="w-full">
                         <TabsList className="grid w-full grid-cols-2">
@@ -265,132 +184,72 @@ function WalletPageContent() {
                             <TabsTrigger value="bank">Bank Transfer</TabsTrigger>
                         </TabsList>
                         <TabsContent value="upi" className="pt-4 space-y-4">
-                            <p className="text-sm text-center text-muted-foreground">Scan the QR code or use one of the UPI IDs below.</p>
                             {adminPaymentMethods.qrCodeUrl && (
                                 <div className="flex justify-center p-4 bg-muted rounded-lg">
-                                    <Image src={adminPaymentMethods.qrCodeUrl} alt="Payment QR Code" width={200} height={200} data-ai-hint="QR code" />
+                                    <Image src={adminPaymentMethods.qrCodeUrl} alt="QR Code" width={200} height={200} />
                                 </div>
                             )}
                             <div className="space-y-2 text-sm">
-                                <div className="flex justify-between items-center p-2 rounded-md hover:bg-muted">
-                                    <span className="font-semibold">GPay:</span>
-                                    <CopyButton valueToCopy={adminPaymentMethods.gpayNumber} />
-                                </div>
-                                <div className="flex justify-between items-center p-2 rounded-md hover:bg-muted">
-                                    <span className="font-semibold">PhonePe:</span>
-                                    <CopyButton valueToCopy={adminPaymentMethods.phonepeNumber} />
-                                </div>
-                                <div className="flex justify-between items-center p-2 rounded-md hover:bg-muted">
-                                    <span className="font-semibold">Main UPI ID:</span>
-                                    <CopyButton valueToCopy={adminPaymentMethods.upiId} />
-                                </div>
+                                <div className="flex justify-between items-center p-2 rounded-md hover:bg-muted"><span className="font-semibold">GPay:</span><CopyButton valueToCopy={adminPaymentMethods.gpayNumber} /></div>
+                                <div className="flex justify-between items-center p-2 rounded-md hover:bg-muted"><span className="font-semibold">PhonePe:</span><CopyButton valueToCopy={adminPaymentMethods.phonepeNumber} /></div>
+                                <div className="flex justify-between items-center p-2 rounded-md hover:bg-muted"><span className="font-semibold">Main UPI:</span><CopyButton valueToCopy={adminPaymentMethods.upiId} /></div>
                             </div>
                         </TabsContent>
                         <TabsContent value="bank" className="pt-4 space-y-2 text-sm">
-                             <div className="flex justify-between items-center p-2 rounded-md hover:bg-muted">
-                                <span>Account Name:</span>
-                                <CopyButton valueToCopy={adminPaymentMethods.accountHolderName} />
-                            </div>
-                             <div className="flex justify-between items-center p-2 rounded-md hover:bg-muted">
-                                <span>Account No:</span>
-                                <CopyButton valueToCopy={adminPaymentMethods.accountNumber} />
-                            </div>
-                            <div className="flex justify-between items-center p-2 rounded-md hover:bg-muted">
-                                <span>IFSC Code:</span>
-                                 <CopyButton valueToCopy={adminPaymentMethods.ifscCode} />
-                            </div>
-                             <div className="flex justify-between items-center p-2 rounded-md hover:bg-muted">
-                                <span>Bank Name:</span>
-                                <span className="font-medium text-right">{adminPaymentMethods.bankName}</span>
-                            </div>
+                             <div className="flex justify-between items-center p-2 rounded-md hover:bg-muted"><span>Account:</span><CopyButton valueToCopy={adminPaymentMethods.accountNumber} /></div>
+                             <div className="flex justify-between items-center p-2 rounded-md hover:bg-muted"><span>IFSC:</span><CopyButton valueToCopy={adminPaymentMethods.ifscCode} /></div>
+                             <div className="flex justify-between items-center p-2 rounded-md hover:bg-muted"><span>Bank:</span><span className="font-medium">{adminPaymentMethods.bankName}</span></div>
                         </TabsContent>
                     </Tabs>
                     <form onSubmit={handleAddFunds} className="space-y-4 border-t pt-4">
-                        <div>
-                            <Label htmlFor="amount-add">Amount (INR)</Label>
-                            <Input id="amount-add" name="amount-add" type="number" placeholder="e.g., 500" required />
-                        </div>
-                        <div>
-                            <Label htmlFor="txnId">Transaction Reference ID</Label>
-                            <Input id="txnId" name="txnId" placeholder="Enter the UPI/Bank transaction ID" required />
-                        </div>
-                        <DialogFooter>
-                            <Button type="submit">Submit Request</Button>
-                        </DialogFooter>
+                        <div><Label htmlFor="amount-add">Amount (INR)</Label><Input id="amount-add" name="amount-add" type="number" required /></div>
+                        <div><Label htmlFor="txnId">Reference ID</Label><Input id="txnId" name="txnId" required /></div>
+                        <DialogFooter><Button type="submit" className="w-full">Submit Request</Button></DialogFooter>
                     </form>
                 </div>
               </DialogContent>
             </Dialog>
-
             <Dialog open={withdrawOpen} onOpenChange={setWithdrawOpen}>
               <DialogTrigger asChild>
-                <Button size="lg" variant="outline"><MinusCircle className="mr-2"/> Withdraw</Button>
+                <Button size="lg" variant="outline" className="h-14"><MinusCircle className="mr-2"/> Withdraw</Button>
               </DialogTrigger>
               <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Withdraw Funds</DialogTitle>
-                  <DialogDescription>
-                    Request a withdrawal to your payment account. Minimum ₹200.
-                  </DialogDescription>
-                </DialogHeader>
+                <DialogHeader><DialogTitle>Withdraw Funds</DialogTitle></DialogHeader>
                 <form onSubmit={handleWithdraw} className="space-y-4">
-                    <div>
-                        <Label htmlFor="amount-withdraw">Amount (INR)</Label>
-                        <Input id="amount-withdraw" name="amount-withdraw" type="number" placeholder="e.g., 250" required min="200" />
-                    </div>
-                    <div>
-                        <Label htmlFor="upiId">Your UPI / GPay / PhonePe ID</Label>
-                        <Input id="upiId" name="upiId" placeholder="Enter your payment ID" required />
-                    </div>
-                    <DialogFooter>
-                        <Button type="submit">Submit Request</Button>
-                    </DialogFooter>
+                    <div><Label htmlFor="amount-withdraw">Amount (INR)</Label><Input id="amount-withdraw" name="amount-withdraw" type="number" required min="200" /></div>
+                    <div><Label htmlFor="upiId">Target UPI ID</Label><Input id="upiId" name="upiId" required /></div>
+                    <DialogFooter><Button type="submit" className="w-full">Submit Request</Button></DialogFooter>
                 </form>
               </DialogContent>
             </Dialog>
           </div>
-
           <div className="space-y-4 pt-4">
-            <h3 className="font-semibold text-lg text-center">Recent Activity</h3>
-            {transactions.length > 0 ? (
-                <div className="space-y-2">
-                    {transactions.map((tx) => (
-                         <div key={tx.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                            <div className="flex items-center gap-3">
-                                <div className={`p-2 rounded-full ${tx.amount >= 0 ? 'bg-green-100 dark:bg-green-900' : 'bg-red-100 dark:bg-red-900'}`}>
-                                    {tx.amount >= 0 
-                                    ? <ArrowDownLeft className="w-4 h-4 text-green-600 dark:text-green-400" /> 
-                                    : <ArrowUpRight className="w-4 h-4 text-red-600 dark:text-red-400" />}
-                                </div>
-                                <div>
-                                    <p className="font-medium">{tx.description}</p>
-                                    <p className="text-xs text-muted-foreground">{format(new Date(tx.date), 'P')}</p>
-                                </div>
+            <h3 className="font-bold text-center">Recent Activity</h3>
+            <div className="space-y-2">
+                {transactions.length > 0 ? transactions.map((tx) => (
+                     <div key={tx.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                        <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-full ${tx.amount >= 0 ? 'bg-green-100' : 'bg-red-100'}`}>
+                                {tx.amount >= 0 ? <ArrowDownLeft className="w-4 h-4 text-green-600" /> : <ArrowUpRight className="w-4 h-4 text-red-600" />}
                             </div>
-                            <div className="text-right">
-                                <p className={`font-bold ${tx.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                     {tx.amount >= 0 ? '+' : ''}₹{Math.abs(tx.amount).toFixed(2)}
-                                </p>
-                                <Badge variant={getStatusBadgeVariant(tx.status)} className="mt-1">{tx.status}</Badge>
+                            <div>
+                                <p className="font-medium text-sm">{tx.description}</p>
+                                <p className="text-[10px] text-muted-foreground">{format(new Date(tx.date), 'PP')}</p>
                             </div>
-                         </div>
-                    ))}
-                </div>
-            ) : (
-                <p className="text-sm text-muted-foreground text-center">No recent transactions.</p>
-            )}
+                        </div>
+                        <div className="text-right">
+                            <p className={`font-bold text-sm ${tx.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>₹{Math.abs(tx.amount).toFixed(2)}</p>
+                            <Badge variant={getStatusBadgeVariant(tx.status)} className="text-[10px] h-5 px-1.5">{tx.status}</Badge>
+                        </div>
+                     </div>
+                )) : <p className="text-sm text-muted-foreground text-center">No transactions found.</p>}
+            </div>
           </div>
         </CardContent>
          <CardFooter>
-            <Button asChild variant="secondary" className="w-full">
-                <Link href="/transactions">
-                    <History className="mr-2" />
-                    View Full Transaction History
-                </Link>
-            </Button>
+            <Button asChild variant="secondary" className="w-full"><Link href="/transactions"><History className="mr-2" /> Full History</Link></Button>
          </CardFooter>
       </Card>
-      
     </div>
   );
 }

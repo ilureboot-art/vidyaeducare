@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -22,7 +22,6 @@ import { useAuth, useDb } from "@/firebase";
 import { doc, getDoc, setDoc, collection, getDocs, deleteDoc, updateDoc, query, where, DocumentData, onSnapshot } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import UserLayout from "@/components/UserLayout";
-
 
 function ProfilePageContent() {
     const { toast } = useToast();
@@ -48,7 +47,6 @@ function ProfilePageContent() {
         if (user && db) {
             setIsLoading(true);
             
-            // Parent Profile Listener
             const unsubParent = onSnapshot(doc(db, "users", user.uid), (doc) => {
                 if (doc.exists()) setParentProfile(doc.data());
                 setIsLoading(false);
@@ -57,14 +55,12 @@ function ProfilePageContent() {
                 setIsLoading(false);
             });
 
-            // Students Listener
             const q = query(collection(db, "students"), where("parentId", "==", user.uid));
             const unsubStudents = onSnapshot(q, (snapshot) => {
                 const studentList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentProfile));
                 setStudents(studentList);
             });
 
-            // Activation Codes Listener
             const unsubCodes = onSnapshot(doc(db, "activationCodes", user.uid), (doc) => {
                 setValidCodes(doc.exists() ? doc.data().codes : []);
             });
@@ -120,15 +116,12 @@ function ProfilePageContent() {
         
         try {
             await setDoc(doc(db, "students", newStudentId), newStudent);
-
             const updatedCodes = validCodes.filter(c => c !== activationCode);
             await updateDoc(doc(db, "activationCodes", user.uid), { codes: updatedCodes });
-
             toast({ title: "Student Added!", description: `${newStudent.name}'s profile has been created.`});
             setIsAddStudentOpen(false);
             setActivationCode("");
             setIsCodeVerified(false);
-
         } catch (error) {
             console.error("Error adding student:", error);
             toast({ variant: 'destructive', title: "Error", description: "Could not create student profile." });
@@ -138,7 +131,6 @@ function ProfilePageContent() {
     const handleDeleteStudent = async (studentId: string) => {
         if (!db) return;
         if (!confirm("Are you sure you want to remove this student profile?")) return;
-        
         try {
             await deleteDoc(doc(db, "students", studentId));
             toast({ title: "Student Removed", description: "The student profile has been deleted." });
@@ -153,7 +145,6 @@ function ProfilePageContent() {
         setSelectedStudentForTest(student);
         setIsTestDialogOpen(true);
         setIsLoadingTests(true);
-        
         try {
             const q = query(
                 collection(db, "scheduledTests"), 
@@ -162,8 +153,7 @@ function ProfilePageContent() {
             );
             const snapshot = await getDocs(q);
             const tests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ScheduledTest));
-            const sortedTests = tests.sort((a,b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
-            setAvailableTests(sortedTests);
+            setAvailableTests(tests.sort((a,b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime()));
         } catch (e) {
             console.error("Error fetching tests:", e);
             toast({ variant: 'destructive', title: "Error", description: "Could not load tests." });
@@ -234,7 +224,7 @@ function ProfilePageContent() {
             <Card className="border-yellow-200 bg-yellow-50 dark:bg-yellow-900/20">
                 <CardContent className="flex items-center gap-3 p-4">
                     <AlertCircle className="text-yellow-600" />
-                    <p className="text-sm text-yellow-700 dark:text-yellow-400 font-medium">Your profile data is being initialized. You can still manage students below.</p>
+                    <p className="text-sm text-yellow-700 dark:text-yellow-400 font-medium">Your profile data is being initialized.</p>
                 </CardContent>
             </Card>
         )}
@@ -257,7 +247,7 @@ function ProfilePageContent() {
                         <DialogDescription>
                             {isCodeVerified 
                                 ? "Fill in the details for the new student profile." 
-                                : "You need a product activation code from a subscription purchase to add a new student."}
+                                : "You need a product activation code to add a new student."}
                         </DialogDescription>
                     </DialogHeader>
                     {!isCodeVerified ? (
@@ -433,7 +423,7 @@ function ProfilePageContent() {
                     </div>
                     <div>
                         <p className="text-lg font-bold">No Student Profiles Found</p>
-                        <p className="text-sm text-muted-foreground max-w-xs mx-auto">Purchase a subscription in the store to get an activation code, then add a student to begin their journey.</p>
+                        <p className="text-sm text-muted-foreground max-w-xs mx-auto">Purchase a subscription in the store to get an activation code.</p>
                     </div>
                     <Button asChild variant="outline">
                         <Link href="/store">Go to Store</Link>
@@ -462,7 +452,6 @@ function ProfilePageContent() {
                             const now = new Date();
                             const testDate = new Date(test.dateTime);
                             const isCompleted = testDate < now;
-
                             return (
                                 <div key={test.id} className="flex items-center justify-between p-4 rounded-xl border bg-card hover:border-primary/50 transition-colors">
                                     <div className="space-y-1">
@@ -481,13 +470,12 @@ function ProfilePageContent() {
                     ) : (
                         <div className="text-center py-12 space-y-2">
                             <BookOpen className="w-10 h-10 text-muted-foreground mx-auto opacity-20" />
-                            <p className="text-sm text-muted-foreground font-medium">No tests available for this standard yet.</p>
+                            <p className="text-sm text-muted-foreground font-medium">No tests available yet.</p>
                         </div>
                     )}
                 </div>
             </DialogContent>
        </Dialog>
-
     </div>
   );
 }

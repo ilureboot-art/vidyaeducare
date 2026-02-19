@@ -99,15 +99,17 @@ Start your journey to success now: ${url}
               
               {user ? (
                   <div className="mt-8 space-y-4">
-                      <div className="p-4 bg-primary/5 rounded-xl border border-primary/10 inline-block">
-                        <p className="text-sm font-semibold text-primary mb-2">Welcome Back!</p>
-                        <Button asChild size="lg" className="px-8 py-6 text-lg font-bold shadow-xl">
+                      <div className="p-6 bg-primary/[0.03] rounded-2xl border border-primary/10 inline-block text-center md:text-left">
+                        <p className="text-sm font-bold text-primary mb-3 flex items-center gap-2 justify-center md:justify-start">
+                            <Shield className="w-4 h-4" /> ACTIVE SESSION DETECTED
+                        </p>
+                        <Button asChild size="lg" className="px-10 py-8 text-xl font-black shadow-xl hover:scale-105 transition-transform">
                             <Link href={isAdmin ? "/admin/analytics" : "/profile"}>
-                                ENTER YOUR WORKSPACE <ArrowRight className="ml-2" />
+                                RETURN TO WORKSPACE <ArrowRight className="ml-2" />
                             </Link>
                         </Button>
+                        <p className="mt-4 text-xs text-muted-foreground font-medium">Logged in as <span className="text-primary">{user.email}</span></p>
                       </div>
-                      <p className="text-xs text-muted-foreground">Authenticated as {user.email}</p>
                   </div>
               ) : (
                   <div className="mt-8 flex gap-2 md:gap-4 justify-center md:justify-start flex-wrap">
@@ -126,8 +128,9 @@ Start your journey to success now: ${url}
                   </div>
               )}
           </div>
-          <div>
-              <Image src="https://picsum.photos/seed/1/600/400" width={600} height={400} alt="Promotional image for Vidya EduCare" className="rounded-lg shadow-xl" data-ai-hint="students learning" />
+          <div className="relative group">
+              <div className="absolute -inset-1 bg-gradient-to-r from-primary to-accent rounded-lg blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
+              <Image src="https://picsum.photos/seed/1/600/400" width={600} height={400} alt="Promotional image for Vidya EduCare" className="relative rounded-lg shadow-2xl" data-ai-hint="students learning" />
           </div>
         </section>
         
@@ -164,7 +167,7 @@ Start your journey to success now: ${url}
             </div>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {features.map((feature) => (
-                    <Card key={feature.title} className="text-center hover:shadow-lg transition-shadow">
+                    <Card key={feature.title} className="text-center hover:shadow-lg transition-shadow border-primary/5">
                         <CardHeader className="items-center">
                             <div className="p-3 bg-primary/10 rounded-full">
                               <feature.icon className="w-8 h-8 text-primary" />
@@ -180,10 +183,10 @@ Start your journey to success now: ${url}
         </section>
 
         {/* Founder's Note Section */}
-        <section className="bg-muted/50 rounded-lg p-6 md:p-12">
+        <section className="bg-muted/50 rounded-lg p-6 md:p-12 border">
           <div className="grid md:grid-cols-3 gap-8 items-center">
             <div className="md:col-span-1">
-                <Image src="https://picsum.photos/seed/2/400/400" width={400} height={400} alt="Mr. Sanjay Vidya Vijay Gurav, Founder of Vidya EduCare" className="rounded-lg shadow-xl mx-auto" data-ai-hint="portrait professional" />
+                <Image src="https://picsum.photos/seed/2/400/400" width={400} height={400} alt="Mr. Sanjay Vidya Vijay Gurav, Founder of Vidya EduCare" className="rounded-lg shadow-xl mx-auto border-4 border-white" data-ai-hint="portrait professional" />
             </div>
             <div className="md:col-span-2">
               <h2 className="text-3xl font-bold text-primary">A Note From Our Founder</h2>
@@ -193,7 +196,7 @@ Start your journey to success now: ${url}
               </p>
               <div className="mt-6">
                 <p className="text-xl font-bold">Mr. Sanjay Vidya Vijay Gurav</p>
-                <p className="text-muted-foreground">Founder & Owner, Vidya EduCare</p>
+                <p className="text-muted-foreground font-medium uppercase tracking-widest text-xs">Founder & Owner, Vidya EduCare</p>
               </div>
             </div>
           </div>
@@ -207,7 +210,7 @@ Start your journey to success now: ${url}
             </div>
             <div className="grid md:grid-cols-3 gap-6">
               {testimonials.map((testimonial) => (
-                <Card key={testimonial.name} className="flex flex-col">
+                <Card key={testimonial.name} className="flex flex-col border-primary/5">
                     <CardContent className="pt-6 flex-grow">
                         <Quote className="w-8 h-8 text-primary/50 mb-4"/>
                         <p className="text-muted-foreground italic">"{testimonial.quote}"</p>
@@ -215,7 +218,7 @@ Start your journey to success now: ${url}
                     <CardFooter className="mt-4">
                         <div className="flex items-center gap-3">
                             <Avatar>
-                                <AvatarImage src={`https://picsum.photos/seed/${testimonial.avatar}/40/40`} data-ai-hint="profile avatar" />
+                                <AvatarImage src={`https://picsum.photos/seed/${testimonial.avatar}/40/40`} />
                                 <AvatarFallback>{testimonial.avatar}</AvatarFallback>
                             </Avatar>
                             <div>
@@ -230,21 +233,23 @@ Start your journey to success now: ${url}
         </section>
 
         {/* Final CTA Section */}
-        <section className="bg-primary text-primary-foreground rounded-lg p-8 md:p-12 text-center">
-            <h2 className="text-3xl md:text-4xl font-bold">Ready to Get Started?</h2>
-            <p className="mt-4 max-w-2xl mx-auto">Join thousands of users who are acing their exams and winning rewards. Sign up today and get an instant welcome bonus!</p>
-            <div className="mt-8 flex gap-2 md:gap-4 justify-center flex-wrap">
+        <section className="bg-primary text-primary-foreground rounded-lg p-8 md:p-12 text-center shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32 blur-3xl"></div>
+            <div className="absolute bottom-0 left-0 w-64 h-64 bg-accent/20 rounded-full -ml-32 -mb-32 blur-3xl"></div>
+            <h2 className="text-3xl md:text-4xl font-black relative z-10">Ready to Get Started?</h2>
+            <p className="mt-4 max-w-2xl mx-auto relative z-10 font-medium opacity-90">Join thousands of users who are acing their exams and winning rewards. Sign up today and get an instant welcome bonus!</p>
+            <div className="mt-8 flex gap-2 md:gap-4 justify-center flex-wrap relative z-10">
                 {user ? (
-                    <Button asChild size="lg" variant="secondary" className="text-primary hover:bg-white/90">
+                    <Button asChild size="lg" variant="secondary" className="text-primary hover:bg-white/90 font-bold px-8">
                         <Link href={isAdmin ? "/admin/analytics" : "/profile"}>Return to Workspace</Link>
                     </Button>
                 ) : (
-                    <Button asChild size="lg" variant="secondary" className="text-primary hover:bg-white/90">
+                    <Button asChild size="lg" variant="secondary" className="text-primary hover:bg-white/90 font-bold px-8">
                         <Link href="/signup">Create Your Account</Link>
                     </Button>
                 )}
-                <Button size="lg" variant="ghost" onClick={handleShare}>
-                    <Share2 className="mr-2"/> Share with Friends
+                <Button size="lg" variant="ghost" onClick={handleShare} className="hover:bg-white/10 font-bold">
+                    <Share2 className="mr-2 h-5 w-5"/> Share with Friends
                   </Button>
             </div>
         </section>

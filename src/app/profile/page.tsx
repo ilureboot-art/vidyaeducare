@@ -1,13 +1,13 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { User, Mail, Calendar, Phone, Edit, GraduationCap, Trash2, PlusCircle, BookOpen, Loader2, BarChart2, AlertCircle, Users as UsersIcon } from "lucide-react";
+import { User, Mail, Calendar, Phone, Edit, GraduationCap, Trash2, PlusCircle, BookOpen, Loader2, BarChart2, AlertCircle, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -19,7 +19,7 @@ import { format } from "date-fns";
 import type { StudentProfile } from "@/lib/student-data";
 import type { ScheduledTest } from "@/lib/test-schedule";
 import { useAuth, useDb } from "@/firebase";
-import { doc, getDoc, setDoc, collection, getDocs, deleteDoc, updateDoc, query, where, DocumentData, onSnapshot } from "firebase/firestore";
+import { doc, setDoc, collection, getDocs, deleteDoc, updateDoc, query, where, DocumentData, onSnapshot } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import UserLayout from "@/components/UserLayout";
 
@@ -323,7 +323,7 @@ function ProfilePageContent() {
                 <CardHeader className="flex flex-row items-start justify-between gap-4 bg-muted/30 p-6">
                     <div className="flex items-center gap-5">
                         <Avatar className="w-20 h-20 border-4 border-background shadow-md">
-                            <AvatarImage src={student.avatarUrl} alt={student.name} data-ai-hint="student avatar" />
+                            <AvatarImage src={student.avatarUrl} alt={student.name} />
                             <AvatarFallback className="bg-primary/10 text-primary text-2xl font-bold">{student.name.charAt(0)}</AvatarFallback>
                         </Avatar>
                         <div>
@@ -419,7 +419,7 @@ function ProfilePageContent() {
             <Card className="border-dashed border-2">
                 <CardContent className="text-center p-16 space-y-4">
                     <div className="bg-muted w-16 h-16 rounded-full flex items-center justify-center mx-auto">
-                        <UsersIcon className="text-muted-foreground w-8 h-8" />
+                        <Users className="text-muted-foreground w-8 h-8" />
                     </div>
                     <div>
                         <p className="text-lg font-bold">No Student Profiles Found</p>

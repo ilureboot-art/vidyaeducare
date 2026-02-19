@@ -20,7 +20,7 @@ const AuthContext = createContext<AuthState | undefined>(undefined);
 const DbContext = createContext<Firestore | undefined>(undefined);
 const AuthServiceContext = createContext<Auth | undefined>(undefined);
 
-const ROLE_CACHE_KEY = 've_role_v3';
+const ROLE_CACHE_KEY = 've_role_v4';
 
 const getCachedRoles = () => {
     if (typeof window === 'undefined') return null;
@@ -92,11 +92,6 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
     const { auth, db } = services;
     
-    // Safety timer to prevent infinite loading screen on network failure
-    const safetyTimeout = setTimeout(() => {
-        setAuthState(prev => ({ ...prev, loading: false }));
-    }, 10000);
-
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) {
           sessionStorage.removeItem(ROLE_CACHE_KEY);
@@ -104,17 +99,14 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
           return;
       }
 
-      // Crucial: Wait for role before allowing navigation to settle
       const roles = await resolveUserRole(user, db);
       setAuthState({ user, loading: false, ...roles });
     });
 
-    return () => {
-        unsubscribe();
-        clearTimeout(safetyTimeout);
-    };
+    return () => unsubscribe();
   }, [services, resolveUserRole]);
 
+  // DETERMINISTIC ROUTING ENGINE
   useEffect(() => {
     if (authState.loading || !services) return;
 
@@ -129,28 +121,31 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
     if (user) {
       if (isAdmin) {
-        // Force Admins into Dashboard
+        // Admins belong exclusively in the Admin Dashboard
         if (!isAdminArea) {
           targetPath = '/admin/analytics';
         }
       } else {
-        // Force Students into Player Workspace
+        // Students belong exclusively in the Player Portal
+        // If they visit Home, Login, or Signup, move them to Profile
         if (isAdminArea || isAuthRoute || cleanPath === '/') {
           targetPath = '/profile';
         }
       }
     } else {
-      // Guests belong in auth/public routes
+      // Guests belong in public/auth routes
       if (isAdminArea || (!isAuthRoute && !isPublicRoute)) {
         targetPath = '/';
       }
     }
 
+    // Atomic Navigation Mutex: Prevents "Scrolling" Redirect Loops
     if (targetPath && targetPath !== cleanPath && navigationLock.current !== targetPath) {
       navigationLock.current = targetPath;
       router.replace(targetPath);
       
-      const timer = setTimeout(() => { navigationLock.current = null; }, 2000);
+      // Release lock after transition
+      const timer = setTimeout(() => { navigationLock.current = null; }, 1000);
       return () => clearTimeout(timer);
     }
   }, [authState, pathname, router, services]);
@@ -164,7 +159,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
         </div>
         <div className="space-y-2">
             <p className="text-xl font-black text-primary tracking-tighter uppercase italic">Vidya EduCare</p>
-            <p className="text-muted-foreground text-sm font-medium tracking-wide">Establishing Secure Session...</p>
+            <p className="text-muted-foreground text-sm font-medium tracking-wide">Syncing Credentials...</p>
         </div>
       </div>
     );

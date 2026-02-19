@@ -59,6 +59,7 @@ export default function UserManagementPage() {
 
     try {
         const usersCollection = collection(db, "users");
+        // Only fetch minimal parent info to keep loading fast
         const q = query(usersCollection, orderBy("joinDate", "desc"), limit(100));
         const userSnapshot = await getDocs(q);
         
@@ -89,9 +90,8 @@ export default function UserManagementPage() {
       setIsDetailsOpen(true);
 
       try {
-          // PERFORMANCE: Fetch Wallet and Students in parallel only when details are requested
+          // PERFORMANCE OPTIMIZATION: Fetch details lazily only when requested
           const studentsQuery = query(collection(db, "students"), where("parentId", "==", parent.id));
-          const walletRef = doc(db, "wallets", parent.id);
           
           const [studentsSnap, walletSnap] = await Promise.all([
               getDocs(studentsQuery),
@@ -163,7 +163,7 @@ export default function UserManagementPage() {
         <h1 className="text-3xl font-bold">User Management</h1>
         <Button variant="outline" size="sm" onClick={() => fetchUsers(false)} disabled={isRefreshing}>
             <RefreshCcw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            Refresh
+            Refresh List
         </Button>
       </div>
 
@@ -171,7 +171,7 @@ export default function UserManagementPage() {
         <CardHeader>
           <CardTitle>All Registered Users (Parents)</CardTitle>
           <CardDescription>
-            Manage parent accounts and access student performance records.
+            Manage parent accounts and access linked student records.
           </CardDescription>
           <div className="pt-4">
             <div className="relative w-full max-w-sm">
@@ -202,7 +202,7 @@ export default function UserManagementPage() {
                   <TableCell>
                     <div className="flex items-center gap-3">
                         <Avatar className="h-9 w-9">
-                            <AvatarImage src={`https://picsum.photos/seed/${user.id}/40/40`} data-ai-hint="user avatar" />
+                            <AvatarImage src={`https://picsum.photos/seed/${user.id}/40/40`} />
                             <AvatarFallback className="bg-primary/10 text-primary font-bold">{user.name?.charAt(0)}</AvatarFallback>
                         </Avatar>
                         <div>
@@ -233,7 +233,7 @@ export default function UserManagementPage() {
                         <DropdownMenuLabel>Control Panel</DropdownMenuLabel>
                         <DropdownMenuItem onClick={() => viewUserDetails(user)}>
                             <Info className="mr-2 h-4 w-4 text-blue-500" />
-                            View Performance & Wallet
+                            View Records & Wallet
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleStatusChange(user.id, user.status === "Banned" ? "Active" : "Banned")}>
                             {user.status === "Banned" ? "Unban Account" : "Suspend Account"}
@@ -265,70 +265,71 @@ export default function UserManagementPage() {
                       <UsersIcon className="text-primary" />
                       Details for {selectedParent?.name}
                   </DialogTitle>
-                  <DialogDescription>Overview of student profiles and financial standing.</DialogDescription>
+                  <DialogDescription>Full record of linked student profiles and wallet standing.</DialogDescription>
               </DialogHeader>
               
               {isLoadingDetails ? (
                   <div className="flex flex-col items-center justify-center py-12 space-y-4">
                       <Loader2 className="animate-spin text-primary" size={32} />
-                      <p className="text-sm text-muted-foreground">Fetching deep records...</p>
+                      <p className="text-sm text-muted-foreground font-medium">Fetching deep records...</p>
                   </div>
               ) : (
-                  <div className="space-y-6">
+                  <div className="space-y-6 pt-4">
                       <div className="grid grid-cols-2 gap-4">
-                          <Card className="bg-primary/5 border-primary/10">
+                          <Card className="bg-primary/[0.03] border-primary/10">
                               <CardHeader className="py-3 px-4">
-                                  <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Wallet Balance</CardTitle>
+                                  <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Wallet Balance</CardTitle>
                               </CardHeader>
                               <CardContent className="py-0 px-4 pb-4">
-                                  <p className="text-2xl font-bold text-primary">₹{parentWallet?.toFixed(2) || '0.00'}</p>
+                                  <p className="text-3xl font-black text-primary">₹{parentWallet?.toFixed(2) || '0.00'}</p>
                               </CardContent>
                           </Card>
-                          <Card className="bg-muted/30">
+                          <Card className="bg-muted/30 border-transparent">
                               <CardHeader className="py-3 px-4">
-                                  <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Students Linked</CardTitle>
+                                  <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Enrolled Students</CardTitle>
                               </CardHeader>
                               <CardContent className="py-0 px-4 pb-4">
-                                  <p className="text-2xl font-bold">{parentStudents?.length || 0}</p>
+                                  <p className="text-3xl font-black">{parentStudents?.length || 0}</p>
                               </CardContent>
                           </Card>
                       </div>
 
                       <div className="space-y-3">
-                          <h3 className="text-sm font-bold flex items-center gap-2">
-                              <GraduationCap className="w-4 h-4" /> Enrolled Students
+                          <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                              <GraduationCap className="w-4 h-4" /> Academic Records
                           </h3>
                           {parentStudents && parentStudents.length > 0 ? (
                               <div className="grid gap-3">
                                   {parentStudents.map(s => (
-                                      <div key={s.id} className="p-4 border rounded-xl flex items-center justify-between bg-card hover:shadow-sm transition-shadow">
+                                      <div key={s.id} className="p-4 border rounded-xl flex items-center justify-between bg-card hover:shadow-md transition-shadow">
                                           <div className="flex items-center gap-4">
-                                              <Avatar className="h-12 w-12 border-2 border-muted">
+                                              <Avatar className="h-12 w-12 border-2 border-background shadow-sm">
                                                   <AvatarImage src={s.avatarUrl} />
                                                   <AvatarFallback>{s.name.charAt(0)}</AvatarFallback>
                                               </Avatar>
                                               <div>
-                                                  <p className="font-bold">{s.name}</p>
-                                                  <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                                      {s.academic.standard} • {s.academic.board}
+                                                  <p className="font-bold leading-none">{s.name}</p>
+                                                  <p className="text-[10px] font-bold text-muted-foreground uppercase mt-1">
+                                                      {s.academic.standard} • {s.academic.board} Board
                                                   </p>
                                               </div>
                                           </div>
-                                          <div className="text-right text-xs">
-                                              <p className="flex items-center justify-end gap-1 text-muted-foreground">
-                                                  <Calendar className="w-3 h-3" /> {s.dob}
+                                          <div className="text-right">
+                                              <p className="flex items-center justify-end gap-1 text-[10px] font-bold text-muted-foreground uppercase">
+                                                  <Calendar className="w-3 h-3" /> Born: {s.dob}
                                               </p>
                                               <div className="mt-1 flex items-center justify-end gap-2">
-                                                  <Badge variant="outline" className="font-mono text-[10px]">{s.id}</Badge>
-                                                  <p className="font-bold text-primary">{s.stats.testsTaken} Tests</p>
+                                                  <Badge variant="outline" className="font-mono text-[9px] uppercase">{s.id}</Badge>
+                                                  <p className="font-black text-primary text-sm">{s.stats?.testsTaken || 0} Tests</p>
                                               </div>
                                           </div>
                                       </div>
                                   ))}
                               </div>
                           ) : (
-                              <div className="text-center py-8 bg-muted/20 rounded-xl border border-dashed">
-                                  <p className="text-sm text-muted-foreground">No students enrolled yet.</p>
+                              <div className="text-center py-12 bg-muted/20 rounded-2xl border-2 border-dashed">
+                                  <UsersIcon className="w-10 h-10 text-muted-foreground mx-auto opacity-20 mb-2" />
+                                  <p className="text-sm text-muted-foreground font-medium">No students enrolled yet.</p>
                               </div>
                           )}
                       </div>

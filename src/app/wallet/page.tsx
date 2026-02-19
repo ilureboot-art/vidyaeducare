@@ -51,6 +51,19 @@ type WalletInfo = {
   referralCode: string;
 }
 
+const defaultPaymentMethods: AdminPaymentMethods = {
+    accountHolderName: "Not Configured",
+    accountNumber: "N/A",
+    ifscCode: "N/A",
+    bankName: "N/A",
+    upiId: "N/A",
+    gpayNumber: "N/A",
+    gpayUpiId: "N/A",
+    phonepeNumber: "N/A",
+    phonepeUpiId: "N/A",
+    qrCodeUrl: ""
+};
+
 function WalletPageContent() {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -65,9 +78,14 @@ function WalletPageContent() {
 
   useEffect(() => {
     if (user && db) {
+        // Fetch Admin Config with default fallback to prevent page hang
         const paymentMethodsRef = doc(db, "configs", "paymentMethods");
         const unsubPaymentMethods = onSnapshot(paymentMethodsRef, (doc) => {
-            if (doc.exists()) setAdminPaymentMethods(doc.data() as AdminPaymentMethods);
+            if (doc.exists()) {
+                setAdminPaymentMethods(doc.data() as AdminPaymentMethods);
+            } else {
+                setAdminPaymentMethods(defaultPaymentMethods);
+            }
         });
 
         const walletRef = doc(db, "wallets", user.uid);
@@ -85,6 +103,9 @@ function WalletPageContent() {
                 return { id: d.id, ...data, date } as Transaction;
             });
             setTransactions(transactionList);
+        }, (err) => {
+            console.error("Transactions sync error:", err);
+            setTransactions([]);
         });
 
         return () => {
@@ -99,8 +120,11 @@ function WalletPageContent() {
     event.preventDefault();
     if (!user || !db) return;
     const form = event.currentTarget;
-    const amount = parseFloat((form.elements.namedItem('amount-add') as HTMLInputElement).value);
-    const txnId = (form.elements.namedItem('txnId') as HTMLInputElement).value;
+    const amountInput = form.elements.namedItem('amount-add') as HTMLInputElement;
+    const txnIdInput = form.elements.namedItem('txnId') as HTMLInputElement;
+    const amount = parseFloat(amountInput.value);
+    const txnId = txnIdInput.value;
+    
     if (!amount || !txnId) return;
 
     try {
@@ -125,8 +149,11 @@ function WalletPageContent() {
     event.preventDefault();
     if (!walletInfo || !user || !db) return;
     const form = event.currentTarget;
-    const amount = parseFloat((form.elements.namedItem('amount-withdraw') as HTMLInputElement).value);
-    const upiId = (form.elements.namedItem('upiId') as HTMLInputElement).value;
+    const amountInput = form.elements.namedItem('amount-withdraw') as HTMLInputElement;
+    const upiIdInput = form.elements.namedItem('upiId') as HTMLInputElement;
+    const amount = parseFloat(amountInput.value);
+    const upiId = upiIdInput.value;
+
     if (!amount || !upiId || amount > walletInfo.balance || amount < 200) {
         toast({ variant: 'destructive', title: "Invalid Request", description: "Check balance and minimum amount (₹200)." });
         return;
@@ -152,31 +179,32 @@ function WalletPageContent() {
 
   if (!walletInfo || !transactions || !adminPaymentMethods) {
     return (
-      <div className="w-full max-w-2xl mx-auto flex justify-center items-center h-96">
-        <Loader2 className="animate-spin text-primary" size={32} />
+      <div className="w-full max-w-2xl mx-auto flex flex-col items-center justify-center h-96 space-y-4">
+        <Loader2 className="animate-spin text-primary" size={40} />
+        <p className="text-muted-foreground animate-pulse font-medium">Connecting to Wallet Service...</p>
       </div>
     );
   }
 
   return (
     <div className="w-full max-w-2xl mx-auto space-y-6">
-      <Card className="shadow-lg">
+      <Card className="shadow-lg border-primary/10">
         <CardHeader className="text-center">
           <CardTitle className="text-3xl font-bold text-primary">My Wallet</CardTitle>
-          <CardDescription>Secure balance management.</CardDescription>
+          <CardDescription>Secure balance management and financial history.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <Card className="text-center p-6 bg-primary/10 border-none shadow-inner">
-            <p className="text-sm font-medium text-primary">AVAILABLE CASH</p>
-            <p className="text-5xl font-bold text-primary">₹{walletInfo.balance.toFixed(2)}</p>
+          <Card className="text-center p-8 bg-primary/[0.03] border-dashed border-primary/20 shadow-inner">
+            <p className="text-xs font-bold text-primary tracking-widest uppercase mb-1">AVAILABLE CASH</p>
+            <p className="text-5xl font-black text-primary tracking-tighter">₹{walletInfo.balance.toFixed(2)}</p>
           </Card>
           <div className="grid grid-cols-2 gap-4">
             <Dialog open={addFundsOpen} onOpenChange={setAddFundsOpen}>
               <DialogTrigger asChild>
-                <Button size="lg" variant="outline" className="h-14"><PlusCircle className="mr-2"/> Add Funds</Button>
+                <Button size="lg" variant="outline" className="h-16 shadow-sm border-primary/20 hover:bg-primary/5"><PlusCircle className="mr-2 h-5 w-5 text-primary"/> Add Funds</Button>
               </DialogTrigger>
               <DialogContent className="max-w-md">
-                <DialogHeader><DialogTitle>Add Funds</DialogTitle></DialogHeader>
+                <DialogHeader><DialogTitle>Deposit Funds</DialogTitle></DialogHeader>
                 <div className="space-y-4 pt-2 max-h-[70vh] overflow-y-auto pr-2">
                     <Tabs defaultValue="upi" className="w-full">
                         <TabsList className="grid w-full grid-cols-2">
@@ -185,69 +213,88 @@ function WalletPageContent() {
                         </TabsList>
                         <TabsContent value="upi" className="pt-4 space-y-4">
                             {adminPaymentMethods.qrCodeUrl && (
-                                <div className="flex justify-center p-4 bg-muted rounded-lg">
-                                    <Image src={adminPaymentMethods.qrCodeUrl} alt="QR Code" width={200} height={200} />
+                                <div className="flex justify-center p-4 bg-muted/30 rounded-lg border">
+                                    <Image src={adminPaymentMethods.qrCodeUrl} alt="QR Code" width={200} height={200} className="rounded-md" />
                                 </div>
                             )}
                             <div className="space-y-2 text-sm">
-                                <div className="flex justify-between items-center p-2 rounded-md hover:bg-muted"><span className="font-semibold">GPay:</span><CopyButton valueToCopy={adminPaymentMethods.gpayNumber} /></div>
-                                <div className="flex justify-between items-center p-2 rounded-md hover:bg-muted"><span className="font-semibold">PhonePe:</span><CopyButton valueToCopy={adminPaymentMethods.phonepeNumber} /></div>
-                                <div className="flex justify-between items-center p-2 rounded-md hover:bg-muted"><span className="font-semibold">Main UPI:</span><CopyButton valueToCopy={adminPaymentMethods.upiId} /></div>
+                                <div className="flex justify-between items-center p-2.5 rounded-md hover:bg-muted border border-transparent hover:border-border transition-colors"><span className="font-semibold">GPay:</span><CopyButton valueToCopy={adminPaymentMethods.gpayNumber} /></div>
+                                <div className="flex justify-between items-center p-2.5 rounded-md hover:bg-muted border border-transparent hover:border-border transition-colors"><span className="font-semibold">PhonePe:</span><CopyButton valueToCopy={adminPaymentMethods.phonepeNumber} /></div>
+                                <div className="flex justify-between items-center p-2.5 rounded-md hover:bg-muted border border-transparent hover:border-border transition-colors"><span className="font-semibold">Main UPI:</span><CopyButton valueToCopy={adminPaymentMethods.upiId} /></div>
                             </div>
                         </TabsContent>
                         <TabsContent value="bank" className="pt-4 space-y-2 text-sm">
-                             <div className="flex justify-between items-center p-2 rounded-md hover:bg-muted"><span>Account:</span><CopyButton valueToCopy={adminPaymentMethods.accountNumber} /></div>
-                             <div className="flex justify-between items-center p-2 rounded-md hover:bg-muted"><span>IFSC:</span><CopyButton valueToCopy={adminPaymentMethods.ifscCode} /></div>
-                             <div className="flex justify-between items-center p-2 rounded-md hover:bg-muted"><span>Bank:</span><span className="font-medium">{adminPaymentMethods.bankName}</span></div>
+                             <div className="flex justify-between items-center p-2.5 rounded-md hover:bg-muted border border-transparent hover:border-border transition-colors"><span>Account:</span><CopyButton valueToCopy={adminPaymentMethods.accountNumber} /></div>
+                             <div className="flex justify-between items-center p-2.5 rounded-md hover:bg-muted border border-transparent hover:border-border transition-colors"><span>IFSC:</span><CopyButton valueToCopy={adminPaymentMethods.ifscCode} /></div>
+                             <div className="flex justify-between items-center p-2.5 rounded-md hover:bg-muted border border-transparent hover:border-border transition-colors"><span>Bank:</span><span className="font-bold">{adminPaymentMethods.bankName}</span></div>
                         </TabsContent>
                     </Tabs>
                     <form onSubmit={handleAddFunds} className="space-y-4 border-t pt-4">
-                        <div><Label htmlFor="amount-add">Amount (INR)</Label><Input id="amount-add" name="amount-add" type="number" required /></div>
-                        <div><Label htmlFor="txnId">Reference ID</Label><Input id="txnId" name="txnId" required /></div>
-                        <DialogFooter><Button type="submit" className="w-full">Submit Request</Button></DialogFooter>
+                        <div className="space-y-2">
+                            <Label htmlFor="amount-add">Amount to Deposit (INR)</Label>
+                            <Input id="amount-add" name="amount-add" type="number" required placeholder="Enter amount paid" />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="txnId">Reference ID / UTR</Label>
+                            <Input id="txnId" name="txnId" required placeholder="Copy from payment app" />
+                        </div>
+                        <DialogFooter><Button type="submit" className="w-full py-6 font-bold shadow-lg">Submit Request</Button></DialogFooter>
                     </form>
                 </div>
               </DialogContent>
             </Dialog>
             <Dialog open={withdrawOpen} onOpenChange={setWithdrawOpen}>
               <DialogTrigger asChild>
-                <Button size="lg" variant="outline" className="h-14"><MinusCircle className="mr-2"/> Withdraw</Button>
+                <Button size="lg" variant="outline" className="h-16 shadow-sm border-destructive/20 hover:bg-destructive/5"><MinusCircle className="mr-2 h-5 w-5 text-destructive"/> Withdraw</Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader><DialogTitle>Withdraw Funds</DialogTitle></DialogHeader>
                 <form onSubmit={handleWithdraw} className="space-y-4">
-                    <div><Label htmlFor="amount-withdraw">Amount (INR)</Label><Input id="amount-withdraw" name="amount-withdraw" type="number" required min="200" /></div>
-                    <div><Label htmlFor="upiId">Target UPI ID</Label><Input id="upiId" name="upiId" required /></div>
-                    <DialogFooter><Button type="submit" className="w-full">Submit Request</Button></DialogFooter>
+                    <div className="space-y-2">
+                        <Label htmlFor="amount-withdraw">Amount (INR)</Label>
+                        <Input id="amount-withdraw" name="amount-withdraw" type="number" required min="200" placeholder="Minimum ₹200" />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="upiId">Your Receiving UPI ID</Label>
+                        <Input id="upiId" name="upiId" required placeholder="e.g. mobile@upi" />
+                    </div>
+                    <DialogFooter><Button type="submit" className="w-full py-6 font-bold shadow-lg">Submit Request</Button></DialogFooter>
                 </form>
               </DialogContent>
             </Dialog>
           </div>
           <div className="space-y-4 pt-4">
-            <h3 className="font-bold text-center">Recent Activity</h3>
+            <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground text-center">Recent Activity</h3>
             <div className="space-y-2">
                 {transactions.length > 0 ? transactions.map((tx) => (
-                     <div key={tx.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                        <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-full ${tx.amount >= 0 ? 'bg-green-100' : 'bg-red-100'}`}>
-                                {tx.amount >= 0 ? <ArrowDownLeft className="w-4 h-4 text-green-600" /> : <ArrowUpRight className="w-4 h-4 text-red-600" />}
+                     <div key={tx.id} className="flex items-center justify-between p-4 bg-muted/30 hover:bg-muted/50 transition-colors border rounded-xl">
+                        <div className="flex items-center gap-4">
+                            <div className={`p-2.5 rounded-full ${tx.amount >= 0 ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                                {tx.amount >= 0 ? <ArrowDownLeft className="w-5 h-5" /> : <ArrowUpRight className="w-5 h-5" />}
                             </div>
                             <div>
-                                <p className="font-medium text-sm">{tx.description}</p>
-                                <p className="text-[10px] text-muted-foreground">{format(new Date(tx.date), 'PP')}</p>
+                                <p className="font-bold text-sm leading-tight">{tx.description}</p>
+                                <p className="text-[10px] text-muted-foreground mt-0.5">{format(new Date(tx.date), 'PP p')}</p>
                             </div>
                         </div>
                         <div className="text-right">
-                            <p className={`font-bold text-sm ${tx.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>₹{Math.abs(tx.amount).toFixed(2)}</p>
-                            <Badge variant={getStatusBadgeVariant(tx.status)} className="text-[10px] h-5 px-1.5">{tx.status}</Badge>
+                            <p className={`font-black text-sm ${tx.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {tx.amount >= 0 ? '+' : '-'} ₹{Math.abs(tx.amount).toFixed(2)}
+                            </p>
+                            <Badge variant={getStatusBadgeVariant(tx.status)} className="text-[9px] h-4 px-1.5 font-bold">{tx.status}</Badge>
                         </div>
                      </div>
-                )) : <p className="text-sm text-muted-foreground text-center">No transactions found.</p>}
+                )) : (
+                    <div className="text-center py-12 border-2 border-dashed rounded-xl bg-muted/10">
+                        <History className="w-10 h-10 text-muted-foreground mx-auto opacity-20 mb-2" />
+                        <p className="text-sm text-muted-foreground font-medium">No transactions recorded yet.</p>
+                    </div>
+                )}
             </div>
           </div>
         </CardContent>
          <CardFooter>
-            <Button asChild variant="secondary" className="w-full"><Link href="/transactions"><History className="mr-2" /> Full History</Link></Button>
+            <Button asChild variant="ghost" className="w-full h-12 text-muted-foreground hover:text-primary"><Link href="/transactions"><History className="mr-2 h-4 w-4" /> View Full History</Link></Button>
          </CardFooter>
       </Card>
     </div>

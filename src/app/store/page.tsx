@@ -33,14 +33,20 @@ function StorePageContent() {
     if (user && db) {
         const fetchData = async () => {
             const walletDocRef = doc(db, "wallets", user.uid);
-            const walletDoc = await getDoc(walletDocRef);
-            if(walletDoc.exists()) {
-                setWalletData(walletDoc.data() as WalletData);
+            const storeConfigRef = doc(db, "configs", "store");
+            
+            // Parallelize fetching for speed
+            const [walletSnap, configSnap] = await Promise.all([
+                getDoc(walletDocRef),
+                getDoc(storeConfigRef)
+            ]);
+
+            if(walletSnap.exists()) {
+                setWalletData(walletSnap.data() as WalletData);
             }
             
-            const storeConfigDoc = await getDoc(doc(db, "configs", "store"));
-            if(storeConfigDoc.exists()) {
-                setStoreConfig(storeConfigDoc.data() as StoreConfig);
+            if(configSnap.exists()) {
+                setStoreConfig(configSnap.data() as StoreConfig);
             }
         };
         fetchData();

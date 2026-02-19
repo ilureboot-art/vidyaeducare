@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { onAuthStateChanged, type Auth, type User } from 'firebase/auth';
 import { doc, getDoc, type Firestore } from 'firebase/firestore';
 import { Loader2, Shield } from 'lucide-react';
@@ -16,14 +16,16 @@ interface AuthState {
   isHeadAdmin: boolean;
 }
 
-const AuthServiceContext = createContext<Auth | undefined>(undefined);
-const DbContext = createContext<Firestore | undefined>(undefined);
 const AuthContext = createContext<AuthState | undefined>(undefined);
+const DbContext = createContext<Firestore | undefined>(undefined);
+const AuthServiceContext = createContext<Auth | undefined>(undefined);
+
+const ROLE_CACHE_KEY = 've_role_v3';
 
 const getCachedRoles = () => {
     if (typeof window === 'undefined') return null;
     try {
-        const cached = sessionStorage.getItem('ve_role');
+        const cached = sessionStorage.getItem(ROLE_CACHE_KEY);
         return cached ? JSON.parse(cached) : null;
     } catch {
         return null;
@@ -31,14 +33,14 @@ const getCachedRoles = () => {
 };
 
 export function FirebaseProvider({ children }: { children: React.ReactNode }) {
-  const [services] = useState(() => {
+  const services = useMemo(() => {
     try {
       return getFirebaseServices();
     } catch (e) {
       console.error("Firebase Services failed to initialize:", e);
       return null;
     }
-  });
+  }, []);
 
   const [authState, setAuthState] = useState<AuthState>(() => {
       const cached = getCachedRoles();
@@ -56,7 +58,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
   const resolveUserRole = useCallback(async (user: User | null, db: Firestore) => {
     if (!user) {
-      sessionStorage.removeItem('ve_role');
+      sessionStorage.removeItem(ROLE_CACHE_KEY);
       return { isAdmin: false, isHeadAdmin: false };
     }
 
@@ -74,71 +76,71 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
         };
       }
       
-      sessionStorage.setItem('ve_role', JSON.stringify(roles));
+      sessionStorage.setItem(ROLE_CACHE_KEY, JSON.stringify(roles));
       return roles;
     } catch (e) {
       console.error("Role resolution failed:", e);
-      return { isAdmin: false, isHeadAdmin: false };
+      return getCachedRoles() || { isAdmin: false, isHeadAdmin: false };
     }
   }, []);
 
   useEffect(() => {
-    if (!services) return;
-
-    const safetyTimer = setTimeout(() => {
+    if (!services) {
         setAuthState(prev => ({ ...prev, loading: false }));
-    }, 5000);
+        return;
+    }
 
     const { auth, db } = services;
+    
+    // Safety timer to prevent infinite loading screen on network failure
+    const safetyTimeout = setTimeout(() => {
+        setAuthState(prev => ({ ...prev, loading: false }));
+    }, 10000);
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) {
-          sessionStorage.removeItem('ve_role');
+          sessionStorage.removeItem(ROLE_CACHE_KEY);
           setAuthState({ user: null, loading: false, isAdmin: false, isHeadAdmin: false });
           return;
       }
 
-      const cached = getCachedRoles();
-      if (cached) {
-          setAuthState({ user, loading: false, ...cached });
-          resolveUserRole(user, db).then(fresh => {
-              if (JSON.stringify(fresh) !== JSON.stringify(cached)) {
-                  setAuthState(prev => ({ ...prev, ...fresh }));
-              }
-          });
-      } else {
-          const roles = await resolveUserRole(user, db);
-          setAuthState({ user, loading: false, ...roles });
-      }
+      // Crucial: Wait for role before allowing navigation to settle
+      const roles = await resolveUserRole(user, db);
+      setAuthState({ user, loading: false, ...roles });
     });
 
     return () => {
         unsubscribe();
-        clearTimeout(safetyTimer);
+        clearTimeout(safetyTimeout);
     };
   }, [services, resolveUserRole]);
 
   useEffect(() => {
-    if (authState.loading) return;
+    if (authState.loading || !services) return;
 
     const { user, isAdmin } = authState;
-    const cleanPath = pathname.endsWith('/') && pathname !== '/' ? pathname.slice(0, -1) : pathname;
+    const cleanPath = pathname === '/' ? '/' : pathname.replace(/\/$/, '');
+    
     const isAdminArea = cleanPath.startsWith('/admin');
     const isAuthRoute = ['/login', '/signup', '/admin/login', '/forgot-password', '/admin/setup'].includes(cleanPath);
-    const isPublicRoute = ['/how-to-play', '/'].includes(cleanPath);
+    const isPublicRoute = ['/how-to-play', '/', '/check-head-admin'].includes(cleanPath);
     
     let targetPath: string | null = null;
 
     if (user) {
       if (isAdmin) {
+        // Force Admins into Dashboard
         if (!isAdminArea) {
           targetPath = '/admin/analytics';
         }
       } else {
+        // Force Students into Player Workspace
         if (isAdminArea || isAuthRoute || cleanPath === '/') {
           targetPath = '/profile';
         }
       }
     } else {
+      // Guests belong in auth/public routes
       if (isAdminArea || (!isAuthRoute && !isPublicRoute)) {
         targetPath = '/';
       }
@@ -148,10 +150,10 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       navigationLock.current = targetPath;
       router.replace(targetPath);
       
-      const timer = setTimeout(() => { navigationLock.current = null; }, 1500);
+      const timer = setTimeout(() => { navigationLock.current = null; }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [authState, pathname, router]);
+  }, [authState, pathname, router, services]);
 
   if (authState.loading) {
      return (

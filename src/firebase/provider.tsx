@@ -20,7 +20,7 @@ const AuthContext = createContext<AuthState | undefined>(undefined);
 const DbContext = createContext<Firestore | undefined>(undefined);
 const AuthServiceContext = createContext<Auth | undefined>(undefined);
 
-const ROLE_CACHE_KEY = 've_role_v4';
+const ROLE_CACHE_KEY = 've_role_v5';
 
 const getCachedRoles = () => {
     if (typeof window === 'undefined') return null;
@@ -122,12 +122,12 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     if (user) {
       if (isAdmin) {
         // Admins belong exclusively in the Admin Dashboard
-        if (!isAdminArea) {
+        // If they land on Home, Redirect them to Dashboard to prevent "Automatic Logout" sensation
+        if (!isAdminArea || cleanPath === '/admin/login') {
           targetPath = '/admin/analytics';
         }
       } else {
         // Students belong exclusively in the Player Portal
-        // If they visit Home, Login, or Signup, move them to Profile
         if (isAdminArea || isAuthRoute || cleanPath === '/') {
           targetPath = '/profile';
         }

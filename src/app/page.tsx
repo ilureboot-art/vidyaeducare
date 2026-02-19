@@ -130,7 +130,7 @@ Start your journey to success now: ${url}
           </div>
           <div className="relative group">
               <div className="absolute -inset-1 bg-gradient-to-r from-primary to-accent rounded-lg blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
-              <Image src="https://picsum.photos/seed/1/600/400" width={600} height={400} alt="Promotional image for Vidya EduCare" className="relative rounded-lg shadow-2xl" data-ai-hint="students learning" />
+              <Image src="https://picsum.photos/seed/1/600/400" width={600} height={400} alt="Promotional image" className="relative rounded-lg shadow-2xl" data-ai-hint="students learning" />
           </div>
         </section>
         
@@ -186,13 +186,13 @@ Start your journey to success now: ${url}
         <section className="bg-muted/50 rounded-lg p-6 md:p-12 border">
           <div className="grid md:grid-cols-3 gap-8 items-center">
             <div className="md:col-span-1">
-                <Image src="https://picsum.photos/seed/2/400/400" width={400} height={400} alt="Mr. Sanjay Vidya Vijay Gurav, Founder of Vidya EduCare" className="rounded-lg shadow-xl mx-auto border-4 border-white" data-ai-hint="portrait professional" />
+                <Image src="https://picsum.photos/seed/2/400/400" width={400} height={400} alt="Mr. Sanjay Vidya Vijay Gurav" className="rounded-lg shadow-xl mx-auto border-4 border-white" data-ai-hint="portrait professional" />
             </div>
             <div className="md:col-span-2">
               <h2 className="text-3xl font-bold text-primary">A Note From Our Founder</h2>
               <Quote className="w-10 h-10 text-primary/20 my-4" />
               <p className="text-lg text-muted-foreground italic">
-                "Our mission at Vidya EduCare has always been to make learning an accessible, engaging, and genuinely rewarding experience. We believe that by combining serious academic preparation with powerful referral programs, we can empower students not only to excel in their exams but also to build valuable skills in a fun environment. This platform is our commitment to that vision."
+                "Our mission at Vidya EduCare has always been to make learning an accessible, engaging, and genuinely rewarding experience. We believe that by combining serious academic preparation with powerful referral programs, we can empower students not only to excel in their exams but also to build valuable skills in a fun environment."
               </p>
               <div className="mt-6">
                 <p className="text-xl font-bold">Mr. Sanjay Vidya Vijay Gurav</p>

@@ -58,8 +58,7 @@ export default function AnalyticsPage() {
             where('status', '==', 'Completed')
           );
 
-          // PERFORMANCE OPTIMIZATION: Truly parallel execution for all statistical counters
-          // Replaced getDocs with getCountFromServer for high-speed statistical resolution
+          // PERFORMANCE OPTIMIZATION: High-speed statistical resolution
           const [revenueSnapshot, usersCountRes, resultsCountRes] = await Promise.all([
               getDocs(revenueQuery),
               getCountFromServer(usersCol),
@@ -147,7 +146,7 @@ export default function AnalyticsPage() {
       </div>
 
       <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3">
-        <Card className="hover:shadow-md transition-shadow">
+        <Card className="hover:shadow-md transition-shadow border-primary/10">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-widest">
               <Users className="text-primary h-4 w-4"/> Total Registrations
@@ -158,7 +157,7 @@ export default function AnalyticsPage() {
             <p className="text-xs text-muted-foreground mt-1">Active player accounts</p>
           </CardContent>
         </Card>
-        <Card className="hover:shadow-md transition-shadow">
+        <Card className="hover:shadow-md transition-shadow border-primary/10">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-widest">
               <BookOpen className="text-primary h-4 w-4"/> Academic Activity

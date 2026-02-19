@@ -78,7 +78,7 @@ function WalletPageContent() {
 
   useEffect(() => {
     if (user && db) {
-        // Fetch Admin Config with default fallback to prevent page hang
+        // PERFORMANCE OPTIMIZATION: Immediate fallback if config doesn't exist
         const paymentMethodsRef = doc(db, "configs", "paymentMethods");
         const unsubPaymentMethods = onSnapshot(paymentMethodsRef, (doc) => {
             if (doc.exists()) {

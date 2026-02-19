@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -146,6 +146,7 @@ function ProfilePageContent() {
         setIsTestDialogOpen(true);
         setIsLoadingTests(true);
         try {
+            // PERFORMANCE OPTIMIZATION: Specific query filtering
             const q = query(
                 collection(db, "scheduledTests"), 
                 where("board", "==", student.academic.board),

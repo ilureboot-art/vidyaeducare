@@ -1,13 +1,13 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { User, Mail, Calendar, Phone, Edit, GraduationCap, Trash2, PlusCircle, BookOpen, Loader2, BarChart2, AlertCircle, Users } from "lucide-react";
+import { User, Mail, Calendar, Phone, Edit, GraduationCap, Trash2, PlusCircle, BookOpen, Loader2, BarChart2, AlertCircle, Users as LucideUsers } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -49,9 +49,6 @@ function ProfilePageContent() {
             
             const unsubParent = onSnapshot(doc(db, "users", user.uid), (doc) => {
                 if (doc.exists()) setParentProfile(doc.data());
-                setIsLoading(false);
-            }, (err) => {
-                console.error("Error loading parent profile:", err);
                 setIsLoading(false);
             });
 
@@ -123,7 +120,6 @@ function ProfilePageContent() {
             setActivationCode("");
             setIsCodeVerified(false);
         } catch (error) {
-            console.error("Error adding student:", error);
             toast({ variant: 'destructive', title: "Error", description: "Could not create student profile." });
         }
     }
@@ -135,7 +131,6 @@ function ProfilePageContent() {
             await deleteDoc(doc(db, "students", studentId));
             toast({ title: "Student Removed", description: "The student profile has been deleted." });
         } catch (error) {
-            console.error("Error deleting student:", error);
             toast({ variant: 'destructive', title: "Error", description: "Could not delete student profile." });
         }
     }
@@ -146,7 +141,6 @@ function ProfilePageContent() {
         setIsTestDialogOpen(true);
         setIsLoadingTests(true);
         try {
-            // PERFORMANCE OPTIMIZATION: Specific query filtering
             const q = query(
                 collection(db, "scheduledTests"), 
                 where("board", "==", student.academic.board),
@@ -156,7 +150,6 @@ function ProfilePageContent() {
             const tests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ScheduledTest));
             setAvailableTests(tests.sort((a,b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime()));
         } catch (e) {
-            console.error("Error fetching tests:", e);
             toast({ variant: 'destructive', title: "Error", description: "Could not load tests." });
         } finally {
             setIsLoadingTests(false);
@@ -182,7 +175,7 @@ function ProfilePageContent() {
 
   return (
     <div className="w-full max-w-5xl mx-auto space-y-8">
-        {parentProfile ? (
+        {parentProfile && (
             <Card className="border-primary/10 shadow-sm">
                 <CardHeader>
                     <CardTitle className="text-2xl flex items-center gap-2"><User className="text-primary" /> Parent Profile</CardTitle>
@@ -219,13 +212,6 @@ function ProfilePageContent() {
                             </div>
                         </div>
                     </div>
-                </CardContent>
-            </Card>
-        ) : (
-            <Card className="border-yellow-200 bg-yellow-50 dark:bg-yellow-900/20">
-                <CardContent className="flex items-center gap-3 p-4">
-                    <AlertCircle className="text-yellow-600" />
-                    <p className="text-sm text-yellow-700 dark:text-yellow-400 font-medium">Your profile data is being initialized.</p>
                 </CardContent>
             </Card>
         )}
@@ -297,18 +283,6 @@ function ProfilePageContent() {
                                     </Select>
                                 </div>
                            </div>
-                           <div className="space-y-2">
-                               <Label htmlFor="stream">Stream</Label>
-                               <Select name="stream" required>
-                                   <SelectTrigger><SelectValue placeholder="Select..."/></SelectTrigger>
-                                   <SelectContent>
-                                       <SelectItem value="Science">Science</SelectItem>
-                                       <SelectItem value="Commerce">Commerce</SelectItem>
-                                       <SelectItem value="Arts">Arts</SelectItem>
-                                       <SelectItem value="General">General</SelectItem>
-                                   </SelectContent>
-                               </Select>
-                           </div>
                            <DialogFooter>
                                <Button type="submit" className="w-full sm:w-auto">Create Student Profile</Button>
                            </DialogFooter>
@@ -338,7 +312,6 @@ function ProfilePageContent() {
                         </div>
                     </div>
                     <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button variant="outline" size="icon" className="h-8 w-8"><Edit className="w-4 h-4"/></Button>
                         <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => handleDeleteStudent(student.id)}><Trash2 className="w-4 h-4"/></Button>
                     </div>
                 </CardHeader>
@@ -355,55 +328,25 @@ function ProfilePageContent() {
                                 <p><span className="text-muted-foreground">D.O.B:</span> <span className="font-semibold">{student.dob ? format(new Date(student.dob), 'PP') : 'N/A'}</span></p>
                             </div>
                         </div>
-                        <div className="pt-4 border-t border-dashed">
-                            <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">Skill Badges</h3>
-                            <div className="flex flex-wrap gap-2">
-                                {student.badges?.length > 0 ? student.badges.map(b => (
-                                    <Badge key={b} variant="outline" className="bg-primary/5 text-primary border-primary/20">{b}</Badge>
-                                )) : <p className="text-xs text-muted-foreground">No badges earned yet.</p>}
-                            </div>
-                        </div>
                     </div>
                     <div>
                         <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2 mb-3">
                             <BarChart2 size={14}/> Performance Analytics
                         </h3>
-                        <div className="grid grid-cols-3 gap-3 text-center mb-6">
-                            <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800">
-                                <p className="text-[10px] font-bold text-blue-600 uppercase">Avg</p>
-                                <p className="text-xl font-bold text-blue-700">{(student.stats?.avgScore || 0).toFixed(0)}%</p>
-                            </div>
-                            <div className="p-2 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-100 dark:border-green-800">
-                                <p className="text-[10px] font-bold text-green-600 uppercase">Max</p>
-                                <p className="text-xl font-bold text-green-700">{student.stats?.performance?.length > 0 ? Math.max(...student.stats.performance.map(p => p.score)) : 0}%</p>
-                            </div>
-                            <div className="p-2 bg-pink-50 dark:bg-pink-900/20 rounded-xl border border-pink-100 dark:border-pink-800">
-                                <p className="text-[10px] font-bold text-pink-600 uppercase">Tests</p>
-                                <p className="text-xl font-bold text-pink-700">{student.stats?.testsTaken || 0}</p>
-                            </div>
-                        </div>
                         <div className="h-40 w-full">
                             {student.stats?.performance && student.stats.performance.length > 0 ? (
                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={student.stats.performance} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                                <BarChart data={student.stats.performance}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.1} />
-                                    <XAxis dataKey="name" fontSize={10} tickLine={false} axisLine={false} hide />
+                                    <XAxis dataKey="name" hide />
                                     <YAxis fontSize={10} domain={[0, 100]} axisLine={false} tickLine={false} />
-                                    <Tooltip
-                                        contentStyle={{
-                                            background: "hsl(var(--background))",
-                                            border: "1px solid hsl(var(--border))",
-                                            borderRadius: "var(--radius)",
-                                            fontSize: '12px'
-                                        }}
-                                        formatter={(value) => [`${value}%`, "Score"]}
-                                    />
+                                    <Tooltip contentStyle={{ fontSize: '12px' }} formatter={(value) => [`${value}%`, "Score"]} />
                                     <Bar dataKey="score" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                                 </BarChart>
                             </ResponsiveContainer>
                             ) : (
                                 <div className="flex items-center justify-center h-full text-xs text-muted-foreground bg-muted/20 rounded-xl border border-dashed">
-                                    No performance data recorded.
+                                    No tests recorded yet.
                                 </div>
                             )}
                         </div>
@@ -420,7 +363,7 @@ function ProfilePageContent() {
             <Card className="border-dashed border-2">
                 <CardContent className="text-center p-16 space-y-4">
                     <div className="bg-muted w-16 h-16 rounded-full flex items-center justify-center mx-auto">
-                        <Users className="text-muted-foreground w-8 h-8" />
+                        <LucideUsers className="text-muted-foreground w-8 h-8" />
                     </div>
                     <div>
                         <p className="text-lg font-bold">No Student Profiles Found</p>
@@ -439,7 +382,7 @@ function ProfilePageContent() {
                 <DialogHeader>
                     <DialogTitle>Tests for {selectedStudentForTest?.name}</DialogTitle>
                     <DialogDescription>
-                        Showing tests for {selectedStudentForTest?.academic.board} {selectedStudentForTest?.academic.standard}.
+                        Available tests for {selectedStudentForTest?.academic.board} {selectedStudentForTest?.academic.standard}.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-3 pt-4 max-h-[60vh] overflow-y-auto pr-2">

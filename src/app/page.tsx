@@ -58,32 +58,17 @@ export default function HomePage() {
     const url = window.location.origin;
     const message = `🎓 Check out Vidya EduCare! It's an amazing platform for mock tests and earning rewards. 
     
-Here's what you get:
-- 📚 Access to a huge library of mock tests.
-- 🏆 Win cash prizes on the live leaderboard.
-- 💸 Earn rewards by referring friends.
-
 Start your journey to success now: ${url}
 #VidyaEduCare #EdTech #MockTest #ReferAndEarn`;
     
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
 
-    const fallbackCopy = () => {
-        navigator.clipboard.writeText(message);
-        toast({
-            title: "Link Copied!",
-            description: "Promotional message copied to clipboard.",
-        });
-    };
-
     try {
-        const newWindow = window.open(whatsappUrl, '_blank');
-        if(!newWindow || newWindow.closed || typeof newWindow.closed=='undefined') {
-            fallbackCopy();
-        }
+        window.open(whatsappUrl, '_blank');
     } catch(e) {
-        fallbackCopy();
+        navigator.clipboard.writeText(message);
+        toast({ title: "Link Copied!", description: "Promotional message copied to clipboard." });
     }
   };
 
@@ -134,31 +119,6 @@ Start your journey to success now: ${url}
           </div>
         </section>
         
-        {/* How it Works Section */}
-        <section>
-          <div className="text-center space-y-2 mb-12">
-            <h2 className="text-3xl font-bold">A Rewarding Journey in 3 Steps</h2>
-            <p className="text-muted-foreground">Getting started is simple and straightforward.</p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-8 text-center">
-              <div className="flex flex-col items-center">
-                  <div className="flex items-center justify-center bg-primary/20 text-primary w-16 h-16 rounded-full text-2xl font-bold mb-4">1</div>
-                  <h3 className="text-xl font-semibold">Sign Up</h3>
-                  <p className="text-muted-foreground mt-2">Create your account in minutes. Use a referral code to get an instant bonus!</p>
-              </div>
-              <div className="flex flex-col items-center">
-                  <div className="flex items-center justify-center bg-primary/20 text-primary w-16 h-16 rounded-full text-2xl font-bold mb-4">2</div>
-                  <h3 className="text-xl font-semibold">Learn & Compete</h3>
-                  <p className="text-muted-foreground mt-2">Access high-quality mock tests and compete on the leaderboard.</p>
-              </div>
-              <div className="flex flex-col items-center">
-                  <div className="flex items-center justify-center bg-primary/20 text-primary w-16 h-16 rounded-full text-2xl font-bold mb-4">3</div>
-                  <h3 className="text-xl font-semibold">Earn Rewards</h3>
-                  <p className="text-muted-foreground mt-2">Win cash prizes from tests and earn bonuses by referring your friends.</p>
-              </div>
-          </div>
-        </section>
-
         {/* Features Section */}
         <section>
             <div className="text-center space-y-2 mb-12">
@@ -200,36 +160,6 @@ Start your journey to success now: ${url}
               </div>
             </div>
           </div>
-        </section>
-
-        {/* Testimonials Section */}
-        <section>
-            <div className="text-center space-y-2 mb-12">
-              <h2 className="text-3xl font-bold">Trusted by Parents and Users</h2>
-              <p className="text-muted-foreground">Don't just take our word for it. Here's what people are saying.</p>
-            </div>
-            <div className="grid md:grid-cols-3 gap-6">
-              {testimonials.map((testimonial) => (
-                <Card key={testimonial.name} className="flex flex-col border-primary/5">
-                    <CardContent className="pt-6 flex-grow">
-                        <Quote className="w-8 h-8 text-primary/50 mb-4"/>
-                        <p className="text-muted-foreground italic">"{testimonial.quote}"</p>
-                    </CardContent>
-                    <CardFooter className="mt-4">
-                        <div className="flex items-center gap-3">
-                            <Avatar>
-                                <AvatarImage src={`https://picsum.photos/seed/${testimonial.avatar}/40/40`} />
-                                <AvatarFallback>{testimonial.avatar}</AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <p className="font-semibold">{testimonial.name}</p>
-                              <p className="text-sm text-muted-foreground">{testimonial.role}</p>
-                            </div>
-                        </div>
-                    </CardFooter>
-                </Card>
-              ))}
-            </div>
         </section>
 
         {/* Final CTA Section */}

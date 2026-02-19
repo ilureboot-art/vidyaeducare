@@ -59,7 +59,6 @@ export default function UserManagementPage() {
 
     try {
         const usersCollection = collection(db, "users");
-        // Only fetch minimal parent info to keep loading fast
         const q = query(usersCollection, orderBy("joinDate", "desc"), limit(100));
         const userSnapshot = await getDocs(q);
         
@@ -70,7 +69,6 @@ export default function UserManagementPage() {
         
         setUsers(userList);
     } catch (error) {
-        console.error("Error fetching users:", error);
         toast({ variant: 'destructive', title: "Sync Error", description: "Could not load user list." });
     } finally {
         setIsRefreshing(false);
@@ -90,21 +88,21 @@ export default function UserManagementPage() {
       setIsDetailsOpen(true);
 
       try {
-          // PERFORMANCE OPTIMIZATION: Fetch details lazily only when requested
+          // Lazy Fetch: Only fetch deep records when requested
           const studentsQuery = query(collection(db, "students"), where("parentId", "==", parent.id));
+          const walletRef = doc(db, "wallets", parent.id);
           
           const [studentsSnap, walletSnap] = await Promise.all([
               getDocs(studentsQuery),
-              getDocs(query(collection(db, "wallets"), where("__name__", "==", parent.id)))
+              getDoc(walletRef)
           ]);
 
           const students = studentsSnap.docs.map(d => ({ id: d.id, ...d.data() } as StudentProfile));
-          const walletBalance = !walletSnap.empty ? walletSnap.docs[0].data().balance : 0;
+          const walletBalance = walletSnap.exists() ? walletSnap.data().balance : 0;
 
           setParentStudents(students);
           setParentWallet(walletBalance);
       } catch (e) {
-          console.error("Error loading details:", e);
           toast({ variant: 'destructive', title: "Error", description: "Could not load details." });
       } finally {
           setIsLoadingDetails(false);
@@ -116,37 +114,18 @@ export default function UserManagementPage() {
     try {
         const userDocRef = doc(db, "users", userId);
         await updateDoc(userDocRef, { status: newStatus });
-        
         setUsers(prev => prev ? prev.map(u => u.id === userId ? { ...u, status: newStatus } : u) : null);
-        
-        toast({
-          title: `User ${newStatus}`,
-          description: `User account has been marked as ${newStatus.toLowerCase()}.`,
-        });
+        toast({ title: `User ${newStatus}`, description: `Account updated to ${newStatus}.` });
     } catch (error) {
-        console.error("Error changing status:", error);
         toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not update user status.'});
     }
   };
-
-  const handleDeleteUser = async (userId: string) => {
-    if (!db) return;
-    if (!confirm("Are you sure you want to delete this user? This action cannot be undone.")) return;
-
-    try {
-        await deleteDoc(doc(db, "users", userId));
-        setUsers(prev => prev ? prev.filter(u => u.id !== userId) : null);
-        toast({ title: "User Deleted", description: "Account removed successfully." });
-    } catch(error) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Could not delete user.' });
-    }
-  }
 
   if (!users) {
     return (
       <div className="flex flex-col items-center justify-center h-96 space-y-4">
         <Loader2 className="animate-spin text-primary" size={40} />
-        <p className="text-muted-foreground animate-pulse">Syncing User Database...</p>
+        <p className="text-muted-foreground animate-pulse font-medium">Syncing User Database...</p>
       </div>
     );
   }
@@ -170,18 +149,11 @@ export default function UserManagementPage() {
       <Card>
         <CardHeader>
           <CardTitle>All Registered Users (Parents)</CardTitle>
-          <CardDescription>
-            Manage parent accounts and access linked student records.
-          </CardDescription>
+          <CardDescription>Manage parent accounts and access linked student records.</CardDescription>
           <div className="pt-4">
             <div className="relative w-full max-w-sm">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  placeholder="Search by name or email..." 
-                  className="pl-8"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
+                <Input placeholder="Search name or email..." className="pl-8" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             </div>
           </div>
         </CardHeader>
@@ -191,13 +163,12 @@ export default function UserManagementPage() {
               <TableRow>
                 <TableHead>User Identity</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Contact</TableHead>
                 <TableHead>Join Date</TableHead>
                 <TableHead className="text-center">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredUsers.length > 0 ? filteredUsers.map((user) => (
+              {filteredUsers.map((user) => (
                 <TableRow key={user.id} className="group">
                   <TableCell>
                     <div className="flex items-center gap-3">
@@ -211,48 +182,21 @@ export default function UserManagementPage() {
                         </div>
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <Badge variant={getStatusBadgeVariant(user.status)}>
-                      {user.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-xs font-medium">
-                      {user.phone || 'No Phone'}
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                      {user.joinDate ? format(new Date(user.joinDate), 'PP') : 'N/A'}
-                  </TableCell>
+                  <TableCell><Badge variant={getStatusBadgeVariant(user.status)}>{user.status}</Badge></TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{user.joinDate ? format(new Date(user.joinDate), 'PP') : 'N/A'}</TableCell>
                   <TableCell className="text-center">
                     <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
+                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal size={16}/></Button></DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Control Panel</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => viewUserDetails(user)}>
-                            <Info className="mr-2 h-4 w-4 text-blue-500" />
-                            View Records & Wallet
-                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => viewUserDetails(user)}><Info size={14} className="mr-2"/> View Records</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleStatusChange(user.id, user.status === "Banned" ? "Active" : "Banned")}>
                             {user.status === "Banned" ? "Unban Account" : "Suspend Account"}
-                        </DropdownMenuItem>
-                         <DropdownMenuItem className="text-destructive focus:bg-destructive/10" onClick={() => handleDeleteUser(user.id)}>
-                            <Trash2 className="mr-2 h-4 w-4"/>
-                            Permanently Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
                 </TableRow>
-              )) : (
-                 <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground h-32">
-                        {searchTerm ? "No users match your search." : "No users registered yet."}
-                    </TableCell>
-                </TableRow>
-              )}
+              ))}
             </TableBody>
           </Table>
         </CardContent>
@@ -261,10 +205,7 @@ export default function UserManagementPage() {
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2">
-                      <UsersIcon className="text-primary" />
-                      Details for {selectedParent?.name}
-                  </DialogTitle>
+                  <DialogTitle className="flex items-center gap-2"><UsersIcon className="text-primary" /> Details for {selectedParent?.name}</DialogTitle>
                   <DialogDescription>Full record of linked student profiles and wallet standing.</DialogDescription>
               </DialogHeader>
               
@@ -277,27 +218,17 @@ export default function UserManagementPage() {
                   <div className="space-y-6 pt-4">
                       <div className="grid grid-cols-2 gap-4">
                           <Card className="bg-primary/[0.03] border-primary/10">
-                              <CardHeader className="py-3 px-4">
-                                  <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Wallet Balance</CardTitle>
-                              </CardHeader>
-                              <CardContent className="py-0 px-4 pb-4">
-                                  <p className="text-3xl font-black text-primary">₹{parentWallet?.toFixed(2) || '0.00'}</p>
-                              </CardContent>
+                              <CardHeader className="py-3 px-4"><CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Wallet Balance</CardTitle></CardHeader>
+                              <CardContent className="py-0 px-4 pb-4"><p className="text-3xl font-black text-primary">₹{parentWallet?.toFixed(2) || '0.00'}</p></CardContent>
                           </Card>
                           <Card className="bg-muted/30 border-transparent">
-                              <CardHeader className="py-3 px-4">
-                                  <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Enrolled Students</CardTitle>
-                              </CardHeader>
-                              <CardContent className="py-0 px-4 pb-4">
-                                  <p className="text-3xl font-black">{parentStudents?.length || 0}</p>
-                              </CardContent>
+                              <CardHeader className="py-3 px-4"><CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Enrolled Students</CardTitle></CardHeader>
+                              <CardContent className="py-0 px-4 pb-4"><p className="text-3xl font-black">{parentStudents?.length || 0}</p></CardContent>
                           </Card>
                       </div>
 
                       <div className="space-y-3">
-                          <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                              <GraduationCap className="w-4 h-4" /> Academic Records
-                          </h3>
+                          <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2"><GraduationCap size={14}/> Academic Records</h3>
                           {parentStudents && parentStudents.length > 0 ? (
                               <div className="grid gap-3">
                                   {parentStudents.map(s => (
@@ -309,26 +240,17 @@ export default function UserManagementPage() {
                                               </Avatar>
                                               <div>
                                                   <p className="font-bold leading-none">{s.name}</p>
-                                                  <p className="text-[10px] font-bold text-muted-foreground uppercase mt-1">
-                                                      {s.academic.standard} • {s.academic.board} Board
-                                                  </p>
+                                                  <p className="text-[10px] font-bold text-muted-foreground uppercase mt-1">{s.academic.standard} • {s.academic.board} Board</p>
                                               </div>
                                           </div>
                                           <div className="text-right">
-                                              <p className="flex items-center justify-end gap-1 text-[10px] font-bold text-muted-foreground uppercase">
-                                                  <Calendar className="w-3 h-3" /> Born: {s.dob}
-                                              </p>
-                                              <div className="mt-1 flex items-center justify-end gap-2">
-                                                  <Badge variant="outline" className="font-mono text-[9px] uppercase">{s.id}</Badge>
-                                                  <p className="font-black text-primary text-sm">{s.stats?.testsTaken || 0} Tests</p>
-                                              </div>
+                                              <p className="font-black text-primary text-sm">{s.stats?.testsTaken || 0} Tests</p>
                                           </div>
                                       </div>
                                   ))}
                               </div>
                           ) : (
                               <div className="text-center py-12 bg-muted/20 rounded-2xl border-2 border-dashed">
-                                  <UsersIcon className="w-10 h-10 text-muted-foreground mx-auto opacity-20 mb-2" />
                                   <p className="text-sm text-muted-foreground font-medium">No students enrolled yet.</p>
                               </div>
                           )}

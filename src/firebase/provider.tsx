@@ -20,7 +20,7 @@ const AuthContext = createContext<AuthState | undefined>(undefined);
 const DbContext = createContext<Firestore | undefined>(undefined);
 const AuthServiceContext = createContext<Auth | undefined>(undefined);
 
-const ROLE_CACHE_KEY = 've_role_v5';
+const ROLE_CACHE_KEY = 've_role_v6';
 
 const getCachedRoles = () => {
     if (typeof window === 'undefined') return null;
@@ -103,7 +103,15 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       setAuthState({ user, loading: false, ...roles });
     });
 
-    return () => unsubscribe();
+    // Fail-safe: Ensure we don't stay loading forever if network is slow
+    const timeout = setTimeout(() => {
+        setAuthState(prev => ({ ...prev, loading: false }));
+    }, 5000);
+
+    return () => {
+        unsubscribe();
+        clearTimeout(timeout);
+    };
   }, [services, resolveUserRole]);
 
   // DETERMINISTIC ROUTING ENGINE
@@ -122,7 +130,6 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     if (user) {
       if (isAdmin) {
         // Admins belong exclusively in the Admin Dashboard
-        // If they land on Home, Redirect them to Dashboard to prevent "Automatic Logout" sensation
         if (!isAdminArea || cleanPath === '/admin/login') {
           targetPath = '/admin/analytics';
         }
@@ -139,12 +146,11 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    // Atomic Navigation Mutex: Prevents "Scrolling" Redirect Loops
+    // Atomic Navigation Mutex: Prevents Redirection Loops
     if (targetPath && targetPath !== cleanPath && navigationLock.current !== targetPath) {
       navigationLock.current = targetPath;
       router.replace(targetPath);
       
-      // Release lock after transition
       const timer = setTimeout(() => { navigationLock.current = null; }, 1000);
       return () => clearTimeout(timer);
     }

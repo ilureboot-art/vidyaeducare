@@ -162,7 +162,6 @@ function ProfilePageContent() {
             );
             const snapshot = await getDocs(q);
             const tests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ScheduledTest));
-            // PERFORMANCE: Only fetch tests when student specifically requests them
             const sortedTests = tests.sort((a,b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
             setAvailableTests(sortedTests);
         } catch (e) {
@@ -235,7 +234,7 @@ function ProfilePageContent() {
             <Card className="border-yellow-200 bg-yellow-50 dark:bg-yellow-900/20">
                 <CardContent className="flex items-center gap-3 p-4">
                     <AlertCircle className="text-yellow-600" />
-                    <p className="text-sm text-yellow-700 dark:text-yellow-400 font-medium">Your primary profile data is being initialized. You can still manage students below.</p>
+                    <p className="text-sm text-yellow-700 dark:text-yellow-400 font-medium">Your profile data is being initialized. You can still manage students below.</p>
                 </CardContent>
             </Card>
         )}

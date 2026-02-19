@@ -20,7 +20,7 @@ const AuthServiceContext = createContext<Auth | undefined>(undefined);
 const DbContext = createContext<Firestore | undefined>(undefined);
 const AuthContext = createContext<AuthState | undefined>(undefined);
 
-// Synchronous helper to get cached roles from storage
+// Synchronous helper to get cached roles from storage to prevent "flicker"
 const getCachedRoles = () => {
     if (typeof window === 'undefined') return null;
     try {
@@ -41,7 +41,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     }
   });
 
-  // INITIAL STATE: Optimistically use cached roles to minimize "Verifying permissions" screen time
+  // INITIAL STATE: Prioritize cache to eliminate "Verifying permissions" screen on refresh
   const [authState, setAuthState] = useState<AuthState>(() => {
       const cached = getCachedRoles();
       return {
@@ -87,7 +87,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!services) return;
 
-    // PERFORMANCE: 5-second safety resolution to prevent indefinite loading hang
+    // PERFORMANCE: Fail-safe timer to prevent indefinite loading hang
     const safetyTimer = setTimeout(() => {
         setAuthState(prev => ({ ...prev, loading: false }));
     }, 5000);
@@ -100,18 +100,17 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
           return;
       }
 
-      // If we have cached roles, resolve loading state immediately using them
+      // Handle immediate resolution if cache exists
       const cached = getCachedRoles();
       if (cached) {
           setAuthState({ user, loading: false, ...cached });
-          // Background sync to ensure cache is still valid
+          // Refresh role in background to ensure security
           resolveUserRole(user, db).then(fresh => {
               if (JSON.stringify(fresh) !== JSON.stringify(cached)) {
                   setAuthState(prev => ({ ...prev, ...fresh }));
               }
           });
       } else {
-          // No cache: Perform a one-time block to determine role correctly
           const roles = await resolveUserRole(user, db);
           setAuthState({ user, loading: false, ...roles });
       }
@@ -123,43 +122,41 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     };
   }, [services, resolveUserRole]);
 
-  // Unified Redirection Engine with Mutex Lock to prevent "Scrolling" reload loops
+  // REDIRECTION ENGINE: Deterministic Mutex Lock to stop "scrolling" reloads
   useEffect(() => {
     if (authState.loading) return;
 
     const { user, isAdmin } = authState;
     const isAdminArea = pathname.startsWith('/admin');
     const isAuthRoute = ['/login', '/signup', '/admin/login', '/forgot-password', '/admin/setup'].includes(pathname);
-    const isPublicRoute = ['/how-to-play'].includes(pathname);
+    const isPublicRoute = ['/how-to-play', '/'].includes(pathname);
     
     let targetPath: string | null = null;
 
     if (user) {
       if (isAdmin) {
-        // ADMINS: Forcefully locked into the Dashboard workspace.
-        // Prevent "Fake Logout" sensation by barring access to Guest Home while logged in.
+        // ADMINS: Locked into Dashboard. Redirect if straying to guest/student zones.
         if (!isAdminArea) {
           targetPath = '/admin/analytics';
         }
       } else {
-        // STUDENTS: Barred from Admin Panel and redirected from Auth/Home to Profile.
+        // STUDENTS: Locked into Student workspace.
         if (isAdminArea || isAuthRoute || pathname === '/') {
           targetPath = '/profile';
         }
       }
     } else {
-      // GUESTS: Barred from all secure workspaces.
-      if (isAdminArea || (!isAuthRoute && !isPublicRoute && pathname !== '/')) {
+      // GUESTS: Barred from secure zones.
+      if (isAdminArea || (!isAuthRoute && !isPublicRoute)) {
         targetPath = '/';
       }
     }
 
-    // Apply Navigation Mutex to prevent flickering reload loops
+    // Atomic Navigation Mutex
     if (targetPath && targetPath !== pathname && navigationLock.current !== targetPath) {
       navigationLock.current = targetPath;
       router.replace(targetPath);
       
-      // Clear lock after a reasonable delay to allow the path change to register
       const timer = setTimeout(() => { navigationLock.current = null; }, 1000);
       return () => clearTimeout(timer);
     }

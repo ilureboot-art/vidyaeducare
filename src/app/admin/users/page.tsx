@@ -89,8 +89,7 @@ export default function UserManagementPage() {
       setIsDetailsOpen(true);
 
       try {
-          // PERFORMANCE: Fetch Wallet and Students in parallel for the selected user only
-          // Prevents N+1 query problem by loading details only on interaction
+          // PERFORMANCE: Fetch Wallet and Students in parallel only when details are requested
           const studentsQuery = query(collection(db, "students"), where("parentId", "==", parent.id));
           const walletRef = doc(db, "wallets", parent.id);
           
@@ -118,7 +117,6 @@ export default function UserManagementPage() {
         const userDocRef = doc(db, "users", userId);
         await updateDoc(userDocRef, { status: newStatus });
         
-        // Optimistic UI update
         setUsers(prev => prev ? prev.map(u => u.id === userId ? { ...u, status: newStatus } : u) : null);
         
         toast({

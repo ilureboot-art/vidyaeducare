@@ -98,13 +98,16 @@ Start your journey to success now: ${url}
               <p className="text-lg md:text-xl text-muted-foreground mt-4">The ultimate platform combining academic excellence with rewarding opportunities to make learning impactful.</p>
               
               {user ? (
-                  <div className="mt-8">
-                      <Button asChild size="lg" className="px-8 py-6 text-lg font-bold shadow-xl">
-                          <Link href={isAdmin ? "/admin/analytics" : "/profile"}>
-                              ENTER YOUR WORKSPACE <ArrowRight className="ml-2" />
-                          </Link>
-                      </Button>
-                      <p className="mt-2 text-sm text-muted-foreground">Logged in as {user.email}</p>
+                  <div className="mt-8 space-y-4">
+                      <div className="p-4 bg-primary/5 rounded-xl border border-primary/10 inline-block">
+                        <p className="text-sm font-semibold text-primary mb-2">Welcome Back!</p>
+                        <Button asChild size="lg" className="px-8 py-6 text-lg font-bold shadow-xl">
+                            <Link href={isAdmin ? "/admin/analytics" : "/profile"}>
+                                ENTER YOUR WORKSPACE <ArrowRight className="ml-2" />
+                            </Link>
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Authenticated as {user.email}</p>
                   </div>
               ) : (
                   <div className="mt-8 flex gap-2 md:gap-4 justify-center md:justify-start flex-wrap">

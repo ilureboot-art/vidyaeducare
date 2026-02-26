@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -85,6 +86,9 @@ function WalletPageContent() {
             } else {
                 setAdminPaymentMethods(defaultPaymentMethods);
             }
+        }, (error) => {
+            console.error("Payment methods sync error:", error);
+            setAdminPaymentMethods(defaultPaymentMethods);
         });
 
         const walletRef = doc(db, "wallets", user.uid);

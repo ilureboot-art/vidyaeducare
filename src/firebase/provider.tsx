@@ -20,6 +20,7 @@ const AuthContext = createContext<AuthState | undefined>(undefined);
 const DbContext = createContext<Firestore | undefined>(undefined);
 const AuthServiceContext = createContext<Auth | undefined>(undefined);
 
+// Stable key for role caching to prevent hydration mismatches and sequential load lag
 const ROLE_CACHE_KEY = 've_role_v12_stable';
 
 const getCachedRoles = () => {
@@ -63,7 +64,6 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      // Use getDoc with standard behavior to ensure role resolution is primary source of truth
       const adminDocRef = doc(db, "admins", user.uid);
       const adminDocSnap = await getDoc(adminDocRef);
       
@@ -71,6 +71,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       
       if (adminDocSnap.exists()) {
         const adminData = adminDocSnap.data() as Admin;
+        // Admin is authorized if Active status or if they are the Head Admin
         roles = {
             isAdmin: adminData.status === 'Active' || adminData.role === 'Head Admin',
             isHeadAdmin: adminData.role === 'Head Admin'
@@ -81,7 +82,6 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       return roles;
     } catch (e) {
       console.error("Role resolution failed:", e);
-      // Fallback to cache or default to guest
       return getCachedRoles() || { isAdmin: false, isHeadAdmin: false };
     }
   }, []);
@@ -101,15 +101,13 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
           return;
       }
 
-      // Re-resolve role on every actual auth state change to prevent stale cache issues
       const roles = await resolveUserRole(user, db);
       setAuthState({ user, loading: false, ...roles });
     });
 
-    // Secure fail-safe resolution: Ensure the splash screen doesn't hang forever
     const timeout = setTimeout(() => {
         setAuthState(prev => ({ ...prev, loading: false }));
-    }, 8000);
+    }, 5000);
 
     return () => {
         unsubscribe();
@@ -117,7 +115,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     };
   }, [services, resolveUserRole]);
 
-  // DETERMINISTIC NAVIGATION ENGINE: Resolves Redirection Loops
+  // ATOMIC NAVIGATION ENGINE: Resolves Redirection Loops & "Auto-Logout" sensation
   useEffect(() => {
     if (authState.loading || !services) return;
 
@@ -132,24 +130,24 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
     if (user) {
       if (isAdmin) {
-        // Force Administrators into the Admin Portal
+        // Deterministic Admin Lock: Prevent Admins from seeing student/guest routes
         if (!isAdminArea || isAuthRoute || cleanPath === '/') {
           targetPath = '/admin/analytics';
         }
       } else {
-        // Force Players into the Player Portal
+        // Player Lock: Prevent Players from seeing admin routes
         if (isAdminArea || isAuthRoute || cleanPath === '/') {
           targetPath = '/profile';
         }
       }
     } else {
-      // Unauthenticated users go to Home if they attempt to access protected routes
+      // Unauthenticated users are strictly returned to Home if attempting to access protected data
       if (!isPublicRoute && !isAuthRoute) {
         targetPath = '/';
       }
     }
 
-    // Atomic Navigation Mutex
+    // Atomic Navigation Mutex: Ensures router performs exactly one transition per state change
     if (targetPath && targetPath !== cleanPath && navigationLock.current !== targetPath) {
       navigationLock.current = targetPath;
       router.replace(targetPath);

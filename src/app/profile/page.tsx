@@ -387,7 +387,9 @@ function ProfilePageContent() {
        <Dialog open={isTestDialogOpen} onOpenChange={setIsTestDialogOpen}>
             <DialogContent className="max-w-md">
                 <DialogHeader>
-                    <DialogTitle>Tests for {selectedStudentForTest?.name}</DialogTitle>
+                    <DialogTitle className="flex items-center gap-2">
+                        <Users className="text-primary" /> Tests for {selectedStudentForTest?.name}
+                    </DialogTitle>
                     <DialogDescription>
                         Available tests for {selectedStudentForTest?.academic.board} {selectedStudentForTest?.academic.standard}.
                     </DialogDescription>

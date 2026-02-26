@@ -21,7 +21,7 @@ const DbContext = createContext<Firestore | undefined>(undefined);
 const AuthServiceContext = createContext<Auth | undefined>(undefined);
 
 // Stable key for role caching to prevent hydration mismatches and sequential load lag
-const ROLE_CACHE_KEY = 'vidya_auth_role_v1';
+const ROLE_CACHE_KEY = 'vidya_auth_role_v2';
 
 const getCachedRoles = () => {
     if (typeof window === 'undefined') return null;
@@ -63,6 +63,12 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       return { isAdmin: false, isHeadAdmin: false };
     }
 
+    // Optimization: Check if cache matches current user to skip network round-trip
+    const cached = getCachedRoles();
+    if (cached && cached.uid === user.uid) {
+        return { isAdmin: cached.isAdmin, isHeadAdmin: cached.isHeadAdmin };
+    }
+
     try {
       const adminDocRef = doc(db, "admins", user.uid);
       const adminDocSnap = await getDoc(adminDocRef);
@@ -71,19 +77,17 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       
       if (adminDocSnap.exists()) {
         const adminData = adminDocSnap.data() as Admin;
-        // Admin is authorized if Active status or if they are the Head Admin
         roles = {
             isAdmin: adminData.status === 'Active' || adminData.role === 'Head Admin',
             isHeadAdmin: adminData.role === 'Head Admin'
         };
       }
       
-      sessionStorage.setItem(ROLE_CACHE_KEY, JSON.stringify(roles));
+      sessionStorage.setItem(ROLE_CACHE_KEY, JSON.stringify({ ...roles, uid: user.uid }));
       return roles;
     } catch (e) {
       console.error("Role resolution failed:", e);
-      // Fallback to cache if network fails to avoid blocking the user
-      return getCachedRoles() || { isAdmin: false, isHeadAdmin: false };
+      return cached?.uid === user.uid ? cached : { isAdmin: false, isHeadAdmin: false };
     }
   }, []);
 
@@ -106,10 +110,9 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       setAuthState({ user, loading: false, ...roles });
     });
 
-    // Failsafe: Ensure the loader clears even if Auth/DB hang
     const timeout = setTimeout(() => {
         setAuthState(prev => ({ ...prev, loading: false }));
-    }, 5000);
+    }, 3000);
 
     return () => {
         unsubscribe();
@@ -117,45 +120,38 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     };
   }, [services, resolveUserRole]);
 
-  // ATOMIC NAVIGATION ENGINE: Resolves Redirection Loops & "Auto-Logout" sensation
   useEffect(() => {
     if (authState.loading || !services) return;
 
     const { user, isAdmin } = authState;
     const cleanPath = pathname === '/' ? '/' : pathname.replace(/\/$/, '');
     
-    const isPublicRoute = ['/', '/how-to-play', '/admin/setup', '/check-head-admin'].includes(cleanPath);
-    const isAuthRoute = ['/login', '/signup', '/admin/login', '/forgot-password'].includes(cleanPath);
+    const isPublicRoute = ['/', '/how-to-play', '/admin/setup', '/check-head-admin', '/forgot-password'].includes(cleanPath);
+    const isAuthRoute = ['/login', '/signup', '/admin/login'].includes(cleanPath);
     const isAdminArea = cleanPath.startsWith('/admin');
     
     let targetPath: string | null = null;
 
     if (user) {
       if (isAdmin) {
-        // Deterministic Admin Lock: Prevent Admins from seeing student/guest routes
         if (!isAdminArea || isAuthRoute || cleanPath === '/') {
           targetPath = '/admin/analytics';
         }
       } else {
-        // Player Lock: Prevent Players from seeing admin routes
         if (isAdminArea || isAuthRoute || cleanPath === '/') {
           targetPath = '/profile';
         }
       }
     } else {
-      // Unauthenticated users are strictly returned to Home if attempting to access protected data
       if (!isPublicRoute && !isAuthRoute) {
         targetPath = '/';
       }
     }
 
-    // Atomic Navigation Mutex: Ensures router performs exactly one transition per state change
     if (targetPath && targetPath !== cleanPath && navigationLock.current !== targetPath) {
       navigationLock.current = targetPath;
       router.replace(targetPath);
-      
-      // Release lock after a delay to allow the new page to stabilize
-      const timer = setTimeout(() => { navigationLock.current = null; }, 2000);
+      const timer = setTimeout(() => { navigationLock.current = null; }, 1500);
       return () => clearTimeout(timer);
     }
   }, [authState, pathname, router, services]);
@@ -169,7 +165,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
         </div>
         <div className="space-y-2">
             <p className="text-xl font-black text-primary tracking-tighter uppercase italic">Vidya EduCare</p>
-            <p className="text-muted-foreground text-sm font-medium tracking-wide">Syncing Workspace Credentials...</p>
+            <p className="text-muted-foreground text-sm font-medium tracking-wide">Synchronizing Session...</p>
         </div>
       </div>
     );

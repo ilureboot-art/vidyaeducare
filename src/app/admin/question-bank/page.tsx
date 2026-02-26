@@ -32,7 +32,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { type TestSet, type Question } from "@/lib/question-bank";
 import type { AcademicConfig } from "@/lib/academic-config";
 import { useDb } from "@/firebase";
-import { collection, getDocs, doc, setDoc, deleteDoc } from "firebase/firestore";
+import { collection, getDocs, doc, setDoc, deleteDoc, getDoc } from "firebase/firestore";
 import Papa from "papaparse";
 import { generateQuestions, GenerateQuestionsInput } from "@/ai/flows/generate-questions-flow";
 
@@ -78,15 +78,22 @@ export default function TestSetManagementPage() {
   const fetchPageData = async () => {
       if (!db) return;
       
-      const testSetsCollection = collection(db, "testSets");
-      const testSetSnapshot = await getDocs(testSetsCollection);
-      const testSetList = testSetSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TestSet));
-      setTestSets(testSetList);
+      try {
+          const testSetsCollection = collection(db, "testSets");
+          const testSetSnapshot = await getDocs(testSetsCollection);
+          const testSetList = testSetSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TestSet));
+          setTestSets(testSetList);
 
-      const configRef = doc(db, "configs", 'academic');
-      const configSnap = await getDoc(configRef);
-      if (configSnap.exists()) {
-          setAcademicConfig(configSnap.data() as AcademicConfig);
+          const configRef = doc(db, "configs", 'academic');
+          const configSnap = await getDoc(configRef);
+          if (configSnap.exists()) {
+              setAcademicConfig(configSnap.data() as AcademicConfig);
+          } else {
+              setAcademicConfig({ boards: ["SSC", "CBSE", "ICSE"], standards: ["10th"], subjects: ["Science"] });
+          }
+      } catch (error) {
+          console.error("Error fetching bank data:", error);
+          setTestSets([]);
       }
   };
 
@@ -271,8 +278,6 @@ const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
                  toast({ variant: 'destructive', title: 'CSV Error', description: error.message });
             }
         });
-    } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-        toast({ variant: 'destructive', title: 'File type not supported yet', description: 'DOCX file processing is a work in progress.' });
     } else {
         toast({ variant: 'destructive', title: 'Unsupported File Type', description: 'Please upload a CSV file.' });
     }
@@ -344,7 +349,7 @@ const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
                              <>
                             <DialogHeader>
                                 <DialogTitle>{editingTestSet.id.startsWith("NEW-") ? 'Add' : 'Edit'} Questions (Step 2 of 2)</DialogTitle>
-                                <DialogDescription>Enter questions for the "{editingTestSet.name}" test set. You can save your progress and add more later.</DialogDescription>
+                                <DialogDescription>Enter questions for the "{editingTestSet.name}" test set.</DialogDescription>
                             </DialogHeader>
                              <ScrollArea className="h-full -mx-6 px-6">
                                 <div className="space-y-4 py-4">
@@ -442,11 +447,11 @@ const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
                          <DialogHeader>
                              <DialogTitle>Upload MCQs from File</DialogTitle>
                              <DialogDescription>
-                                 Upload a CSV file with your questions. The questions will be loaded into the editor for you to review and save.
+                                 Upload a CSV file with your questions.
                              </DialogDescription>
                          </DialogHeader>
                          <div className="space-y-4 py-4">
-                            <Input id="file-upload" type="file" accept=".csv, .docx" onChange={handleFileUpload} />
+                            <Input id="file-upload" type="file" accept=".csv" onChange={handleFileUpload} />
                              <a href="/mcq_template.csv" download>
                                 <Button variant="link" className="p-0 h-auto">
                                     <Download className="mr-2 h-4 w-4" /> Download CSV Template

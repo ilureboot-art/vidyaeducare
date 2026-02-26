@@ -78,7 +78,7 @@ function WalletPageContent() {
 
   useEffect(() => {
     if (user && db) {
-        // PERFORMANCE: Fallback instantly if doc doesn't exist to prevent loader hang
+        // Fetch Admin Payment Config
         const paymentMethodsRef = doc(db, "configs", "paymentMethods");
         const unsubPaymentMethods = onSnapshot(paymentMethodsRef, (doc) => {
             if (doc.exists()) {
@@ -91,12 +91,17 @@ function WalletPageContent() {
             setAdminPaymentMethods(defaultPaymentMethods);
         });
 
+        // Fetch User Wallet
         const walletRef = doc(db, "wallets", user.uid);
         const unsubWallet = onSnapshot(walletRef, (doc) => {
             if (doc.exists()) setWalletInfo(doc.data() as WalletInfo);
             else setWalletInfo({ balance: 0, coins: 0, referralCode: `REF${user.uid.slice(0,6).toUpperCase()}` });
+        }, (error) => {
+            console.error("Wallet sync error:", error);
+            setWalletInfo({ balance: 0, coins: 0, referralCode: `REF${user.uid.slice(0,6).toUpperCase()}` });
         });
 
+        // Fetch Recent Transactions
         const txsRef = collection(db, "transactions");
         const q = query(txsRef, where("user", "==", user.uid), orderBy("date", "desc"), limit(10));
         const unsubTransactions = onSnapshot(q, (querySnapshot) => {
@@ -106,6 +111,9 @@ function WalletPageContent() {
                 return { id: d.id, ...data, date } as Transaction;
             });
             setTransactions(transactionList);
+        }, (error) => {
+            console.error("Transactions sync error:", error);
+            setTransactions([]);
         });
 
         return () => {

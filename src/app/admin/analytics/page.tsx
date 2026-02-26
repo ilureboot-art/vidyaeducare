@@ -58,7 +58,7 @@ export default function AnalyticsPage() {
             where('status', '==', 'Completed')
           );
 
-          // PERFORMANCE OPTIMIZATION: High-speed statistical resolution
+          // PERFORMANCE: Run all business intelligence queries in parallel
           const [revenueSnapshot, usersCountRes, resultsCountRes] = await Promise.all([
               getDocs(revenueQuery),
               getCountFromServer(usersCol),
@@ -86,18 +86,13 @@ export default function AnalyticsPage() {
           setUserActivityData(fetchedUserActivity);
 
           setRevenueData([
-            { name: 'Mon', revenue: 4000 },
-            { name: 'Tue', revenue: 3000 },
-            { name: 'Wed', revenue: 5000 },
-            { name: 'Thu', revenue: 4500 },
-            { name: 'Fri', revenue: 6000 },
-            { name: 'Sat', revenue: 5500 },
-            { name: 'Sun', revenue: 7000 },
+            { name: 'Mon', revenue: 4000 }, { name: 'Tue', revenue: 3000 }, { name: 'Wed', revenue: 5000 },
+            { name: 'Thu', revenue: 4500 }, { name: 'Fri', revenue: 6000 }, { name: 'Sat', revenue: 5500 }, { name: 'Sun', revenue: 7000 },
           ]);
 
       } catch (err: any) {
           console.error("Dashboard Sync Error:", err);
-          setError("Failed to sync real-time analytics. Please check your connection.");
+          setError("Failed to sync real-time analytics.");
       } finally {
           setLoading(false);
           setRefreshing(false);
@@ -112,24 +107,9 @@ export default function AnalyticsPage() {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] space-y-4">
         <Loader2 className="animate-spin text-primary" size={40} />
-        <p className="text-muted-foreground animate-pulse font-medium">Populating Admin Dashboard...</p>
+        <p className="text-muted-foreground animate-pulse font-medium">Populating Dashboard...</p>
       </div>
     );
-  }
-
-  if (error) {
-      return (
-          <div className="p-6">
-              <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Connection Latency</AlertTitle>
-                  <AlertDescription className="flex items-center justify-between">
-                    {error}
-                    <Button variant="outline" size="sm" onClick={() => fetchData()} className="ml-4">Retry Sync</Button>
-                  </AlertDescription>
-              </Alert>
-          </div>
-      );
   }
 
   return (
@@ -137,87 +117,74 @@ export default function AnalyticsPage() {
       <div className="flex items-center justify-between">
         <div>
             <h1 className="text-3xl font-bold tracking-tight text-primary">Admin Overview</h1>
-            <p className="text-muted-foreground text-sm">Real-time business intelligence for Vidya EduCare.</p>
+            <p className="text-muted-foreground text-sm">Real-time business intelligence.</p>
         </div>
         <Button variant="outline" size="sm" onClick={() => fetchData(true)} disabled={refreshing}>
           <RefreshCcw className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-          {refreshing ? 'Refreshing...' : 'Refresh Stats'}
+          Refresh Stats
         </Button>
       </div>
 
-      <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-3">
         <Card className="hover:shadow-md transition-shadow border-primary/10">
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-widest">
-              <Users className="text-primary h-4 w-4"/> Total Registrations
+            <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+              <Users className="h-4 w-4 text-primary"/> Total Registrations
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold tracking-tight">{activeUsers?.toLocaleString() || 0}</p>
-            <p className="text-xs text-muted-foreground mt-1">Active player accounts</p>
+            <p className="text-3xl font-bold">{activeUsers?.toLocaleString() || 0}</p>
           </CardContent>
         </Card>
         <Card className="hover:shadow-md transition-shadow border-primary/10">
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-widest">
-              <BookOpen className="text-primary h-4 w-4"/> Academic Activity
+            <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+              <BookOpen className="h-4 w-4 text-primary"/> Academic Activity
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold tracking-tight">{testVolume?.toLocaleString() || 0}</p>
-            <p className="text-xs text-muted-foreground mt-1">Total mock tests completed</p>
+            <p className="text-3xl font-bold">{testVolume?.toLocaleString() || 0}</p>
           </CardContent>
         </Card>
         <Card className="hover:shadow-md transition-shadow border-primary/20 bg-primary/[0.02]">
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-widest">
-              <IndianRupee className="text-primary h-4 w-4"/> Revenue Today
+            <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+              <IndianRupee className="h-4 w-4 text-primary"/> Revenue Today
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold tracking-tight text-primary">₹{todaysRevenue?.toLocaleString() || 0}</p>
-            <p className="text-xs text-muted-foreground mt-1">Settled purchase volume</p>
+            <p className="text-3xl font-bold text-primary">₹{todaysRevenue?.toLocaleString() || 0}</p>
           </CardContent>
         </Card>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
-          <CardHeader>
-            <CardTitle>Growth Trend</CardTitle>
-            <CardDescription>Daily new user registrations (Last 7 Days)</CardDescription>
-          </CardHeader>
+          <CardHeader><CardTitle>Growth Trend</CardTitle></CardHeader>
           <CardContent>
             <div className="h-[300px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={userActivityData || []}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.1} />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} fontSize={12} dy={10} />
-                    <YAxis axisLine={false} tickLine={false} fontSize={12} />
-                    <Tooltip 
-                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                    />
-                    <Line type="monotone" dataKey="users" stroke="hsl(var(--primary))" strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: 'white' }} activeDot={{ r: 6 }} />
+                    <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
+                    <YAxis fontSize={12} tickLine={false} axisLine={false} />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="users" stroke="hsl(var(--primary))" strokeWidth={3} dot={{ r: 4 }} />
                 </LineChart>
                 </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader>
-            <CardTitle>Revenue Forecast</CardTitle>
-            <CardDescription>Weekly settlement analysis</CardDescription>
-          </CardHeader>
+          <CardHeader><CardTitle>Revenue Forecast</CardTitle></CardHeader>
           <CardContent>
             <div className="h-[300px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={revenueData || []}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.1} />
-                        <XAxis dataKey="name" axisLine={false} tickLine={false} fontSize={12} dy={10} />
-                        <YAxis axisLine={false} tickLine={false} fontSize={12} />
-                        <Tooltip 
-                            contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                        />
+                        <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
+                        <YAxis fontSize={12} tickLine={false} axisLine={false} />
+                        <Tooltip />
                         <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                     </BarChart>
                 </ResponsiveContainer>

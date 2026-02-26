@@ -20,7 +20,7 @@ const AuthContext = createContext<AuthState | undefined>(undefined);
 const DbContext = createContext<Firestore | undefined>(undefined);
 const AuthServiceContext = createContext<Auth | undefined>(undefined);
 
-const ROLE_CACHE_KEY = 've_role_v6';
+const ROLE_CACHE_KEY = 've_role_v7';
 
 const getCachedRoles = () => {
     if (typeof window === 'undefined') return null;
@@ -103,7 +103,6 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       setAuthState({ user, loading: false, ...roles });
     });
 
-    // Fail-safe: Ensure we don't stay loading forever if network is slow
     const timeout = setTimeout(() => {
         setAuthState(prev => ({ ...prev, loading: false }));
     }, 5000);
@@ -121,32 +120,32 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     const { user, isAdmin } = authState;
     const cleanPath = pathname === '/' ? '/' : pathname.replace(/\/$/, '');
     
+    const isPublicRoute = ['/', '/how-to-play', '/admin/setup', '/check-head-admin'].includes(cleanPath);
+    const isAuthRoute = ['/login', '/signup', '/admin/login', '/forgot-password'].includes(cleanPath);
     const isAdminArea = cleanPath.startsWith('/admin');
-    const isAuthRoute = ['/login', '/signup', '/admin/login', '/forgot-password', '/admin/setup'].includes(cleanPath);
-    const isPublicRoute = ['/how-to-play', '/', '/check-head-admin'].includes(cleanPath);
     
     let targetPath: string | null = null;
 
     if (user) {
       if (isAdmin) {
-        // Admins belong exclusively in the Admin Dashboard
+        // Force Admins into the Admin Workspace
         if (!isAdminArea || cleanPath === '/admin/login') {
           targetPath = '/admin/analytics';
         }
       } else {
-        // Students belong exclusively in the Player Portal
+        // Force Students into the Player Portal
         if (isAdminArea || isAuthRoute || cleanPath === '/') {
           targetPath = '/profile';
         }
       }
     } else {
-      // Guests belong in public/auth routes
-      if (isAdminArea || (!isAuthRoute && !isPublicRoute)) {
+      // Guests belong in public or auth routes
+      if (!isPublicRoute && !isAuthRoute) {
         targetPath = '/';
       }
     }
 
-    // Atomic Navigation Mutex: Prevents Redirection Loops
+    // Atomic Navigation Mutex: Prevents Redirection Loops (Scrolling)
     if (targetPath && targetPath !== cleanPath && navigationLock.current !== targetPath) {
       navigationLock.current = targetPath;
       router.replace(targetPath);
@@ -165,7 +164,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
         </div>
         <div className="space-y-2">
             <p className="text-xl font-black text-primary tracking-tighter uppercase italic">Vidya EduCare</p>
-            <p className="text-muted-foreground text-sm font-medium tracking-wide">Syncing Credentials...</p>
+            <p className="text-muted-foreground text-sm font-medium tracking-wide">Syncing Workspace Credentials...</p>
         </div>
       </div>
     );

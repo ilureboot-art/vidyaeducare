@@ -7,7 +7,7 @@ import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { User, Mail, Calendar, Phone, GraduationCap, Trash2, PlusCircle, BookOpen, Loader2, BarChart2, Users } from "lucide-react";
+import { User, Mail, Calendar, Phone, GraduationCap, Trash2, PlusCircle, BookOpen, Loader2, BarChart2, Users as UsersIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -50,16 +50,23 @@ function ProfilePageContent() {
             const unsubParent = onSnapshot(doc(db, "users", user.uid), (doc) => {
                 if (doc.exists()) setParentProfile(doc.data());
                 setIsLoading(false);
-            }, () => setIsLoading(false));
+            }, (error) => {
+                console.error("Profile sync error:", error);
+                setIsLoading(false);
+            });
 
             const q = query(collection(db, "students"), where("parentId", "==", user.uid));
             const unsubStudents = onSnapshot(q, (snapshot) => {
                 const studentList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentProfile));
                 setStudents(studentList);
+            }, (error) => {
+                console.error("Students sync error:", error);
             });
 
             const unsubCodes = onSnapshot(doc(db, "activationCodes", user.uid), (doc) => {
                 setValidCodes(doc.exists() ? doc.data().codes : []);
+            }, (error) => {
+                console.error("Activation codes sync error:", error);
             });
             
             return () => {
@@ -141,7 +148,6 @@ function ProfilePageContent() {
         setIsTestDialogOpen(true);
         setIsLoadingTests(true);
         try {
-            // Lazy load tests only when dialog is opened
             const q = query(
                 collection(db, "scheduledTests"), 
                 where("board", "==", student.academic.board),
@@ -364,7 +370,7 @@ function ProfilePageContent() {
             <Card className="border-dashed border-2">
                 <CardContent className="text-center p-16 space-y-4">
                     <div className="bg-muted w-16 h-16 rounded-full flex items-center justify-center mx-auto">
-                        <Users className="text-muted-foreground w-8 h-8" />
+                        <UsersIcon className="text-muted-foreground w-8 h-8" />
                     </div>
                     <div>
                         <p className="text-lg font-bold">No Student Profiles Found</p>

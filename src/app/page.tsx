@@ -61,7 +61,7 @@ Start your journey to success now: ${url}`;
               
               {user ? (
                   <div className="mt-8">
-                      <div className="p-6 bg-primary/[0.03] rounded-2xl border border-primary/10 inline-block">
+                      <div className="p-6 bg-primary/[0.03] rounded-2xl border border-primary/10 inline-block shadow-sm">
                         <p className="text-sm font-bold text-primary mb-3 flex items-center gap-2 justify-center md:justify-start">
                             <Shield className="w-4 h-4" /> ACTIVE {isAdmin ? 'ADMIN' : 'PLAYER'} SESSION
                         </p>

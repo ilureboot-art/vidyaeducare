@@ -20,7 +20,7 @@ const AuthContext = createContext<AuthState | undefined>(undefined);
 const DbContext = createContext<Firestore | undefined>(undefined);
 const AuthServiceContext = createContext<Auth | undefined>(undefined);
 
-const ROLE_CACHE_KEY = 've_role_v12';
+const ROLE_CACHE_KEY = 've_role_v12_stable';
 
 const getCachedRoles = () => {
     if (typeof window === 'undefined') return null;
@@ -63,6 +63,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
+      // Use getDoc with standard behavior to ensure role resolution is primary source of truth
       const adminDocRef = doc(db, "admins", user.uid);
       const adminDocSnap = await getDoc(adminDocRef);
       
@@ -80,6 +81,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       return roles;
     } catch (e) {
       console.error("Role resolution failed:", e);
+      // Fallback to cache or default to guest
       return getCachedRoles() || { isAdmin: false, isHeadAdmin: false };
     }
   }, []);
@@ -104,9 +106,10 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       setAuthState({ user, loading: false, ...roles });
     });
 
+    // Secure fail-safe resolution: Ensure the splash screen doesn't hang forever
     const timeout = setTimeout(() => {
         setAuthState(prev => ({ ...prev, loading: false }));
-    }, 6000);
+    }, 8000);
 
     return () => {
         unsubscribe();
@@ -114,7 +117,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     };
   }, [services, resolveUserRole]);
 
-  // ATOMIC NAVIGATION ENGINE: Prevents Redirection Loops (Scrolling)
+  // DETERMINISTIC NAVIGATION ENGINE: Resolves Redirection Loops
   useEffect(() => {
     if (authState.loading || !services) return;
 
@@ -129,30 +132,29 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
     if (user) {
       if (isAdmin) {
-        // Force Administrators to stay in the Admin Portal
+        // Force Administrators into the Admin Portal
         if (!isAdminArea || isAuthRoute || cleanPath === '/') {
           targetPath = '/admin/analytics';
         }
       } else {
-        // Force Players to stay in the Player Portal
+        // Force Players into the Player Portal
         if (isAdminArea || isAuthRoute || cleanPath === '/') {
           targetPath = '/profile';
         }
       }
     } else {
-      // Unauthenticated users are redirected to Home if they attempt to access protected routes
+      // Unauthenticated users go to Home if they attempt to access protected routes
       if (!isPublicRoute && !isAuthRoute) {
         targetPath = '/';
       }
     }
 
-    // Navigation Mutex: Ensures router.replace is called exactly ONCE per state change
+    // Atomic Navigation Mutex
     if (targetPath && targetPath !== cleanPath && navigationLock.current !== targetPath) {
       navigationLock.current = targetPath;
       router.replace(targetPath);
       
-      // Release lock after a delay to allow the path to update in state
-      const timer = setTimeout(() => { navigationLock.current = null; }, 1500);
+      const timer = setTimeout(() => { navigationLock.current = null; }, 2000);
       return () => clearTimeout(timer);
     }
   }, [authState, pathname, router, services]);

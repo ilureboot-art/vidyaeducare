@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -13,13 +14,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, MoreHorizontal, Trash2, Loader2, Users as UsersIcon, GraduationCap, Calendar, Info, RefreshCcw } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Search, MoreHorizontal, Trash2, Loader2, Users as UsersIcon, GraduationCap, RefreshCcw, Info } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { format } from 'date-fns';
 import { useDb } from "@/firebase";
-import { collection, doc, updateDoc, deleteDoc, getDocs, getDoc, query, where, orderBy, limit } from "firebase/firestore";
+import { collection, doc, updateDoc, getDocs, getDoc, query, where, orderBy, limit } from "firebase/firestore";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import type { StudentProfile } from "@/lib/student-data";
 

@@ -21,7 +21,7 @@ const DbContext = createContext<Firestore | undefined>(undefined);
 const AuthServiceContext = createContext<Auth | undefined>(undefined);
 
 // Stable key for role caching to prevent hydration mismatches and sequential load lag
-const ROLE_CACHE_KEY = 've_role_v12_stable';
+const ROLE_CACHE_KEY = 'vidya_auth_role_v1';
 
 const getCachedRoles = () => {
     if (typeof window === 'undefined') return null;
@@ -82,6 +82,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       return roles;
     } catch (e) {
       console.error("Role resolution failed:", e);
+      // Fallback to cache if network fails to avoid blocking the user
       return getCachedRoles() || { isAdmin: false, isHeadAdmin: false };
     }
   }, []);
@@ -105,6 +106,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       setAuthState({ user, loading: false, ...roles });
     });
 
+    // Failsafe: Ensure the loader clears even if Auth/DB hang
     const timeout = setTimeout(() => {
         setAuthState(prev => ({ ...prev, loading: false }));
     }, 5000);
@@ -152,6 +154,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       navigationLock.current = targetPath;
       router.replace(targetPath);
       
+      // Release lock after a delay to allow the new page to stabilize
       const timer = setTimeout(() => { navigationLock.current = null; }, 2000);
       return () => clearTimeout(timer);
     }

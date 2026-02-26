@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -59,7 +58,7 @@ Start your journey to success now: ${url}`;
                   <div className="mt-8">
                       <div className="p-6 bg-primary/[0.03] rounded-2xl border border-primary/10 inline-block">
                         <p className="text-sm font-bold text-primary mb-3 flex items-center gap-2 justify-center md:justify-start">
-                            <Shield className="w-4 h-4" /> ACTIVE SESSION DETECTED
+                            <Shield className="w-4 h-4" /> ACTIVE {isAdmin ? 'ADMIN' : 'PLAYER'} SESSION
                         </p>
                         <Button asChild size="lg" className="px-10 py-8 text-xl font-black shadow-xl hover:scale-105 transition-transform">
                             <Link href={isAdmin ? "/admin/analytics" : "/profile"}>

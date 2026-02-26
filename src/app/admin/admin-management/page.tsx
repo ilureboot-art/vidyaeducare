@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -36,9 +35,10 @@ import {
 } from "@/components/ui/select"
 import { format } from 'date-fns';
 import type { Admin, AdminRole } from "@/lib/admin-data";
-import { collection, onSnapshot, doc, setDoc, deleteDoc, updateDoc, getDocs } from "firebase/firestore";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { useAuth, useDb, useAuthService } from "@/firebase";
+import { collection, onSnapshot, doc, setDoc, deleteDoc, updateDoc } from "firebase/firestore";
+import { initializeApp, deleteApp } from "firebase/app";
+import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
+import { useAuth, useDb } from "@/firebase";
 
 const WhatsAppIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-green-500">
@@ -48,7 +48,6 @@ const WhatsAppIcon = () => (
 
 export default function AdminManagementPage() {
   const db = useDb();
-  const auth = useAuthService();
   const { user, loading: authLoading, isHeadAdmin } = useAuth();
   const [allAdmins, setAllAdmins] = useState<Admin[] | null>(null);
   
@@ -57,6 +56,7 @@ export default function AdminManagementPage() {
   const [isResetPassOpen, setIsResetPassOpen] = useState(false);
   const [selectedAdmin, setSelectedAdmin] = useState<Admin | null>(null);
   const [newAdminRole, setNewAdminRole] = useState<AdminRole | ''>('');
+  const [isCreating, setIsCreating] = useState(false);
   const { toast } = useToast();
   
   useEffect(() => {
@@ -73,12 +73,11 @@ export default function AdminManagementPage() {
         setAllAdmins(adminList);
     }, (error) => {
         console.error("Error fetching admins:", error);
-        toast({ variant: 'destructive', title: "Error", description: "Could not fetch admin data."});
         setAllAdmins([]);
     });
 
     return () => unsubscribe();
-  }, [db, user, isHeadAdmin, authLoading, toast]);
+  }, [db, user, isHeadAdmin, authLoading]);
 
 
   const openWhatsApp = (phone: string, message?: string) => {
@@ -137,7 +136,8 @@ export default function AdminManagementPage() {
 
   const handleCreateAdmin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!db || !auth) return;
+    if (!db || isCreating) return;
+    
     const form = e.currentTarget;
     const name = (form.elements.namedItem('name') as HTMLInputElement).value;
     const email = (form.elements.namedItem('email') as HTMLInputElement).value;
@@ -150,12 +150,25 @@ export default function AdminManagementPage() {
         return;
     }
     
-    // IMPORTANT: Security rules MUST be configured to allow an authenticated admin
-    // to call createUserWithEmailAndPassword. This is not a default behavior.
-    // A more secure production pattern uses a backend Cloud Function.
-    // For this app, we are relying on security rules for this action.
+    setIsCreating(true);
+
+    // CRITICAL: To create a user without signing out the current admin,
+    // we must use a secondary app instance.
+    let secondaryApp;
     try {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const firebaseConfig = {
+            apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+            authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+            projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+            storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+            messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+            appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+        };
+
+        secondaryApp = initializeApp(firebaseConfig, "secondary-auth-" + Date.now());
+        const secondaryAuth = getAuth(secondaryApp);
+        
+        const userCredential = await createUserWithEmailAndPassword(secondaryAuth, email, password);
         const tempUser = userCredential.user;
 
         const newAdminData: Omit<Admin, 'id'> = {
@@ -169,7 +182,7 @@ export default function AdminManagementPage() {
 
         await setDoc(doc(db, "admins", tempUser.uid), newAdminData);
         
-        toast({ title: 'Admin Created!', description: `${name} has been added.`});
+        toast({ title: 'Admin Created!', description: `${name} has been added to the system.`});
         setIsCreateDialogOpen(false);
 
     } catch(error: any) {
@@ -177,10 +190,11 @@ export default function AdminManagementPage() {
          let errorMessage = error.message || 'An unknown error occurred.';
          if (error.code === 'auth/email-already-in-use') {
              errorMessage = 'This email is already in use by another user.';
-         } else if (error.code === 'auth/weak-password') {
-             errorMessage = 'The password is too weak. Please use a stronger password.';
          }
          toast({ variant: 'destructive', title: "Error creating admin", description: errorMessage});
+    } finally {
+        if (secondaryApp) await deleteApp(secondaryApp);
+        setIsCreating(false);
     }
   }
   
@@ -213,8 +227,6 @@ export default function AdminManagementPage() {
   
   const handleResetPassword = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!selectedAdmin) return;
-    
     toast({
         variant: "destructive",
         title: 'Action Not Supported',
@@ -235,10 +247,9 @@ export default function AdminManagementPage() {
     
     try {
         await deleteDoc(doc(db, "admins", adminId));
-        
         toast({
             title: "Admin Deleted",
-            description: `Admin account for ${adminToDelete.name} has been deleted. Note: Auth user may still exist.`,
+            description: `Admin account for ${adminToDelete.name} has been removed.`,
         })
     } catch(error) {
         console.error("Error deleting admin:", error);
@@ -260,7 +271,7 @@ export default function AdminManagementPage() {
               <Card>
                   <CardHeader>
                       <CardTitle>Access Denied</CardTitle>
-                      <CardDescription>You do not have permission to view this page.</CardDescription>
+                      <CardDescription>Only the Head Admin can manage administrators.</CardDescription>
                   </CardHeader>
               </Card>
           </div>
@@ -303,7 +314,7 @@ export default function AdminManagementPage() {
                          </Button>
                       </div>
                   </TableCell>
-                  <TableCell>{format(new Date(req.joinDate), 'P')}</TableCell>
+                  <TableCell>{req.joinDate ? format(new Date(req.joinDate), 'PP') : 'N/A'}</TableCell>
                   <TableCell className="text-center">
                     <div className="flex gap-2 justify-center">
                         <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700" onClick={() => handleRequest(req.id, "Active")}>Approve</Button>
@@ -340,6 +351,7 @@ export default function AdminManagementPage() {
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Create New Admin</DialogTitle>
+                        <DialogDescription>This will create a new administrator account without logging you out.</DialogDescription>
                     </DialogHeader>
                     <form onSubmit={handleCreateAdmin} className="space-y-4">
                         <div className="space-y-2">
@@ -351,7 +363,7 @@ export default function AdminManagementPage() {
                             <Input id="email" name="email" type="email" required />
                         </div>
                          <div className="space-y-2">
-                            <Label htmlFor="phone">WhatsApp Number (with country code)</Label>
+                            <Label htmlFor="phone">WhatsApp Number</Label>
                             <Input id="phone" name="phone" type="tel" required placeholder="e.g., 919876543210"/>
                         </div>
                         <div className="space-y-2">
@@ -371,7 +383,10 @@ export default function AdminManagementPage() {
                             </Select>
                         </div>
                         <DialogFooter>
-                            <Button type="submit">Create Admin</Button>
+                            <Button type="submit" disabled={isCreating}>
+                                {isCreating ? <Loader2 className="animate-spin mr-2"/> : null}
+                                Create Admin
+                            </Button>
                         </DialogFooter>
                     </form>
                 </DialogContent>
@@ -425,7 +440,7 @@ export default function AdminManagementPage() {
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuItem onClick={() => handleSendWelcome(admin)}>
                             <MessageSquare className="mr-2 h-4 w-4"/>
-                            Send Welcome Message
+                            Send Welcome
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => openEditDialog(admin)} disabled={admin.id === user?.uid}>
                             <Edit className="mr-2 h-4 w-4"/>
@@ -435,7 +450,7 @@ export default function AdminManagementPage() {
                          {admin.role !== "Head Admin" && (
                             <DropdownMenuItem className="text-red-600 focus:text-red-500 focus:bg-red-950/50" onClick={() => handleDeleteAdmin(admin.id)}>
                                 <Trash2 className="mr-2 h-4 w-4"/>
-                                Delete Admin
+                                Delete Account
                             </DropdownMenuItem>
                         )}
                       </DropdownMenuContent>

@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
@@ -20,7 +19,7 @@ const AuthContext = createContext<AuthState | undefined>(undefined);
 const DbContext = createContext<Firestore | undefined>(undefined);
 const AuthServiceContext = createContext<Auth | undefined>(undefined);
 
-const ROLE_CACHE_KEY = 've_role_v7';
+const ROLE_CACHE_KEY = 've_role_v10';
 
 const getCachedRoles = () => {
     if (typeof window === 'undefined') return null;
@@ -105,7 +104,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
     const timeout = setTimeout(() => {
         setAuthState(prev => ({ ...prev, loading: false }));
-    }, 5000);
+    }, 8000);
 
     return () => {
         unsubscribe();
@@ -129,7 +128,8 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     if (user) {
       if (isAdmin) {
         // Force Admins into the Admin Workspace
-        if (!isAdminArea || cleanPath === '/admin/login') {
+        // If an admin is on a public page, an auth page, or in the player portal (not starting with /admin)
+        if (!isAdminArea || isAuthRoute || cleanPath === '/') {
           targetPath = '/admin/analytics';
         }
       } else {
@@ -164,7 +164,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
         </div>
         <div className="space-y-2">
             <p className="text-xl font-black text-primary tracking-tighter uppercase italic">Vidya EduCare</p>
-            <p className="text-muted-foreground text-sm font-medium tracking-wide">Syncing Workspace Credentials...</p>
+            <p className="text-muted-foreground text-sm font-medium tracking-wide">Securing Administrative Session...</p>
         </div>
       </div>
     );

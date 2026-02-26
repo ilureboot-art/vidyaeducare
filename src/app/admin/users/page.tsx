@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -20,7 +19,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { format } from 'date-fns';
 import { useDb } from "@/firebase";
-import { collection, doc, updateDoc, deleteDoc, getDocs, query, where, orderBy, limit } from "firebase/firestore";
+import { collection, doc, updateDoc, deleteDoc, getDocs, getDoc, query, where, orderBy, limit } from "firebase/firestore";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import type { StudentProfile } from "@/lib/student-data";
 

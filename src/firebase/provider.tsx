@@ -19,7 +19,7 @@ const AuthContext = createContext<AuthState | undefined>(undefined);
 const DbContext = createContext<Firestore | undefined>(undefined);
 const AuthServiceContext = createContext<Auth | undefined>(undefined);
 
-const ROLE_CACHE_KEY = 've_role_v10';
+const ROLE_CACHE_KEY = 've_role_v11';
 
 const getCachedRoles = () => {
     if (typeof window === 'undefined') return null;
@@ -112,7 +112,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     };
   }, [services, resolveUserRole]);
 
-  // DETERMINISTIC ROUTING ENGINE
+  // DETERMINISTIC NAVIGATION MUTEX
   useEffect(() => {
     if (authState.loading || !services) return;
 
@@ -127,25 +127,21 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
     if (user) {
       if (isAdmin) {
-        // Force Admins into the Admin Workspace
-        // If an admin is on a public page, an auth page, or in the player portal (not starting with /admin)
         if (!isAdminArea || isAuthRoute || cleanPath === '/') {
           targetPath = '/admin/analytics';
         }
       } else {
-        // Force Students into the Player Portal
         if (isAdminArea || isAuthRoute || cleanPath === '/') {
           targetPath = '/profile';
         }
       }
     } else {
-      // Guests belong in public or auth routes
       if (!isPublicRoute && !isAuthRoute) {
         targetPath = '/';
       }
     }
 
-    // Atomic Navigation Mutex: Prevents Redirection Loops (Scrolling)
+    // Atomic Navigation Mutex: Prevents Redirection Loops
     if (targetPath && targetPath !== cleanPath && navigationLock.current !== targetPath) {
       navigationLock.current = targetPath;
       router.replace(targetPath);
@@ -164,7 +160,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
         </div>
         <div className="space-y-2">
             <p className="text-xl font-black text-primary tracking-tighter uppercase italic">Vidya EduCare</p>
-            <p className="text-muted-foreground text-sm font-medium tracking-wide">Securing Administrative Session...</p>
+            <p className="text-muted-foreground text-sm font-medium tracking-wide">Syncing Workspace Credentials...</p>
         </div>
       </div>
     );

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -37,7 +38,11 @@ export default function HomePage() {
 Start your journey to success now: ${url}`;
     
     try {
-        await navigator.share({ title: 'Vidya EduCare', text: message, url });
+        if (navigator.share) {
+            await navigator.share({ title: 'Vidya EduCare', text: message, url });
+        } else {
+            throw new Error("Share not supported");
+        }
     } catch(e) {
         navigator.clipboard.writeText(message);
         toast({ title: "Link Copied!", description: "Promotional message copied to clipboard." });
@@ -65,7 +70,7 @@ Start your journey to success now: ${url}`;
                                 RETURN TO WORKSPACE <ArrowRight className="ml-2" />
                             </Link>
                         </Button>
-                        <p className="mt-4 text-xs text-muted-foreground">Logged in as <span className="text-primary font-bold">{user.email}</span></p>
+                        <p className="mt-4 text-xs text-muted-foreground text-center md:text-left">Logged in as <span className="text-primary font-bold">{user.email}</span></p>
                       </div>
                   </div>
               ) : (

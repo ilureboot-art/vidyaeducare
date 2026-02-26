@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
@@ -19,7 +20,7 @@ const AuthContext = createContext<AuthState | undefined>(undefined);
 const DbContext = createContext<Firestore | undefined>(undefined);
 const AuthServiceContext = createContext<Auth | undefined>(undefined);
 
-const ROLE_CACHE_KEY = 've_role_v11';
+const ROLE_CACHE_KEY = 've_role_v12';
 
 const getCachedRoles = () => {
     if (typeof window === 'undefined') return null;
@@ -98,13 +99,14 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
           return;
       }
 
+      // Re-resolve role on every actual auth state change to prevent stale cache issues
       const roles = await resolveUserRole(user, db);
       setAuthState({ user, loading: false, ...roles });
     });
 
     const timeout = setTimeout(() => {
         setAuthState(prev => ({ ...prev, loading: false }));
-    }, 8000);
+    }, 6000);
 
     return () => {
         unsubscribe();
@@ -112,7 +114,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     };
   }, [services, resolveUserRole]);
 
-  // DETERMINISTIC NAVIGATION MUTEX
+  // ATOMIC NAVIGATION ENGINE: Prevents Redirection Loops (Scrolling)
   useEffect(() => {
     if (authState.loading || !services) return;
 
@@ -127,26 +129,30 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
     if (user) {
       if (isAdmin) {
+        // Force Administrators to stay in the Admin Portal
         if (!isAdminArea || isAuthRoute || cleanPath === '/') {
           targetPath = '/admin/analytics';
         }
       } else {
+        // Force Players to stay in the Player Portal
         if (isAdminArea || isAuthRoute || cleanPath === '/') {
           targetPath = '/profile';
         }
       }
     } else {
+      // Unauthenticated users are redirected to Home if they attempt to access protected routes
       if (!isPublicRoute && !isAuthRoute) {
         targetPath = '/';
       }
     }
 
-    // Atomic Navigation Mutex: Prevents Redirection Loops
+    // Navigation Mutex: Ensures router.replace is called exactly ONCE per state change
     if (targetPath && targetPath !== cleanPath && navigationLock.current !== targetPath) {
       navigationLock.current = targetPath;
       router.replace(targetPath);
       
-      const timer = setTimeout(() => { navigationLock.current = null; }, 1000);
+      // Release lock after a delay to allow the path to update in state
+      const timer = setTimeout(() => { navigationLock.current = null; }, 1500);
       return () => clearTimeout(timer);
     }
   }, [authState, pathname, router, services]);

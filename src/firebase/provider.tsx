@@ -20,8 +20,8 @@ const AuthContext = createContext<AuthState | undefined>(undefined);
 const DbContext = createContext<Firestore | undefined>(undefined);
 const AuthServiceContext = createContext<Auth | undefined>(undefined);
 
-// Stable key for role caching to prevent hydration mismatches and sequential load lag
-const ROLE_CACHE_KEY = 'vidya_auth_role_v2';
+// Synchronous role cache to prevent hydration mismatches and sequential load lag
+const ROLE_CACHE_KEY = 'vidya_auth_role_v3';
 
 const getCachedRoles = () => {
     if (typeof window === 'undefined') return null;
@@ -63,7 +63,6 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       return { isAdmin: false, isHeadAdmin: false };
     }
 
-    // Optimization: Check if cache matches current user to skip network round-trip
     const cached = getCachedRoles();
     if (cached && cached.uid === user.uid) {
         return { isAdmin: cached.isAdmin, isHeadAdmin: cached.isHeadAdmin };
@@ -120,6 +119,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     };
   }, [services, resolveUserRole]);
 
+  // Deterministic Navigation Mutex: Ensures only ONE atomic redirect per state change
   useEffect(() => {
     if (authState.loading || !services) return;
 
@@ -134,10 +134,12 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
     if (user) {
       if (isAdmin) {
+        // Force Admins to stay in the Admin Portal
         if (!isAdminArea || isAuthRoute || cleanPath === '/') {
           targetPath = '/admin/analytics';
         }
       } else {
+        // Force Students to stay out of the Admin Portal
         if (isAdminArea || isAuthRoute || cleanPath === '/') {
           targetPath = '/profile';
         }
@@ -148,6 +150,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
+    // Atomic navigation with mutex lock
     if (targetPath && targetPath !== cleanPath && navigationLock.current !== targetPath) {
       navigationLock.current = targetPath;
       router.replace(targetPath);

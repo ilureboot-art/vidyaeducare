@@ -85,7 +85,7 @@ export default function AnalyticsPage() {
           }));
           setUserActivityData(fetchedUserActivity);
 
-          // Mock revenue forecast for visual impact
+          // Placeholder revenue forecast
           setRevenueData([
             { name: 'Mon', revenue: 4000 }, { name: 'Tue', revenue: 3000 }, { name: 'Wed', revenue: 5000 },
             { name: 'Thu', revenue: 4500 }, { name: 'Fri', revenue: 6000 }, { name: 'Sat', revenue: 5500 }, { name: 'Sun', revenue: 7000 },

@@ -18,7 +18,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -32,7 +31,7 @@ import Image from "next/image";
 import { CopyButton } from "@/components/CopyButton";
 import { format } from "date-fns";
 import { useAuth, useDb } from "@/firebase";
-import { doc, getDoc, collection, addDoc, query, where, orderBy, limit, onSnapshot, serverTimestamp, runTransaction, Timestamp } from "firebase/firestore";
+import { doc, collection, addDoc, query, where, orderBy, limit, onSnapshot, serverTimestamp, runTransaction, Timestamp } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import UserLayout from "@/components/UserLayout";
 
@@ -87,7 +86,7 @@ function WalletPageContent() {
                 setAdminPaymentMethods(defaultPaymentMethods);
             }
         }, (error) => {
-            console.error("Payment methods sync error:", error);
+            console.warn("Payment methods fetch error (using defaults):", error);
             setAdminPaymentMethods(defaultPaymentMethods);
         });
 
@@ -246,7 +245,6 @@ function WalletPageContent() {
          </CardFooter>
       </Card>
 
-      {/* Dialogs */}
       <Dialog open={addFundsOpen} onOpenChange={setAddFundsOpen}>
           <DialogContent className="max-w-md">
             <DialogHeader><DialogTitle>Deposit Funds</DialogTitle></DialogHeader>

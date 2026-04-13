@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
@@ -20,7 +21,7 @@ const DbContext = createContext<Firestore | undefined>(undefined);
 const AuthServiceContext = createContext<Auth | undefined>(undefined);
 
 // Synchronous role cache to prevent hydration mismatches and sequential load lag
-const ROLE_CACHE_KEY = 'vidya_auth_role_v4';
+const ROLE_CACHE_KEY = 'vidya_auth_role_v5';
 
 const getCachedRoles = () => {
     if (typeof window === 'undefined') return null;

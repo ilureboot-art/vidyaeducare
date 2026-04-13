@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
@@ -21,7 +20,7 @@ const DbContext = createContext<Firestore | undefined>(undefined);
 const AuthServiceContext = createContext<Auth | undefined>(undefined);
 
 // Synchronous role cache to prevent hydration mismatches and sequential load lag
-const ROLE_CACHE_KEY = 'vidya_auth_role_v3';
+const ROLE_CACHE_KEY = 'vidya_auth_role_v4';
 
 const getCachedRoles = () => {
     if (typeof window === 'undefined') return null;
@@ -119,7 +118,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     };
   }, [services, resolveUserRole]);
 
-  // Deterministic Navigation Mutex: Ensures only ONE atomic redirect per state change
+  // Deterministic Navigation Engine: Ensures atomic, single-redirect session transitions
   useEffect(() => {
     if (authState.loading || !services) return;
 
@@ -134,27 +133,29 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
     if (user) {
       if (isAdmin) {
-        // Force Admins to stay in the Admin Portal
+        // Logged-in Admins: Prevent access to guest pages and force return to workspace
         if (!isAdminArea || isAuthRoute || cleanPath === '/') {
           targetPath = '/admin/analytics';
         }
       } else {
-        // Force Students to stay out of the Admin Portal
+        // Logged-in Students: Block Admin portal and force return to profile
         if (isAdminArea || isAuthRoute || cleanPath === '/') {
           targetPath = '/profile';
         }
       }
     } else {
+      // Unauthenticated Users: Return to root if attempting to access protected content
       if (!isPublicRoute && !isAuthRoute) {
         targetPath = '/';
       }
     }
 
-    // Atomic navigation with mutex lock
+    // Atomic Navigation Lock: Prevents infinite redirection scrolling loops
     if (targetPath && targetPath !== cleanPath && navigationLock.current !== targetPath) {
       navigationLock.current = targetPath;
       router.replace(targetPath);
-      const timer = setTimeout(() => { navigationLock.current = null; }, 1500);
+      // Brief debounce to allow the browser to settle the new route
+      const timer = setTimeout(() => { navigationLock.current = null; }, 1000);
       return () => clearTimeout(timer);
     }
   }, [authState, pathname, router, services]);

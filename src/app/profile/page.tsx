@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -51,7 +50,7 @@ function ProfilePageContent() {
                 if (doc.exists()) setParentProfile(doc.data());
                 setIsLoading(false);
             }, (error) => {
-                console.error("Profile sync error:", error);
+                console.warn("Parent profile fetch interrupted (offline/unauthorized).");
                 setIsLoading(false);
             });
 
@@ -60,13 +59,13 @@ function ProfilePageContent() {
                 const studentList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentProfile));
                 setStudents(studentList);
             }, (error) => {
-                console.error("Students sync error:", error);
+                console.warn("Students list fetch interrupted.");
             });
 
             const unsubCodes = onSnapshot(doc(db, "activationCodes", user.uid), (doc) => {
                 setValidCodes(doc.exists() ? doc.data().codes : []);
             }, (error) => {
-                console.error("Activation codes sync error:", error);
+                console.warn("Activation codes sync interrupted.");
             });
             
             return () => {

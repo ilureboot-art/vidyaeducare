@@ -8,8 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
-import { PlusCircle, Trash2, Zap, BookOpen, GraduationCap, Percent, Loader2 } from "lucide-react";
-import type { TicketPackage, ReferboltSubscription, MockTestPackage, ReferboltSettings, GameSettings, StoreConfig } from "@/lib/store-config";
+import { PlusCircle, Trash2, Zap, BookOpen, GraduationCap, Percent, Loader2, Users } from "lucide-react";
+import type { TicketPackage, ReferboltSubscription, MockTestPackage, ReferboltSettings, GameSettings, StoreConfig, RecommendationSettings } from "@/lib/store-config";
 import type { AcademicConfig } from "@/lib/academic-config";
 import { Switch } from "@/components/ui/switch";
 import { useDb } from "@/firebase";
@@ -83,6 +83,11 @@ export default function AdminStoreSettingsPage() {
   const handleReferboltSettingsChange = (field: keyof ReferboltSettings, value: boolean | number) => {
       if (!storeConfig) return;
       setStoreConfig(prev => prev ? ({ ...prev, referboltSettings: { ...prev.referboltSettings, [field]: value } }) : null);
+  };
+
+  const handleRecSettingsChange = (field: keyof RecommendationSettings, value: number) => {
+      if (!storeConfig) return;
+      setStoreConfig(prev => prev ? ({ ...prev, recommendationSettings: { ...prev.recommendationSettings, [field]: value } }) : null);
   };
 
   const addMockTestPackage = () => {
@@ -221,6 +226,42 @@ export default function AdminStoreSettingsPage() {
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Add New Subscription
             </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><Users /> Recommendation Rewards</CardTitle>
+            <CardDescription>Configure extra discounts for users who refer friends quickly.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <div className="space-y-2">
+                <Label>Additional Discount (%)</Label>
+                <Input 
+                    type="number" 
+                    value={storeConfig.recommendationSettings?.additionalDiscount || 0} 
+                    onChange={(e) => handleRecSettingsChange('additionalDiscount', Number(e.target.value))} 
+                />
+                <p className="text-[10px] text-muted-foreground">Applied on top of base and IBA discounts.</p>
+              </div>
+              <div className="space-y-2">
+                <Label>Required Referrals</Label>
+                <Input 
+                    type="number" 
+                    value={storeConfig.recommendationSettings?.requiredCount || 0} 
+                    onChange={(e) => handleRecSettingsChange('requiredCount', Number(e.target.value))} 
+                />
+                <p className="text-[10px] text-muted-foreground">Customers needed to unlock discount.</p>
+              </div>
+              <div className="space-y-2">
+                <Label>Time Window (Days)</Label>
+                <Input 
+                    type="number" 
+                    value={storeConfig.recommendationSettings?.windowDays || 0} 
+                    onChange={(e) => handleRecSettingsChange('windowDays', Number(e.target.value))} 
+                />
+                <p className="text-[10px] text-muted-foreground">Since joining or last purchase.</p>
+              </div>
           </CardContent>
         </Card>
 

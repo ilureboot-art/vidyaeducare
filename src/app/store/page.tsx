@@ -1,11 +1,11 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { ShoppingCart, Sparkles, Loader2, BookOpen, Zap } from "lucide-react";
+import { ShoppingCart, Sparkles, Loader2, BookOpen, Zap, CheckCircle2, AlertCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,9 +13,10 @@ import Link from 'next/link';
 import type { StoreConfig, MockTestPackage, ReferboltSubscription } from "@/lib/store-config";
 import type { WalletData } from "@/lib/user-data";
 import { useAuth, useDb } from "@/firebase";
-import { doc, getDoc, runTransaction, collection, serverTimestamp, updateDoc, arrayUnion, query, where, getDocs, type Firestore } from "firebase/firestore";
+import { doc, getDoc, runTransaction, collection, serverTimestamp, updateDoc, arrayUnion, query, where, getDocs, orderBy, limit, Timestamp, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import UserLayout from "@/components/UserLayout";
+import { Badge } from "@/components/ui/badge";
 
 function StorePageContent() {
   const { toast } = useToast();
@@ -25,9 +26,67 @@ function StorePageContent() {
   const [walletData, setWalletData] = useState<WalletData | null>(null);
   const [storeConfig, setStoreConfig] = useState<StoreConfig | null>(null);
   const [isPurchasing, setIsPurchasing] = useState<string | null>(null);
+  const [isCheckingEligibility, setIsCheckingEligibility] = useState(true);
+  const [isEligibleForRecDiscount, setIsEligibleForRecDiscount] = useState(false);
+  const [recommendationCount, setRecommendationCount] = useState(0);
   
   const [referralCode1, setReferralCode1] = useState("");
   const [referralCode2, setReferralCode2] = useState("");
+
+  const checkRecEligibility = useCallback(async (db: Firestore, userId: string, config: StoreConfig) => {
+    if (!config.recommendationSettings) {
+        setIsCheckingEligibility(false);
+        return;
+    }
+
+    try {
+        const userDoc = await getDoc(doc(db, "users", userId));
+        if (!userDoc.exists()) return;
+        const joinDate = new Date(userDoc.data().joinDate);
+
+        const qT = query(
+            collection(db, "transactions"), 
+            where("user", "==", userId), 
+            where("type", "==", "Purchase"), 
+            orderBy("date", "desc"), 
+            limit(1)
+        );
+        const tSnap = await getDocs(qT);
+        let lastPurchaseDate = null;
+        if (!tSnap.empty) {
+            const d = tSnap.docs[0].data().date;
+            lastPurchaseDate = d instanceof Timestamp ? d.toDate() : new Date(d);
+        }
+
+        const anchorDate = lastPurchaseDate && lastPurchaseDate > joinDate ? lastPurchaseDate : joinDate;
+        const windowEnd = new Date(anchorDate.getTime() + (config.recommendationSettings.windowDays * 24 * 60 * 60 * 1000));
+        const now = new Date();
+
+        if (now > windowEnd) {
+            setIsEligibleForRecDiscount(false);
+            setIsCheckingEligibility(false);
+            return;
+        }
+
+        const qC = query(collection(db, "clients"), where("referrerId", "==", userId));
+        const cSnap = await getDocs(qC);
+        let validCount = 0;
+        cSnap.forEach(doc => {
+            const data = doc.data();
+            const pDate = data.purchaseDate instanceof Timestamp ? data.purchaseDate.toDate() : new Date(data.purchaseDate);
+            if (pDate >= anchorDate && pDate <= windowEnd) {
+                validCount++;
+            }
+        });
+
+        setRecommendationCount(validCount);
+        setIsEligibleForRecDiscount(validCount >= config.recommendationSettings.requiredCount);
+    } catch (e) {
+        console.error("Eligibility check error:", e);
+    } finally {
+        setIsCheckingEligibility(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (user && db) {
@@ -35,7 +94,6 @@ function StorePageContent() {
             const walletDocRef = doc(db, "wallets", user.uid);
             const storeConfigRef = doc(db, "configs", "store");
             
-            // Parallelize fetching for speed
             const [walletSnap, configSnap] = await Promise.all([
                 getDoc(walletDocRef),
                 getDoc(storeConfigRef)
@@ -46,12 +104,14 @@ function StorePageContent() {
             }
             
             if(configSnap.exists()) {
-                setStoreConfig(configSnap.data() as StoreConfig);
+                const config = configSnap.data() as StoreConfig;
+                setStoreConfig(config);
+                checkRecEligibility(db, user.uid, config);
             }
         };
         fetchData();
     }
-  }, [user, db]);
+  }, [user, db, checkRecEligibility]);
 
   const handlePurchase = async (item: MockTestPackage | ReferboltSubscription, type: 'mock' | 'referbolt') => {
     if (!user || !storeConfig || !walletData || !db) return;
@@ -61,13 +121,14 @@ function StorePageContent() {
     let priceDetails;
     if (type === 'mock') {
         const baseDiscount = 0.05;
-        const hasReferral = referralCode1.trim() !== "";
-        const referralDiscount = hasReferral ? 0.10 : 0;
-        const totalDiscount = baseDiscount + referralDiscount;
+        const referralDiscount = referralCode1.trim() !== "" ? 0.10 : 0;
+        const recommendationDiscount = isEligibleForRecDiscount ? (storeConfig.recommendationSettings?.additionalDiscount || 0) / 100 : 0;
+        
+        const totalDiscount = baseDiscount + referralDiscount + recommendationDiscount;
         const discountedBasePrice = item.price * (1 - totalDiscount);
         const gstAmount = discountedBasePrice * (item.gstRate / 100);
         const finalPrice = discountedBasePrice + gstAmount;
-        priceDetails = { finalPrice, basePrice: item.price, hasReferral };
+        priceDetails = { finalPrice, basePrice: item.price, hasReferral: referralCode1.trim() !== "" };
     } else {
         const gstAmount = item.price * (item.gstRate / 100);
         const finalPrice = item.price + gstAmount;
@@ -83,13 +144,10 @@ function StorePageContent() {
     try {
         await runTransaction(db, async (transaction) => {
             const userWalletRef = doc(db, "wallets", user.uid);
-            
-            // 1. Deduct from user's balance
             const userWalletDoc = await transaction.get(userWalletRef);
             const currentBalance = userWalletDoc.exists() ? userWalletDoc.data().balance : 0;
             transaction.update(userWalletRef, { balance: currentBalance - priceDetails.finalPrice });
 
-            // 2. Log the purchase transaction
             const purchaseTxRef = doc(collection(db, "transactions"));
             transaction.set(purchaseTxRef, {
                 user: user.uid,
@@ -100,11 +158,9 @@ function StorePageContent() {
                 type: "Purchase",
             });
 
-            // 3. Handle IBA commissions
             if (priceDetails.hasReferral && referralCode1.trim()) {
                 const ibasToPay = [referralCode1.trim()];
                 if (referralCode2.trim()) ibasToPay.push(referralCode2.trim());
-
                 const baseCommissionRate = 0.1765;
                 const commissionAmount = (priceDetails.basePrice * baseCommissionRate) / ibasToPay.length;
 
@@ -115,22 +171,20 @@ function StorePageContent() {
                         const ibaUserDoc = ibaQuerySnapshot.docs[0];
                         const ibaId = ibaUserDoc.id;
                         const ibaWalletRef = doc(db, "wallets", ibaId);
-                        const ibaCommissionTxRef = doc(collection(db, "transactions"));
-                        
                         const ibaWalletDoc = await transaction.get(ibaWalletRef);
                         const ibaCurrentBalance = ibaWalletDoc.exists() ? ibaWalletDoc.data().balance : 0;
                         transaction.update(ibaWalletRef, { balance: ibaCurrentBalance + commissionAmount });
                         
+                        const ibaCommissionTxRef = doc(collection(db, "transactions"));
                         transaction.set(ibaCommissionTxRef, {
                             user: ibaId, amount: commissionAmount, date: serverTimestamp(),
-                            description: `Commission from ${user.displayName || user.email}`,
+                            description: `Commission from ${user.email}`,
                             status: "Completed", type: "Commission",
                         });
                     }
                 }
             }
 
-            // 4. Update user status/codes
             if (type === 'mock') {
                 const activationCode = `PROD-${Date.now().toString().slice(-6)}`;
                 const activationCodesRef = doc(db, 'activationCodes', user.uid);
@@ -179,7 +233,37 @@ function StorePageContent() {
               <TabsTrigger value="referbolt">ReferBolt</TabsTrigger>
             </TabsList>
             <TabsContent value="tests" className="space-y-6 pt-6">
-                 <div className="max-w-md mx-auto space-y-4 p-4 border rounded-lg bg-muted/50">
+                 
+                 {!isCheckingEligibility && (
+                    <Card className={`border-dashed border-2 ${isEligibleForRecDiscount ? 'border-green-500 bg-green-500/5' : 'border-primary/20 bg-muted/20'}`}>
+                        <CardContent className="p-4 flex items-center justify-between gap-4">
+                            <div className="flex items-center gap-3">
+                                {isEligibleForRecDiscount ? (
+                                    <CheckCircle2 className="text-green-500 w-8 h-8" />
+                                ) : (
+                                    <AlertCircle className="text-primary w-8 h-8" />
+                                )}
+                                <div>
+                                    <p className="font-bold text-sm">
+                                        {isEligibleForRecDiscount 
+                                            ? `Fast-Mover Discount Unlocked!` 
+                                            : `Unlock +${storeConfig.recommendationSettings?.additionalDiscount}% Extra Discount`}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                        {isEligibleForRecDiscount 
+                                            ? `You've recommended ${recommendationCount} customers within the window. Bonus applied!` 
+                                            : `Recommend ${storeConfig.recommendationSettings?.requiredCount} customers within ${storeConfig.recommendationSettings?.windowDays} days to unlock.`}
+                                    </p>
+                                </div>
+                            </div>
+                            {!isEligibleForRecDiscount && (
+                                <Badge variant="secondary" className="font-mono">{recommendationCount} / {storeConfig.recommendationSettings?.requiredCount}</Badge>
+                            )}
+                        </CardContent>
+                    </Card>
+                 )}
+
+                 <div className="max-w-md mx-auto space-y-4 p-4 border rounded-lg bg-muted/50 mt-4">
                     <p className="text-sm text-center font-semibold">Enter IBA code(s) to get a discount and support your associates.</p>
                     <div className="space-y-2">
                         <Label htmlFor="referralCode1">Referral Code 1 (For Discount & Commission)</Label>
@@ -204,7 +288,9 @@ function StorePageContent() {
                 {storeConfig.mockTestPackages.map((product, index) => {
                     const baseDiscount = 0.05;
                     const referralDiscount = referralCode1.trim() !== "" ? 0.10 : 0;
-                    const totalDiscount = baseDiscount + referralDiscount;
+                    const recommendationDiscount = isEligibleForRecDiscount ? (storeConfig.recommendationSettings?.additionalDiscount || 0) / 100 : 0;
+                    
+                    const totalDiscount = baseDiscount + referralDiscount + recommendationDiscount;
                     const discountedBasePrice = product.price * (1 - totalDiscount);
                     const gstAmount = discountedBasePrice * (product.gstRate / 100);
                     const finalPrice = discountedBasePrice + gstAmount;

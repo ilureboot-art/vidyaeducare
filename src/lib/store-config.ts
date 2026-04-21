@@ -40,6 +40,12 @@ export type ReferboltSettings = {
     ibaBonusCommission: number;
 };
 
+export type RecommendationSettings = {
+    additionalDiscount: number;
+    windowDays: number;
+    requiredCount: number;
+};
+
 export type StoreConfig = {
     packages: TicketPackage[];
     mockTestPackages: MockTestPackage[];
@@ -47,9 +53,9 @@ export type StoreConfig = {
     referralBonus: number;
     gameSettings: GameSettings;
     referboltSettings: ReferboltSettings;
+    recommendationSettings: RecommendationSettings;
 };
 
-// This can remain as it is configuration, not user-specific data.
 export const defaultStoreConfig: StoreConfig = {
     packages: [],
     
@@ -79,5 +85,11 @@ export const defaultStoreConfig: StoreConfig = {
     referboltSettings: {
         freeAccessWithMockTest: true,
         ibaBonusCommission: 5,
+    },
+
+    recommendationSettings: {
+        additionalDiscount: 5,
+        windowDays: 30,
+        requiredCount: 2
     }
 };

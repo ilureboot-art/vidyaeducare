@@ -58,6 +58,7 @@ function StorePageContent() {
             lastPurchaseDate = d instanceof Timestamp ? d.toDate() : new Date(d);
         }
 
+        // Window starts from latest of Join Date or Last Purchase
         const anchorDate = lastPurchaseDate && lastPurchaseDate > joinDate ? lastPurchaseDate : joinDate;
         const windowEnd = new Date(anchorDate.getTime() + (config.recommendationSettings.windowDays * 24 * 60 * 60 * 1000));
         const now = new Date();
@@ -68,6 +69,7 @@ function StorePageContent() {
             return;
         }
 
+        // Count referrals within the current active window
         const qC = query(collection(db, "clients"), where("referrerId", "==", userId));
         const cSnap = await getDocs(qC);
         let validCount = 0;
@@ -199,6 +201,7 @@ function StorePageContent() {
         });
 
         toast({ title: "Purchase Successful!", description: `You have successfully purchased ${item.name}.`, duration: 7000 });
+        checkRecEligibility(db, user.uid, storeConfig); // Refresh eligibility for next time
     } catch (e: any) {
         toast({ variant: "destructive", title: "Purchase Failed", description: e.message || "An error occurred." });
     } finally {

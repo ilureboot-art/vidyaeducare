@@ -220,7 +220,7 @@ function StorePageContent() {
   return (
     <div className="w-full max-w-4xl mx-auto space-y-6">
       <Card className="shadow-lg">
-        <CardHeader className="text-center">
+        <CardHeader>
           <CardTitle className="text-3xl font-bold text-primary flex items-center justify-center gap-2">
             <ShoppingCart />
             Product Store

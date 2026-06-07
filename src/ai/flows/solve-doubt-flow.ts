@@ -1,8 +1,8 @@
 'use server';
 /**
- * @fileOverview A flow for solving student doubts about specific MCQ questions.
+ * @fileOverview A flow for solving student doubts about academic topics or specific MCQs.
  *
- * - solveDoubt - A function that provides bilingual explanations for MCQs.
+ * - solveDoubt - A function that provides bilingual explanations for any educational query.
  * - SolveDoubtInput - The input type for the solveDoubt function.
  * - SolveDoubtOutput - The return type for the solveDoubt function.
  */
@@ -15,13 +15,13 @@ const SolveDoubtInputSchema = z.object({
         text: z.object({ en: z.string(), mr: z.string() }),
         options: z.object({ en: z.array(z.string()), mr: z.array(z.string()) }),
         correctAnswer: z.object({ en: z.string(), mr: z.string() }),
-    }),
+    }).optional().describe('Optional MCQ context if the doubt is about a specific question.'),
     context: z.object({
-        subject: z.string(),
+        subject: z.string().optional(),
         standard: z.string(),
         board: z.string(),
     }),
-    userDoubt: z.string().optional().describe('Specific question or doubt from the user.'),
+    userDoubt: z.string().describe('The student\'s question or specific doubt.'),
 });
 export type SolveDoubtInput = z.infer<typeof SolveDoubtInputSchema>;
 
@@ -30,7 +30,7 @@ const SolveDoubtOutputSchema = z.object({
     en: z.string().describe('Clear, pedagogical explanation in English.'),
     mr: z.string().describe('Clear, pedagogical explanation in Marathi.'),
   }),
-  keyConcept: z.string().describe('The core scientific or academic concept being tested.'),
+  keyConcept: z.string().describe('The core scientific or academic concept being addressed.'),
 });
 export type SolveDoubtOutput = z.infer<typeof SolveDoubtOutputSchema>;
 
@@ -42,29 +42,27 @@ const prompt = ai.definePrompt({
   name: 'solveDoubtPrompt',
   input: { schema: SolveDoubtInputSchema },
   output: { schema: SolveDoubtOutputSchema },
-  prompt: `You are an expert tutor for the {{{context.board}}} board, teaching {{{context.standard}}} {{{context.subject}}}.
+  prompt: `You are an expert tutor for the {{{context.board}}} board, teaching {{{context.standard}}} {{{#if context.subject}}}{{{context.subject}}}{{{/if}}}.
 
-  A student has a doubt about the following multiple-choice question:
-  Question (English): {{{question.text.en}}}
-  Question (Marathi): {{{question.text.mr}}}
+  {{#if question}}
+  A student has a doubt about this specific MCQ:
+  Question: {{{question.text.en}}} ({{{question.text.mr}}})
+  Options: 
+  {{#each question.options.en}} - {{{this}}} (Marathi: {{{lookup ../question.options.mr @index}}}) {{/each}}
+  Correct Answer: {{{question.correctAnswer.en}}}
 
-  Options:
-  {{#each question.options.en}}
-  - Option {{@index}}: {{{this}}} (Marathi: {{{lookup ../question.options.mr @index}}})
-  {{/each}}
-
-  Correct Answer: {{{question.correctAnswer.en}}} ({{{question.correctAnswer.mr}}})
-
-  {{#if userDoubt}}
-  Student's specific doubt: {{{userDoubt}}}
+  Student's specific question: {{{userDoubt}}}
+  {{else}}
+  A student is asking a general academic question:
+  "{{{userDoubt}}}"
   {{/if}}
 
   Your task:
-  1. Provide a clear, step-by-step explanation of why the correct answer is right.
-  2. Briefly explain why common distractors (incorrect options) are wrong.
+  1. Provide a clear, step-by-step explanation or answer.
+  2. If an MCQ was provided, explain why the correct answer is right and why others are wrong.
   3. Ensure the explanation is pedagogical, encouraging, and easy for a {{{context.standard}}} student to understand.
   4. Provide the explanation in BOTH English and Marathi.
-  5. Identify the "Key Concept" used in the question.
+  5. Identify the "Key Concept" involved.
 
   Use a friendly tutor-like tone.`,
 });

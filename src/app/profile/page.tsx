@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { User, Mail, Calendar, Phone, GraduationCap, Trash2, PlusCircle, BookOpen, Loader2, BarChart2, Users, BrainCircuit, Sparkles, ScrollText } from "lucide-react";
+import { User, Mail, Calendar, Phone, GraduationCap, Trash2, PlusCircle, BookOpen, Loader2, BarChart2, Users, BrainCircuit, Sparkles, ScrollText, ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -231,14 +231,19 @@ function ProfilePageContent() {
                 <CardDescription>Premium AI tools available for all your registered students.</CardDescription>
             </CardHeader>
             <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="flex items-center gap-4 p-3 bg-background rounded-xl border">
-                    <div className="p-2 bg-accent/10 rounded-lg"><BrainCircuit className="w-6 h-6 text-accent" /></div>
-                    <div>
-                        <p className="font-bold text-sm">AI Doubt Solver</p>
-                        <p className="text-[10px] text-muted-foreground">Instant bilingual conceptual clarity for any MCQ.</p>
+                <div className="flex items-center justify-between gap-4 p-4 bg-background rounded-xl border group hover:border-accent/50 transition-colors">
+                    <div className="flex items-center gap-4">
+                        <div className="p-2 bg-accent/10 rounded-lg"><BrainCircuit className="w-6 h-6 text-accent" /></div>
+                        <div>
+                            <p className="font-bold text-sm">AI Doubt Solver</p>
+                            <p className="text-[10px] text-muted-foreground">Instant bilingual answers for any question.</p>
+                        </div>
                     </div>
+                    <Button variant="ghost" size="icon" asChild className="group-hover:translate-x-1 transition-transform">
+                        <Link href="/ai-tutor"><ArrowRight size={18}/></Link>
+                    </Button>
                 </div>
-                <div className="flex items-center gap-4 p-3 bg-background rounded-xl border">
+                <div className="flex items-center gap-4 p-4 bg-background rounded-xl border">
                     <div className="p-2 bg-primary/10 rounded-lg"><ScrollText className="w-6 h-6 text-primary" /></div>
                     <div>
                         <p className="font-bold text-sm">AI Notes Generator</p>

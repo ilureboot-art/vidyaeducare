@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -7,10 +6,10 @@ import { BookOpen, Store, Users, Wallet, Home, BrainCircuit, Gamepad2, Zap, Shie
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { href: "/", label: "Home", icon: Home },
-  { href: "/profile", label: "My Students", icon: Users },
+  { href: "/profile", label: "Students", icon: Users },
+  { href: "/ai-tutor", label: "AI Tutor", icon: BrainCircuit },
   { href: "/quiz-clash", label: "Quiz Clash", icon: Puzzle },
-  { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
+  { href: "/leaderboard", label: "Ranking", icon: Trophy },
   { href: "/store", label: "Store", icon: Store },
   { href: "/wallet", label: "Wallet", icon: Wallet },
 ];
@@ -27,7 +26,7 @@ export function Navbar() {
          <nav className="grid grid-cols-6 gap-1">
             {navItems.map((item) => {
                 const Icon = item.icon;
-                const isActive = item.href === '/' ? pathname === item.href : pathname.startsWith(item.href);
+                const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
                 return (
                     <Link
                         key={item.href}

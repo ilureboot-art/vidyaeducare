@@ -9,7 +9,7 @@ export type QuizClashTournament = {
     entryFee: number;
     questionCount: number;
     testSetId: string;
-    registeredPlayers: string[];
+    registeredUsers: string[];
     prizePool: number;
     status: 'scheduled' | 'live' | 'completed';
     winners?: { userId: string; rank: number; prize: number }[];

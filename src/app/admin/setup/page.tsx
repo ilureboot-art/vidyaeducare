@@ -18,7 +18,7 @@ const HEAD_ADMIN_PHONE = '9999999999';
 
 const TEST_STUDENT_EMAIL = 'student@vidyaeducare.com';
 const TEST_STUDENT_PASSWORD = 'password123';
-const TEST_STUDENT_NAME = 'Test Player';
+const TEST_STUDENT_NAME = 'Test User';
 
 export default function SetupAdminPage() {
   const db = useDb();
@@ -99,10 +99,10 @@ export default function SetupAdminPage() {
             balance: 100, coins: 50, referralCode: `REF${user.uid.slice(0, 6).toUpperCase()}`
         });
 
-        toast({ title: "Student Created!", description: "Test player account is ready for use." });
+        toast({ title: "User Created!", description: "Test user account is ready for use." });
     } catch (error: any) {
         if (error.code === 'auth/email-already-in-use') {
-            toast({ title: "Already Exists", description: "Test student account is already created." });
+            toast({ title: "Already Exists", description: "Test user account is already created." });
         } else {
             toast({ variant: 'destructive', title: "Error", description: error.message });
         }
@@ -155,16 +155,16 @@ export default function SetupAdminPage() {
           </div>
 
           <div className="space-y-4 pt-4 border-t">
-            <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">Player Portal</h3>
+            <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">User Portal</h3>
             <div className="bg-muted p-4 rounded-lg space-y-3">
-                <p className="text-xs text-muted-foreground">Create a test player account to verify student features, mock tests, and the wallet system.</p>
+                <p className="text-xs text-muted-foreground">Create a test user account to verify student features, mock tests, and the wallet system.</p>
                 <div className="text-xs font-mono bg-background p-2 rounded border">
                     Email: {TEST_STUDENT_EMAIL}<br/>
                     Pass: {TEST_STUDENT_PASSWORD}
                 </div>
                 <Button variant="secondary" className="w-full" onClick={createTestStudent} disabled={isCreatingStudent}>
                     {isCreatingStudent ? <Loader2 className="animate-spin mr-2" /> : <User className="mr-2" />}
-                    Create Test Student
+                    Create Test User
                 </Button>
             </div>
           </div>

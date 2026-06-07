@@ -39,7 +39,7 @@ function QuizClashPageContent() {
         return;
     }
     
-    if (tournament.registeredPlayers.includes(user.uid)) {
+    if (tournament.registeredUsers.includes(user.uid)) {
         toast({ title: "Already Registered", description: "You are already registered for this tournament."});
         return;
     }
@@ -59,9 +59,9 @@ function QuizClashPageContent() {
                 const newBalance = userWalletDoc.data().balance - tournament.entryFee;
                 transaction.update(userWalletRef, { balance: newBalance });
 
-                // 2. Add user to tournament players list and update prize pool
+                // 2. Add user to tournament users list and update prize pool
                 transaction.update(tournamentRef, { 
-                    registeredPlayers: arrayUnion(user.uid),
+                    registeredUsers: arrayUnion(user.uid),
                     prizePool: (tournament.prizePool || 0) + tournament.entryFee,
                 });
 
@@ -79,7 +79,7 @@ function QuizClashPageContent() {
         } else { // For Practice tournaments
             const tournamentRef = doc(db, "quizClashTournaments", tournament.id);
             await updateDoc(tournamentRef, {
-                registeredPlayers: arrayUnion(user.uid)
+                registeredUsers: arrayUnion(user.uid)
             });
         }
 
@@ -91,7 +91,7 @@ function QuizClashPageContent() {
         // Optimistically update UI
         setTournaments(prev => prev!.map(t => 
             t.id === tournament.id 
-                ? { ...t, registeredPlayers: [...t.registeredPlayers, user.uid], prizePool: t.type === 'Pro' ? t.prizePool + t.entryFee : t.prizePool }
+                ? { ...t, registeredUsers: [...t.registeredUsers, user.uid], prizePool: t.type === 'Pro' ? t.prizePool + t.entryFee : t.prizePool }
                 : t
         ));
 
@@ -129,7 +129,7 @@ function QuizClashPageContent() {
             <p>1. Register for an upcoming tournament. Pro Clashes require an entry fee, Practice Clashes are free.</p>
             <p>2. Join the quiz at the scheduled time. All participants play at the same time.</p>
             <p>3. Answer as many questions correctly and as quickly as possible.</p>
-            <p>4. Top players on the leaderboard win a share of the prize pool in Pro Clashes, or bragging rights in Practice Clashes!</p>
+            <p>4. Top users on the leaderboard win a share of the prize pool in Pro Clashes, or bragging rights in Practice Clashes!</p>
         </CardContent>
       </Card>
 
@@ -138,7 +138,7 @@ function QuizClashPageContent() {
         {tournaments.length > 0 ? (
             <div className="space-y-4">
             {tournaments.map((tourney) => {
-                const isRegistered = user ? tourney.registeredPlayers.includes(user.uid) : false;
+                const isRegistered = user ? tourney.registeredUsers.includes(user.uid) : false;
                 const canPlay = new Date(tourney.startTime) <= new Date();
 
                 return (
@@ -164,8 +164,8 @@ function QuizClashPageContent() {
                             <p className="text-xs text-muted-foreground">Questions</p>
                         </div>
                         <div className="p-3 bg-muted/50 rounded-lg">
-                            <h4 className="font-bold text-lg">{tourney.registeredPlayers.length}</h4>
-                            <p className="text-xs text-muted-foreground">Contestants</p>
+                            <h4 className="font-bold text-lg">{tourney.registeredUsers.length}</h4>
+                            <p className="text-xs text-muted-foreground">Users Registered</p>
                         </div>
                         {tourney.type === 'Pro' ? (
                             <div className="p-3 bg-green-100 dark:bg-green-900/50 rounded-lg">

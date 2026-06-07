@@ -17,7 +17,7 @@ import { useDb } from "@/firebase";
 import { collection, getDocs, query, orderBy, limit } from "firebase/firestore";
 import UserLayout from "@/components/UserLayout";
 
-type Player = {
+type UserEntry = {
   rank: number;
   name: string;
   avatar: string;
@@ -35,7 +35,7 @@ const getRankColor = (rank: number) => {
 
 export default function LeaderboardPage() {
   const db = useDb();
-  const [leaderboardData, setLeaderboardData] = useState<Player[] | null>(null);
+  const [leaderboardData, setLeaderboardData] = useState<UserEntry[] | null>(null);
   
   useEffect(() => {
     const fetchLeaderboard = async () => {
@@ -47,7 +47,7 @@ export default function LeaderboardPage() {
         const leaderboard = querySnapshot.docs.map((doc, index) => ({
             rank: index + 1,
             ...doc.data()
-        } as Player));
+        } as UserEntry));
         setLeaderboardData(leaderboard);
     };
     if (db) {

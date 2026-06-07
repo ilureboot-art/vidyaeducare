@@ -63,7 +63,7 @@ Start your journey to success now: ${url}`;
                   <div className="mt-8">
                       <div className="p-6 bg-primary/[0.03] rounded-2xl border border-primary/10 inline-block shadow-sm">
                         <p className="text-sm font-bold text-primary mb-3 flex items-center gap-2 justify-center md:justify-start">
-                            <Shield className="w-4 h-4" /> ACTIVE {isAdmin ? 'ADMIN' : 'PLAYER'} SESSION
+                            <Shield className="w-4 h-4" /> ACTIVE {isAdmin ? 'ADMIN' : 'USER'} SESSION
                         </p>
                         <Button asChild size="lg" className="px-10 py-8 text-xl font-black shadow-xl hover:scale-105 transition-transform">
                             <Link href={isAdmin ? "/admin/analytics" : "/profile"}>
@@ -79,7 +79,7 @@ Start your journey to success now: ${url}`;
                           <Link href="/signup"><LogIn className="mr-2"/> Join for Free</Link>
                       </Button>
                       <Button asChild size="lg" variant="outline">
-                          <Link href="/login"><User className="mr-2"/> Player Login</Link>
+                          <Link href="/login"><User className="mr-2"/> User Login</Link>
                       </Button>
                       <Button asChild size="lg" variant="ghost">
                           <Link href="/admin/login"><Shield className="mr-2"/> Admin Portal</Link>

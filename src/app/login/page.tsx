@@ -74,7 +74,7 @@ export default function LoginPage() {
         <h1 className="text-4xl font-bold text-primary flex items-center gap-2 justify-center">
             <Gamepad2 className="w-10 h-10" /> Vidya EduCare
         </h1>
-        <p className="text-muted-foreground">Player Login Portal</p>
+        <p className="text-muted-foreground">User Login Portal</p>
       </div>
       <Card className="w-full">
         <form onSubmit={handleLogin}>

@@ -114,7 +114,7 @@ export default function AdminQuizClashPage() {
             entryFee: newTournament.type === 'Practice' ? 0 : Number(newTournament.entryFee),
             testSetId: newTournament.testSetId,
             questionCount: selectedTestSet.questions.length,
-            registeredPlayers: [],
+            registeredUsers: [],
             prizePool: 0,
             status: "scheduled",
         };
@@ -268,7 +268,7 @@ export default function AdminQuizClashPage() {
                                 <TableHead>Type</TableHead>
                                 <TableHead>Start Time</TableHead>
                                 <TableHead>Entry Fee</TableHead>
-                                <TableHead>Players</TableHead>
+                                <TableHead>Users</TableHead>
                                 <TableHead>Actions</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -279,7 +279,7 @@ export default function AdminQuizClashPage() {
                                      <TableCell><Badge variant={t.type === 'Pro' ? 'default' : 'secondary'}>{t.type}</Badge></TableCell>
                                     <TableCell>{format(new Date(t.startTime), 'P p')}</TableCell>
                                     <TableCell>₹{t.entryFee}</TableCell>
-                                    <TableCell>{t.registeredPlayers.length}</TableCell>
+                                    <TableCell>{t.registeredUsers.length}</TableCell>
                                     <TableCell>
                                         <Button variant="ghost" size="icon" onClick={() => handleDeleteTournament(t.id)}>
                                             <Trash2 className="w-4 h-4 text-red-500" />

@@ -8,7 +8,7 @@ This is a comprehensive NextJS application for Vidya EduCare, combining academic
 - **Email**: `admin@vidyaeducare.com`
 - **Password**: `password123`
 
-## Player Credentials (Test Account)
+## User Credentials (Test Account)
 - **Login URL**: `/login`
 - **Email**: `student@vidyaeducare.com`
 - **Password**: `password123`
@@ -18,7 +18,7 @@ This is a comprehensive NextJS application for Vidya EduCare, combining academic
 
 ### 1. Business Intelligence
 - **Analytics Dashboard**: Real-time tracking of total users, revenue, and academic engagement.
-- **User Management**: View, manage, and take action (ban/unban) on all player accounts.
+- **User Management**: View, manage, and take action (ban/unban) on all user accounts.
 - **Transaction Ledger**: Approve or reject financial requests with automatic wallet synchronization.
 
 ### 2. Content & Education

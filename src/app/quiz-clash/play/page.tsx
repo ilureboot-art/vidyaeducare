@@ -217,7 +217,7 @@ function QuizClashGameContent() {
                 <CardHeader className="text-center">
                     <div className="flex justify-between items-center">
                         <div className="w-24 text-left">
-                             <p className="text-sm flex items-center gap-1"><Users className="w-4 h-4"/> {tournament.registeredPlayers.length}</p>
+                             <p className="text-sm flex items-center gap-1"><Users className="w-4 h-4"/> {tournament.registeredUsers.length}</p>
                         </div>
                          <div className="relative w-24 h-24 flex items-center justify-center">
                             <svg className="absolute w-full h-full" viewBox="0 0 100 100">

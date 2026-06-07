@@ -71,7 +71,7 @@ function QuizClashResultsContent() {
                 // Fetch user names
                 for (let result of fetchedResults) {
                     const userDoc = await getDoc(doc(db, "users", result.userId));
-                    result.userName = userDoc.exists() ? userDoc.data().name : "Unknown Player";
+                    result.userName = userDoc.exists() ? userDoc.data().name : "Unknown User";
                 }
 
                 let finalResults: Result[] = [];

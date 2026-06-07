@@ -16,9 +16,9 @@ const HEAD_ADMIN_PASSWORD = 'password123';
 const HEAD_ADMIN_NAME = 'Main Admin';
 const HEAD_ADMIN_PHONE = '9999999999';
 
-const TEST_STUDENT_EMAIL = 'student@vidyaeducare.com';
-const TEST_STUDENT_PASSWORD = 'password123';
-const TEST_STUDENT_NAME = 'Test User';
+const TEST_USER_EMAIL = 'student@vidyaeducare.com';
+const TEST_USER_PASSWORD = 'password123';
+const TEST_USER_NAME = 'Test User';
 
 export default function SetupAdminPage() {
   const db = useDb();
@@ -28,7 +28,7 @@ export default function SetupAdminPage() {
   
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
-  const [isCreatingStudent, setIsCreatingStudent] = useState(false);
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
 
   const createHeadAdmin = async () => {
     if (!db || !auth) return;
@@ -82,16 +82,16 @@ export default function SetupAdminPage() {
     }
   };
 
-  const createTestStudent = async () => {
+  const createTestUser = async () => {
     if (!db || !auth) return;
-    setIsCreatingStudent(true);
+    setIsCreatingUser(true);
     
     try {
-        const userCredential = await createUserWithEmailAndPassword(auth, TEST_STUDENT_EMAIL, TEST_STUDENT_PASSWORD);
+        const userCredential = await createUserWithEmailAndPassword(auth, TEST_USER_EMAIL, TEST_USER_PASSWORD);
         const user = userCredential.user;
 
         await setDoc(doc(db, "users", user.uid), {
-            id: user.uid, name: TEST_STUDENT_NAME, email: TEST_STUDENT_EMAIL, phone: "0000000000",
+            id: user.uid, name: TEST_USER_NAME, email: TEST_USER_EMAIL, phone: "0000000000",
             joinDate: new Date().toISOString(), status: "Active",
         });
 
@@ -107,7 +107,7 @@ export default function SetupAdminPage() {
             toast({ variant: 'destructive', title: "Error", description: error.message });
         }
     } finally {
-        setIsCreatingStudent(false);
+        setIsCreatingUser(false);
     }
   }
 
@@ -119,12 +119,12 @@ export default function SetupAdminPage() {
             <Shield className="text-primary" /> System Setup
           </CardTitle>
           <CardDescription>
-            Configure initial accounts for testing and administration.
+            Initialize official accounts for testing and administration.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-4">
-            <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">Admin Portal</h3>
+            <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">Admin Access</h3>
             {status === 'success' ? (
                 <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 p-4 rounded-lg space-y-3">
                     <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
@@ -155,15 +155,15 @@ export default function SetupAdminPage() {
           </div>
 
           <div className="space-y-4 pt-4 border-t">
-            <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">User Portal</h3>
+            <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">User Access</h3>
             <div className="bg-muted p-4 rounded-lg space-y-3">
-                <p className="text-xs text-muted-foreground">Create a test user account to verify student features, mock tests, and the wallet system.</p>
+                <p className="text-xs text-muted-foreground">Create a test user account to verify academic features, AI tools, and the wallet system.</p>
                 <div className="text-xs font-mono bg-background p-2 rounded border">
-                    Email: {TEST_STUDENT_EMAIL}<br/>
-                    Pass: {TEST_STUDENT_PASSWORD}
+                    Email: {TEST_USER_EMAIL}<br/>
+                    Pass: {TEST_USER_PASSWORD}
                 </div>
-                <Button variant="secondary" className="w-full" onClick={createTestStudent} disabled={isCreatingStudent}>
-                    {isCreatingStudent ? <Loader2 className="animate-spin mr-2" /> : <User className="mr-2" />}
+                <Button variant="secondary" className="w-full" onClick={createTestUser} disabled={isCreatingUser}>
+                    {isCreatingUser ? <Loader2 className="animate-spin mr-2" /> : <User className="mr-2" />}
                     Create Test User
                 </Button>
             </div>

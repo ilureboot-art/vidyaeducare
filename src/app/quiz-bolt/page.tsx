@@ -17,7 +17,7 @@ const mockTournaments = [
         title: "Daily Evening Challenge",
         startTime: new Date(new Date().setHours(20, 0, 0, 0)).toISOString(),
         entryFee: 25,
-        registeredPlayers: 88,
+        registeredUsers: 88,
         questionCount: 15,
         prizePool: 2200,
     },
@@ -26,7 +26,7 @@ const mockTournaments = [
         title: "Weekend Bonanza",
         startTime: new Date(new Date().setDate(new Date().getDate() + 2)).toISOString(),
         entryFee: 50,
-        registeredPlayers: 42,
+        registeredUsers: 42,
         questionCount: 20,
         prizePool: 2100,
     }
@@ -74,7 +74,7 @@ function QuizBoltPageContent() {
             <p>1. Register for an upcoming tournament by paying the entry fee from your wallet.</p>
             <p>2. Join the quiz at the scheduled time. All participants play at the same time.</p>
             <p>3. Answer as many questions correctly and as quickly as possible.</p>
-            <p>4. The top 4 players on the leaderboard win a share of the total prize pool!</p>
+            <p>4. The top 4 users on the leaderboard win a share of the total prize pool!</p>
         </CardContent>
       </Card>
 
@@ -99,8 +99,8 @@ function QuizBoltPageContent() {
                     <p className="text-xs text-muted-foreground">Questions</p>
                 </div>
                  <div className="p-3 bg-muted/50 rounded-lg">
-                    <h4 className="font-bold text-lg">{tourney.registeredPlayers}</h4>
-                    <p className="text-xs text-muted-foreground">Contestants</p>
+                    <h4 className="font-bold text-lg">{tourney.registeredUsers}</h4>
+                    <p className="text-xs text-muted-foreground">Users</p>
                 </div>
                  <div className="p-3 bg-green-100 dark:bg-green-900/50 rounded-lg">
                     <h4 className="font-bold text-lg text-green-700 dark:text-green-300">₹{tourney.prizePool}</h4>

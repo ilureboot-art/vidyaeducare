@@ -231,7 +231,7 @@ function ProfilePageContent() {
                 <CardDescription>Premium AI tools available for all your registered students.</CardDescription>
             </CardHeader>
             <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="flex items-center justify-between gap-4 p-4 bg-background rounded-xl border group hover:border-accent/50 transition-colors">
+                <div className="flex items-center justify-between gap-4 p-4 bg-background rounded-xl border group hover:border-accent/50 transition-all hover:shadow-md">
                     <div className="flex items-center gap-4">
                         <div className="p-2 bg-accent/10 rounded-lg"><BrainCircuit className="w-6 h-6 text-accent" /></div>
                         <div>
@@ -243,12 +243,17 @@ function ProfilePageContent() {
                         <Link href="/ai-tutor"><ArrowRight size={18}/></Link>
                     </Button>
                 </div>
-                <div className="flex items-center gap-4 p-4 bg-background rounded-xl border">
-                    <div className="p-2 bg-primary/10 rounded-lg"><ScrollText className="w-6 h-6 text-primary" /></div>
-                    <div>
-                        <p className="font-bold text-sm">AI Notes Generator</p>
-                        <p className="text-[10px] text-muted-foreground">Personalized study summaries based on test results.</p>
+                <div className="flex items-center justify-between gap-4 p-4 bg-background rounded-xl border group hover:border-primary/50 transition-all hover:shadow-md">
+                    <div className="flex items-center gap-4">
+                        <div className="p-2 bg-primary/10 rounded-lg"><ScrollText className="w-6 h-6 text-primary" /></div>
+                        <div>
+                            <p className="font-bold text-sm">AI Notes Generator</p>
+                            <p className="text-[10px] text-muted-foreground">Convert text or images into study summaries.</p>
+                        </div>
                     </div>
+                    <Button variant="ghost" size="icon" asChild className="group-hover:translate-x-1 transition-transform">
+                        <Link href="/ai-notes"><ArrowRight size={18}/></Link>
+                    </Button>
                 </div>
             </CardContent>
         </Card>

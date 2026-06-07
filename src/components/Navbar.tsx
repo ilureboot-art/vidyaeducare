@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, Store, Users, Wallet, Home, BrainCircuit, Gamepad2, Zap, ShieldCheck, LayoutDashboard, User, Trophy, Puzzle } from "lucide-react";
+import { BookOpen, Store, Users, Wallet, Home, BrainCircuit, Gamepad2, Zap, ShieldCheck, LayoutDashboard, User, Trophy, Puzzle, ScrollText } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/profile", label: "Students", icon: Users },
   { href: "/ai-tutor", label: "AI Tutor", icon: BrainCircuit },
+  { href: "/ai-notes", label: "AI Notes", icon: ScrollText },
   { href: "/quiz-clash", label: "Quiz Clash", icon: Puzzle },
-  { href: "/leaderboard", label: "Ranking", icon: Trophy },
   { href: "/store", label: "Store", icon: Store },
   { href: "/wallet", label: "Wallet", icon: Wallet },
 ];
@@ -36,8 +36,8 @@ export function Navbar() {
                             isActive ? "text-primary" : "text-muted-foreground"
                         )}
                     >
-                        <Icon className="h-6 w-6 mb-1" />
-                        <span className="text-center text-[10px] leading-tight">{item.label}</span>
+                        <Icon className="h-5 w-5 mb-1" />
+                        <span className="text-center text-[9px] leading-tight font-bold">{item.label}</span>
                     </Link>
                 )
             })}

@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Trash2, Edit, BookCopy, FilePlus, ScrollText, ArrowRight, Save, Loader2, Upload, Wand2, Download } from "lucide-react";
+import { MoreHorizontal, Trash2, Edit, BookCopy, FilePlus, ScrollText, ArrowRight, Save, Loader2, Upload, Wand2, Download, Info } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -252,7 +252,7 @@ const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (file.type === 'text/csv') {
+    if (file.type === 'text/csv' || file.name.endsWith('.csv')) {
         Papa.parse(file, {
             header: true,
             skipEmptyLines: true,
@@ -441,20 +441,29 @@ const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
 
                 <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
                     <DialogTrigger asChild>
-                        <Button variant="outline"><Upload className="mr-2 h-4 w-4"/> Upload File</Button>
+                        <Button variant="outline"><Upload className="mr-2 h-4 w-4"/> Upload CSV</Button>
                     </DialogTrigger>
-                    <DialogContent>
+                    <DialogContent className="max-w-md">
                          <DialogHeader>
                              <DialogTitle>Upload MCQs from File</DialogTitle>
                              <DialogDescription>
-                                 Upload a CSV file with your questions.
+                                 Upload a CSV file to bulk-import Multiple Choice Questions.
                              </DialogDescription>
                          </DialogHeader>
-                         <div className="space-y-4 py-4">
-                            <Input id="file-upload" type="file" accept=".csv" onChange={handleFileUpload} />
-                             <a href="/mcq_template.csv" download>
-                                <Button variant="link" className="p-0 h-auto">
-                                    <Download className="mr-2 h-4 w-4" /> Download CSV Template
+                         <div className="space-y-6 py-4">
+                            <div className="bg-muted/50 p-4 rounded-lg border border-dashed text-sm space-y-2">
+                                <p className="font-bold flex items-center gap-2"><Info size={14}/> CSV Headers Required:</p>
+                                <code className="text-[10px] block bg-background p-2 rounded break-all">
+                                    question_en, question_mr, option1_en, option1_mr, option2_en, option2_mr, option3_en, option3_mr, option4_en, option4_mr, correct_answer_en, correct_answer_mr
+                                </code>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="file-upload">Select CSV File</Label>
+                                <Input id="file-upload" type="file" accept=".csv" onChange={handleFileUpload} />
+                            </div>
+                             <a href="/mcq_template.csv" download className="block">
+                                <Button variant="link" className="p-0 h-auto text-primary">
+                                    <Download className="mr-2 h-4 w-4" /> Download Example Template
                                 </Button>
                             </a>
                          </div>

@@ -7,8 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Trophy, Clock, CheckCircle, XCircle, FileQuestion, ArrowLeft, Loader2, Info, BrainCircuit, Sparkles } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/alert";
+import { Trophy, Clock, CheckCircle, XCircle, FileQuestion, ArrowLeft, Loader2, Info, BrainCircuit, Sparkles, ScrollText } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +22,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import { useDb } from "@/firebase";
 import UserLayout from "@/components/UserLayout";
 import { solveDoubt, type SolveDoubtOutput } from "@/ai/flows/solve-doubt-flow";
+import { generateStudyNotes, type GenerateNotesOutput } from "@/ai/flows/generate-notes-flow";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 const MOCK_TEST_DURATION = 30 * 60; // 30 minutes in seconds
@@ -45,10 +46,14 @@ function MockTestContent() {
     const [score, setScore] = useState(0);
     const [isLiveTest, setIsLiveTest] = useState(false);
 
-    // AI Doubt Solver State
+    // AI Flow States
     const [isAiSolving, setIsAiSolving] = useState<string | null>(null);
     const [aiExplanation, setAiExplanation] = useState<SolveDoubtOutput | null>(null);
     const [isAiDialogOpen, setIsAiDialogOpen] = useState(false);
+
+    const [isGeneratingNotes, setIsGeneratingNotes] = useState(false);
+    const [aiNotes, setAiNotes] = useState<GenerateNotesOutput | null>(null);
+    const [isNotesDialogOpen, setIsNotesDialogOpen] = useState(false);
     
     useEffect(() => {
         if (!db) return;
@@ -66,7 +71,6 @@ function MockTestContent() {
         
         const fetchData = async () => {
             try {
-                // Fetch student profile
                 const studentDoc = await getDoc(doc(db, 'students', studentId));
                 if (studentDoc.exists()) {
                     setStudentProfile(studentDoc.data() as StudentProfile);
@@ -74,13 +78,11 @@ function MockTestContent() {
                     throw new Error("Student profile not found");
                 }
 
-                // Fetch scheduled test details
                 const scheduledTestDoc = await getDoc(doc(db, 'scheduledTests', testId));
                 if (scheduledTestDoc.exists()) {
                     const scheduledTestData = scheduledTestDoc.data() as ScheduledTest;
                     setScheduledTest(scheduledTestData);
 
-                    // Fetch the actual questions from the test set
                     const testSetDoc = await getDoc(doc(db, 'testSets', scheduledTestData.testSetId));
                     if (testSetDoc.exists()) {
                         const testSetData = testSetDoc.data() as TestSet;
@@ -212,6 +214,36 @@ function MockTestContent() {
             setIsAiSolving(null);
         }
     };
+
+    const handleGenerateNotes = async () => {
+        if (!scheduledTest) return;
+        setIsGeneratingNotes(true);
+        setAiNotes(null);
+        setIsNotesDialogOpen(true);
+
+        // Extract context based on performance (incorrect answers)
+        const incorrectTopics = activeQuestions
+            .filter(q => answers[q.id]?.en !== q.correctAnswer.en)
+            .map(q => q.text.en)
+            .slice(0, 5)
+            .join(", ");
+
+        try {
+            const notes = await generateStudyNotes({
+                subject: scheduledTest.subject,
+                standard: scheduledTest.standard,
+                board: scheduledTest.board,
+                performanceContext: score < 100 ? `The student struggled with these specific concepts: ${incorrectTopics}` : "The student performed well, generate advanced summary notes.",
+                topics: [scheduledTest.testSetName]
+            });
+            setAiNotes(notes);
+        } catch (error) {
+            toast({ variant: 'destructive', title: "Generation Failed", description: "AI Study notes could not be generated at this time." });
+            setIsNotesDialogOpen(false);
+        } finally {
+            setIsGeneratingNotes(false);
+        }
+    };
     
     if (testState === "loading" || !studentProfile || !scheduledTest || activeQuestions.length === 0) {
         return (
@@ -305,9 +337,7 @@ function MockTestContent() {
                         <DialogTitle className="flex items-center gap-2 text-primary">
                             <Sparkles className="w-5 h-5" /> AI Tutor Explanation
                         </DialogTitle>
-                        <DialogDescription>
-                            Conceptual breakdown of the selected question.
-                        </DialogDescription>
+                        <DialogDescription>Conceptual breakdown of the selected question.</DialogDescription>
                     </DialogHeader>
                     {aiExplanation ? (
                         <div className="space-y-6 pt-4">
@@ -341,6 +371,7 @@ function MockTestContent() {
 
     if (testState === "completed") {
         return (
+            <>
             <Card className="w-full max-w-2xl text-center">
                 <CardHeader>
                     <CardTitle className="text-3xl text-primary">Test Results: {scheduledTest.testSetName}</CardTitle>
@@ -351,49 +382,94 @@ function MockTestContent() {
                     <p className="text-xl">You have completed the test.</p>
                     <p className="text-4xl font-bold">Your Score: {score.toFixed(0)}%</p>
                     
-                    {!isLiveTest && (
-                         <Alert variant="default" className="bg-blue-100 dark:bg-blue-900 border-blue-500 text-left">
-                             <Info className="h-4 w-4 text-blue-700" />
-                            <AlertTitle className="text-blue-800">Practice Test Completed</AlertTitle>
-                            <AlertDescription className="text-blue-700">
-                                This was a completed test taken for practice. No prizes are awarded for non-live tests. Keep practicing to win next time!
-                            </AlertDescription>
-                        </Alert>
-                    )}
-
-                    {isLiveTest && score > 80 && (
-                        <Alert variant="default" className="bg-green-100 dark:bg-green-900 border-green-500 text-left">
-                             <CheckCircle className="h-4 w-4 text-green-700" />
-                            <AlertTitle className="text-green-800">Congratulations! Prize Eligible!</AlertTitle>
-                            <AlertDescription className="text-green-700">
-                                Rewards will be credited to your wallet shortly based on your rank. Check the leaderboard!
-                            </AlertDescription>
-                        </Alert>
-                    )}
-
-                     {isLiveTest && score <= 80 && (
-                         <Alert variant="destructive" className="text-left">
-                             <XCircle className="h-4 w-4" />
-                            <AlertTitle>Keep Practicing!</AlertTitle>
-                            <AlertDescription>
-                                You need a score above 80% to be eligible for prizes in a live test.
-                            </AlertDescription>
-                        </Alert>
-                    )}
-
-                    <div className="flex flex-wrap gap-4 justify-center pt-4">
-                        <Button onClick={() => setTestState('review')} className="gap-2">
-                             <BrainCircuit className="w-4 h-4"/> Review Answers & Doubts
+                    <div className="grid gap-3 pt-6">
+                        <Button onClick={handleGenerateNotes} className="w-full py-8 text-lg font-black gap-3 shadow-xl bg-accent hover:bg-accent/90 animate-bounce-slow">
+                            <ScrollText className="w-6 h-6" />
+                            GENERATE AI STUDY NOTES
                         </Button>
-                         <Button asChild variant="outline">
-                            <Link href="/profile">Back to My Students</Link>
-                        </Button>
-                        <Button asChild variant="outline">
-                            <Link href="/leaderboard">View Leaderboard</Link>
-                        </Button>
+                        <div className="grid grid-cols-2 gap-3">
+                            <Button onClick={() => setTestState('review')} variant="outline" className="gap-2">
+                                <BrainCircuit className="w-4 h-4"/> Review Answers
+                            </Button>
+                            <Button asChild variant="outline">
+                                <Link href="/profile">Exit Workspace</Link>
+                            </Button>
+                        </div>
                     </div>
                 </CardContent>
             </Card>
+
+            <Dialog open={isNotesDialogOpen} onOpenChange={setIsNotesDialogOpen}>
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-primary text-2xl font-black">
+                            <ScrollText className="w-7 h-7" /> AI PERSONALIZED STUDY NOTES
+                        </DialogTitle>
+                        <DialogDescription>Notes tailored to your board, standard, and recent test performance.</DialogDescription>
+                    </DialogHeader>
+                    
+                    {aiNotes ? (
+                        <div className="space-y-8 pt-6">
+                            <div className="text-center space-y-2 border-b pb-6">
+                                <h1 className="text-3xl font-black text-primary">{aiNotes.title}</h1>
+                                <Badge variant="secondary" className="px-4 py-1 text-xs">{scheduledTest.board} • {scheduledTest.standard} • {scheduledTest.subject}</Badge>
+                            </div>
+
+                            {aiNotes.sections.map((section, idx) => (
+                                <div key={idx} className="space-y-4 p-6 bg-muted/20 rounded-2xl border border-muted-foreground/10 group hover:border-primary/30 transition-colors">
+                                    <div className="flex flex-col gap-1 border-l-4 border-primary pl-4">
+                                        <h2 className="text-xl font-black text-primary">{section.heading.mr}</h2>
+                                        <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-widest">{section.heading.en}</h3>
+                                    </div>
+                                    <div className="grid md:grid-cols-2 gap-6 pt-2">
+                                        <div className="space-y-2">
+                                            <p className="text-lg leading-relaxed font-medium">{section.content.mr}</p>
+                                            <ul className="space-y-2">
+                                                {section.keyPoints.map((point, pIdx) => (
+                                                    <li key={pIdx} className="flex gap-2 text-sm">
+                                                        <CheckCircle className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
+                                                        <span>{point.mr}</span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                        <div className="space-y-2 bg-background/50 p-4 rounded-xl">
+                                            <p className="text-md leading-relaxed text-muted-foreground">{section.content.en}</p>
+                                            <ul className="space-y-2">
+                                                {section.keyPoints.map((point, pIdx) => (
+                                                    <li key={pIdx} className="flex gap-2 text-xs text-muted-foreground italic">
+                                                        <span>• {point.en}</span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+
+                            <Card className="bg-primary/5 border-primary/20">
+                                <CardHeader className="pb-2"><CardTitle className="text-sm uppercase tracking-widest font-black text-primary flex items-center gap-2"><Sparkles className="w-4 h-4"/> Concept Summary</CardTitle></CardHeader>
+                                <CardContent className="space-y-4">
+                                    <p className="text-xl font-bold leading-relaxed">{aiNotes.summary.mr}</p>
+                                    <p className="text-sm text-muted-foreground italic border-t pt-2">{aiNotes.summary.en}</p>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col items-center justify-center py-24 space-y-6">
+                            <div className="relative">
+                                <ScrollText className="w-20 h-20 text-primary animate-pulse" />
+                                <Loader2 className="absolute inset-0 w-20 h-20 text-accent animate-spin opacity-40" />
+                            </div>
+                            <div className="text-center">
+                                <p className="text-2xl font-black text-primary animate-pulse">Analyzing Performance...</p>
+                                <p className="text-muted-foreground font-medium">Curating bilingual study material just for you.</p>
+                            </div>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
+            </>
         );
     }
     

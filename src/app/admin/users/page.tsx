@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Table,
   TableBody,
@@ -14,7 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, MoreHorizontal, Trash2, Loader2, Users as UsersIcon, GraduationCap, RefreshCcw, Info } from "lucide-react";
+import { Search, MoreHorizontal, Trash2, Loader2, Users as UsersIcon, GraduationCap, RefreshCcw, Info, FilterX } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
@@ -23,6 +23,7 @@ import { useDb } from "@/firebase";
 import { collection, doc, updateDoc, getDocs, getDoc, query, where, orderBy, limit } from "firebase/firestore";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import type { StudentProfile } from "@/lib/student-data";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type UserStatus = "Active" | "Banned" | "Inactive";
 type UserSummary = {
@@ -44,6 +45,7 @@ export default function UserManagementPage() {
   
   const [users, setUsers] = useState<UserSummary[] | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isRefreshing, setIsRefreshing] = useState(false);
   
   const [selectedParent, setSelectedParent] = useState<UserSummary | null>(null);
@@ -121,6 +123,16 @@ export default function UserManagementPage() {
     }
   };
 
+  const filteredUsers = useMemo(() => {
+    if (!users) return [];
+    return users.filter(user => {
+      const matchesSearch = (user.name?.toLowerCase() || "").includes(searchTerm.toLowerCase()) || 
+                           (user.email?.toLowerCase() || "").includes(searchTerm.toLowerCase());
+      const matchesStatus = statusFilter === "all" || user.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [users, searchTerm, statusFilter]);
+
   if (!users) {
     return (
       <div className="flex flex-col items-center justify-center h-96 space-y-4">
@@ -129,12 +141,6 @@ export default function UserManagementPage() {
       </div>
     );
   }
-
-  const filteredUsers = users.filter(
-    (user) =>
-      user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   return (
     <div className="space-y-6">
@@ -150,11 +156,25 @@ export default function UserManagementPage() {
         <CardHeader>
           <CardTitle>All Registered Users (Parents)</CardTitle>
           <CardDescription>Manage parent accounts and access linked student records.</CardDescription>
-          <div className="pt-4">
+          <div className="pt-4 flex flex-wrap gap-4">
             <div className="relative w-full max-w-sm">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input placeholder="Search name or email..." className="pl-8" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Status Filter" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="Active">Active</SelectItem>
+                <SelectItem value="Banned">Banned</SelectItem>
+                <SelectItem value="Inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button variant="ghost" size="icon" onClick={() => { setSearchTerm(""); setStatusFilter("all"); }}>
+              <FilterX className="h-4 w-4 text-muted-foreground" />
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
@@ -168,7 +188,7 @@ export default function UserManagementPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredUsers.map((user) => (
+              {filteredUsers.length > 0 ? filteredUsers.map((user) => (
                 <TableRow key={user.id} className="group">
                   <TableCell>
                     <div className="flex items-center gap-3">
@@ -196,7 +216,13 @@ export default function UserManagementPage() {
                     </DropdownMenu>
                   </TableCell>
                 </TableRow>
-              ))}
+              )) : (
+                <TableRow>
+                  <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                    No users found matching your search.
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>

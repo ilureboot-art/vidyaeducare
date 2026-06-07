@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Table,
   TableBody,
@@ -12,7 +13,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { UserCog, UserPlus, MoreHorizontal, Trash2, MessageSquare, Edit, Loader2 } from "lucide-react";
+import { UserCog, UserPlus, MoreHorizontal, Trash2, MessageSquare, Edit, Loader2, Search, FilterX } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -57,6 +58,11 @@ export default function AdminManagementPage() {
   const [selectedAdmin, setSelectedAdmin] = useState<Admin | null>(null);
   const [newAdminRole, setNewAdminRole] = useState<AdminRole | ''>('');
   const [isCreating, setIsCreating] = useState(false);
+  
+  // Filter States
+  const [searchTerm, setSearchTerm] = useState("");
+  const [roleFilter, setRoleFilter] = useState<string>("all");
+
   const { toast } = useToast();
   
   useEffect(() => {
@@ -152,8 +158,6 @@ export default function AdminManagementPage() {
     
     setIsCreating(true);
 
-    // CRITICAL: To create a user without signing out the current admin,
-    // we must use a secondary app instance.
     let secondaryApp;
     try {
         const firebaseConfig = {
@@ -257,6 +261,16 @@ export default function AdminManagementPage() {
     }
   }
 
+  const filteredAdmins = useMemo(() => {
+    if (!allAdmins) return [];
+    return allAdmins.filter(admin => {
+      const matchesSearch = admin.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                           admin.email.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesRole = roleFilter === "all" || admin.role === roleFilter;
+      return matchesSearch && matchesRole && admin.status === "Active";
+    });
+  }, [allAdmins, searchTerm, roleFilter]);
+
   if (authLoading || allAdmins === null) {
     return (
       <div className="flex justify-center items-center h-96">
@@ -278,7 +292,6 @@ export default function AdminManagementPage() {
       )
   }
   
-  const activeAdmins = allAdmins.filter(admin => admin.status === "Active");
   const pendingRequests = allAdmins.filter(admin => admin.status === "Pending");
 
   return (
@@ -334,11 +347,11 @@ export default function AdminManagementPage() {
       
       <Card>
         <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
                 <CardTitle>All Administrators</CardTitle>
                 <CardDescription>
-                    View and manage all admin accounts.
+                    View and manage all active admin accounts.
                 </CardDescription>
               </div>
               <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
@@ -364,7 +377,7 @@ export default function AdminManagementPage() {
                         </div>
                          <div className="space-y-2">
                             <Label htmlFor="phone">WhatsApp Number</Label>
-                            <Input id="phone" name="phone" type="tel" required placeholder="e.g., 919876543210"/>
+                            <Input id="phone" name="phone" type="tel" required placeholder="919876543210"/>
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="password">Password</Label>
@@ -392,6 +405,31 @@ export default function AdminManagementPage() {
                 </DialogContent>
               </Dialog>
             </div>
+
+            <div className="pt-6 grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-2xl">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input 
+                  placeholder="Search by name or email..." 
+                  className="pl-8"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <div className="flex gap-2">
+                <Select value={roleFilter} onValueChange={setRoleFilter}>
+                  <SelectTrigger><SelectValue placeholder="Filter by Role" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Roles</SelectItem>
+                    <SelectItem value="Head Admin">Head Admin</SelectItem>
+                    <SelectItem value="Sub-admin">Sub-admin</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button variant="ghost" size="icon" onClick={() => {setSearchTerm(""); setRoleFilter("all");}}>
+                  <FilterX className="h-4 w-4 text-muted-foreground" />
+                </Button>
+              </div>
+            </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -406,7 +444,7 @@ export default function AdminManagementPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {activeAdmins.map((admin) => (
+              {filteredAdmins.length > 0 ? filteredAdmins.map((admin) => (
                 <TableRow key={admin.id}>
                   <TableCell className="font-medium">{admin.name}</TableCell>
                    <TableCell>{admin.email}</TableCell>
@@ -433,7 +471,7 @@ export default function AdminManagementPage() {
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" className="h-8 w-8 p-0">
                           <span className="sr-only">Open menu</span>
-                          <MoreHorizontal className="h-4 w-4" />
+                          < MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
@@ -457,7 +495,13 @@ export default function AdminManagementPage() {
                     </DropdownMenu>
                   </TableCell>
                 </TableRow>
-              ))}
+              )) : (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                    No active admins found matching your criteria.
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>

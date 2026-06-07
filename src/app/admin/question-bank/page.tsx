@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Table,
   TableBody,
@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Trash2, Edit, BookCopy, FilePlus, ScrollText, ArrowRight, Save, Loader2, Upload, Wand2, Download, Info } from "lucide-react";
+import { MoreHorizontal, Trash2, Edit, BookCopy, FilePlus, ScrollText, ArrowRight, Save, Loader2, Upload, Wand2, Download, Info, Search, FilterX } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -74,6 +74,12 @@ export default function TestSetManagementPage() {
   const [step, setStep] = useState(1);
   const [editingTestSet, setEditingTestSet] = useState<TestSet | null>(null);
   const [aiInput, setAiInput] = useState<GenerateQuestionsInput>(initialAiInputState);
+
+  // Filter States
+  const [searchTerm, setSearchTerm] = useState("");
+  const [boardFilter, setBoardFilter] = useState<string>("all");
+  const [standardFilter, setStandardFilter] = useState<string>("all");
+  const [subjectFilter, setSubjectFilter] = useState<string>("all");
   
   const fetchPageData = async () => {
       if (!db) return;
@@ -283,6 +289,23 @@ const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     }
 };
 
+  const filteredTestSets = useMemo(() => {
+    if (!testSets) return [];
+    return testSets.filter(ts => {
+      const matchesSearch = ts.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesBoard = boardFilter === "all" || ts.board === boardFilter;
+      const matchesStandard = standardFilter === "all" || ts.standard === standardFilter;
+      const matchesSubject = subjectFilter === "all" || ts.subject === subjectFilter;
+      return matchesSearch && matchesBoard && matchesStandard && matchesSubject;
+    });
+  }, [testSets, searchTerm, boardFilter, standardFilter, subjectFilter]);
+
+  const clearFilters = () => {
+    setSearchTerm("");
+    setBoardFilter("all");
+    setStandardFilter("all");
+    setSubjectFilter("all");
+  };
 
   if (!testSets || !academicConfig) {
     return (
@@ -298,14 +321,14 @@ const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
 
       <Card>
         <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
                 <CardTitle>All Test Sets</CardTitle>
                 <CardDescription>
                     Create or manage sets of questions for mock tests.
                 </CardDescription>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                  <Dialog open={isManualCreateOpen} onOpenChange={(isOpen) => {
                       if (!isOpen) resetManualForm();
                       setIsManualCreateOpen(isOpen);
@@ -471,6 +494,43 @@ const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
                 </Dialog>
               </div>
             </div>
+
+            {/* Advanced Filters */}
+            <div className="pt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input 
+                  placeholder="Search test sets..." 
+                  className="pl-8"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <Select value={boardFilter} onValueChange={setBoardFilter}>
+                <SelectTrigger><SelectValue placeholder="Filter by Board" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Boards</SelectItem>
+                  {academicConfig.boards.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select value={standardFilter} onValueChange={setStandardFilter}>
+                <SelectTrigger><SelectValue placeholder="Filter by Standard" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Standards</SelectItem>
+                  {academicConfig.standards.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select value={subjectFilter} onValueChange={setSubjectFilter}>
+                <SelectTrigger><SelectValue placeholder="Filter by Subject" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Subjects</SelectItem>
+                  {academicConfig.subjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Button variant="ghost" className="text-muted-foreground" onClick={clearFilters}>
+                <FilterX className="mr-2 h-4 w-4" /> Reset
+              </Button>
+            </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -485,7 +545,7 @@ const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {testSets.length > 0 ? testSets.map((ts) => (
+              {filteredTestSets.length > 0 ? filteredTestSets.map((ts) => (
                 <TableRow key={ts.id}>
                   <TableCell className="font-medium">{ts.name}</TableCell>
                   <TableCell>{ts.subject}</TableCell>
@@ -514,7 +574,9 @@ const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
                 </TableRow>
               )) : (
                 <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground h-24">No test sets uploaded yet.</TableCell>
+                    <TableCell colSpan={6} className="text-center text-muted-foreground h-24">
+                      {searchTerm || boardFilter !== "all" ? "No matches found for your filters." : "No test sets uploaded yet."}
+                    </TableCell>
                 </TableRow>
               )}
             </TableBody>

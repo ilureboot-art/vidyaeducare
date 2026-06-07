@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
@@ -9,7 +8,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Trophy, Clock, CheckCircle, XCircle, FileQuestion, ArrowLeft, Loader2, Info } from "lucide-react";
+import { Trophy, Clock, CheckCircle, XCircle, FileQuestion, ArrowLeft, Loader2, Info, BrainCircuit, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -18,10 +17,12 @@ import { cn } from "@/lib/utils";
 import type { StudentProfile } from "@/lib/student-data";
 import type { Question, TestSet } from "@/lib/question-bank";
 import type { ScheduledTest } from "@/lib/test-schedule";
-import { doc, getDoc, setDoc, type Firestore } from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useDb } from "@/firebase";
 import UserLayout from "@/components/UserLayout";
+import { solveDoubt, type SolveDoubtOutput } from "@/ai/flows/solve-doubt-flow";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 const MOCK_TEST_DURATION = 30 * 60; // 30 minutes in seconds
 
@@ -43,6 +44,11 @@ function MockTestContent() {
     const [answers, setAnswers] = useState<{ [key: string]: { en: string; mr: string; } }>({});
     const [score, setScore] = useState(0);
     const [isLiveTest, setIsLiveTest] = useState(false);
+
+    // AI Doubt Solver State
+    const [isAiSolving, setIsAiSolving] = useState<string | null>(null);
+    const [aiExplanation, setAiExplanation] = useState<SolveDoubtOutput | null>(null);
+    const [isAiDialogOpen, setIsAiDialogOpen] = useState(false);
     
     useEffect(() => {
         if (!db) return;
@@ -178,6 +184,34 @@ function MockTestContent() {
             toast({ variant: 'destructive', title: "Error", description: "Could not save your test results." });
         }
     };
+
+    const handleAskAi = async (question: Question) => {
+        if (!scheduledTest) return;
+        setIsAiSolving(question.id);
+        setAiExplanation(null);
+        setIsAiDialogOpen(true);
+
+        try {
+            const explanation = await solveDoubt({
+                question: {
+                    text: question.text,
+                    options: question.options,
+                    correctAnswer: question.correctAnswer
+                },
+                context: {
+                    subject: scheduledTest.subject,
+                    standard: scheduledTest.standard,
+                    board: scheduledTest.board
+                }
+            });
+            setAiExplanation(explanation);
+        } catch (error) {
+            toast({ variant: 'destructive', title: "AI Offline", description: "The AI tutor is currently busy. Please try again later." });
+            setIsAiDialogOpen(false);
+        } finally {
+            setIsAiSolving(null);
+        }
+    };
     
     if (testState === "loading" || !studentProfile || !scheduledTest || activeQuestions.length === 0) {
         return (
@@ -191,6 +225,7 @@ function MockTestContent() {
     
     if (testState === "review") {
         return (
+            <>
             <Card className="w-full max-w-3xl">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
@@ -200,33 +235,54 @@ function MockTestContent() {
                 </CardHeader>
                 <CardContent>
                     <ScrollArea className="h-[60vh] pr-4">
-                        <div className="space-y-4">
+                        <div className="space-y-6">
                             {activeQuestions.map((q, index) => {
                                 const userAnswer = answers[q.id];
                                 const isCorrect = userAnswer?.en === q.correctAnswer.en;
                                 return (
-                                <div key={q.id} className="p-4 border rounded-lg">
-                                    <div className="flex items-center justify-between">
-                                        <p className="font-semibold">{index + 1}. {q.text.mr}</p>
-                                        {isCorrect ? <CheckCircle className="text-green-500"/> : <XCircle className="text-red-500"/>}
+                                <div key={q.id} className="p-4 border rounded-xl space-y-4">
+                                    <div className="flex items-start justify-between gap-4">
+                                        <div className="flex-1">
+                                            <p className="font-bold text-lg">{index + 1}. {q.text.mr}</p>
+                                            <p className="font-medium text-muted-foreground">{q.text.en}</p>
+                                        </div>
+                                        {isCorrect ? (
+                                            <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-green-200">
+                                                <CheckCircle className="w-3 h-3 mr-1"/> Correct
+                                            </Badge>
+                                        ) : (
+                                            <Badge variant="destructive" className="bg-red-100 text-red-700 hover:bg-red-100 border-red-200">
+                                                <XCircle className="w-3 h-3 mr-1"/> Incorrect
+                                            </Badge>
+                                        )}
                                     </div>
-                                    <p className="font-semibold text-muted-foreground">{q.text.en}</p>
-                                    <div className="mt-2 space-y-1 text-sm">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                         {q.options.mr.map((optionMr, optionIndex) => {
                                             const optionEn = q.options.en[optionIndex];
                                             const isUserAnswer = userAnswer?.mr === optionMr;
                                             const isCorrectAnswer = q.correctAnswer.mr === optionMr;
                                             return (
                                                 <div key={optionMr} className={cn(
-                                                    "p-2 rounded-md",
-                                                    isCorrectAnswer && "bg-green-100 dark:bg-green-900/50 font-semibold",
-                                                    isUserAnswer && !isCorrectAnswer && "bg-red-100 dark:bg-red-900/50 line-through"
+                                                    "p-3 rounded-lg border text-sm transition-colors",
+                                                    isCorrectAnswer && "bg-green-50 border-green-500 text-green-900 font-bold",
+                                                    isUserAnswer && !isCorrectAnswer && "bg-red-50 border-red-500 text-red-900 line-through"
                                                 )}>
                                                     <p>{optionMr}</p>
-                                                    <p className="text-muted-foreground">{optionEn}</p>
+                                                    <p className="text-[10px] uppercase opacity-70">{optionEn}</p>
                                                 </div>
                                             )
                                         })}
+                                    </div>
+                                    <div className="pt-2 flex justify-end">
+                                        <Button 
+                                            variant="outline" 
+                                            size="sm" 
+                                            className="text-xs font-bold gap-2 text-primary border-primary/20 bg-primary/5 hover:bg-primary/10"
+                                            onClick={() => handleAskAi(q)}
+                                        >
+                                            <BrainCircuit className="w-4 h-4" />
+                                            ASK AI FOR EXPLANATION
+                                        </Button>
                                     </div>
                                 </div>
                             )})}
@@ -242,6 +298,44 @@ function MockTestContent() {
                     </div>
                 </CardContent>
             </Card>
+
+            <Dialog open={isAiDialogOpen} onOpenChange={setIsAiDialogOpen}>
+                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-primary">
+                            <Sparkles className="w-5 h-5" /> AI Tutor Explanation
+                        </DialogTitle>
+                        <DialogDescription>
+                            Conceptual breakdown of the selected question.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {aiExplanation ? (
+                        <div className="space-y-6 pt-4">
+                            {aiExplanation.keyConcept && (
+                                <Badge variant="secondary" className="bg-primary/10 text-primary border-none">
+                                    Concept: {aiExplanation.keyConcept}
+                                </Badge>
+                            )}
+                            <div className="space-y-4">
+                                <div className="p-4 bg-muted/30 rounded-xl border-l-4 border-primary">
+                                    <h4 className="font-bold text-sm uppercase tracking-widest text-muted-foreground mb-2">Marathi Explanation</h4>
+                                    <p className="text-lg leading-relaxed">{aiExplanation.explanation.mr}</p>
+                                </div>
+                                <div className="p-4 bg-muted/30 rounded-xl border-l-4 border-accent">
+                                    <h4 className="font-bold text-sm uppercase tracking-widest text-muted-foreground mb-2">English Explanation</h4>
+                                    <p className="text-lg leading-relaxed text-muted-foreground">{aiExplanation.explanation.en}</p>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col items-center justify-center py-20 space-y-4">
+                            <Loader2 className="w-10 h-10 animate-spin text-primary" />
+                            <p className="text-muted-foreground animate-pulse font-medium">AI is thinking...</p>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
+            </>
         )
     }
 
@@ -288,7 +382,9 @@ function MockTestContent() {
                     )}
 
                     <div className="flex flex-wrap gap-4 justify-center pt-4">
-                        <Button onClick={() => setTestState('review')}>Review Answers</Button>
+                        <Button onClick={() => setTestState('review')} className="gap-2">
+                             <BrainCircuit className="w-4 h-4"/> Review Answers & Doubts
+                        </Button>
                          <Button asChild variant="outline">
                             <Link href="/profile">Back to My Students</Link>
                         </Button>

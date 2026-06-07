@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
@@ -69,12 +68,16 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
+      // Hardened for offline/flaky connections
       const adminDocRef = doc(db, "admins", user.uid);
-      const adminDocSnap = await getDoc(adminDocRef);
+      const adminDocSnap = await getDoc(adminDocRef).catch(err => {
+          console.warn("Firestore fetch error (likely offline):", err);
+          return null;
+      });
       
       let roles = { isAdmin: false, isHeadAdmin: false };
       
-      if (adminDocSnap.exists()) {
+      if (adminDocSnap && adminDocSnap.exists()) {
         const adminData = adminDocSnap.data() as Admin;
         roles = {
             isAdmin: adminData.status === 'Active' || adminData.role === 'Head Admin',
@@ -105,13 +108,14 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
           return;
       }
 
+      // Pre-resolve roles to prevent flickering/redirect loops
       const roles = await resolveUserRole(user, db);
       setAuthState({ user, loading: false, ...roles });
     });
 
     const timeout = setTimeout(() => {
         setAuthState(prev => ({ ...prev, loading: false }));
-    }, 3000);
+    }, 5000); // Increased timeout for slower connections
 
     return () => {
         unsubscribe();

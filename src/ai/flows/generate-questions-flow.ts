@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview A flow for generating multiple-choice questions.
@@ -10,7 +9,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { Question } from '@/lib/question-bank';
+import { googleAI } from '@genkit-ai/google-genai';
 
 const GenerateQuestionsInputSchema = z.object({
     topic: z.string().describe('The topic or chapter name to generate questions about.'),
@@ -49,6 +48,7 @@ export async function generateQuestions(input: GenerateQuestionsInput): Promise<
 
 const prompt = ai.definePrompt({
   name: 'generateQuestionsPrompt',
+  model: googleAI.model('gemini-2.5-flash'),
   input: { schema: GenerateQuestionsInputSchema },
   output: { schema: GenerateQuestionsOutputSchema },
   prompt: `You are an expert at creating educational content. Your task is to generate a set of multiple-choice questions (MCQs) based on the provided details.
@@ -93,4 +93,3 @@ const generateQuestionsFlow = ai.defineFlow(
     return output;
   }
 );
-

@@ -9,6 +9,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
+import { googleAI } from '@genkit-ai/google-genai';
 
 const SolveDoubtInputSchema = z.object({
     question: z.object({
@@ -40,6 +41,7 @@ export async function solveDoubt(input: SolveDoubtInput): Promise<SolveDoubtOutp
 
 const prompt = ai.definePrompt({
   name: 'solveDoubtPrompt',
+  model: googleAI.model('gemini-2.5-flash'),
   input: { schema: SolveDoubtInputSchema },
   output: { schema: SolveDoubtOutputSchema },
   prompt: `You are an expert tutor for the {{{context.board}}} board, teaching {{{context.standard}}} {{{#if context.subject}}}{{{context.subject}}}{{{/if}}}.

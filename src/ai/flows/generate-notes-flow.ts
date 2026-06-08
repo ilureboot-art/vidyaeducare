@@ -9,6 +9,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
+import { googleAI } from '@genkit-ai/google-genai';
 
 const GenerateNotesInputSchema = z.object({
     subject: z.string().describe('The academic subject.'),
@@ -38,6 +39,7 @@ export async function generateStudyNotes(input: GenerateNotesInput): Promise<Gen
 
 const prompt = ai.definePrompt({
   name: 'generateStudyNotesPrompt',
+  model: googleAI.model('gemini-2.5-flash'),
   input: { schema: GenerateNotesInputSchema },
   output: { schema: GenerateNotesOutputSchema },
   prompt: `You are an expert educational content creator and tutor for the {{{board}}} board, teaching {{{standard}}} {{{subject}}}.

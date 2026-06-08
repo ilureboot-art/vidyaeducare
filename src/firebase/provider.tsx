@@ -22,7 +22,7 @@ const DbContext = createContext<Firestore | undefined>(undefined);
 const AuthServiceContext = createContext<Auth | undefined>(undefined);
 
 // Synchronous role cache to prevent hydration mismatches and sequential load lag
-const ROLE_CACHE_KEY = 'vidya_auth_role_v7';
+const ROLE_CACHE_KEY = 'vidya_auth_role_v8';
 
 const getCachedRoles = () => {
     if (typeof window === 'undefined') return null;
@@ -72,7 +72,18 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
     try {
       const adminDocRef = doc(db, "admins", user.uid);
-      let adminDocSnap = await getDoc(adminDocRef).catch(() => null);
+      
+      let adminDocSnap;
+      try {
+        adminDocSnap = await getDoc(adminDocRef);
+      } catch (e: any) {
+        // Handle "Offline" or "Unavailable" errors gracefully
+        if (e.code === 'unavailable' || e.message?.toLowerCase().includes('offline')) {
+          console.warn("Firestore unavailable for role check, using defaults.");
+          return cached?.uid === user.uid ? cached : { isAdmin: false, isHeadAdmin: false };
+        }
+        throw e;
+      }
       
       // Replication lag buffer: retry once if document not immediately found (happens during setup)
       if (!adminDocSnap?.exists() && retry) {

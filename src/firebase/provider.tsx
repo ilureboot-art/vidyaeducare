@@ -130,7 +130,8 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     const { user, isAdmin } = authState;
     const cleanPath = pathname === '/' ? '/' : pathname.replace(/\/$/, '');
     
-    const isPublicRoute = ['/', '/how-to-play', '/admin/setup', '/check-head-admin', '/forgot-password'].includes(cleanPath);
+    // ALLOW AI TOOLS FOR TRIAL (GUEST ACCESS)
+    const isPublicRoute = ['/', '/how-to-play', '/admin/setup', '/check-head-admin', '/forgot-password', '/ai-tutor', '/ai-notes'].includes(cleanPath);
     const isAuthRoute = ['/login', '/signup', '/admin/login'].includes(cleanPath);
     const isAdminArea = cleanPath.startsWith('/admin');
     
@@ -139,11 +140,11 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     if (user) {
       if (isAdmin) {
         // Logged-in Admins: Prevent access to guest pages and force return to workspace
-        if (!isAdminArea || isAuthRoute || cleanPath === '/') {
+        if ((!isAdminArea && !isPublicRoute) || isAuthRoute || cleanPath === '/') {
           targetPath = '/admin/analytics';
         }
       } else {
-        // Logged-in Students: Block Admin portal and force return to profile
+        // Logged-in Students: Block Admin portal and allow access to profile or public trial tools
         if (isAdminArea || isAuthRoute || cleanPath === '/') {
           targetPath = '/profile';
         }

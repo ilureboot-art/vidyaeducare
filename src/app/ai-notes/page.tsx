@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { ScrollText, Sparkles, Loader2, Send, FileUp, Info, CheckCircle, ArrowLeft, BrainCircuit, X, Image as ImageIcon } from "lucide-react";
+import { ScrollText, Sparkles, Loader2, Send, FileUp, Info, CheckCircle, ArrowLeft, BrainCircuit, X, Image as ImageIcon, LogIn } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -12,11 +12,11 @@ import { useAuth, useDb } from "@/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import type { StudentProfile } from "@/lib/student-data";
 import { generateStudyNotes, type GenerateNotesOutput } from "@/ai/flows/generate-notes-flow";
-import ProtectedRoute from "@/components/ProtectedRoute";
 import UserLayout from "@/components/UserLayout";
 import Link from "next/link";
 import { Label } from "@/components/ui/label";
 import Image from "next/image";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 function AiNotesPageContent() {
     const { toast } = useToast();
@@ -30,10 +30,11 @@ function AiNotesPageContent() {
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [result, setResult] = useState<GenerateNotesOutput | null>(null);
-    const [isLoadingStudents, setIsLoadingStudents] = useState(true);
+    const [isLoadingStudents, setIsLoadingStudents] = useState(false);
 
     useEffect(() => {
         if (user && db) {
+            setIsLoadingStudents(true);
             const fetchStudents = async () => {
                 const q = query(collection(db, "students"), where("parentId", "==", user.uid));
                 const snap = await getDocs(q);
@@ -63,13 +64,21 @@ function AiNotesPageContent() {
 
     const handleGenerate = async (e: React.FormEvent) => {
         e.preventDefault();
-        if ((!materialText.trim() && !imagePreview) || !selectedStudentId) {
+        if ((!materialText.trim() && !imagePreview)) {
             toast({ variant: 'destructive', title: 'Input Required', description: 'Please provide text or an image of your study material.' });
             return;
         }
 
         const student = students.find(s => s.id === selectedStudentId);
-        if (!student) return;
+        
+        // Trial Context
+        const academic = student ? {
+            standard: student.academic.standard,
+            board: student.academic.board,
+        } : {
+            standard: "10th",
+            board: "SSC"
+        };
 
         setIsGenerating(true);
         setResult(null);
@@ -78,9 +87,9 @@ function AiNotesPageContent() {
             const response = await generateStudyNotes({
                 materialDescription: materialText,
                 photoDataUri: imagePreview || undefined,
-                subject: 'Academic General', // Can be refined if we add a subject picker
-                standard: student.academic.standard,
-                board: student.academic.board,
+                subject: 'Academic General',
+                standard: academic.standard,
+                board: academic.board,
             });
             setResult(response);
             toast({ title: "Notes Generated!", description: "Bilingual study summary is ready." });
@@ -101,9 +110,20 @@ function AiNotesPageContent() {
                     <ScrollText className="w-8 h-8 text-accent" /> AI NOTES GENERATOR
                 </h1>
                 <Button variant="ghost" asChild size="sm">
-                    <Link href="/profile"><ArrowLeft className="mr-2 h-4 w-4" /> Dashboard</Link>
+                    <Link href={user ? "/profile" : "/"}><ArrowLeft className="mr-2 h-4 w-4" /> {user ? 'Dashboard' : 'Home'}</Link>
                 </Button>
             </div>
+
+            {!user && (
+                <Alert className="bg-primary/5 border-primary/20">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    <AlertTitle className="text-primary font-black uppercase tracking-tight">FREE TRIAL MODE</AlertTitle>
+                    <AlertDescription className="text-xs">
+                        Guest mode active. Notes will be generated for <b>SSC 10th Standard</b> level.
+                        <Link href="/signup" className="ml-2 underline font-bold">Sign up for full access.</Link>
+                    </AlertDescription>
+                </Alert>
+            )}
 
             {!result ? (
                 <Card className="border-primary/20 shadow-xl">
@@ -113,23 +133,25 @@ function AiNotesPageContent() {
                                 <CardTitle className="text-lg">Generate Study Summary</CardTitle>
                                 <CardDescription>Convert textbooks or images into bilingual notes.</CardDescription>
                             </div>
-                            <div className="w-full sm:w-48 space-y-1">
-                                <Label className="text-[10px] uppercase font-bold text-muted-foreground">Tailor for</Label>
-                                {isLoadingStudents ? (
-                                    <div className="h-10 bg-muted animate-pulse rounded-md" />
-                                ) : (
-                                    <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
-                                        <SelectTrigger className="bg-background">
-                                            <SelectValue placeholder="Select student..." />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {students.map(s => (
-                                                <SelectItem key={s.id} value={s.id}>{s.name} ({s.academic.standard})</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                )}
-                            </div>
+                            {user && (
+                                <div className="w-full sm:w-48 space-y-1">
+                                    <Label className="text-[10px] uppercase font-bold text-muted-foreground">Tailor for</Label>
+                                    {isLoadingStudents ? (
+                                        <div className="h-10 bg-muted animate-pulse rounded-md" />
+                                    ) : (
+                                        <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
+                                            <SelectTrigger className="bg-background">
+                                                <SelectValue placeholder="Select student..." />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {students.map(s => (
+                                                    <SelectItem key={s.id} value={s.id}>{s.name} ({s.academic.standard})</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </CardHeader>
                     <form onSubmit={handleGenerate}>
@@ -190,12 +212,10 @@ function AiNotesPageContent() {
                                 </div>
                             </div>
 
-                            {selectedStudent && (
-                                <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 p-2 rounded-lg">
-                                    <Info size={14} />
-                                    <span>Notes will be generated for <b>{selectedStudent.academic.board} {selectedStudent.academic.standard}</b> level.</span>
-                                </div>
-                            )}
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 p-2 rounded-lg">
+                                <Info size={14} />
+                                <span>Notes will be generated for <b>{selectedStudent?.academic.board || "SSC"} {selectedStudent?.academic.standard || "10th"}</b> level.</span>
+                            </div>
                         </CardContent>
                         <CardFooter className="bg-muted/30 border-t flex justify-between gap-4">
                             <Button 
@@ -230,7 +250,7 @@ function AiNotesPageContent() {
                             </div>
                             <CardTitle className="text-3xl font-black text-primary uppercase tracking-tight">{result.title}</CardTitle>
                             <CardDescription className="font-bold text-xs uppercase tracking-widest mt-2">
-                                {selectedStudent?.academic.board} • {selectedStudent?.academic.standard} • AI CURATED NOTES
+                                {selectedStudent?.academic.board || "SSC"} • {selectedStudent?.academic.standard || "10th"} • AI CURATED NOTES
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-10 pt-10">
@@ -289,6 +309,20 @@ function AiNotesPageContent() {
                             <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">© Vidya EduCare AI Tutoring Excellence</p>
                         </CardFooter>
                     </Card>
+
+                    {!user && (
+                        <Card className="bg-accent text-white text-center shadow-xl border-none">
+                            <CardHeader>
+                                <CardTitle className="text-2xl font-black italic uppercase">Love these notes?</CardTitle>
+                                <CardDescription className="text-white/80">Join Vidya EduCare today to generate personalized notes for all your students across any board and standard.</CardDescription>
+                            </CardHeader>
+                            <CardFooter className="justify-center">
+                                <Button asChild variant="secondary" size="lg" className="font-black">
+                                    <Link href="/signup">CREATE FREE ACCOUNT <LogIn className="ml-2 h-4 w-4"/></Link>
+                                </Button>
+                            </CardFooter>
+                        </Card>
+                    )}
                 </div>
             )}
 
@@ -300,7 +334,7 @@ function AiNotesPageContent() {
                     </div>
                     <div className="text-center space-y-2">
                         <h2 className="text-2xl font-black text-primary animate-pulse uppercase tracking-tighter italic">Analyzing Content...</h2>
-                        <p className="text-muted-foreground font-medium">Synthesizing bilingual study material for {selectedStudent?.academic.standard}.</p>
+                        <p className="text-muted-foreground font-medium">Synthesizing bilingual study material for SSC 10th (Trial).</p>
                     </div>
                     <div className="flex gap-2">
                         <Badge variant="outline" className="animate-bounce">Reading Text</Badge>
@@ -315,10 +349,8 @@ function AiNotesPageContent() {
 
 export default function AiNotesPage() {
     return (
-        <ProtectedRoute>
-            <UserLayout>
-                <AiNotesPageContent />
-            </UserLayout>
-        </ProtectedRoute>
+        <UserLayout>
+            <AiNotesPageContent />
+        </UserLayout>
     );
 }

@@ -1,13 +1,13 @@
-
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, Trophy, Users, LogIn, Share2, Quote, User, Shield, ArrowRight } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { BookOpen, Trophy, Users, LogIn, Share2, Quote, User, Shield, ArrowRight, BrainCircuit, ScrollText, Sparkles } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/firebase";
+import { Badge } from "@/components/ui/badge";
 
 const features = [
   {
@@ -90,6 +90,42 @@ Start your journey to success now: ${url}`;
           <div className="relative">
               <Image src="https://picsum.photos/seed/1/600/400" width={600} height={400} alt="Students" className="rounded-lg shadow-2xl" data-ai-hint="students learning" />
           </div>
+        </section>
+
+        {/* AI TRIAL LAB SECTION */}
+        <section className="relative py-12 px-6 rounded-3xl bg-primary shadow-2xl overflow-hidden">
+            <div className="absolute top-0 right-0 p-8 opacity-10 rotate-12"><Sparkles size={120} className="text-white"/></div>
+            <div className="relative z-10 text-center space-y-4 max-w-2xl mx-auto mb-12">
+                <Badge variant="outline" className="bg-white/10 text-white border-white/20 px-4 py-1 text-xs font-black tracking-widest uppercase">FREE TRIAL LAB</Badge>
+                <h2 className="text-3xl md:text-5xl font-black text-white tracking-tighter">Experience Our AI Academic Tools</h2>
+                <p className="text-primary-foreground/80 text-lg">No account required. Try our bilingual AI tutor and notes generator right now.</p>
+            </div>
+            <div className="grid md:grid-cols-2 gap-8 relative z-10">
+                <Card className="border-none bg-white/10 backdrop-blur-md text-white hover:bg-white/15 transition-all group">
+                    <CardHeader>
+                        <div className="w-12 h-12 bg-accent rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"><BrainCircuit size={28}/></div>
+                        <CardTitle className="text-2xl font-black italic uppercase">AI Doubt Solver</CardTitle>
+                        <CardDescription className="text-primary-foreground/70">Type any question and get an instant bilingual (Marathi/English) explanation.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Button asChild variant="secondary" className="w-full py-6 font-bold shadow-lg">
+                            <Link href="/ai-tutor">Try Doubt Solver Free <ArrowRight className="ml-2 h-4 w-4"/></Link>
+                        </Button>
+                    </CardContent>
+                </Card>
+                <Card className="border-none bg-white/10 backdrop-blur-md text-white hover:bg-white/15 transition-all group">
+                    <CardHeader>
+                        <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"><ScrollText size={28}/></div>
+                        <CardTitle className="text-2xl font-black italic uppercase">AI Notes Generator</CardTitle>
+                        <CardDescription className="text-primary-foreground/70">Paste text or upload textbook photos to create structured bilingual study notes.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Button asChild variant="secondary" className="w-full py-6 font-bold shadow-lg">
+                            <Link href="/ai-notes">Try Notes Generator Free <ArrowRight className="ml-2 h-4 w-4"/></Link>
+                        </Button>
+                    </CardContent>
+                </Card>
+            </div>
         </section>
         
         {/* Features */}

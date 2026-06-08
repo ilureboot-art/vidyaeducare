@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -40,11 +41,19 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
+      // Standardize input
+      const cleanEmail = email.trim();
+      const cleanPassword = password; // Passwords shouldn't be trimmed usually
+
+      if (!cleanEmail || !cleanPassword) {
+          throw new Error("Please enter both email and password.");
+      }
+
       // Direct Firebase Authentication
-      await signInWithEmailAndPassword(authService, email.trim(), password);
+      await signInWithEmailAndPassword(authService, cleanEmail, cleanPassword);
 
       if (rememberMe) {
-        localStorage.setItem('rememberedUser', email.trim());
+        localStorage.setItem('rememberedUser', cleanEmail);
       } else {
         localStorage.removeItem('rememberedUser');
       }
@@ -52,7 +61,7 @@ export default function LoginPage() {
       setIsVerifying(true);
       toast({
           title: "Access Granted",
-          description: "Syncing your student profile...",
+          description: "Syncing your academic profile...",
       });
       // The FirebaseProvider handles the redirection to /profile once role is resolved
 
@@ -66,6 +75,10 @@ export default function LoginPage() {
            errorMessage = "Too many failed attempts. Please try again later.";
        } else if (error.code === 'auth/user-disabled') {
            errorMessage = "This account has been disabled.";
+       } else if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+           errorMessage = "Incorrect email or password. Please try again.";
+       } else if (error.message) {
+           errorMessage = error.message;
        }
 
         toast({

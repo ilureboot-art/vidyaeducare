@@ -4,8 +4,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDb, useAuthService } from '@/firebase';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, runTransaction, getDocs, collection, query, where } from 'firebase/firestore';
+import { createUserWithEmailAndPassword, fetchSignInMethodsForEmail } from 'firebase/auth';
+import { doc, runTransaction, getDocs, collection, query, where, getDoc, setDoc } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, CheckCircle, AlertTriangle, User, Shield } from 'lucide-react';
@@ -30,60 +30,75 @@ export default function SetupAdminPage() {
   const [errorMessage, setErrorMessage] = useState('');
   const [isCreatingUser, setIsCreatingUser] = useState(false);
 
+  // Helper to ensure records exist even if Auth creation is bypassed
+  const ensureRecords = async (uid: string, type: 'admin' | 'student') => {
+    if (!db) return;
+    await runTransaction(db, async (transaction) => {
+      const userDocRef = doc(db, "users", uid);
+      const userSnap = await transaction.get(userDocRef);
+      if (!userSnap.exists()) {
+        transaction.set(userDocRef, {
+          id: uid,
+          name: type === 'admin' ? HEAD_ADMIN_NAME : TEST_USER_NAME,
+          email: type === 'admin' ? HEAD_ADMIN_EMAIL : TEST_USER_EMAIL,
+          phone: type === 'admin' ? HEAD_ADMIN_PHONE : "0000000000",
+          joinDate: new Date().toISOString(),
+          status: "Active",
+        });
+      }
+
+      const walletDocRef = doc(db, "wallets", uid);
+      const walletSnap = await transaction.get(walletDocRef);
+      if (!walletSnap.exists()) {
+        transaction.set(walletDocRef, {
+          balance: type === 'admin' ? 0 : 100,
+          coins: 50,
+          referralCode: type === 'admin' ? 'HEADADMIN' : `REF${uid.slice(0, 6).toUpperCase()}`
+        });
+      }
+
+      if (type === 'admin') {
+        const adminDocRef = doc(db, "admins", uid);
+        const adminSnap = await transaction.get(adminDocRef);
+        if (!adminSnap.exists()) {
+          transaction.set(adminDocRef, {
+            name: HEAD_ADMIN_NAME, email: HEAD_ADMIN_EMAIL, phone: HEAD_ADMIN_PHONE,
+            role: "Head Admin", status: "Active", joinDate: new Date().toISOString(),
+          });
+        }
+      }
+    });
+  };
+
   const createHeadAdmin = async () => {
     if (!db || !auth) return;
     setStatus('loading');
     
     try {
-        const adminsCollection = collection(db, 'admins');
-        const headAdminQuery = query(adminsCollection, where("role", "==", "Head Admin"));
-        const headAdminSnapshot = await getDocs(headAdminQuery);
-
-        if (!headAdminSnapshot.empty) {
-          toast({ title: "Already Configured", description: "A Head Admin account already exists." });
-          setStatus('success');
-          return;
+        let uid = '';
+        try {
+            const userCredential = await createUserWithEmailAndPassword(auth, HEAD_ADMIN_EMAIL, HEAD_ADMIN_PASSWORD);
+            uid = userCredential.user.uid;
+        } catch (e: any) {
+            if (e.code === 'auth/email-already-in-use') {
+                // Find existing user (This is tricky on client side without Admin SDK, we rely on standard query if records exist)
+                const q = query(collection(db, "users"), where("email", "==", HEAD_ADMIN_EMAIL));
+                const snap = await getDocs(q);
+                if (!snap.empty) uid = snap.docs[0].id;
+                else throw new Error("User exists in Auth but no record found in Database. Please use a different email or delete user in Firebase Console.");
+            } else throw e;
         }
 
-        // 1. Create the user identity
-        const userCredential = await createUserWithEmailAndPassword(auth, HEAD_ADMIN_EMAIL, HEAD_ADMIN_PASSWORD);
-        const user = userCredential.user;
-
-        // 2. Commit all records before the auth provider attempts role resolution
-        await runTransaction(db, async (transaction) => {
-          const adminDocRef = doc(db, "admins", user.uid);
-          transaction.set(adminDocRef, {
-            name: HEAD_ADMIN_NAME, email: HEAD_ADMIN_EMAIL, phone: HEAD_ADMIN_PHONE,
-            role: "Head Admin", status: "Active", joinDate: new Date().toISOString(),
-          });
-
-          const userDocRef = doc(db, "users", user.uid);
-          transaction.set(userDocRef, {
-            id: user.uid, name: HEAD_ADMIN_NAME, email: HEAD_ADMIN_EMAIL, phone: HEAD_ADMIN_PHONE,
-            joinDate: new Date().toISOString(), status: "Active",
-          });
-
-          const walletDocRef = doc(db, "wallets", user.uid);
-          transaction.set(walletDocRef, {
-            balance: 0, coins: 0, referralCode: `HEADADMIN`
-          });
-        });
+        await ensureRecords(uid, 'admin');
         
-        // Ensure role cache is clear for this new session
         sessionStorage.clear();
-
         setStatus('success');
-        toast({ title: "Head Admin Created", description: "Administrative workspace is now active." });
+        toast({ title: "Head Admin Synchronized", description: "Administrative workspace is now active." });
 
     } catch (error: any) {
-        if (error.code === 'auth/email-already-in-use') {
-            setStatus('success');
-            toast({ title: "Already Exists", description: "The admin email is already registered identity." });
-        } else {
-            console.error("Head Admin creation failed:", error);
-            setErrorMessage(error.message);
-            setStatus('error');
-        }
+        console.error("Head Admin creation failed:", error);
+        setErrorMessage(error.message);
+        setStatus('error');
     }
   };
 
@@ -92,29 +107,23 @@ export default function SetupAdminPage() {
     setIsCreatingUser(true);
     
     try {
-        const userCredential = await createUserWithEmailAndPassword(auth, TEST_USER_EMAIL, TEST_USER_PASSWORD);
-        const user = userCredential.user;
-
-        await runTransaction(db, async (transaction) => {
-            const userDocRef = doc(db, "users", user.uid);
-            transaction.set(userDocRef, {
-                id: user.uid, name: TEST_USER_NAME, email: TEST_USER_EMAIL, phone: "0000000000",
-                joinDate: new Date().toISOString(), status: "Active",
-            });
-
-            const walletDocRef = doc(db, "wallets", user.uid);
-            transaction.set(walletDocRef, {
-                balance: 100, coins: 50, referralCode: `REF${user.uid.slice(0, 6).toUpperCase()}`
-            });
-        });
-
-        toast({ title: "User Created!", description: "Test user account is ready for use." });
-    } catch (error: any) {
-        if (error.code === 'auth/email-already-in-use') {
-            toast({ title: "Already Exists", description: "Test user account is already created." });
-        } else {
-            toast({ variant: 'destructive', title: "Error", description: error.message });
+        let uid = '';
+        try {
+            const userCredential = await createUserWithEmailAndPassword(auth, TEST_USER_EMAIL, TEST_USER_PASSWORD);
+            uid = userCredential.user.uid;
+        } catch (e: any) {
+            if (e.code === 'auth/email-already-in-use') {
+                const q = query(collection(db, "users"), where("email", "==", TEST_USER_EMAIL));
+                const snap = await getDocs(q);
+                if (!snap.empty) uid = snap.docs[0].id;
+                else throw new Error("Student exists in Auth but no record found in Database.");
+            } else throw e;
         }
+
+        await ensureRecords(uid, 'student');
+        toast({ title: "Test User Ready", description: "Student profile is fully synchronized." });
+    } catch (error: any) {
+        toast({ variant: 'destructive', title: "Error", description: error.message });
     } finally {
         setIsCreatingUser(false);
     }
@@ -166,14 +175,14 @@ export default function SetupAdminPage() {
           <div className="space-y-4 pt-6 border-t">
             <h3 className="font-bold text-xs uppercase tracking-widest text-muted-foreground border-b pb-2">Standard User (Testing)</h3>
             <div className="bg-muted p-4 rounded-xl space-y-3">
-                <p className="text-[10px] text-muted-foreground font-medium">Create a student-role profile to verify academic flows and the AI learning suite.</p>
+                <p className="text-[10px] text-muted-foreground font-medium">Create or sync the student profile to verify academic flows and AI tools.</p>
                 <div className="text-xs font-mono bg-background p-3 rounded-lg border border-dashed">
                     Email: {TEST_USER_EMAIL}<br/>
                     Pass: {TEST_USER_PASSWORD}
                 </div>
                 <Button variant="secondary" className="w-full font-bold" onClick={createTestUser} disabled={isCreatingUser}>
                     {isCreatingUser ? <Loader2 className="animate-spin mr-2" /> : <User className="mr-2 h-4 w-4" />}
-                    Create Test User
+                    SYNC TEST USER
                 </Button>
             </div>
           </div>

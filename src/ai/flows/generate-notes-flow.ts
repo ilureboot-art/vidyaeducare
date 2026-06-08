@@ -42,35 +42,35 @@ const prompt = ai.definePrompt({
   model: googleAI.model('gemini-2.5-flash'),
   input: { schema: GenerateNotesInputSchema },
   output: { schema: GenerateNotesOutputSchema },
-  prompt: `You are an expert educational content creator and tutor for the {{{board}}} board, teaching {{{standard}}} {{{subject}}}.
+  prompt: `You are an expert educational content creator for the {{{board}}} board, teaching {{{standard}}} {{{subject}}}.
 
   Your task is to generate highly effective, exam-oriented study notes.
   
   {{#if materialDescription}}
-  Study Material / Topic to summarize: {{{materialDescription}}}
+  TOPIC/MATERIAL TO SUMMARIZE: {{{materialDescription}}}
   {{/if}}
 
   {{#if photoDataUri}}
-  I have also attached a photo of some study material. Please analyze it and include its core concepts in the notes: {{media url=photoDataUri}}
+  I have attached a photo of some study material. Please analyze the concepts in this image and include them in the notes: {{media url=photoDataUri}}
   {{/if}}
 
   {{#if performanceContext}}
-  Additional Context: {{{performanceContext}}}
+  PERSONALIZATION CONTEXT: {{{performanceContext}}} (Focus on explaining these areas clearly).
   {{/if}}
   
   {{#if topics}}
-  Main Topics to Cover: {{#each topics}}{{{this}}}, {{/each}}
+  MAIN TOPICS: {{#each topics}}{{{this}}}, {{/each}}
   {{/if}}
 
-  Requirements:
-  1. Provide a concise title for the notes.
-  2. Create 3 to 4 detailed sections focusing on core concepts extracted from the material.
-  3. For each section, provide a heading and a clear explanation in BOTH English and Marathi.
-  4. For each section, provide 3 bullet points (key points) that are easy to memorize, in BOTH languages.
-  5. Provide a final pedagogical summary (the "Moral" or "Core Lesson") in both languages.
-  6. Ensure the Marathi is natural, academic, and easy for a {{{standard}}} student to understand.
+  REQUIREMENTS:
+  1. Provide a concise, clear title.
+  2. Create 3 detailed sections focusing on core concepts.
+  3. For EACH section, provide a heading and a clear explanation in BOTH English and Marathi.
+  4. For EACH section, provide 3 bullet points (key points) in BOTH languages.
+  5. Provide a final pedagogical summary in both languages.
+  6. Ensure the Marathi is natural and appropriate for a {{{standard}}} student.
   
-  Tone: Encouraging, professional, and clear. Help the student succeed!`,
+  Tone: Educational, clear, and professional.`,
 });
 
 const generateStudyNotesFlow = ai.defineFlow(

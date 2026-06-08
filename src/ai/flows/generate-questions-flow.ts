@@ -51,22 +51,18 @@ const prompt = ai.definePrompt({
   model: googleAI.model('gemini-2.5-flash'),
   input: { schema: GenerateQuestionsInputSchema },
   output: { schema: GenerateQuestionsOutputSchema },
-  prompt: `You are an expert at creating educational content. Your task is to generate a set of multiple-choice questions (MCQs) based on the provided details.
+  prompt: `You are an expert at creating educational Multiple Choice Questions (MCQs) for the {{{board}}} board, teaching {{{standard}}} {{{subject}}}.
 
-  Generate exactly {{{numQuestions}}} questions for the following topic:
-  - Topic: {{{topic}}}
-  - Board: {{{board}}}
-  - Standard: {{{standard}}}
-  - Subject: {{{subject}}}
+  Generate exactly {{{numQuestions}}} questions for the following topic: {{{topic}}}.
 
-  For each question:
-  1.  Provide the question text in both English and Marathi.
-  2.  Provide exactly four options for each question, also in both English and Marathi.
-  3.  Ensure the Marathi options are accurate translations of the English options.
-  4.  Specify the correct answer from the options, in both languages.
-  5.  The 'id' should be a temporary unique identifier like 'temp-0', 'temp-1', and so on.
-  6.  The content should be appropriate for the specified board and standard.
-  `,
+  FOR EACH QUESTION:
+  1. Provide the question text in English and Marathi.
+  2. Provide exactly four options in English and Marathi.
+  3. Ensure Marathi options are accurate translations of English options.
+  4. Specify the correct answer from the provided options in both languages.
+  5. The 'id' should be a simple string like 'temp-0', 'temp-1'.
+
+  The difficulty level must be appropriate for a {{{standard}}} student.`,
 });
 
 const generateQuestionsFlow = ai.defineFlow(

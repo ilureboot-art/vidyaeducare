@@ -47,13 +47,14 @@ const prompt = ai.definePrompt({
   prompt: `You are an expert tutor for the {{{context.board}}} board, teaching {{{context.standard}}} {{{#if context.subject}}}{{{context.subject}}}{{{/if}}}.
 
   {{#if question}}
-  A student has a doubt about this specific MCQ:
-  Question: {{{question.text.en}}} ({{{question.text.mr}}})
-  Options: 
-  {{#each question.options.en}} - {{{this}}} (Marathi: {{{lookup ../question.options.mr @index}}}) {{/each}}
-  Correct Answer: {{{question.correctAnswer.en}}}
+  A student has a doubt about this specific Multiple Choice Question:
+  
+  QUESTION (English): {{{question.text.en}}}
+  QUESTION (Marathi): {{{question.text.mr}}}
+  
+  CORRECT ANSWER: {{{question.correctAnswer.en}}} ({{{question.correctAnswer.mr}}})
 
-  Student's specific question: {{{userDoubt}}}
+  STUDENT'S SPECIFIC QUERY: "{{{userDoubt}}}"
   {{else}}
   A student is asking a general academic question:
   "{{{userDoubt}}}"
@@ -61,12 +62,12 @@ const prompt = ai.definePrompt({
 
   Your task:
   1. Provide a clear, step-by-step explanation or answer.
-  2. If an MCQ was provided, explain why the correct answer is right and why others are wrong.
-  3. Ensure the explanation is pedagogical, encouraging, and easy for a {{{context.standard}}} student to understand.
-  4. Provide the explanation in BOTH English and Marathi.
-  5. Identify the "Key Concept" involved.
+  2. If an MCQ was provided, explain why the correct answer is correct and why the other logic might be confusing.
+  3. Ensure the explanation is encouraging and easy for a {{{context.standard}}} student to understand.
+  4. You MUST provide the explanation in BOTH English and Marathi.
+  5. Identify the "Key Concept" involved (e.g., "Photosynthesis", "Newton's First Law").
 
-  Use a friendly tutor-like tone.`,
+  Tone: Friendly, academic, and supportive.`,
 });
 
 const solveDoubtFlow = ai.defineFlow(

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { BrainCircuit, Sparkles, Loader2, Send, Users, ArrowLeft, MessageSquare, Info, LogIn } from "lucide-react";
+import { BrainCircuit, Sparkles, Loader2, Send, Users, ArrowLeft, MessageSquare, Info, LogIn, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -15,6 +15,9 @@ import { solveDoubt, type SolveDoubtOutput } from "@/ai/flows/solve-doubt-flow";
 import UserLayout from "@/components/UserLayout";
 import Link from "next/link";
 import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
+const GUEST_TRIAL_LIMIT = 5;
 
 function AiTutorPageContent() {
     const { toast } = useToast();
@@ -27,6 +30,16 @@ function AiTutorPageContent() {
     const [isSolving, setIsSolving] = useState(false);
     const [result, setResult] = useState<SolveDoubtOutput | null>(null);
     const [isLoadingStudents, setIsLoadingStudents] = useState(false);
+    
+    // Trial Tracking
+    const [trialCount, setTrialCount] = useState(0);
+
+    useEffect(() => {
+        if (typeof window !== 'undefined' && !user) {
+            const count = parseInt(localStorage.getItem('trial_ai_tutor_count') || '0');
+            setTrialCount(count);
+        }
+    }, [user]);
 
     useEffect(() => {
         if (user && db) {
@@ -46,6 +59,11 @@ function AiTutorPageContent() {
     const handleAskAi = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!queryText.trim()) return;
+
+        if (!user && trialCount >= GUEST_TRIAL_LIMIT) {
+            toast({ variant: 'destructive', title: "Trial Limit Reached", description: "Please sign up to continue asking doubts." });
+            return;
+        }
 
         const student = students.find(s => s.id === selectedStudentId);
         
@@ -67,6 +85,13 @@ function AiTutorPageContent() {
                 context: context
             });
             setResult(response);
+
+            // Increment trial if guest
+            if (!user) {
+                const newCount = trialCount + 1;
+                setTrialCount(newCount);
+                localStorage.setItem('trial_ai_tutor_count', newCount.toString());
+            }
         } catch (error) {
             toast({ variant: 'destructive', title: "AI Error", description: "The AI Tutor could not process your question right now." });
         } finally {
@@ -75,6 +100,7 @@ function AiTutorPageContent() {
     };
 
     const selectedStudent = students.find(s => s.id === selectedStudentId);
+    const isLocked = !user && trialCount >= GUEST_TRIAL_LIMIT;
 
     return (
         <div className="w-full max-w-3xl mx-auto space-y-6">
@@ -88,12 +114,16 @@ function AiTutorPageContent() {
             </div>
 
             {!user && (
-                <Alert className="bg-accent/5 border-accent/20">
-                    <Sparkles className="h-4 w-4 text-accent" />
-                    <AlertTitle className="text-accent font-black">FREE TRIAL MODE</AlertTitle>
+                <Alert className={isLocked ? "bg-red-50 border-red-200" : "bg-accent/5 border-accent/20"}>
+                    {isLocked ? <Lock className="h-4 w-4 text-red-600" /> : <Sparkles className="h-4 w-4 text-accent" />}
+                    <AlertTitle className={isLocked ? "text-red-700 font-black" : "text-accent font-black"}>
+                        {isLocked ? "TRIAL LIMIT REACHED" : `FREE TRIAL MODE (${GUEST_TRIAL_LIMIT - trialCount} Queries Left)`}
+                    </AlertTitle>
                     <AlertDescription className="text-xs">
-                        You are trying the AI Tutor as a guest. Questions will be answered using <b>SSC 10th Standard</b> context. 
-                        <Link href="/signup" className="ml-2 underline font-bold">Sign up for personalized answers.</Link>
+                        {isLocked 
+                            ? "You have used your 5 free trial queries. Please join Vidya EduCare for unlimited access." 
+                            : "Guests get 5 free questions using SSC 10th Standard context."}
+                        <Link href="/signup" className="ml-2 underline font-bold">Sign up now.</Link>
                     </AlertDescription>
                 </Alert>
             )}
@@ -133,11 +163,12 @@ function AiTutorPageContent() {
                                 <Label htmlFor="query">What is your question?</Label>
                                 <Textarea 
                                     id="query"
-                                    placeholder="e.g., Why do planets orbit the sun in ellipses? or Give me 5 key points about the Indian Constitution."
+                                    placeholder={isLocked ? "Limit reached. Please sign up to ask more questions." : "e.g., Why do planets orbit the sun in ellipses?"}
                                     className="min-h-[120px] text-lg focus-visible:ring-accent"
                                     value={queryText}
                                     onChange={(e) => setQueryText(e.target.value)}
                                     required
+                                    disabled={isLocked}
                                 />
                             </div>
                             <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 p-2 rounded-lg">
@@ -158,7 +189,7 @@ function AiTutorPageContent() {
                         <Button 
                             type="submit" 
                             className="px-8 font-bold gap-2 bg-accent hover:bg-accent/90" 
-                            disabled={isSolving || !queryText.trim()}
+                            disabled={isSolving || !queryText.trim() || isLocked}
                         >
                             {isSolving ? <Loader2 className="animate-spin" /> : <><Send size={18} /> Get Answer</>}
                         </Button>
@@ -224,8 +255,6 @@ function AiTutorPageContent() {
         </div>
     );
 }
-
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function AiTutorPage() {
     return (

@@ -98,14 +98,14 @@ Start your journey to success now: ${url}`;
             <div className="relative z-10 text-center space-y-4 max-w-2xl mx-auto mb-12">
                 <Badge variant="outline" className="bg-white/10 text-white border-white/20 px-4 py-1 text-xs font-black tracking-widest uppercase">FREE TRIAL LAB</Badge>
                 <h2 className="text-3xl md:text-5xl font-black text-white tracking-tighter">Experience Our AI Academic Tools</h2>
-                <p className="text-primary-foreground/80 text-lg">No account required. Try our bilingual AI tutor and notes generator right now.</p>
+                <p className="text-primary-foreground/80 text-lg">No account required. Try our bilingual AI tutor, notes generator, and mock tests right now.</p>
             </div>
-            <div className="grid md:grid-cols-2 gap-8 relative z-10">
+            <div className="grid md:grid-cols-3 gap-8 relative z-10">
                 <Card className="border-none bg-white/10 backdrop-blur-md text-white hover:bg-white/15 transition-all group">
                     <CardHeader>
                         <div className="w-12 h-12 bg-accent rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"><BrainCircuit size={28}/></div>
                         <CardTitle className="text-2xl font-black italic uppercase">AI Doubt Solver</CardTitle>
-                        <CardDescription className="text-primary-foreground/70">Type any question and get an instant bilingual (Marathi/English) explanation.</CardDescription>
+                        <CardDescription className="text-primary-foreground/70">Ask any question and get an instant bilingual explanation. (5 Free Queries)</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <Button asChild variant="secondary" className="w-full py-6 font-bold shadow-lg">
@@ -117,11 +117,23 @@ Start your journey to success now: ${url}`;
                     <CardHeader>
                         <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"><ScrollText size={28}/></div>
                         <CardTitle className="text-2xl font-black italic uppercase">AI Notes Generator</CardTitle>
-                        <CardDescription className="text-primary-foreground/70">Paste text or upload textbook photos to create structured bilingual study notes.</CardDescription>
+                        <CardDescription className="text-primary-foreground/70">Paste text or upload photos to create structured study notes. (5 Free Pages)</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <Button asChild variant="secondary" className="w-full py-6 font-bold shadow-lg">
                             <Link href="/ai-notes">Try Notes Generator Free <ArrowRight className="ml-2 h-4 w-4"/></Link>
+                        </Button>
+                    </CardContent>
+                </Card>
+                <Card className="border-none bg-white/10 backdrop-blur-md text-white hover:bg-white/15 transition-all group">
+                    <CardHeader>
+                        <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"><BookOpen size={28}/></div>
+                        <CardTitle className="text-2xl font-black italic uppercase">Trial Mock Test</CardTitle>
+                        <CardDescription className="text-primary-foreground/70">Experience a real exam environment with 5 curated MCQs for practice.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Button asChild variant="secondary" className="w-full py-6 font-bold shadow-lg">
+                            <Link href="/trial-mock-test">Take Free Test <ArrowRight className="ml-2 h-4 w-4"/></Link>
                         </Button>
                     </CardContent>
                 </Card>

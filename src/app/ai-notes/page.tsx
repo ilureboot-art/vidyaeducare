@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { ScrollText, Sparkles, Loader2, Send, FileUp, Info, CheckCircle, ArrowLeft, BrainCircuit, X, Image as ImageIcon, LogIn } from "lucide-react";
+import { ScrollText, Sparkles, Loader2, Send, FileUp, Info, CheckCircle, ArrowLeft, BrainCircuit, X, Image as ImageIcon, LogIn, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -17,6 +17,8 @@ import Link from "next/link";
 import { Label } from "@/components/ui/label";
 import Image from "next/image";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
+const GUEST_TRIAL_LIMIT = 5;
 
 function AiNotesPageContent() {
     const { toast } = useToast();
@@ -31,6 +33,16 @@ function AiNotesPageContent() {
     const [isGenerating, setIsGenerating] = useState(false);
     const [result, setResult] = useState<GenerateNotesOutput | null>(null);
     const [isLoadingStudents, setIsLoadingStudents] = useState(false);
+
+    // Trial Tracking
+    const [trialCount, setTrialCount] = useState(0);
+
+    useEffect(() => {
+        if (typeof window !== 'undefined' && !user) {
+            const count = parseInt(localStorage.getItem('trial_ai_notes_count') || '0');
+            setTrialCount(count);
+        }
+    }, [user]);
 
     useEffect(() => {
         if (user && db) {
@@ -69,6 +81,11 @@ function AiNotesPageContent() {
             return;
         }
 
+        if (!user && trialCount >= GUEST_TRIAL_LIMIT) {
+            toast({ variant: 'destructive', title: "Trial Limit Reached", description: "Please sign up to continue generating notes." });
+            return;
+        }
+
         const student = students.find(s => s.id === selectedStudentId);
         
         // Trial Context
@@ -92,6 +109,14 @@ function AiNotesPageContent() {
                 board: academic.board,
             });
             setResult(response);
+            
+            // Increment trial if guest
+            if (!user) {
+                const newCount = trialCount + 1;
+                setTrialCount(newCount);
+                localStorage.setItem('trial_ai_notes_count', newCount.toString());
+            }
+
             toast({ title: "Notes Generated!", description: "Bilingual study summary is ready." });
         } catch (error) {
             console.error(error);
@@ -102,6 +127,7 @@ function AiNotesPageContent() {
     };
 
     const selectedStudent = students.find(s => s.id === selectedStudentId);
+    const isLocked = !user && trialCount >= GUEST_TRIAL_LIMIT;
 
     return (
         <div className="w-full max-w-4xl mx-auto space-y-6">
@@ -115,11 +141,15 @@ function AiNotesPageContent() {
             </div>
 
             {!user && (
-                <Alert className="bg-primary/5 border-primary/20">
-                    <Sparkles className="h-4 w-4 text-primary" />
-                    <AlertTitle className="text-primary font-black uppercase tracking-tight">FREE TRIAL MODE</AlertTitle>
+                <Alert className={isLocked ? "bg-red-50 border-red-200" : "bg-primary/5 border-primary/20"}>
+                    {isLocked ? <Lock className="h-4 w-4 text-red-600" /> : <Sparkles className="h-4 w-4 text-primary" />}
+                    <AlertTitle className={isLocked ? "text-red-700 font-black uppercase" : "text-primary font-black uppercase tracking-tight"}>
+                        {isLocked ? "TRIAL LIMIT REACHED" : `FREE TRIAL MODE (${GUEST_TRIAL_LIMIT - trialCount} Generations Left)`}
+                    </AlertTitle>
                     <AlertDescription className="text-xs">
-                        Guest mode active. Notes will be generated for <b>SSC 10th Standard</b> level.
+                        {isLocked 
+                            ? "You have reached the 5-page trial limit. Upgrade to generate unlimited notes." 
+                            : "Guest mode active. Notes will be generated for SSC 10th Standard level."}
                         <Link href="/signup" className="ml-2 underline font-bold">Sign up for full access.</Link>
                     </AlertDescription>
                 </Alert>
@@ -160,10 +190,11 @@ function AiNotesPageContent() {
                                 <Label htmlFor="material">Study Material (Text)</Label>
                                 <Textarea 
                                     id="material"
-                                    placeholder="Paste text from your chapter, or describe the topic you want notes on..."
+                                    placeholder={isLocked ? "Trial limit reached. Please join us to ask more." : "Paste text from your chapter, or describe the topic you want notes on..."}
                                     className="min-h-[150px] text-lg focus-visible:ring-accent"
                                     value={materialText}
                                     onChange={(e) => setMaterialText(e.target.value)}
+                                    disabled={isLocked}
                                 />
                             </div>
 
@@ -175,6 +206,7 @@ function AiNotesPageContent() {
                                         variant="outline" 
                                         className="border-dashed border-2 h-32 w-full flex-col gap-2 bg-muted/20 hover:bg-muted/40 transition-all"
                                         onClick={() => fileInputRef.current?.click()}
+                                        disabled={isLocked}
                                     >
                                         {imagePreview ? (
                                             <div className="flex items-center gap-2">
@@ -229,7 +261,7 @@ function AiNotesPageContent() {
                             <Button 
                                 type="submit" 
                                 className="px-8 font-black gap-2 bg-accent hover:bg-accent/90 shadow-lg" 
-                                disabled={isGenerating}
+                                disabled={isGenerating || isLocked}
                             >
                                 {isGenerating ? <Loader2 className="animate-spin" /> : <><Sparkles size={18} /> GENERATE BILINGUAL NOTES</>}
                             </Button>

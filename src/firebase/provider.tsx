@@ -131,7 +131,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     const cleanPath = pathname === '/' ? '/' : pathname.replace(/\/$/, '');
     
     // ALLOW AI TOOLS FOR TRIAL (GUEST ACCESS)
-    const isPublicRoute = ['/', '/how-to-play', '/admin/setup', '/check-head-admin', '/forgot-password', '/ai-tutor', '/ai-notes'].includes(cleanPath);
+    const isPublicRoute = ['/', '/how-to-play', '/admin/setup', '/check-head-admin', '/forgot-password', '/ai-tutor', '/ai-notes', '/trial-mock-test'].includes(cleanPath);
     const isAuthRoute = ['/login', '/signup', '/admin/login'].includes(cleanPath);
     const isAdminArea = cleanPath.startsWith('/admin');
     

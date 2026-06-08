@@ -58,12 +58,15 @@ export default function AnalyticsPage() {
             where('status', '==', 'Completed')
           );
 
-          // PERFORMANCE: Run all business intelligence queries in parallel
+          // PERFORMANCE: Run all business intelligence queries in parallel with error shielding
           const [revenueSnapshot, usersCountRes, resultsCountRes] = await Promise.all([
               getDocs(revenueQuery),
               getCountFromServer(usersCol),
               getCountFromServer(resultsCol)
-          ]);
+          ]).catch(e => {
+              if (e.message?.includes('offline')) throw new Error("Offline: Check your network connection.");
+              throw e;
+          });
 
           let totalRevenue = 0;
           revenueSnapshot.forEach(doc => {
@@ -93,7 +96,7 @@ export default function AnalyticsPage() {
 
       } catch (err: any) {
           console.error("Dashboard Sync Error:", err);
-          setError("Failed to sync real-time analytics.");
+          setError(err.message || "Failed to sync real-time analytics.");
       } finally {
           setLoading(false);
           setRefreshing(false);
@@ -127,9 +130,9 @@ export default function AnalyticsPage() {
       </div>
 
       {error && (
-          <Alert variant="destructive">
+          <Alert variant="destructive" className="bg-destructive/10">
               <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Connection Error</AlertTitle>
+              <AlertTitle>Synchronization Error</AlertTitle>
               <AlertDescription>{error}</AlertDescription>
           </Alert>
       )}

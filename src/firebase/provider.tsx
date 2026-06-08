@@ -22,7 +22,7 @@ const DbContext = createContext<Firestore | undefined>(undefined);
 const AuthServiceContext = createContext<Auth | undefined>(undefined);
 
 // Synchronous role cache to prevent hydration mismatches and sequential load lag
-const ROLE_CACHE_KEY = 'vidya_auth_role_v8';
+const ROLE_CACHE_KEY = 'vidya_auth_role_v9';
 
 const getCachedRoles = () => {
     if (typeof window === 'undefined') return null;
@@ -68,6 +68,12 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     const cached = getCachedRoles();
     if (cached && cached.uid === user.uid) {
         return { isAdmin: cached.isAdmin, isHeadAdmin: cached.isHeadAdmin };
+    }
+
+    // Safety: If client is offline, getDoc will throw if document is not cached.
+    if (typeof window !== 'undefined' && !window.navigator.onLine) {
+        console.warn("Firestore: Client is offline. Using cached roles if available.");
+        return cached?.uid === user.uid ? cached : { isAdmin: false, isHeadAdmin: false };
     }
 
     try {
@@ -139,7 +145,6 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     };
   }, [services, resolveUserRole]);
 
-  // Deterministic Navigation Engine: Ensures atomic, single-redirect session transitions
   useEffect(() => {
     if (authState.loading || !authState.isResolved || !services) return;
 
@@ -154,7 +159,6 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
     if (user) {
       if (isAdmin) {
-        // Logged-in Admins: Prevent access to guest/auth pages and force return to workspace
         const onRestrictedGuestPage = !isAdminArea && !isPublicRoute;
         const onSetupPath = cleanPath === '/admin/setup' || cleanPath === '/check-head-admin';
 
@@ -162,20 +166,17 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
           targetPath = '/admin/analytics';
         }
       } else {
-        // Logged-in Students: Block Admin portal (except public setup) and redirect to profile
         const inRestrictedAdminZone = isAdminArea && !isPublicRoute;
         if (inRestrictedAdminZone || isAuthRoute || cleanPath === '/') {
           targetPath = '/profile';
         }
       }
     } else {
-      // Unauthenticated Users: Return to root if attempting to access protected content
       if (!isPublicRoute && !isAuthRoute) {
         targetPath = '/';
       }
     }
 
-    // Atomic Navigation Lock: Prevents infinite redirection scrolling loops
     if (targetPath && targetPath !== cleanPath && navigationLock.current !== targetPath) {
       navigationLock.current = targetPath;
       router.replace(targetPath);

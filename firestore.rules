@@ -12,20 +12,17 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // BOOTSTRAP HELPER: Identifies the master accounts allowed to initialize the project
-    // Uses safer 'get' access to avoid crashes if token properties are missing
+    // BOOTSTRAP OVERRIDE: Grants absolute authority to master accounts for initialization
     function isBootstrap() {
-      let email = request.auth.token.get('email', '').lower();
       return isAuthenticated() && 
-             (email == 'admin@vidyaeducare.com' || 
-              email == 'student@vidyaeducare.com');
+             (request.auth.token.email.lower() == 'admin@vidyaeducare.com' || 
+              request.auth.token.email.lower() == 'student@vidyaeducare.com');
     }
 
     // Robust check: ensures document exists before accessing properties
     function isAdmin() {
       if (!isAuthenticated()) return false;
-      let email = request.auth.token.get('email', '').lower();
-      if (email == 'admin@vidyaeducare.com') return true; 
+      if (isBootstrap()) return true; 
       
       let adminPath = /databases/$(database)/documents/admins/$(request.auth.uid);
       return exists(adminPath) && (
@@ -36,8 +33,7 @@ service cloud.firestore {
 
     function isHeadAdmin() {
       if (!isAuthenticated()) return false;
-      let email = request.auth.token.get('email', '').lower();
-      if (email == 'admin@vidyaeducare.com') return true;
+      if (isBootstrap()) return true;
 
       let adminPath = /databases/$(database)/documents/admins/$(request.auth.uid);
       return exists(adminPath) && get(adminPath).data.role == 'Head Admin';
@@ -45,25 +41,25 @@ service cloud.firestore {
 
     match /admins/{userId} {
       allow read: if isAuthenticated();
-      // Allow bootstrap identity to always manage admin records
-      // Allow existing Head Admins to manage other admin records
-      allow write, delete: if isBootstrap() || isHeadAdmin();
+      // Allow bootstrap identity or Head Admins to manage admin records
+      // Allow users to delete their own admin record (needed for student re-sync)
+      allow write, delete: if isBootstrap() || isHeadAdmin() || isOwner(userId);
     }
 
     match /users/{userId} {
-      allow list, get: if isAuthenticated();
+      allow list: if isBootstrap() || isAdmin();
+      allow get: if isAuthenticated();
       allow write: if isBootstrap() || isOwner(userId) || isAdmin();
     }
 
     match /wallets/{userId} {
-      allow list: if isAuthenticated();
+      allow list: if isBootstrap() || isAdmin();
       allow get: if isOwner(userId) || isAdmin();
       allow write: if isBootstrap() || isOwner(userId) || isAdmin();
     }
 
     match /students/{studentId} {
-      allow list: if isAuthenticated();
-      allow get: if isAuthenticated();
+      allow list, get: if isAuthenticated();
       allow write: if isBootstrap() || isAdmin() || (resource != null && resource.data.parentId == request.auth.uid);
     }
     

@@ -70,7 +70,7 @@ export default function SetupAdminPage() {
         joinDate: new Date().toISOString(),
       }, { merge: true });
     } else {
-      // Safe delete: ensures student identity isn't accidentally mapped to admin
+      // Safe delete for students to ensure they are NOT admins
       batch.delete(adminDocRef);
     }
 

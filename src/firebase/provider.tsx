@@ -22,7 +22,7 @@ const DbContext = createContext<Firestore | undefined>(undefined);
 const AuthServiceContext = createContext<Auth | undefined>(undefined);
 
 // Synchronous role cache to prevent hydration mismatches and sequential load lag
-const ROLE_CACHE_KEY = 'vidya_auth_role_v11';
+const ROLE_CACHE_KEY = 'vidya_auth_role_v12';
 
 const getCachedRoles = () => {
     if (typeof window === 'undefined') return null;
@@ -76,7 +76,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       return roles;
   }, []);
 
-  const resolveUserRole = useCallback(async (user: User | null, db: Firestore, retry = true) => {
+  const resolveUserRole = useCallback(async (user: User | null, db: Firestore) => {
     if (!user) {
       sessionStorage.removeItem(ROLE_CACHE_KEY);
       return { isAdmin: false, isHeadAdmin: false };
@@ -87,23 +87,21 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
         return { isAdmin: cached.isAdmin, isHeadAdmin: cached.isHeadAdmin };
     }
 
-    // Safety: If client is definitely offline, use cached or defaults
-    if (typeof window !== 'undefined' && !window.navigator.onLine) {
-        console.warn("Firestore: Client is offline. Using defaults.");
-        return { isAdmin: false, isHeadAdmin: false };
-    }
+    // Replication lag check: only wait if the account was created in the last 30 seconds
+    const creationTime = new Date(user.metadata.creationTime || 0).getTime();
+    const isNewAccount = (Date.now() - creationTime) < 30000;
 
     try {
       const adminDocRef = doc(db, "admins", user.uid);
       
       // Hardened getDoc with localized catch to prevent Unhandled Runtime Error
       const adminDocSnap = await getDoc(adminDocRef).catch((e: any) => {
-          console.warn("Firestore role resolution suppressed error (likely offline/unreachable):", e.message);
+          console.warn("Firestore role resolution suppressed error:", e.message);
           return null; 
       });
       
-      if (!adminDocSnap?.exists() && retry && typeof window !== 'undefined' && window.navigator.onLine) {
-          // Replication lag buffer: only retry if we think we are online
+      if (!adminDocSnap?.exists() && isNewAccount && typeof window !== 'undefined' && window.navigator.onLine) {
+          // Replication lag buffer: only retry for brand new accounts
           await new Promise(r => setTimeout(r, 1500));
           const retrySnap = await getDoc(adminDocRef).catch(() => null);
           return processSnap(retrySnap, user.uid);

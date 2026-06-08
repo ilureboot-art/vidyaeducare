@@ -35,7 +35,7 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isFirebaseReady) return;
+    if (!isFirebaseReady || isLoading) return;
     
     setIsLoading(true);
 
@@ -63,7 +63,6 @@ export default function LoginPage() {
             title: "Login Failed",
             description: errorMessage,
         });
-    } finally {
         setIsLoading(false);
     }
   };
@@ -94,27 +93,32 @@ export default function LoginPage() {
                 required 
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                disabled={isLoading}
               />
             </div>
             <div className="space-y-2 relative">
               <Label htmlFor="password">Password</Label>
-              <Input 
-                id="password" 
-                type={showPassword ? "text" : "password"}
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-               <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="absolute right-1 top-6 h-7 w-7"
-                onClick={() => setShowPassword(prev => !prev)}
-              >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                <span className="sr-only">Toggle visibility</span>
-              </Button>
+              <div className="relative">
+                <Input 
+                  id="password" 
+                  type={showPassword ? "text" : "password"}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={isLoading}
+                />
+                 <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-1 top-1 h-8 w-8"
+                  onClick={() => setShowPassword(prev => !prev)}
+                  disabled={isLoading}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  <span className="sr-only">Toggle visibility</span>
+                </Button>
+              </div>
             </div>
              <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
@@ -122,6 +126,7 @@ export default function LoginPage() {
                   id="remember-me" 
                   checked={rememberMe}
                   onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                  disabled={isLoading}
                 />
                 <Label htmlFor="remember-me" className="text-sm font-normal">
                   Remember me
@@ -133,8 +138,8 @@ export default function LoginPage() {
             </div>
           </CardContent>
           <CardFooter className="flex-col gap-4">
-            <Button className="w-full" type="submit" disabled={isLoading || authLoading || !isFirebaseReady}>
-                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : 'Login'}
+            <Button className="w-full font-bold" type="submit" disabled={isLoading || authLoading || !isFirebaseReady}>
+                {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Verifying...</> : 'Login'}
             </Button>
           </CardFooter>
         </form>

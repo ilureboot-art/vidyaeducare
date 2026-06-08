@@ -48,7 +48,7 @@ export default function SetupAdminPage() {
 
       // 2. Unified Wallet Record
       transaction.set(walletDocRef, {
-        balance: type === 'admin' ? 0 : 1000, // Give test student starting money
+        balance: type === 'admin' ? 0 : 1000,
         coins: 100,
         referralCode: type === 'admin' ? 'HEADADMIN' : `REF${uid.slice(0, 6).toUpperCase()}`
       }, { merge: true });
@@ -82,21 +82,27 @@ export default function SetupAdminPage() {
         } catch (e: any) {
             if (e.code === 'auth/email-already-in-use') {
                 try {
+                    // Force a re-mapping for existing auth user
                     const signInRes = await signInWithEmailAndPassword(auth, HEAD_ADMIN_EMAIL, HEAD_ADMIN_PASSWORD);
                     uid = signInRes.user.uid;
                 } catch (signInErr) {
                     const q = query(collection(db, "users"), where("email", "==", HEAD_ADMIN_EMAIL));
                     const snap = await getDocs(q);
                     if (!snap.empty) uid = snap.docs[0].id;
-                    else throw new Error("Auth user exists but no database record found. Reset manually.");
+                    else throw new Error("Administrator exists in Auth but mapping failed. Verify console.");
                 }
             } else throw e;
         }
 
         await ensureRecords(uid, 'admin');
-        sessionStorage.clear();
+        
+        // Force re-resolution for the current session
+        if (typeof window !== 'undefined') {
+            sessionStorage.clear();
+        }
+        
         setStatus('success');
-        toast({ title: "Admin Workspace Mapped", description: "Records synchronized." });
+        toast({ title: "Admin Account Correctly Mapped", description: "Head Admin privileges established." });
     } catch (error: any) {
         console.error(error);
         setErrorMessage(error.message);
@@ -144,7 +150,7 @@ export default function SetupAdminPage() {
             <Shield className="w-6 h-6" /> ROLE INITIALIZATION
           </CardTitle>
           <CardDescription>
-            Map and synchronize test accounts to their respective roles.
+            Map and synchronize accounts to their respective roles.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -154,14 +160,14 @@ export default function SetupAdminPage() {
                 <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 p-4 rounded-xl space-y-3">
                     <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
                         <CheckCircle className="w-5 h-5" />
-                        <span className="font-black text-sm">HEAD ADMIN SYNCED</span>
+                        <span className="font-black text-sm uppercase">Mapping Verified</span>
                     </div>
                     <Button variant="outline" size="sm" className="w-full font-bold" onClick={() => router.push('/admin/login')}>Enter Admin Portal</Button>
                 </div>
             ) : status === 'error' ? (
                 <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 p-4 rounded-xl">
                     <p className="text-xs font-bold text-red-700">{errorMessage}</p>
-                    <Button variant="outline" size="sm" className="w-full mt-4 font-bold" onClick={() => setStatus('idle')}>Retry Sync</Button>
+                    <Button variant="outline" size="sm" className="w-full mt-4 font-bold" onClick={() => setStatus('idle')}>Retry Mapping</Button>
                 </div>
             ) : (
                 <Button className="w-full py-6 text-lg font-black shadow-lg" onClick={createHeadAdmin} disabled={status === 'loading'}>

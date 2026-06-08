@@ -83,8 +83,12 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
+      // Explicitly fetch role from Firestore to ensure admin@vidyaeducare.com is correctly identified
       const adminDocRef = doc(db, "admins", user.uid);
-      const adminDocSnap = await getDoc(adminDocRef).catch(() => null);
+      const adminDocSnap = await getDoc(adminDocRef).catch((e) => {
+          console.warn("Administrative check skipped due to connectivity/rules:", e.message);
+          return null;
+      });
       return processSnap(adminDocSnap, user.uid);
     } catch (e) {
       console.error("Role resolution failure:", e);
@@ -93,7 +97,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   }, [processSnap]);
 
   useEffect(() => {
-    // Client-side hydration: load cache after mount
+    // Post-mount hydration safety
     const cached = getCachedRoles();
     if (cached) {
       setAuthState(prev => ({

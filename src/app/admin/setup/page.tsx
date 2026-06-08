@@ -76,9 +76,14 @@ export default function SetupAdminPage() {
   const handleError = (error: any) => {
     console.error(error);
     const msg = error.message || "An unexpected error occurred.";
-    if (msg.includes("database (default) does not exist") || msg.includes("vidyaeducaredatabase") || msg.includes("not exist") || msg.includes("Datastore or Cloud Firestore database")) {
+    
+    // Catch specific Native mode / Datastore mode errors
+    if (msg.includes("Native mode API is disabled") || msg.includes("Datastore mode") || msg.includes("Native mode")) {
         setIsDatabaseMissing(true);
-        setErrorMessage("Ensure the Firestore database exists and the name 'vidyaeducaredatabase' is correctly configured.");
+        setErrorMessage("Your project is in Datastore Mode. Please ensure 'vidyaeducaredatabase' is created as a Firestore Native database in the Google Cloud Console.");
+    } else if (msg.includes("database (default) does not exist") || msg.includes("vidyaeducaredatabase") || msg.includes("not exist")) {
+        setIsDatabaseMissing(true);
+        setErrorMessage("The database 'vidyaeducaredatabase' could not be reached. Ensure the name is correct and it is initialized in Native Mode.");
     } else {
         setErrorMessage(msg);
     }
@@ -152,7 +157,7 @@ export default function SetupAdminPage() {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-muted p-4">
-      <Card className="w-full max-w-md shadow-2xl">
+      <Card className="w-full max-md shadow-2xl">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-black flex items-center justify-center gap-2 text-primary">
             <Shield className="w-6 h-6" /> ROLE INITIALIZATION
@@ -166,12 +171,15 @@ export default function SetupAdminPage() {
           {isDatabaseMissing && (
             <Alert variant="destructive" className="bg-destructive/10 border-destructive/20">
                 <AlertTriangle className="h-4 w-4" />
-                <AlertTitle className="font-bold">Database Connectivity Alert</AlertTitle>
-                <AlertDescription className="text-xs space-y-3">
-                    <p>The system is trying to connect to <b>vidyaeducaredatabase</b>. If this error persists, ensure your database name exactly matches this string in the Firebase Console.</p>
+                <AlertTitle className="font-bold text-xs uppercase">Connectivity & Configuration Alert</AlertTitle>
+                <AlertDescription className="text-xs space-y-3 mt-2">
+                    <p>{errorMessage}</p>
+                    <div className="bg-background/50 p-2 rounded border font-mono text-[10px]">
+                      Target: vidyaeducaredatabase (Native Mode)
+                    </div>
                     <Button asChild variant="destructive" size="sm" className="w-full font-bold">
-                        <a href="https://console.firebase.google.com/project/vidyaeducare/firestore" target="_blank" rel="noopener noreferrer">
-                            OPEN FIRESTORE CONSOLE <ExternalLink className="ml-2 h-3 w-3" />
+                        <a href="https://console.firebase.google.com/project/vidyaeducare/firestore/databases" target="_blank" rel="noopener noreferrer">
+                            MANAGE DATABASES <ExternalLink className="ml-2 h-3 w-3" />
                         </a>
                     </Button>
                 </AlertDescription>
@@ -217,7 +225,7 @@ export default function SetupAdminPage() {
           </div>
         </CardContent>
         <CardFooter className="bg-primary/5 py-4 border-t justify-center">
-            <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground">Using Database: vidyaeducaredatabase</p>
+            <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground">Database Mode: Firestore Native Required</p>
         </CardFooter>
       </Card>
     </div>

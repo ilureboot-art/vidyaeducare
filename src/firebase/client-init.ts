@@ -5,21 +5,9 @@ import { getFirestore, Firestore } from 'firebase/firestore';
 
 /**
  * Synchronously initializes Firebase services.
- * Using synchronous initialization with process.env ensures that the app 
- * doesn't wait for a configuration fetch on every load, significantly 
- * speeding up the "Connecting..." phase.
+ * We explicitly target 'vidyaeducaredatabase' to bypass the project's default Datastore settings.
  */
 export function getFirebaseServices(): { app: FirebaseApp; auth: Auth; db: Firestore; } {
-  // If the app is already initialized, return the existing services immediately.
-  if (getApps().length > 0) {
-    const app = getApp();
-    const auth = getAuth(app);
-    // Ensure the custom database ID is used even on hot-reload/existing app
-    const db = getFirestore(app, "vidyaeducaredatabase");
-    return { app, auth, db };
-  }
-
-  // Construct the Firebase config from environment variables
   const firebaseConfig = {
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
     authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -35,15 +23,16 @@ export function getFirebaseServices(): { app: FirebaseApp; auth: Auth; db: Fires
     throw new Error(errorMessage);
   }
 
-  try {
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    // Explicitly target the named database 'vidyaeducaredatabase'
-    const db = getFirestore(app, "vidyaeducaredatabase");
-    
-    return { app, auth, db };
-  } catch (error) {
-    console.error("Firebase client initialization failed:", error);
-    throw error;
-  }
+  // Use existing app if available to prevent multiple initializations
+  const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  
+  /**
+   * IMPORTANT: We must use the specific name 'vidyaeducaredatabase'.
+   * If your project is in Datastore mode, the (default) database is restricted.
+   * Named databases are always created in Firestore Native mode.
+   */
+  const db = getFirestore(app, "vidyaeducaredatabase");
+  
+  return { app, auth, db };
 }

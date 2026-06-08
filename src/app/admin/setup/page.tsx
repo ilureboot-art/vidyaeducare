@@ -79,7 +79,7 @@ export default function SetupAdminPage() {
     // Clear all session caches to force role re-resolution
     if (typeof window !== 'undefined') {
         sessionStorage.clear();
-        localStorage.removeItem('vidya_auth_role_v15_final');
+        localStorage.clear();
     }
   };
 
@@ -120,7 +120,7 @@ export default function SetupAdminPage() {
         }
 
         // DELAY: Wait for Authentication state to fully propagate to Firestore rules
-        await new Promise(r => setTimeout(r, 3000));
+        await new Promise(r => setTimeout(r, 4000));
         await ensureRecords(uid, 'admin');
         setStatus('success');
         toast({ title: "Sync Complete", description: "Head Admin mapping verified." });
@@ -148,7 +148,7 @@ export default function SetupAdminPage() {
         }
 
         // DELAY: Wait for Identity Propagation
-        await new Promise(r => setTimeout(r, 3000));
+        await new Promise(r => setTimeout(r, 4000));
         await ensureRecords(uid, 'student');
         toast({ title: "Student Synced", description: "Test profile initialized." });
     } catch (error: any) {

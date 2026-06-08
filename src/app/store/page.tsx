@@ -30,7 +30,6 @@ function StorePageContent() {
   const [recommendationCount, setRecommendationCount] = useState(0);
   
   const [referralCode1, setReferralCode1] = useState("");
-  const [referralCode2, setReferralCode2] = useState("");
 
   const checkRecEligibility = useCallback(async (db: Firestore, userId: string, config: StoreConfig) => {
     if (!config.recommendationSettings) {
@@ -39,8 +38,8 @@ function StorePageContent() {
     }
 
     try {
-        const userDoc = await getDoc(doc(db, "users", userId));
-        if (!userDoc.exists()) return;
+        const userDoc = await getDoc(doc(db, "users", userId)).catch(() => null);
+        if (!userDoc || !userDoc.exists()) return;
         const joinDate = userDoc.data().joinDate ? new Date(userDoc.data().joinDate) : new Date();
 
         const qT = query(
@@ -105,6 +104,8 @@ function StorePageContent() {
 
             if(walletSnap && walletSnap.exists()) {
                 setWalletData(walletSnap.data() as WalletData);
+            } else {
+                setWalletData({ balance: 0, coins: 0, referralCode: `REF${user.uid.slice(0, 6).toUpperCase()}` } as WalletData);
             }
             
             if(configSnap && configSnap.exists()) {
@@ -142,31 +143,26 @@ function StorePageContent() {
     }
 
     if (walletData.balance < priceDetails.finalPrice) {
-        toast({ variant: "destructive", title: "Purchase Failed", description: "Insufficient wallet balance. Please add funds to your wallet." });
+        toast({ variant: "destructive", title: "Purchase Failed", description: "Insufficient wallet balance. Please add funds." });
         setIsPurchasing(null);
         return;
     }
 
     try {
-        // PRE-RESOLUTION: Resolve referral codes to UIDs outside of transaction (queries not allowed in transactions)
-        const ibaUids: string[] = [];
+        // PRE-RESOLUTION: Resolve referral code outside of transaction
+        let ibaUid: string | null = null;
         if (priceDetails.hasReferral) {
-            const codes = [referralCode1.trim()];
-            if (referralCode2.trim()) codes.push(referralCode2.trim());
-            
-            for (const code of codes) {
-                const q = query(collection(db, "wallets"), where("referralCode", "==", code));
-                const snap = await getDocs(q);
-                if (!snap.empty) {
-                    ibaUids.push(snap.docs[0].id);
-                }
+            const q = query(collection(db, "wallets"), where("referralCode", "==", referralCode1.trim()));
+            const snap = await getDocs(q);
+            if (!snap.empty) {
+                ibaUid = snap.docs[0].id;
             }
         }
 
         await runTransaction(db, async (transaction) => {
             const userWalletRef = doc(db, "wallets", user.uid);
             const userWalletDoc = await transaction.get(userWalletRef);
-            if (!userWalletDoc.exists()) throw new Error("User wallet record not found.");
+            if (!userWalletDoc.exists()) throw new Error("Wallet not found.");
             
             const currentBalance = userWalletDoc.data().balance;
             if (currentBalance < priceDetails.finalPrice) throw new Error("Insufficient balance.");
@@ -183,24 +179,22 @@ function StorePageContent() {
                 type: "Purchase",
             });
 
-            if (ibaUids.length > 0) {
+            if (ibaUid) {
                 const baseCommissionRate = 0.1765;
-                const commissionAmount = (priceDetails.basePrice * baseCommissionRate) / ibaUids.length;
+                const commissionAmount = priceDetails.basePrice * baseCommissionRate;
 
-                for (const ibaId of ibaUids) {
-                    const ibaWalletRef = doc(db, "wallets", ibaId);
-                    const ibaWalletDoc = await transaction.get(ibaWalletRef);
-                    if (ibaWalletDoc.exists()) {
-                        const ibaCurrentBalance = ibaWalletDoc.data().balance || 0;
-                        transaction.update(ibaWalletRef, { balance: ibaCurrentBalance + commissionAmount });
-                        
-                        const ibaCommissionTxRef = doc(collection(db, "transactions"));
-                        transaction.set(ibaCommissionTxRef, {
-                            user: ibaId, amount: commissionAmount, date: serverTimestamp(),
-                            description: `Commission from student purchase`,
-                            status: "Completed", type: "Commission",
-                        });
-                    }
+                const ibaWalletRef = doc(db, "wallets", ibaUid);
+                const ibaWalletDoc = await transaction.get(ibaWalletRef);
+                if (ibaWalletDoc.exists()) {
+                    const ibaCurrentBalance = ibaWalletDoc.data().balance || 0;
+                    transaction.update(ibaWalletRef, { balance: ibaCurrentBalance + commissionAmount });
+                    
+                    const ibaCommissionTxRef = doc(collection(db, "transactions"));
+                    transaction.set(ibaCommissionTxRef, {
+                        user: ibaUid, amount: commissionAmount, date: serverTimestamp(),
+                        description: `Commission from student purchase`,
+                        status: "Completed", type: "Commission",
+                    });
                 }
             }
 
@@ -217,11 +211,11 @@ function StorePageContent() {
             }
         });
 
-        toast({ title: "Purchase Successful!", description: `You have successfully purchased ${item.name}. Activation code added to your profile.`, duration: 7000 });
+        toast({ title: "Purchase Successful!", description: `${item.name} activated.` });
         checkRecEligibility(db, user.uid, storeConfig);
     } catch (e: any) {
         console.error("Store Purchase Error:", e);
-        toast({ variant: "destructive", title: "Purchase Failed", description: e.message || "An unexpected error occurred during checkout." });
+        toast({ variant: "destructive", title: "Purchase Failed", description: e.message || "An unexpected error occurred." });
     } finally {
         setIsPurchasing(null);
     }
@@ -231,7 +225,7 @@ function StorePageContent() {
     return (
         <div className="w-full max-w-4xl mx-auto flex flex-col items-center justify-center h-64 gap-4">
             <Loader2 className="animate-spin text-primary" size={40}/>
-            <p className="text-muted-foreground animate-pulse text-sm font-medium">Connecting to Secure Store...</p>
+            <p className="text-muted-foreground animate-pulse text-sm font-medium">Connecting to Store...</p>
         </div>
     )
   }
@@ -244,14 +238,14 @@ function StorePageContent() {
             <ShoppingCart className="w-8 h-8" /> PRODUCT STORE
           </CardTitle>
           <CardDescription className="text-center font-medium">
-            Your secure gateway to academic excellence. Wallet Balance: <span className="font-black text-primary">₹{walletData.balance.toFixed(2)}</span>
+            Wallet Balance: <span className="font-black text-primary">₹{walletData.balance.toFixed(2)}</span>
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="tests" className="w-full">
             <TabsList className="grid w-full grid-cols-2 h-12">
-              <TabsTrigger value="tests" className="font-bold">MOCK TEST PACKS</TabsTrigger>
-              <TabsTrigger value="referbolt" className="font-bold">REFERBOLT ACCESS</TabsTrigger>
+              <TabsTrigger value="tests" className="font-bold uppercase text-[10px]">Mock Test Packs</TabsTrigger>
+              <TabsTrigger value="referbolt" className="font-bold uppercase text-[10px]">ReferBolt Access</TabsTrigger>
             </TabsList>
             <TabsContent value="tests" className="space-y-6 pt-6">
                  
@@ -272,14 +266,11 @@ function StorePageContent() {
                                     </p>
                                     <p className="text-xs text-muted-foreground">
                                         {isEligibleForRecDiscount 
-                                            ? `You've recommended ${recommendationCount} customers within your joining window. Congrats!` 
-                                            : `Recommend ${storeConfig.recommendationSettings?.requiredCount} customers within ${storeConfig.recommendationSettings?.windowDays} days to unlock.`}
+                                            ? `You've referred enough customers within your joining window!` 
+                                            : `Refer ${storeConfig.recommendationSettings?.requiredCount} customers within ${storeConfig.recommendationSettings?.windowDays} days.`}
                                     </p>
                                 </div>
                             </div>
-                            {!isEligibleForRecDiscount && (
-                                <Badge variant="secondary" className="font-mono">{recommendationCount} / {storeConfig.recommendationSettings?.requiredCount}</Badge>
-                            )}
                         </CardContent>
                     </Card>
                  )}
@@ -322,7 +313,7 @@ function StorePageContent() {
                           <div className="absolute top-0 right-0 -mt-3 -mr-3">
                             <div className="bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-tighter rounded-full px-3 py-1 flex items-center gap-1 shadow-lg">
                               <Sparkles className="w-3 h-3" />
-                              Most Popular
+                              Best Value
                             </div>
                           </div>
                         )}
@@ -331,18 +322,18 @@ function StorePageContent() {
                           <BookOpen className="text-primary h-5 w-5" />
                           {product.name}
                         </CardTitle>
-                        <CardDescription className="font-bold text-xs uppercase">{product.months} Months Premium Access</CardDescription>
+                        <CardDescription className="font-bold text-xs uppercase">{product.months} Months Access</CardDescription>
                       </CardHeader>
                       <CardContent className="flex-grow flex flex-col justify-center items-center space-y-6">
                          <div className="space-y-1">
                             <p className="text-muted-foreground line-through text-sm">₹{product.price}</p>
                             <p className="text-5xl font-black text-primary tracking-tighter">₹{finalPrice.toFixed(0)}</p>
                             <p className="text-[9px] text-muted-foreground uppercase font-bold">
-                                (Base: ₹{discountedBasePrice.toFixed(0)} + {product.gstRate}% GST)
+                                (Inc. {product.gstRate}% GST)
                             </p>
                             {totalDiscount > 0 && (
                                 <Badge variant="secondary" className="mt-4 bg-accent/10 text-accent border-none font-black text-[11px] py-1 px-4 rounded-full">
-                                    YOU SAVE {(totalDiscount * 100).toFixed(0)}% TODAY
+                                    SAVE {(totalDiscount * 100).toFixed(0)}%
                                 </Badge>
                             )}
                         </div>
@@ -352,7 +343,7 @@ function StorePageContent() {
                           onClick={() => handlePurchase(product, 'mock')}
                           disabled={isPurchasing !== null}
                         >
-                          {isPurchasing === product.name ? <><Loader2 className="animate-spin mr-2" /> PROCESSING...</> : "ACTIVATE NOW"}
+                          {isPurchasing === product.name ? <Loader2 className="animate-spin" /> : "ACTIVATE NOW"}
                         </Button>
                       </CardContent>
                     </Card>
@@ -365,14 +356,14 @@ function StorePageContent() {
                         <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
                             <Zap className="text-primary w-8 h-8 fill-primary" />
                         </div>
-                        <CardTitle className="text-2xl font-black">{storeConfig.referboltSubscription.name} Access</CardTitle>
-                         <CardDescription className="font-medium">{storeConfig.referboltSubscription.description}</CardDescription>
+                        <CardTitle className="text-2xl font-black">{storeConfig.referboltSubscription.name}</CardTitle>
+                         <CardDescription className="font-medium">Continuous Referral Earning Cycle</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <p className="text-5xl font-black text-primary tracking-tighter">₹{(storeConfig.referboltSubscription.price + (storeConfig.referboltSubscription.price * (storeConfig.referboltSubscription.gstRate / 100))).toFixed(0)}</p>
-                         <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Inclusive of all taxes</p>
+                         <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Inclusive of GST</p>
                         <Button size="lg" className="w-full font-black py-7 mt-4" onClick={() => handlePurchase(storeConfig.referboltSubscription, 'referbolt')} disabled={isPurchasing !== null}>
-                            {isPurchasing === storeConfig.referboltSubscription.name ? <Loader2 className="animate-spin"/> : "START EARNING CYCLES"}
+                            {isPurchasing === storeConfig.referboltSubscription.name ? <Loader2 className="animate-spin"/> : "START EARNING"}
                         </Button>
                     </CardContent>
                      <CardContent>

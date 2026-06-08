@@ -1,11 +1,10 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Share2, Copy, Users, IndianRupee, Goal, Percent, ShieldCheck, ChevronRight, BarChart3, HelpCircle, Zap, Loader2 } from "lucide-react";
+import { Share2, Copy, Users, IndianRupee, Goal, Percent, ShieldCheck, ChevronRight, BarChart3, HelpCircle, Zap, Loader2, AlertCircle } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -27,6 +26,7 @@ import { useAuth, useDb } from "@/firebase";
 import { doc, getDoc, collection, query, where, getDocs, Timestamp, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import UserLayout from "@/components/UserLayout";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 
 const dailyTarget = 5;
@@ -55,27 +55,35 @@ function IBADashboardPageContent() {
   const db = useDb();
   const [referralData, setReferralData] = useState<ReferralData | null>(null);
   const [ibaReferralCode, setIbaReferralCode] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   useEffect(() => {
     if (user && db) {
         const fetchIbaData = async (db: Firestore) => {
+            setIsLoading(true);
+            setError(null);
             try {
-                // Assume the IBA-specific data is stored in a subcollection or related doc
                 const userWalletDocRef = doc(db, 'wallets', user.uid);
                 const userWalletSnap = await getDoc(userWalletDocRef);
                 if (userWalletSnap.exists()) {
                     setIbaReferralCode(userWalletSnap.data().referralCode);
+                } else {
+                    setIbaReferralCode(`REF${user.uid.slice(0, 6).toUpperCase()}`);
                 }
 
                 const q = query(collection(db, "transactions"), where("user", "==", user.uid), where("type", "in", ["Commission", "Referral Bonus"]));
-                const querySnapshot = await getDocs(q);
+                const querySnapshot = await getDocs(q).catch(e => {
+                    console.error("IBA Transactions query error:", e);
+                    return { docs: [] };
+                });
 
                 const recentReferrals = querySnapshot.docs.map(d => {
                     const data = d.data();
                     const date = data.date instanceof Timestamp ? data.date.toDate().toISOString() : data.date;
                     return {
                         id: d.id,
-                        name: data.description.split(' from ')[1] || data.description.split(' for ')[1] || 'Unknown User',
+                        name: data.description.split(' from ')[1] || data.description.split(' for ')[1] || 'Commission Received',
                         date: date,
                         commission: data.amount,
                     };
@@ -83,32 +91,29 @@ function IBADashboardPageContent() {
 
                 const totalCommission = recentReferrals.reduce((acc, ref) => acc + ref.commission, 0);
 
-                // Mocked sales data for charts
                 const salesHistory = [
-                    { month: 'Jan', sales: 12 }, { month: 'Feb', sales: 19 }, { month: 'Mar', sales: 3 }, 
-                    { month: 'Apr', sales: 5 }, { month: 'May', sales: 2 }, { month: 'Jun', sales: 3 }
+                    { month: 'Jan', sales: 0 }, { month: 'Feb', sales: 0 }, { month: 'Mar', sales: 0 }, 
+                    { month: 'Apr', sales: 0 }, { month: 'May', sales: 0 }, { month: 'Jun', sales: recentReferrals.length }
                 ];
 
                 setReferralData({
                     totalCommission,
                     totalReferrals: recentReferrals.length,
-                    dailySales: 0, // Needs complex query
-                    monthlySales: 0, // Needs complex query
+                    dailySales: 0,
+                    monthlySales: recentReferrals.length,
                     salesHistory,
                     recentReferrals,
                 });
-            } catch (error) {
-                console.error("Error fetching IBA data:", error);
-                toast({
-                    variant: "destructive",
-                    title: "Error",
-                    description: "Could not load your IBA dashboard data."
-                });
+            } catch (err: any) {
+                console.error("Error fetching IBA data:", err);
+                setError("Could not load IBA dashboard statistics. Please check your connection.");
+            } finally {
+                setIsLoading(false);
             }
         };
         fetchIbaData(db);
     }
-  }, [user, db, toast]);
+  }, [user, db]);
 
   const handleCopyToClipboard = () => {
     if (!ibaReferralCode) return;
@@ -127,219 +132,179 @@ function IBADashboardPageContent() {
 I'm an Independent Business Associate with them, and I highly recommend their platform for serious students.
 
 ✨ **Why Vidya EduCare?**
-- 📚 Extensive library of realistic mock tests for various standards.
-- 🏆 Compete on live leaderboards and win cash prizes for top scores.
+- 📚 Extensive library of realistic mock tests.
+- 🏆 Compete on live leaderboards and win cash prizes.
 - 🎮 Fun skill games to sharpen your mind.
 
-*Become an IBA & start your business journey with Vidya EduCare*
-No registration fee and no investment to become an IBA and start a business with Vidya EduCare.
-
-Use my exclusive IBA code to get a special 10% discount on your subscription!
+Use my exclusive IBA code to get a special discount on your subscription!
 
 🔑 **My IBA Code**: ${ibaReferralCode}
 🔗 **Sign Up Here**: ${shareUrl}
 
-Don't miss out on the best way to prepare for your exams and earn rewards!
 #VidyaEduCare #MockTest #ExamPrep #StudySmart #IBA #Referral #Discount`;
     
-    const encodedMessage = encodeURIComponent(message);
-    const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
-
-    const fallbackCopy = () => {
-      navigator.clipboard.writeText(message);
-      toast({
-          title: "Promotional Message Copied!",
-          description: "Referral link and message copied to clipboard. You can now paste it into WhatsApp.",
-      });
-    };
-
-    try {
-        const newWindow = window.open(whatsappUrl, '_blank');
-        if(!newWindow || newWindow.closed || typeof newWindow.closed=='undefined') {
-            fallbackCopy();
-        }
-    } catch(e) {
-        fallbackCopy();
-    }
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
   };
   
-  if (!ibaReferralCode || !referralData) {
+  if (isLoading) {
     return (
-      <div className="w-full max-w-4xl mx-auto flex items-center justify-center h-96">
+      <div className="w-full max-w-4xl mx-auto flex flex-col items-center justify-center h-96 gap-4">
         <Loader2 className="animate-spin text-primary" size={32} />
+        <p className="text-sm text-muted-foreground animate-pulse font-medium">Syncing IBA Performance...</p>
       </div>
     );
   }
 
-  const dailyProgress = referralData.dailySales > 0 ? (referralData.dailySales / dailyTarget) * 100 : 0;
-  const monthlyProgress = referralData.monthlySales > 0 ? (referralData.monthlySales / monthlyTarget) * 100 : 0;
+  if (error) {
+      return (
+          <div className="w-full max-w-4xl mx-auto p-4">
+              <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Synchronization Error</AlertTitle>
+                  <AlertDescription>{error}</AlertDescription>
+              </Alert>
+              <Button className="mt-4" onClick={() => window.location.reload()}>Retry Sync</Button>
+          </div>
+      )
+  }
+
+  const dailyProgress = referralData!.dailySales > 0 ? (referralData!.dailySales / dailyTarget) * 100 : 0;
+  const monthlyProgress = referralData!.monthlySales > 0 ? (referralData!.monthlySales / monthlyTarget) * 100 : 0;
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-6">
         <h1 className="text-3xl font-bold flex items-center gap-2"><ShieldCheck/> IBA Dashboard</h1>
         <p className="text-muted-foreground">Your hub for tracking referrals, sales, and commissions.</p>
           
-          <div className="text-center p-4 bg-muted rounded-lg">
-            <h3 className="text-lg font-semibold">Your Unique IBA Code</h3>
+          <div className="text-center p-4 bg-muted rounded-lg border">
+            <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Your Unique IBA Code</h3>
             <div className="flex items-center justify-center gap-2 mt-2">
-              <p className="text-2xl font-mono p-3 bg-background rounded-md w-full max-w-xs text-center tracking-widest break-all">{ibaReferralCode}</p>
+              <p className="text-2xl font-mono p-3 bg-background rounded-md w-full max-w-xs text-center tracking-widest border border-dashed">{ibaReferralCode}</p>
             </div>
           </div>
            <div className="flex flex-col sm:flex-row items-center gap-4">
-              <Button variant="outline" className="w-full" onClick={handleCopyToClipboard}><Copy className="mr-2" /> Copy Code</Button>
-              <Button className="w-full" onClick={handleShare}><Share2 className="mr-2" /> Share & Promote</Button>
+              <Button variant="outline" className="w-full" onClick={handleCopyToClipboard}><Copy className="mr-2 h-4 w-4" /> Copy Code</Button>
+              <Button className="w-full" onClick={handleShare}><Share2 className="mr-2 h-4 w-4" /> Share & Promote</Button>
             </div>
             
             <div className="grid grid-cols-2 gap-4 text-center">
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-xl md:text-2xl flex items-center justify-center gap-2"><IndianRupee/>{referralData.totalCommission.toFixed(2)}</CardTitle>
-                        <CardDescription>Total Commission</CardDescription>
+                <Card className="bg-primary/[0.02]">
+                    <CardHeader className="py-4">
+                        <CardTitle className="text-xl md:text-2xl flex items-center justify-center gap-2 text-primary"><IndianRupee size={20}/>{referralData?.totalCommission.toFixed(2)}</CardTitle>
+                        <CardDescription className="text-[10px] font-bold uppercase">Total Commission</CardDescription>
                     </CardHeader>
                 </Card>
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-xl md:text-2xl flex items-center justify-center gap-2"><Users/>{referralData.totalReferrals}</CardTitle>
-                        <CardDescription>Total Sales</CardDescription>
+                <Card className="bg-primary/[0.02]">
+                    <CardHeader className="py-4">
+                        <CardTitle className="text-xl md:text-2xl flex items-center justify-center gap-2"><Users size={20}/>{referralData?.totalReferrals}</CardTitle>
+                        <CardDescription className="text-[10px] font-bold uppercase">Total Referrals</CardDescription>
                     </CardHeader>
                 </Card>
             </div>
 
             <Card>
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><BarChart3/> Sales Analytics</CardTitle>
-                    <CardDescription>Visualize your sales performance and growth over time.</CardDescription>
+                    <CardTitle className="flex items-center gap-2 text-lg"><BarChart3 size={18}/> Sales Analytics</CardTitle>
+                    <CardDescription>Visualizing your recent performance.</CardDescription>
                 </CardHeader>
                 <CardContent className="h-[300px]">
-                    {referralData.salesHistory.length > 0 ? (
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={referralData.salesHistory}>
-                                <XAxis dataKey="month" stroke="#888888" fontSize={12} tickLine={false} axisLine={false}/>
-                                <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${'${value}'}`}/>
-                                <Tooltip
-                                  contentStyle={{
-                                    background: "hsl(var(--background))",
-                                    border: "1px solid hsl(var(--border))",
-                                    borderRadius: "var(--radius)",
-                                  }}
-                                />
-                                <Bar dataKey="sales" name="Monthly Sales" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    ) : (
-                        <div className="flex items-center justify-center h-full text-muted-foreground">No sales data yet.</div>
-                    )}
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={referralData!.salesHistory}>
+                            <XAxis dataKey="month" fontSize={12} tickLine={false} axisLine={false}/>
+                            <YAxis fontSize={12} tickLine={false} axisLine={false} />
+                            <Tooltip
+                              contentStyle={{
+                                background: "hsl(var(--background))",
+                                border: "1px solid hsl(var(--border))",
+                                borderRadius: "var(--radius)",
+                              }}
+                            />
+                            <Bar dataKey="sales" name="Referrals" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                    </ResponsiveContainer>
                 </CardContent>
             </Card>
 
             <Card>
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><Percent/> Commission Structure</CardTitle>
-                    <CardDescription>Your commission rates for referring new clients.</CardDescription>
+                    <CardTitle className="flex items-center gap-2 text-lg"><Percent size={18}/> Commission Structure</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="p-4 bg-muted/50 rounded-lg">
-                        <h4 className="font-semibold">Mock Test Subscriptions</h4>
-                        <div className="flex items-baseline justify-between mt-2">
-                             <p className="text-2xl font-bold text-primary">17.65%</p>
-                             <p className="text-sm text-muted-foreground">of base price</p>
+                    <div className="p-4 bg-muted/50 rounded-lg flex justify-between items-center border">
+                        <div>
+                            <h4 className="font-bold">Mock Test Subscriptions</h4>
+                            <p className="text-xs text-muted-foreground">Standard Referral Rate</p>
                         </div>
+                        <p className="text-2xl font-black text-primary">17.65%</p>
                     </div>
-                     <div className="p-4 bg-primary/10 rounded-lg border border-primary/20">
-                        <h4 className="font-semibold flex items-center gap-2"><Zap className="text-primary"/> ReferBolt Bonus</h4>
-                        <p className="text-muted-foreground text-sm mt-1">
-                            Subscribe to ReferBolt to get an additional bonus commission on all mock test sales you refer!
-                        </p>
-                        <Button asChild size="sm" className="mt-3">
-                            <Link href="/referbolt">Learn More</Link>
+                     <div className="p-4 bg-primary/10 rounded-lg border border-primary/20 flex justify-between items-center">
+                        <div>
+                            <h4 className="font-bold flex items-center gap-2"><Zap className="text-primary" size={14}/> ReferBolt Bonus</h4>
+                            <p className="text-xs text-muted-foreground">Extra commission for ReferBolt subscribers.</p>
+                        </div>
+                        <Button asChild size="sm" variant="secondary" className="font-bold text-[10px]">
+                            <Link href="/referbolt">VIEW BONUS</Link>
                         </Button>
-                    </div>
-                     <div className="flex items-center text-sm text-muted-foreground">
-                        <HelpCircle className="w-4 h-4 mr-2"/>
-                        <span>If a sale involves two IBA codes, the commission is split 50/50 between them.</span>
                     </div>
                 </CardContent>
             </Card>
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Tools & Reports</CardTitle>
-                </CardHeader>
-                 <CardContent>
-                    <Link href="/refer/students" className="flex items-center justify-between p-3 bg-muted/50 hover:bg-muted rounded-lg transition-colors">
-                        <div className="flex items-center gap-3 font-medium">
-                            <Users className="w-5 h-5 text-primary" />
-                            <span>View Client List</span>
-                        </div>
-                        <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                    </Link>
-                </CardContent>
-            </Card>
-            
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-lg font-semibold flex items-center gap-2"><Goal/> Target Progress</CardTitle>
+                    <CardTitle className="text-lg font-semibold flex items-center gap-2"><Goal size={18}/> Target Progress</CardTitle>
                 </CardHeader>
               <CardContent className="space-y-4">
                  <div className="space-y-1">
-                    <div className="flex justify-between text-sm font-medium">
+                    <div className="flex justify-between text-xs font-bold uppercase text-muted-foreground">
                       <span>Daily Target</span>
-                      <span>{referralData.dailySales} / {dailyTarget} sales</span>
+                      <span>{referralData!.dailySales} / {dailyTarget}</span>
                     </div>
-                    <Progress value={dailyProgress} />
+                    <Progress value={dailyProgress} className="h-2" />
                  </div>
                  <div className="space-y-1">
-                    <div className="flex justify-between text-sm font-medium">
+                    <div className="flex justify-between text-xs font-bold uppercase text-muted-foreground">
                       <span>Monthly Target</span>
-                      <span>{referralData.monthlySales} / {monthlyTarget} sales</span>
+                      <span>{referralData!.monthlySales} / {monthlyTarget}</span>
                     </div>
-                    <Progress value={monthlyProgress} />
+                    <Progress value={monthlyProgress} className="h-2" />
                  </div>
               </CardContent>
             </Card>
 
-             <Card>
-                <CardHeader>
-                    <CardTitle className="text-lg font-semibold flex items-center gap-2"><Percent/> Monthly Bonus Commission</CardTitle>
-                </CardHeader>
-                <CardContent className="grid grid-cols-2 md:grid-cols-5 gap-2 text-center">
-                    {bonusTiers.map(tier => (
-                        <div key={tier.target} className="p-2 bg-muted/50 rounded-md">
-                            <p className="font-bold text-primary">{tier.target}% Target</p>
-                            <p className="text-sm text-muted-foreground">+ {tier.bonus}% Bonus</p>
-                        </div>
-                    ))}
-                </CardContent>
-             </Card>
-
             <Card>
                 <CardHeader>
-                    <CardTitle className="text-lg font-semibold">Recent Sales</CardTitle>
+                    <CardTitle className="text-lg font-semibold">Recent Transactions</CardTitle>
                 </CardHeader>
-                <CardContent className="overflow-x-auto">
+                <CardContent>
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Student</TableHead>
+                                <TableHead>Source</TableHead>
                                 <TableHead>Date</TableHead>
                                 <TableHead className="text-right">Commission</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {referralData.recentReferrals.length > 0 ? referralData.recentReferrals.map((ref) => (
+                            {referralData!.recentReferrals.length > 0 ? referralData!.recentReferrals.map((ref) => (
                                 <TableRow key={ref.id}>
-                                    <TableCell>{ref.name}</TableCell>
-                                    <TableCell>{new Date(ref.date).toLocaleDateString()}</TableCell>
-                                    <TableCell className="text-right text-green-600 font-bold">+ ₹{ref.commission.toFixed(2)}</TableCell>
+                                    <TableCell className="font-medium text-sm">{ref.name}</TableCell>
+                                    <TableCell className="text-xs">{new Date(ref.date).toLocaleDateString()}</TableCell>
+                                    <TableCell className="text-right text-green-600 font-bold text-sm">+ ₹{ref.commission.toFixed(2)}</TableCell>
                                 </TableRow>
                             )) : (
                                 <TableRow>
-                                    <TableCell colSpan={3} className="text-center text-muted-foreground h-24">No recent sales yet.</TableCell>
+                                    <TableCell colSpan={3} className="text-center text-muted-foreground h-24 text-xs font-medium">No recent referral commissions found.</TableCell>
                                 </TableRow>
                             )}
                         </TableBody>
                     </Table>
                 </CardContent>
+                <CardFooter>
+                     <Button variant="ghost" className="w-full text-xs text-muted-foreground" asChild>
+                        <Link href="/refer/students">View Full Client List <ChevronRight className="ml-1 h-3 w-3"/></Link>
+                    </Button>
+                </CardFooter>
             </Card>
     </div>
   );

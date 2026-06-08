@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDb, useAuthService } from '@/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, runTransaction, getDocs, collection, query, where, setDoc } from 'firebase/firestore';
+import { doc, runTransaction, getDocs, collection, query, where, setDoc, serverTimestamp } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, CheckCircle, AlertTriangle, User, Shield } from 'lucide-react';
@@ -45,9 +45,11 @@ export default function SetupAdminPage() {
           return;
         }
 
+        // 1. Create the user identity
         const userCredential = await createUserWithEmailAndPassword(auth, HEAD_ADMIN_EMAIL, HEAD_ADMIN_PASSWORD);
         const user = userCredential.user;
 
+        // 2. Commit all records before the auth provider attempts role resolution
         await runTransaction(db, async (transaction) => {
           const adminDocRef = doc(db, "admins", user.uid);
           transaction.set(adminDocRef, {
@@ -63,17 +65,17 @@ export default function SetupAdminPage() {
 
           const walletDocRef = doc(db, "wallets", user.uid);
           transaction.set(walletDocRef, {
-            balance: 0, coins: 0, referralCode: `REF${user.uid.slice(0, 6).toUpperCase()}`
+            balance: 0, coins: 0, referralCode: `HEADADMIN`
           });
         });
 
         setStatus('success');
-        toast({ title: "Head Admin Created", description: "You can now log in with the admin credentials." });
+        toast({ title: "Head Admin Created", description: "Administrative workspace is now active." });
 
     } catch (error: any) {
         if (error.code === 'auth/email-already-in-use') {
             setStatus('success');
-            toast({ title: "Already Exists", description: "The admin email is already registered." });
+            toast({ title: "Already Exists", description: "The admin email is already registered identity." });
         } else {
             console.error("Head Admin creation failed:", error);
             setErrorMessage(error.message);
@@ -90,13 +92,17 @@ export default function SetupAdminPage() {
         const userCredential = await createUserWithEmailAndPassword(auth, TEST_USER_EMAIL, TEST_USER_PASSWORD);
         const user = userCredential.user;
 
-        await setDoc(doc(db, "users", user.uid), {
-            id: user.uid, name: TEST_USER_NAME, email: TEST_USER_EMAIL, phone: "0000000000",
-            joinDate: new Date().toISOString(), status: "Active",
-        });
+        await runTransaction(db, async (transaction) => {
+            const userDocRef = doc(db, "users", user.uid);
+            transaction.set(userDocRef, {
+                id: user.uid, name: TEST_USER_NAME, email: TEST_USER_EMAIL, phone: "0000000000",
+                joinDate: new Date().toISOString(), status: "Active",
+            });
 
-        await setDoc(doc(db, "wallets", user.uid), {
-            balance: 100, coins: 50, referralCode: `REF${user.uid.slice(0, 6).toUpperCase()}`
+            const walletDocRef = doc(db, "wallets", user.uid);
+            transaction.set(walletDocRef, {
+                balance: 100, coins: 50, referralCode: `REF${user.uid.slice(0, 6).toUpperCase()}`
+            });
         });
 
         toast({ title: "User Created!", description: "Test user account is ready for use." });
@@ -113,62 +119,65 @@ export default function SetupAdminPage() {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-muted p-4">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md shadow-2xl">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold flex items-center justify-center gap-2">
-            <Shield className="text-primary" /> System Setup
+          <CardTitle className="text-2xl font-black flex items-center justify-center gap-2 text-primary">
+            <Shield className="w-6 h-6" /> SYSTEM INITIALIZATION
           </CardTitle>
           <CardDescription>
-            Initialize official accounts for testing and administration.
+            Configure the master administrative account and test profiles.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-4">
-            <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">Admin Access</h3>
+            <h3 className="font-bold text-xs uppercase tracking-widest text-muted-foreground border-b pb-2">Master Administrator</h3>
             {status === 'success' ? (
-                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 p-4 rounded-lg space-y-3">
+                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 p-4 rounded-xl space-y-3">
                     <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
                         <CheckCircle className="w-5 h-5" />
-                        <span className="font-bold">Head Admin Configured</span>
+                        <span className="font-black text-sm">HEAD ADMIN CONFIGURED</span>
                     </div>
-                    <div className="text-xs space-y-1">
-                        <p><strong>Email:</strong> {HEAD_ADMIN_EMAIL}</p>
-                        <p><strong>Password:</strong> {HEAD_ADMIN_PASSWORD}</p>
+                    <div className="text-xs space-y-1 font-medium">
+                        <p><strong>Login Email:</strong> {HEAD_ADMIN_EMAIL}</p>
+                        <p><strong>Initial Pass:</strong> {HEAD_ADMIN_PASSWORD}</p>
                     </div>
-                    <Button variant="outline" size="sm" className="w-full" onClick={() => router.push('/admin/login')}>Go to Admin Login</Button>
+                    <Button variant="outline" size="sm" className="w-full font-bold" onClick={() => router.push('/admin/login')}>Proceed to Admin Portal</Button>
                 </div>
             ) : status === 'error' ? (
-                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 p-4 rounded-lg">
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 p-4 rounded-xl">
                     <div className="flex items-center gap-2 text-red-700">
                         <AlertTriangle className="w-5 h-5" />
-                        <span className="font-bold">Setup Error</span>
+                        <span className="font-bold">Initialization Failed</span>
                     </div>
-                    <p className="text-xs mt-1">{errorMessage}</p>
-                    <Button variant="outline" size="sm" className="w-full mt-3" onClick={() => setStatus('idle')}>Try Again</Button>
+                    <p className="text-xs mt-2 opacity-80">{errorMessage}</p>
+                    <Button variant="outline" size="sm" className="w-full mt-4 font-bold" onClick={() => setStatus('idle')}>Retry Configuration</Button>
                 </div>
             ) : (
-                <Button className="w-full" onClick={createHeadAdmin} disabled={status === 'loading'}>
-                    {status === 'loading' ? <Loader2 className="animate-spin mr-2" /> : <Shield className="mr-2" />}
-                    Configure Head Admin
+                <Button className="w-full py-6 text-lg font-black shadow-lg" onClick={createHeadAdmin} disabled={status === 'loading'}>
+                    {status === 'loading' ? <Loader2 className="animate-spin mr-2" /> : <Shield className="mr-2 h-5 w-5" />}
+                    CONFIGURE HEAD ADMIN
                 </Button>
             )}
           </div>
 
-          <div className="space-y-4 pt-4 border-t">
-            <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">User Access</h3>
-            <div className="bg-muted p-4 rounded-lg space-y-3">
-                <p className="text-xs text-muted-foreground">Create a test user account to verify academic features, AI tools, and the wallet system.</p>
-                <div className="text-xs font-mono bg-background p-2 rounded border">
+          <div className="space-y-4 pt-6 border-t">
+            <h3 className="font-bold text-xs uppercase tracking-widest text-muted-foreground border-b pb-2">Standard User (Testing)</h3>
+            <div className="bg-muted p-4 rounded-xl space-y-3">
+                <p className="text-[10px] text-muted-foreground font-medium">Create a student-role profile to verify academic flows and the AI learning suite.</p>
+                <div className="text-xs font-mono bg-background p-3 rounded-lg border border-dashed">
                     Email: {TEST_USER_EMAIL}<br/>
                     Pass: {TEST_USER_PASSWORD}
                 </div>
-                <Button variant="secondary" className="w-full" onClick={createTestUser} disabled={isCreatingUser}>
-                    {isCreatingUser ? <Loader2 className="animate-spin mr-2" /> : <User className="mr-2" />}
+                <Button variant="secondary" className="w-full font-bold" onClick={createTestUser} disabled={isCreatingUser}>
+                    {isCreatingUser ? <Loader2 className="animate-spin mr-2" /> : <User className="mr-2 h-4 w-4" />}
                     Create Test User
                 </Button>
             </div>
           </div>
         </CardContent>
+        <CardFooter className="bg-primary/5 py-4 border-t justify-center">
+            <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground">Vidya EduCare Security Infrastructure</p>
+        </CardFooter>
       </Card>
     </div>
   );

@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
@@ -20,7 +21,7 @@ const DbContext = createContext<Firestore | undefined>(undefined);
 const AuthServiceContext = createContext<Auth | undefined>(undefined);
 
 // Synchronous role cache to prevent hydration mismatches and sequential load lag
-const ROLE_CACHE_KEY = 'vidya_auth_role_v5';
+const ROLE_CACHE_KEY = 'vidya_auth_role_v6';
 
 const getCachedRoles = () => {
     if (typeof window === 'undefined') return null;
@@ -56,7 +57,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const navigationLock = useRef<string | null>(null);
 
-  const resolveUserRole = useCallback(async (user: User | null, db: Firestore) => {
+  const resolveUserRole = useCallback(async (user: User | null, db: Firestore, retry = true) => {
     if (!user) {
       sessionStorage.removeItem(ROLE_CACHE_KEY);
       return { isAdmin: false, isHeadAdmin: false };
@@ -68,12 +69,14 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      // Hardened for offline/flaky connections
       const adminDocRef = doc(db, "admins", user.uid);
-      const adminDocSnap = await getDoc(adminDocRef).catch(err => {
-          console.warn("Firestore fetch error (likely offline):", err);
-          return null;
-      });
+      let adminDocSnap = await getDoc(adminDocRef).catch(() => null);
+      
+      // Replication lag buffer: retry once if document not immediately found (happens during setup)
+      if (!adminDocSnap?.exists() && retry) {
+          await new Promise(r => setTimeout(r, 800));
+          adminDocSnap = await getDoc(adminDocRef).catch(() => null);
+      }
       
       let roles = { isAdmin: false, isHeadAdmin: false };
       
@@ -115,7 +118,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
     const timeout = setTimeout(() => {
         setAuthState(prev => ({ ...prev, loading: false }));
-    }, 5000); // Increased timeout for slower connections
+    }, 6000);
 
     return () => {
         unsubscribe();
@@ -139,13 +142,18 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
     if (user) {
       if (isAdmin) {
-        // Logged-in Admins: Prevent access to guest pages and force return to workspace
-        if ((!isAdminArea && !isPublicRoute) || isAuthRoute || cleanPath === '/') {
+        // Logged-in Admins: Prevent access to guest/auth pages and force return to workspace
+        // Exclude /admin/setup from force-redirect to allow initial configuration
+        const onRestrictedGuestPage = !isAdminArea && !isPublicRoute;
+        const onSetupPath = cleanPath === '/admin/setup' || cleanPath === '/check-head-admin';
+
+        if ((onRestrictedGuestPage || isAuthRoute || cleanPath === '/') && !onSetupPath) {
           targetPath = '/admin/analytics';
         }
       } else {
-        // Logged-in Students: Block Admin portal and allow access to profile or public trial tools
-        if (isAdminArea || isAuthRoute || cleanPath === '/') {
+        // Logged-in Students: Block Admin portal (except public setup) and redirect to profile
+        const inRestrictedAdminZone = isAdminArea && !isPublicRoute;
+        if (inRestrictedAdminZone || isAuthRoute || cleanPath === '/') {
           targetPath = '/profile';
         }
       }
@@ -160,8 +168,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     if (targetPath && targetPath !== cleanPath && navigationLock.current !== targetPath) {
       navigationLock.current = targetPath;
       router.replace(targetPath);
-      // Brief debounce to allow the browser to settle the new route
-      const timer = setTimeout(() => { navigationLock.current = null; }, 1000);
+      const timer = setTimeout(() => { navigationLock.current = null; }, 1500);
       return () => clearTimeout(timer);
     }
   }, [authState, pathname, router, services]);

@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Trash2, Edit, BookCopy, FilePlus, ScrollText, ArrowRight, Save, Loader2, Upload, Wand2, Download, Info, Search, FilterX } from "lucide-react";
+import { MoreHorizontal, Trash2, Edit, BookCopy, FilePlus, ScrollText, ArrowRight, Save, Loader2, Upload, Wand2, Download, Info, Search, FilterX, AlertCircle } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -262,6 +262,7 @@ const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         Papa.parse(file, {
             header: true,
             skipEmptyLines: true,
+            encoding: "UTF-8",
             complete: (results) => {
                 const parsedQuestions: Question[] = results.data.map((row: any, index: number) => ({
                     id: `temp-upload-${index}`,
@@ -470,12 +471,18 @@ const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
                          <DialogHeader>
                              <DialogTitle>Upload MCQs from File</DialogTitle>
                              <DialogDescription>
-                                 Upload a CSV file to bulk-import Multiple Choice Questions.
+                                 Upload a <strong>CSV UTF-8 (comma delimited)</strong> file to bulk-import Multiple Choice Questions.
                              </DialogDescription>
                          </DialogHeader>
                          <div className="space-y-6 py-4">
                             <div className="bg-muted/50 p-4 rounded-lg border border-dashed text-sm space-y-2">
-                                <p className="font-bold flex items-center gap-2"><Info size={14}/> CSV Headers Required:</p>
+                                <p className="font-bold flex items-center gap-2"><AlertCircle size={14} className="text-primary"/> Required Format:</p>
+                                <ul className="list-disc list-inside text-[11px] space-y-1 text-muted-foreground pb-2">
+                                    <li>File must be saved as <strong>CSV UTF-8 (Comma delimited)</strong>.</li>
+                                    <li>Standard "CSV" files from Excel may break Marathi characters.</li>
+                                    <li>Ensure headers match exactly as shown below.</li>
+                                </ul>
+                                <p className="font-bold text-[10px]">Expected CSV Headers:</p>
                                 <code className="text-[10px] block bg-background p-2 rounded break-all">
                                     question_en, question_mr, option1_en, option1_mr, option2_en, option2_mr, option3_en, option3_mr, option4_en, option4_mr, correct_answer_en, correct_answer_mr
                                 </code>
@@ -486,7 +493,7 @@ const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
                             </div>
                              <a href="/mcq_template.csv" download className="block">
                                 <Button variant="link" className="p-0 h-auto text-primary">
-                                    <Download className="mr-2 h-4 w-4" /> Download Example Template
+                                    <Download className="mr-2 h-4 w-4" /> Download Formatting Template
                                 </Button>
                             </a>
                          </div>

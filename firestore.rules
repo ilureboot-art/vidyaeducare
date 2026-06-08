@@ -13,16 +13,19 @@ service cloud.firestore {
     }
 
     // BOOTSTRAP HELPER: Identifies the master accounts allowed to initialize the project
+    // Uses safer 'get' access to avoid crashes if token properties are missing
     function isBootstrap() {
+      let email = request.auth.token.get('email', '').lower();
       return isAuthenticated() && 
-             (request.auth.token.email.lower() == 'admin@vidyaeducare.com' || 
-              request.auth.token.email.lower() == 'student@vidyaeducare.com');
+             (email == 'admin@vidyaeducare.com' || 
+              email == 'student@vidyaeducare.com');
     }
 
-    // Robust check: ensures document exists before accessing properties to prevent evaluation crashes
+    // Robust check: ensures document exists before accessing properties
     function isAdmin() {
       if (!isAuthenticated()) return false;
-      if (request.auth.token.email.lower() == 'admin@vidyaeducare.com') return true; 
+      let email = request.auth.token.get('email', '').lower();
+      if (email == 'admin@vidyaeducare.com') return true; 
       
       let adminPath = /databases/$(database)/documents/admins/$(request.auth.uid);
       return exists(adminPath) && (
@@ -33,7 +36,8 @@ service cloud.firestore {
 
     function isHeadAdmin() {
       if (!isAuthenticated()) return false;
-      if (request.auth.token.email.lower() == 'admin@vidyaeducare.com') return true;
+      let email = request.auth.token.get('email', '').lower();
+      if (email == 'admin@vidyaeducare.com') return true;
 
       let adminPath = /databases/$(database)/documents/admins/$(request.auth.uid);
       return exists(adminPath) && get(adminPath).data.role == 'Head Admin';
@@ -41,8 +45,9 @@ service cloud.firestore {
 
     match /admins/{userId} {
       allow read: if isAuthenticated();
-      // Allow bootstrap email or existing Head Admin to create/update/delete records
-      allow write, delete: if isBootstrap() || (isOwner(userId) && isHeadAdmin());
+      // Allow bootstrap identity to always manage admin records
+      // Allow existing Head Admins to manage other admin records
+      allow write, delete: if isBootstrap() || isHeadAdmin();
     }
 
     match /users/{userId} {
@@ -67,8 +72,8 @@ service cloud.firestore {
         allow get: if isAuthenticated() && (
           resource == null || resource.data.user == request.auth.uid || isAdmin()
         );
-        allow create: if isAuthenticated() && request.resource.data.user == request.auth.uid;
-        allow update: if isHeadAdmin();
+        allow create: if isAuthenticated() && (request.resource.data.user == request.auth.uid || isBootstrap());
+        allow update: if isHeadAdmin() || isBootstrap();
     }
 
     match /chats/{userId} {

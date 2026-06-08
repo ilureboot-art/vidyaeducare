@@ -75,6 +75,8 @@ export default function SetupAdminPage() {
     }
 
     await batch.commit();
+    
+    // Clear all session caches to force role re-resolution
     if (typeof window !== 'undefined') {
         sessionStorage.clear();
         localStorage.removeItem('vidya_auth_role_v15_final');
@@ -92,7 +94,7 @@ export default function SetupAdminPage() {
         setIsDatabaseMissing(true);
         setErrorMessage(`Database '${targetDbId}' target not found. Please verify the ID in Google Cloud.`);
     } else if (msg.includes("permission-denied") || msg.includes("insufficient permissions")) {
-        setErrorMessage(`Permission Denied. identity: ${auth?.currentUser?.email || 'unauthenticated'}. UID: ${auth?.currentUser?.uid || 'none'}. Ensure your Firestore rules are deployed to database '${targetDbId}'.`);
+        setErrorMessage(`Permission Denied. identity: ${auth?.currentUser?.email || 'unauthenticated'}. UID: ${auth?.currentUser?.uid || 'none'}. Please ensure rules are correctly applied to '${targetDbId}'.`);
     } else {
         setErrorMessage(msg);
     }
@@ -117,7 +119,7 @@ export default function SetupAdminPage() {
             } else throw e;
         }
 
-        // Buffer for Identity Propagation
+        // DELAY: Wait for Authentication state to fully propagate to Firestore rules
         await new Promise(r => setTimeout(r, 3000));
         await ensureRecords(uid, 'admin');
         setStatus('success');
@@ -145,7 +147,7 @@ export default function SetupAdminPage() {
             } else throw e;
         }
 
-        // Buffer for Identity Propagation
+        // DELAY: Wait for Identity Propagation
         await new Promise(r => setTimeout(r, 3000));
         await ensureRecords(uid, 'student');
         toast({ title: "Student Synced", description: "Test profile initialized." });

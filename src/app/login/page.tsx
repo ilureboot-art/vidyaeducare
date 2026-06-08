@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -41,10 +40,11 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      await signInWithEmailAndPassword(authService, email, password);
+      // Direct Firebase Authentication
+      await signInWithEmailAndPassword(authService, email.trim(), password);
 
       if (rememberMe) {
-        localStorage.setItem('rememberedUser', email);
+        localStorage.setItem('rememberedUser', email.trim());
       } else {
         localStorage.removeItem('rememberedUser');
       }
@@ -54,13 +54,20 @@ export default function LoginPage() {
           title: "Access Granted",
           description: "Syncing your student profile...",
       });
+      // The FirebaseProvider handles the redirection to /profile once role is resolved
 
     } catch (error: any) {
-       console.error("Login Error:", error);
-       let errorMessage = "Invalid credentials.";
-       if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-           errorMessage = "Please check your email and password.";
+       console.error("Login Error:", error.code, error.message);
+       let errorMessage = "Invalid email or password.";
+       
+       if (error.code === 'auth/network-request-failed') {
+           errorMessage = "Connection error. Please check your internet.";
+       } else if (error.code === 'auth/too-many-requests') {
+           errorMessage = "Too many failed attempts. Please try again later.";
+       } else if (error.code === 'auth/user-disabled') {
+           errorMessage = "This account has been disabled.";
        }
+
         toast({
             variant: "destructive",
             title: "Login Failed",
@@ -93,6 +100,7 @@ export default function LoginPage() {
               <Input 
                 id="email-login" 
                 type="email" 
+                autoComplete="email"
                 placeholder="you@example.com" 
                 required 
                 value={email} 
@@ -106,6 +114,7 @@ export default function LoginPage() {
                 <Input 
                   id="password-login" 
                   type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -144,7 +153,7 @@ export default function LoginPage() {
           <CardFooter className="flex-col gap-4">
             <Button className="w-full font-black py-6 text-lg shadow-lg" type="submit" disabled={isLoading || authLoading || !isFirebaseReady || isVerifying}>
                 {isVerifying ? (
-                    <><Loader2 className="mr-2 h-5 w-5 animate-spin"/> VERIFYING...</>
+                    <><Loader2 className="mr-2 h-5 w-5 animate-spin"/> SYNCING ROLE...</>
                 ) : isLoading ? (
                     <><Loader2 className="mr-2 h-5 w-5 animate-spin"/> SECURING SESSION...</>
                 ) : 'LOGIN TO WORKSPACE'}
@@ -158,8 +167,8 @@ export default function LoginPage() {
             <Button variant="link" className="px-1 font-bold" disabled={isLoading || isVerifying}>Create Account</Button>
         </Link>
       </div>
-      {isVerifying && (
-          <p className="text-xs text-muted-foreground animate-pulse font-bold uppercase tracking-widest">Resolving Academic Identity...</p>
+      {(isVerifying || authLoading) && (
+          <p className="text-xs text-muted-foreground animate-pulse font-bold uppercase tracking-widest mt-4">Resolving Academic Identity...</p>
       )}
     </div>
   );

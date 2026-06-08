@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
@@ -96,9 +95,9 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       
       // Hardened getDoc with localized catch to prevent Unhandled Runtime Error during offline states
       const adminDocSnap = await getDoc(adminDocRef).catch((e: any) => {
-          const isOffline = e.message?.toLowerCase().includes('offline') || e.code === 'unavailable';
+          const isOffline = e.message?.toLowerCase().includes('offline') || e.code === 'unavailable' || e.code === 'permission-denied';
           if (isOffline) {
-              console.warn("Firestore role resolution suppressed error (Client Offline). Falling back to safe defaults.");
+              console.warn("Firestore role resolution suppressed (Offline/Perms). Defaulting to student.");
           } else {
               console.error("Firestore role resolution failed:", e.message);
           }
@@ -134,7 +133,10 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
           return;
       }
 
-      // Pre-resolve roles to prevent flickering/redirect loops
+      // Ensure state is cleared before starting resolution to trigger "Verifying..." UI
+      setAuthState(prev => ({ ...prev, user, loading: false, isResolved: false }));
+
+      // Resolve roles definitively
       const roles = await resolveUserRole(user, db);
       setAuthState({ user, loading: false, ...roles, isResolved: true });
     });

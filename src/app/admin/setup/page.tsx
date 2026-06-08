@@ -5,8 +5,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDb, useAuthService } from '@/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, runTransaction, getDocs, collection, query, where, setDoc, serverTimestamp } from 'firebase/firestore';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { doc, runTransaction, getDocs, collection, query, where } from 'firebase/firestore';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, CheckCircle, AlertTriangle, User, Shield } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -68,6 +68,9 @@ export default function SetupAdminPage() {
             balance: 0, coins: 0, referralCode: `HEADADMIN`
           });
         });
+        
+        // Ensure role cache is clear for this new session
+        sessionStorage.clear();
 
         setStatus('success');
         toast({ title: "Head Admin Created", description: "Administrative workspace is now active." });

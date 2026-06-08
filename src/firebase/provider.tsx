@@ -14,6 +14,7 @@ interface AuthState {
   loading: boolean;
   isAdmin: boolean;
   isHeadAdmin: boolean;
+  isResolved: boolean; // Tracks if role check is complete for the current user
 }
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
@@ -21,7 +22,7 @@ const DbContext = createContext<Firestore | undefined>(undefined);
 const AuthServiceContext = createContext<Auth | undefined>(undefined);
 
 // Synchronous role cache to prevent hydration mismatches and sequential load lag
-const ROLE_CACHE_KEY = 'vidya_auth_role_v6';
+const ROLE_CACHE_KEY = 'vidya_auth_role_v7';
 
 const getCachedRoles = () => {
     if (typeof window === 'undefined') return null;
@@ -50,6 +51,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
         loading: true,
         isAdmin: cached?.isAdmin || false,
         isHeadAdmin: cached?.isHeadAdmin || false,
+        isResolved: false,
       };
   });
 
@@ -74,7 +76,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       
       // Replication lag buffer: retry once if document not immediately found (happens during setup)
       if (!adminDocSnap?.exists() && retry) {
-          await new Promise(r => setTimeout(r, 800));
+          await new Promise(r => setTimeout(r, 1200));
           adminDocSnap = await getDoc(adminDocRef).catch(() => null);
       }
       
@@ -107,18 +109,18 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) {
           sessionStorage.removeItem(ROLE_CACHE_KEY);
-          setAuthState({ user: null, loading: false, isAdmin: false, isHeadAdmin: false });
+          setAuthState({ user: null, loading: false, isAdmin: false, isHeadAdmin: false, isResolved: true });
           return;
       }
 
       // Pre-resolve roles to prevent flickering/redirect loops
       const roles = await resolveUserRole(user, db);
-      setAuthState({ user, loading: false, ...roles });
+      setAuthState({ user, loading: false, ...roles, isResolved: true });
     });
 
     const timeout = setTimeout(() => {
         setAuthState(prev => ({ ...prev, loading: false }));
-    }, 6000);
+    }, 8000);
 
     return () => {
         unsubscribe();
@@ -128,12 +130,11 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
   // Deterministic Navigation Engine: Ensures atomic, single-redirect session transitions
   useEffect(() => {
-    if (authState.loading || !services) return;
+    if (authState.loading || !authState.isResolved || !services) return;
 
     const { user, isAdmin } = authState;
     const cleanPath = pathname === '/' ? '/' : pathname.replace(/\/$/, '');
     
-    // ALLOW AI TOOLS FOR TRIAL (GUEST ACCESS)
     const isPublicRoute = ['/', '/how-to-play', '/admin/setup', '/check-head-admin', '/forgot-password', '/ai-tutor', '/ai-notes', '/trial-mock-test'].includes(cleanPath);
     const isAuthRoute = ['/login', '/signup', '/admin/login'].includes(cleanPath);
     const isAdminArea = cleanPath.startsWith('/admin');
@@ -143,7 +144,6 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     if (user) {
       if (isAdmin) {
         // Logged-in Admins: Prevent access to guest/auth pages and force return to workspace
-        // Exclude /admin/setup from force-redirect to allow initial configuration
         const onRestrictedGuestPage = !isAdminArea && !isPublicRoute;
         const onSetupPath = cleanPath === '/admin/setup' || cleanPath === '/check-head-admin';
 

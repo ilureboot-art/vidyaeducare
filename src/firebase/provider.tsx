@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { onAuthStateChanged, type Auth, type User } from 'firebase/auth';
-import { doc, getDoc, type Firestore } from 'firebase/firestore';
+import { doc, getDoc, type Firestore, type DocumentSnapshot } from 'firebase/firestore';
 import { Loader2, Shield } from 'lucide-react';
 import { getFirebaseServices } from './client-init';
 import type { Admin } from '@/lib/admin-data';
@@ -22,7 +22,7 @@ const DbContext = createContext<Firestore | undefined>(undefined);
 const AuthServiceContext = createContext<Auth | undefined>(undefined);
 
 // Synchronous role cache to prevent hydration mismatches and sequential load lag
-const ROLE_CACHE_KEY = 'vidya_auth_role_v10';
+const ROLE_CACHE_KEY = 'vidya_auth_role_v11';
 
 const getCachedRoles = () => {
     if (typeof window === 'undefined') return null;
@@ -59,6 +59,23 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const navigationLock = useRef<string | null>(null);
 
+  const processSnap = useCallback((snap: DocumentSnapshot | null, uid: string) => {
+      let roles = { isAdmin: false, isHeadAdmin: false };
+      
+      if (snap && snap.exists()) {
+        const adminData = snap.data() as Admin;
+        roles = {
+            isAdmin: adminData.status === 'Active' || adminData.role === 'Head Admin',
+            isHeadAdmin: adminData.role === 'Head Admin'
+        };
+      }
+      
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem(ROLE_CACHE_KEY, JSON.stringify({ ...roles, uid }));
+      }
+      return roles;
+  }, []);
+
   const resolveUserRole = useCallback(async (user: User | null, db: Firestore, retry = true) => {
     if (!user) {
       sessionStorage.removeItem(ROLE_CACHE_KEY);
@@ -70,50 +87,34 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
         return { isAdmin: cached.isAdmin, isHeadAdmin: cached.isHeadAdmin };
     }
 
-    // Safety: If client is offline, getDoc will throw if document is not cached.
+    // Safety: If client is definitely offline, use cached or defaults
     if (typeof window !== 'undefined' && !window.navigator.onLine) {
-        console.warn("Firestore: Client is offline. Using cached roles or defaults.");
-        return (cached && cached.uid === user.uid) ? { isAdmin: cached.isAdmin, isHeadAdmin: cached.isHeadAdmin } : { isAdmin: false, isHeadAdmin: false };
+        console.warn("Firestore: Client is offline. Using defaults.");
+        return { isAdmin: false, isHeadAdmin: false };
     }
 
     try {
       const adminDocRef = doc(db, "admins", user.uid);
       
-      let adminDocSnap;
-      try {
-        adminDocSnap = await getDoc(adminDocRef);
-      } catch (e: any) {
-        // Handle "Offline" or "Unavailable" errors gracefully without crashing the app
-        if (e.code === 'unavailable' || e.message?.toLowerCase().includes('offline')) {
-          console.warn("Firestore unavailable for role check, using defaults.");
-          return (cached && cached.uid === user.uid) ? { isAdmin: cached.isAdmin, isHeadAdmin: cached.isHeadAdmin } : { isAdmin: false, isHeadAdmin: false };
-        }
-        throw e;
-      }
+      // Hardened getDoc with localized catch to prevent Unhandled Runtime Error
+      const adminDocSnap = await getDoc(adminDocRef).catch((e: any) => {
+          console.warn("Firestore role resolution suppressed error (likely offline/unreachable):", e.message);
+          return null; 
+      });
       
-      // Replication lag buffer: retry once if document not immediately found (happens during setup)
-      if (!adminDocSnap?.exists() && retry) {
+      if (!adminDocSnap?.exists() && retry && typeof window !== 'undefined' && window.navigator.onLine) {
+          // Replication lag buffer: only retry if we think we are online
           await new Promise(r => setTimeout(r, 1500));
-          adminDocSnap = await getDoc(adminDocRef).catch(() => null);
+          const retrySnap = await getDoc(adminDocRef).catch(() => null);
+          return processSnap(retrySnap, user.uid);
       }
       
-      let roles = { isAdmin: false, isHeadAdmin: false };
-      
-      if (adminDocSnap && adminDocSnap.exists()) {
-        const adminData = adminDocSnap.data() as Admin;
-        roles = {
-            isAdmin: adminData.status === 'Active' || adminData.role === 'Head Admin',
-            isHeadAdmin: adminData.role === 'Head Admin'
-        };
-      }
-      
-      sessionStorage.setItem(ROLE_CACHE_KEY, JSON.stringify({ ...roles, uid: user.uid }));
-      return roles;
+      return processSnap(adminDocSnap, user.uid);
     } catch (e) {
-      console.error("Role resolution failed:", e);
-      return (cached && cached.uid === user.uid) ? { isAdmin: cached.isAdmin, isHeadAdmin: cached.isHeadAdmin } : { isAdmin: false, isHeadAdmin: false };
+      console.error("Critical role resolution failure:", e);
+      return { isAdmin: false, isHeadAdmin: false };
     }
-  }, []);
+  }, [processSnap]);
 
   useEffect(() => {
     if (!services) {
@@ -137,7 +138,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
     const timeout = setTimeout(() => {
         setAuthState(prev => ({ ...prev, loading: false, isResolved: true }));
-    }, 10000);
+    }, 15000);
 
     return () => {
         unsubscribe();

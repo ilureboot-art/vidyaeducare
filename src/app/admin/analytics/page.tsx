@@ -44,7 +44,7 @@ export default function AnalyticsPage() {
       
       setError(null);
       try {
-          // Safety: Check if user is online
+          // Safety: Check if user is online before expensive parallel queries
           if (typeof window !== 'undefined' && !window.navigator.onLine) {
               throw new Error("You are currently offline. Check your internet connection.");
           }
@@ -63,31 +63,40 @@ export default function AnalyticsPage() {
             where('status', '==', 'Completed')
           );
 
-          // PERFORMANCE: Run all business intelligence queries in parallel with error shielding
-          const [revenueSnapshot, usersCountRes, resultsCountRes] = await Promise.all([
+          // PERFORMANCE: Run queries in parallel with robust error shielding
+          const results = await Promise.allSettled([
               getDocs(revenueQuery),
               getCountFromServer(usersCol),
               getCountFromServer(resultsCol)
-          ]).catch(e => {
-              console.error("Dashboard Parallel Fetch Error:", e);
-              if (e.message?.toLowerCase().includes('offline') || e.code === 'unavailable') {
-                  throw new Error("Unable to reach database. You might be offline.");
-              }
-              throw e;
-          });
+          ]);
+
+          const revenueRes = results[0];
+          const usersRes = results[1];
+          const resultsCountRes = results[2];
+
+          // Check if any critical fetch failed due to connectivity
+          const isNetworkError = results.some(r => r.status === 'rejected' && (r.reason?.code === 'unavailable' || r.reason?.message?.toLowerCase().includes('offline')));
+          if (isNetworkError) {
+              throw new Error("Unable to reach database. You might be offline.");
+          }
 
           let totalRevenue = 0;
-          revenueSnapshot.forEach(doc => {
-              const data = doc.data();
-              if (data.type === 'deposit' || data.amount > 0) {
-                  totalRevenue += Math.abs(data.amount);
-              }
-          });
+          if (revenueRes.status === 'fulfilled') {
+              revenueRes.value.forEach(doc => {
+                  const data = doc.data();
+                  if (data.type === 'deposit' || data.amount > 0) {
+                      totalRevenue += Math.abs(data.amount);
+                  }
+              });
+          }
           
           setTodaysRevenue(totalRevenue);
-          const totalUsersCount = usersCountRes.data().count;
+          
+          const totalUsersCount = usersRes.status === 'fulfilled' ? usersRes.value.data().count : 0;
           setActiveUsers(totalUsersCount);
-          setTestVolume(resultsCountRes.data().count);
+          
+          const totalTests = resultsCountRes.status === 'fulfilled' ? resultsCountRes.value.data().count : 0;
+          setTestVolume(totalTests);
 
           const activityDates = getLast7Days();
           const fetchedUserActivity: ChartData[] = activityDates.map(date => ({
@@ -96,7 +105,6 @@ export default function AnalyticsPage() {
           }));
           setUserActivityData(fetchedUserActivity);
 
-          // Placeholder revenue forecast
           setRevenueData([
             { name: 'Mon', revenue: 4000 }, { name: 'Tue', revenue: 3000 }, { name: 'Wed', revenue: 5000 },
             { name: 'Thu', revenue: 4500 }, { name: 'Fri', revenue: 6000 }, { name: 'Sat', revenue: 5500 }, { name: 'Sun', revenue: 7000 },
@@ -153,7 +161,7 @@ export default function AnalyticsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">{activeUsers?.toLocaleString() || 0}</p>
+            <p className="text-3xl font-bold">{activeUsers !== null ? activeUsers.toLocaleString() : '...'}</p>
           </CardContent>
         </Card>
         <Card className="hover:shadow-md transition-shadow border-primary/10">
@@ -163,7 +171,7 @@ export default function AnalyticsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">{testVolume?.toLocaleString() || 0}</p>
+            <p className="text-3xl font-bold">{testVolume !== null ? testVolume.toLocaleString() : '...'}</p>
           </CardContent>
         </Card>
         <Card className="hover:shadow-md transition-shadow border-primary/20 bg-primary/[0.02]">
@@ -173,7 +181,7 @@ export default function AnalyticsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-primary">₹{todaysRevenue?.toLocaleString() || 0}</p>
+            <p className="text-3xl font-bold text-primary">₹{todaysRevenue !== null ? todaysRevenue.toLocaleString() : '...'}</p>
           </CardContent>
         </Card>
       </div>

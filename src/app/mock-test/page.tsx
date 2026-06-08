@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
@@ -7,7 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Trophy, Clock, CheckCircle, XCircle, FileQuestion, ArrowLeft, Loader2, Info, BrainCircuit, Sparkles, ScrollText } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
@@ -178,7 +178,7 @@ function MockTestContent() {
 
             setTestState("completed");
             toast({
-                title: "Test Submitted!",
+                title: timeLeft <= 0 ? "Time's Up!" : "Test Submitted!",
                 description: `You scored ${correctAnswers} out of ${activeQuestions.length}.`
             });
         } catch (error) {
@@ -383,7 +383,7 @@ function MockTestContent() {
                     <p className="text-4xl font-bold">Your Score: {score.toFixed(0)}%</p>
                     
                     <div className="grid gap-3 pt-6">
-                        <Button onClick={handleGenerateNotes} className="w-full py-8 text-lg font-black gap-3 shadow-xl bg-accent hover:bg-accent/90 animate-bounce-slow">
+                        <Button onClick={handleGenerateNotes} className="w-full py-8 text-lg font-black gap-3 shadow-xl bg-accent hover:bg-accent/90">
                             <ScrollText className="w-6 h-6" />
                             GENERATE AI STUDY NOTES
                         </Button>
@@ -477,6 +477,7 @@ function MockTestContent() {
     const progress = ((currentQuestionIndex + 1) / activeQuestions.length) * 100;
     const minutesLeft = Math.floor(timeLeft / 60);
     const secondsLeft = timeLeft % 60;
+    const isLowTime = timeLeft < 300; // 5 minutes warning
     const solvedCount = Object.keys(answers).length;
     const unsolvedCount = activeQuestions.length - solvedCount;
 
@@ -493,7 +494,10 @@ function MockTestContent() {
                          <Badge variant={isLiveTest ? "default" : "secondary"}>
                             {isLiveTest ? "Live Test" : "Practice"}
                         </Badge>
-                        <Badge variant="secondary" className="flex items-center gap-2">
+                        <Badge 
+                            variant={isLowTime ? "destructive" : "secondary"} 
+                            className={cn("flex items-center gap-2 font-mono text-lg transition-colors", isLowTime && "animate-pulse")}
+                        >
                             <Clock className="w-4 h-4" />
                             {String(minutesLeft).padStart(2, '0')}:{String(secondsLeft).padStart(2, '0')}
                         </Badge>
@@ -501,19 +505,15 @@ function MockTestContent() {
                             <CheckCircle className="w-4 h-4" />
                             Solved: {solvedCount}
                         </Badge>
-                        <Badge variant="outline" className="flex items-center gap-2 text-muted-foreground">
-                            <FileQuestion className="w-4 h-4" />
-                            Unsolved: {unsolvedCount}
-                        </Badge>
                     </div>
                 </div>
                 <Progress value={progress} className="mt-2" />
                 <p className="text-sm text-muted-foreground text-center mt-2">Question {currentQuestionIndex + 1} of {activeQuestions.length}</p>
             </CardHeader>
             <CardContent className="space-y-6">
-                <div>
-                    <p className="text-lg font-semibold">{currentQuestion.text.mr}</p>
-                    <p className="text-lg font-semibold text-muted-foreground">{currentQuestion.text.en}</p>
+                <div className="space-y-2">
+                    <p className="text-2xl font-bold leading-tight">{currentQuestion.text.mr}</p>
+                    <p className="text-lg font-medium text-muted-foreground italic">{currentQuestion.text.en}</p>
                 </div>
                 <RadioGroup 
                     value={answers[currentQuestion.id]?.mr || ""} 
@@ -521,32 +521,31 @@ function MockTestContent() {
                         const optionIndex = currentQuestion.options.mr.indexOf(value);
                         handleAnswerSelect(currentQuestion.id, currentQuestion.options.en[optionIndex], value);
                     }}
-                    className="space-y-2"
+                    className="grid gap-3"
                 >
                     {currentQuestion.options.mr.map((optionMr, index) => {
                         const optionEn = currentQuestion.options.en[index];
                         return (
-                            <Label key={index} className="flex items-start gap-4 p-3 border rounded-md has-[:checked]:bg-primary/10 has-[:checked]:border-primary cursor-pointer">
+                            <Label key={index} className="flex items-start gap-4 p-5 border-2 rounded-2xl cursor-pointer hover:bg-primary/5 transition-all has-[:checked]:border-primary has-[:checked]:bg-primary/5">
                                 <RadioGroupItem value={optionMr} id={`q${currentQuestion.id}-o${index}`} className="mt-1" />
-                                <div>
-                                    <span>{optionMr}</span>
-                                    <br/>
-                                    <span className="text-muted-foreground">{optionEn}</span>
+                                <div className="space-y-1">
+                                    <p className="text-lg font-bold">{optionMr}</p>
+                                    <p className="text-sm text-muted-foreground uppercase font-black opacity-60">{optionEn}</p>
                                 </div>
                             </Label>
                         )
                     })}
                 </RadioGroup>
 
-                 <div className="flex justify-between items-center pt-4 border-t mt-4">
-                    <Button variant="outline" onClick={handlePrevQuestion} disabled={currentQuestionIndex === 0}>
-                        Previous
+                 <div className="flex justify-between items-center pt-8 border-t mt-4">
+                    <Button variant="ghost" onClick={handlePrevQuestion} disabled={currentQuestionIndex === 0}>
+                        <ArrowLeft className="mr-2" /> Previous
                     </Button>
                      {currentQuestionIndex === activeQuestions.length - 1 ? (
-                         <Button onClick={handleSubmitTest} className="bg-accent text-accent-foreground hover:bg-accent/90">Submit Test</Button>
+                         <Button onClick={handleSubmitTest} className="bg-accent text-accent-foreground hover:bg-accent/90 px-10 font-black">SUBMIT TEST</Button>
                      ) : (
-                        <Button onClick={handleNextQuestion}>
-                            Next
+                        <Button onClick={handleNextQuestion} className="px-10 font-black">
+                            NEXT
                         </Button>
                      )}
                 </div>

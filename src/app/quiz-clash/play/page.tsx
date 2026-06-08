@@ -144,7 +144,7 @@ function QuizClashGameContent() {
             });
 
              toast({
-                title: "Quiz Finished!",
+                title: timeLeft <= 0 ? "TIMEOUT!" : "Quiz Finished!",
                 description: `${reason} Your score is being submitted.`,
                 duration: 5000,
             });
@@ -182,8 +182,6 @@ function QuizClashGameContent() {
             setQuestions(newQuestions);
         }
         else if (lifeline === 'switchQuestion') {
-             // In a real app, this would fetch another question from the backend.
-             // For now, we'll just show a toast as a placeholder for the logic.
              toast({ title: 'Lifeline Used: Switch', description: 'Question has been switched.'});
              const nextIndex = currentQuestionIndex < questions.length - 1 ? currentQuestionIndex + 1 : 0;
              setCurrentQuestionIndex(nextIndex);
@@ -214,40 +212,45 @@ function QuizClashGameContent() {
     return (
         <div className="bg-primary/90 dark:bg-slate-900 min-h-screen flex flex-col items-center justify-center p-4 font-sans text-white">
             <Card className="w-full max-w-2xl bg-primary-foreground/10 text-white border-primary-foreground/20 backdrop-blur-lg">
-                <CardHeader className="text-center">
+                <CardHeader className="text-center pb-0">
                     <div className="flex justify-between items-center">
                         <div className="w-24 text-left">
                              <p className="text-sm flex items-center gap-1"><Users className="w-4 h-4"/> {tournament.registeredUsers.length}</p>
                         </div>
                          <div className="relative w-24 h-24 flex items-center justify-center">
-                            <svg className="absolute w-full h-full" viewBox="0 0 100 100">
-                                <circle className="text-white/10" strokeWidth="8" stroke="currentColor" fill="transparent" r="45" cx="50" cy="50"/>
+                            <svg className="absolute w-full h-full -rotate-90" viewBox="0 0 100 100">
                                 <circle 
-                                    className="text-yellow-400"
+                                    className="text-white/10" 
+                                    strokeWidth="8" 
+                                    stroke="currentColor" 
+                                    fill="transparent" 
+                                    r="40" cx="50" cy="50"
+                                />
+                                <circle 
+                                    className={cn("transition-all duration-1000", timeLeft < 10 ? "text-red-500" : "text-yellow-400")}
                                     strokeWidth="8"
-                                    strokeDasharray={2 * Math.PI * 45}
-                                    strokeDashoffset={2 * Math.PI * 45 * (1 - (timeLeft / 30))}
+                                    strokeDasharray={2 * Math.PI * 40}
+                                    strokeDashoffset={2 * Math.PI * 40 * (1 - (timeLeft / 30))}
                                     strokeLinecap="round"
                                     stroke="currentColor"
                                     fill="transparent"
-                                    r="45" cx="50" cy="50"
-                                    style={{ transition: 'stroke-dashoffset 1s linear', transform: 'rotate(-90deg)', transformOrigin: '50% 50%' }}
+                                    r="40" cx="50" cy="50"
                                 />
                             </svg>
-                            <span className="text-3xl font-bold z-10">{timeLeft}</span>
+                            <span className={cn("text-3xl font-black z-10", timeLeft < 10 && "text-red-500 animate-pulse")}>{timeLeft}</span>
                         </div>
                         <div className="w-24 text-right">
-                            <p className="text-sm">Question {currentQuestionIndex + 1}/{questions.length}</p>
-                             <p className="font-bold text-lg text-yellow-300">Score: {finalScore}</p>
+                            <p className="text-xs opacity-70">Question</p>
+                            <p className="font-black text-xl">{currentQuestionIndex + 1}/{questions.length}</p>
                         </div>
                     </div>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                    <div className="p-4 bg-black/20 rounded-lg text-center min-h-[100px] flex items-center justify-center flex-col">
-                        <p className="text-xl font-semibold">{currentQuestion.text.mr}</p>
-                        <p className="text-md text-white/70">{currentQuestion.text.en}</p>
+                <CardContent className="space-y-6 pt-6">
+                    <div className="p-6 bg-black/20 rounded-2xl text-center min-h-[120px] flex items-center justify-center flex-col gap-2 border border-white/5">
+                        <p className="text-2xl font-black leading-tight">{currentQuestion.text.mr}</p>
+                        <p className="text-md text-white/60 italic">{currentQuestion.text.en}</p>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {currentQuestion.options.mr.map((option, index) => {
                             const isSelected = selectedOption === option;
                             const isCorrect = option === currentQuestion.correctAnswer.mr;
@@ -258,47 +261,52 @@ function QuizClashGameContent() {
                                     onClick={() => handleOptionSelect(option)}
                                     disabled={isAnswerLocked}
                                     className={cn(
-                                        "h-auto py-3 text-lg whitespace-normal justify-start transition-all duration-300 flex flex-col items-start",
-                                        "bg-black/20 hover:bg-black/40 border-2 border-primary-foreground/30",
-                                        isSelected && !isAnswerLocked && "border-yellow-400 bg-yellow-900/50",
-                                        isAnswerLocked && isCorrect && "bg-green-500 border-green-300 animate-pulse",
-                                        isAnswerLocked && isSelected && !isCorrect && "bg-red-500 border-red-300",
+                                        "h-auto py-4 px-6 text-lg whitespace-normal justify-start transition-all duration-300 flex flex-col items-start rounded-2xl",
+                                        "bg-black/20 hover:bg-black/40 border-2 border-white/10",
+                                        isSelected && !isAnswerLocked && "border-yellow-400 bg-yellow-900/40",
+                                        isAnswerLocked && isCorrect && "bg-green-500 border-green-300 animate-pulse text-white",
+                                        isAnswerLocked && isSelected && !isCorrect && "bg-red-500 border-red-300 text-white",
                                     )}
                                 >
-                                    <div>
-                                        <span className="font-bold text-yellow-400 mr-3">{String.fromCharCode(65 + index)}:</span>
-                                        <span>{option}</span>
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-sm font-black border border-white/10">
+                                            {String.fromCharCode(65 + index)}
+                                        </div>
+                                        <span className="font-bold">{option}</span>
                                     </div>
-                                    <div className="text-sm text-white/60 pl-8">{optionEn}</div>
+                                    <div className="text-xs opacity-50 pl-11 font-medium">{optionEn}</div>
                                 </Button>
                             );
                         })}
                     </div>
                 </CardContent>
-                <CardFooter className="flex-col gap-4">
+                <CardFooter className="flex-col gap-4 pb-8">
                      <Button
                         size="lg"
-                        className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold"
+                        className="w-full h-16 bg-yellow-400 hover:bg-yellow-500 text-black font-black text-xl shadow-xl shadow-yellow-950/20 rounded-2xl"
                         onClick={handleLockAnswer}
                         disabled={isAnswerLocked || !selectedOption}
                       >
-                       {isAnswerLocked ? <Loader2 className="animate-spin" /> : "Lock Answer"}
+                       {isAnswerLocked ? <Loader2 className="animate-spin" /> : "LOCK FINAL ANSWER"}
                     </Button>
-                    <div className="grid grid-cols-3 gap-2 w-full pt-4 border-t border-white/10">
-                        <Button variant="ghost" className="flex-col h-auto disabled:opacity-30" onClick={() => useLifeline('fiftyFifty')} disabled={usedLifelines.includes('fiftyFifty')}>
-                            <ShieldHalf className="w-8 h-8"/><span>50:50</span>
+                    <div className="grid grid-cols-3 gap-4 w-full pt-6 border-t border-white/5">
+                        <Button variant="ghost" className="flex-col h-auto py-3 rounded-xl hover:bg-white/5 disabled:opacity-20" onClick={() => useLifeline('fiftyFifty')} disabled={usedLifelines.includes('fiftyFifty')}>
+                            <ShieldHalf className="w-6 h-6 mb-1 text-yellow-400"/>
+                            <span className="text-[10px] font-black uppercase tracking-widest">50:50</span>
                         </Button>
-                         <Button variant="ghost" className="flex-col h-auto disabled:opacity-30" onClick={() => useLifeline('switchQuestion')} disabled={usedLifelines.includes('switchQuestion')}>
-                            <RefreshCw className="w-8 h-8"/><span>Switch</span>
+                         <Button variant="ghost" className="flex-col h-auto py-3 rounded-xl hover:bg-white/5 disabled:opacity-20" onClick={() => useLifeline('switchQuestion')} disabled={usedLifelines.includes('switchQuestion')}>
+                            <RefreshCw className="w-6 h-6 mb-1 text-yellow-400"/>
+                            <span className="text-[10px] font-black uppercase tracking-widest">Switch</span>
                         </Button>
-                         <Button variant="ghost" className="flex-col h-auto disabled:opacity-30" onClick={() => useLifeline('aiHint')} disabled={usedLifelines.includes('aiHint')}>
-                            <BrainCircuit className="w-8 h-8"/><span>AI Hint</span>
+                         <Button variant="ghost" className="flex-col h-auto py-3 rounded-xl hover:bg-white/5 disabled:opacity-20" onClick={() => useLifeline('aiHint')} disabled={usedLifelines.includes('aiHint')}>
+                            <BrainCircuit className="w-6 h-6 mb-1 text-yellow-400"/>
+                            <span className="text-[10px] font-black uppercase tracking-widest">AI Hint</span>
                         </Button>
                     </div>
                 </CardFooter>
             </Card>
              <Dialog open={isQuitConfirmOpen} onOpenChange={setIsQuitConfirmOpen}>
-                <DialogTrigger asChild><Button variant="link" className="mt-4 text-white/50">Quit Game</Button></DialogTrigger>
+                <DialogTrigger asChild><Button variant="link" className="mt-4 text-white/30 hover:text-white/60 font-bold uppercase tracking-widest text-[10px]">Quit Challenge</Button></DialogTrigger>
                 <DialogContent className="text-black">
                     <DialogHeader>
                         <DialogTitle>Are you sure you want to quit?</DialogTitle>

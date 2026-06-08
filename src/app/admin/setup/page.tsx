@@ -124,8 +124,8 @@ export default function SetupAdminPage() {
             } else throw e;
         }
 
-        // DELAY: Wait for Authentication state to fully propagate to Firestore rules
-        await new Promise(r => setTimeout(r, 4500));
+        // EXTENDED DELAY: Wait 5 seconds for Authentication state to fully propagate to Firestore rules
+        await new Promise(r => setTimeout(r, 5000));
         await ensureRecords(uid, 'admin');
         setStatus('success');
         toast({ title: "Sync Complete", description: "Head Admin mapping verified." });
@@ -152,8 +152,8 @@ export default function SetupAdminPage() {
             } else throw e;
         }
 
-        // DELAY: Wait for Identity Propagation
-        await new Promise(r => setTimeout(r, 4500));
+        // EXTENDED DELAY: Wait 5 seconds for Identity Propagation
+        await new Promise(r => setTimeout(r, 5000));
         await ensureRecords(uid, 'student');
         toast({ title: "Student Synced", description: "Test profile initialized." });
     } catch (error: any) {
@@ -187,6 +187,8 @@ export default function SetupAdminPage() {
                   <div className="font-bold">{targetDbId}</div>
                   <div className="text-muted-foreground">Current Auth:</div>
                   <div className="font-bold truncate text-primary">{auth?.currentUser?.email || 'NONE'}</div>
+                  <div className="text-muted-foreground">Current UID:</div>
+                  <div className="font-bold truncate text-primary">{auth?.currentUser?.uid || 'NONE'}</div>
               </div>
           </div>
 

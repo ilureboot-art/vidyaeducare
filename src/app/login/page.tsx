@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -54,6 +53,7 @@ export default function LoginPage() {
       });
 
     } catch (error: any) {
+       console.error("Login Error:", error);
        let errorMessage = "Invalid credentials.";
        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
            errorMessage = "Please check your email and password.";
@@ -70,12 +70,12 @@ export default function LoginPage() {
   return (
     <div className="w-full max-w-md mx-auto flex flex-col items-center justify-center min-h-screen space-y-4 p-4">
       <div className="text-center space-y-2">
-        <h1 className="text-4xl font-bold text-primary flex items-center gap-2 justify-center">
-            <Gamepad2 className="w-10 h-10" /> Vidya EduCare
+        <h1 className="text-4xl font-bold text-primary flex items-center gap-2 justify-center tracking-tighter">
+            <Gamepad2 className="w-10 h-10" /> VIDYA EDUCARE
         </h1>
-        <p className="text-muted-foreground">User Login Portal</p>
+        <p className="text-muted-foreground font-medium uppercase text-xs tracking-widest">Student & Parent Portal</p>
       </div>
-      <Card className="w-full">
+      <Card className="w-full border-primary/10 shadow-xl">
         <form onSubmit={handleLogin}>
           <CardHeader>
             <CardTitle>Sign In</CardTitle>
@@ -85,9 +85,9 @@ export default function LoginPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
+              <Label htmlFor="email-login">Email Address</Label>
               <Input 
-                id="email" 
+                id="email-login" 
                 type="email" 
                 placeholder="you@example.com" 
                 required 
@@ -97,10 +97,10 @@ export default function LoginPage() {
               />
             </div>
             <div className="space-y-2 relative">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password-login">Password</Label>
               <div className="relative">
                 <Input 
-                  id="password" 
+                  id="password-login" 
                   type={showPassword ? "text" : "password"}
                   required
                   value={password}
@@ -138,16 +138,16 @@ export default function LoginPage() {
             </div>
           </CardContent>
           <CardFooter className="flex-col gap-4">
-            <Button className="w-full font-bold" type="submit" disabled={isLoading || authLoading || !isFirebaseReady}>
-                {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Verifying...</> : 'Login'}
+            <Button className="w-full font-black py-6 text-lg shadow-lg" type="submit" disabled={isLoading || authLoading || !isFirebaseReady}>
+                {isLoading ? <><Loader2 className="mr-2 h-5 w-5 animate-spin"/> SECURING SESSION...</> : 'LOGIN TO WORKSPACE'}
             </Button>
           </CardFooter>
         </form>
       </Card>
-      <div className="text-center text-sm">
+      <div className="text-center text-sm font-medium">
         Need an account?{" "}
         <Link href="/signup" passHref>
-            <Button variant="link" className="px-1">Create Account</Button>
+            <Button variant="link" className="px-1 font-bold">Create Account</Button>
         </Link>
       </div>
     </div>

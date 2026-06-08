@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -13,7 +12,7 @@ import Link from 'next/link';
 import type { StoreConfig, MockTestPackage, ReferboltSubscription } from "@/lib/store-config";
 import type { WalletData } from "@/lib/user-data";
 import { useAuth, useDb } from "@/firebase";
-import { doc, getDoc, runTransaction, collection, serverTimestamp, updateDoc, arrayUnion, query, where, getDocs, orderBy, limit, Timestamp, type Firestore } from "firebase/firestore";
+import { doc, getDoc, runTransaction, collection, serverTimestamp, arrayUnion, query, where, getDocs, orderBy, limit, Timestamp, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import UserLayout from "@/components/UserLayout";
 import { Badge } from "@/components/ui/badge";
@@ -239,26 +238,25 @@ function StorePageContent() {
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-6">
-      <Card className="shadow-lg">
+      <Card className="shadow-lg border-primary/10">
         <CardHeader>
-          <CardTitle className="text-3xl font-bold text-primary flex items-center justify-center gap-2">
-            <ShoppingCart />
-            Product Store
+          <CardTitle className="text-3xl font-bold text-primary flex items-center justify-center gap-2 tracking-tighter">
+            <ShoppingCart className="w-8 h-8" /> PRODUCT STORE
           </CardTitle>
-          <CardDescription>
-            Your current wallet balance: <span className="font-bold text-primary">₹{walletData.balance.toFixed(2)}</span>
+          <CardDescription className="text-center font-medium">
+            Your secure gateway to academic excellence. Wallet Balance: <span className="font-black text-primary">₹{walletData.balance.toFixed(2)}</span>
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="tests" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="tests">Mock Test Packs</TabsTrigger>
-              <TabsTrigger value="referbolt">ReferBolt Access</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 h-12">
+              <TabsTrigger value="tests" className="font-bold">MOCK TEST PACKS</TabsTrigger>
+              <TabsTrigger value="referbolt" className="font-bold">REFERBOLT ACCESS</TabsTrigger>
             </TabsList>
             <TabsContent value="tests" className="space-y-6 pt-6">
                  
                  {!isCheckingEligibility && (
-                    <Card className={`border-dashed border-2 ${isEligibleForRecDiscount ? 'border-green-500 bg-green-500/5' : 'border-primary/20 bg-muted/20'}`}>
+                    <Card className={`border-dashed border-2 transition-all ${isEligibleForRecDiscount ? 'border-green-500 bg-green-500/5' : 'border-primary/20 bg-muted/20'}`}>
                         <CardContent className="p-4 flex items-center justify-between gap-4">
                             <div className="flex items-center gap-3">
                                 {isEligibleForRecDiscount ? (
@@ -301,16 +299,6 @@ function StorePageContent() {
                             className="bg-background"
                         />
                     </div>
-                     <div className="space-y-2">
-                        <Label htmlFor="referralCode2" className="text-[10px] font-bold uppercase">Secondary Code (Optional Split)</Label>
-                        <Input 
-                            id="referralCode2" 
-                            placeholder="Enter second code if any"
-                            value={referralCode2}
-                            onChange={(e) => setReferralCode2(e.target.value)}
-                            className="bg-background"
-                        />
-                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
@@ -339,11 +327,11 @@ function StorePageContent() {
                           </div>
                         )}
                       <CardHeader>
-                        <CardTitle className="text-2xl font-bold flex items-center justify-center gap-2">
+                        <CardTitle className="text-2xl font-black flex items-center justify-center gap-2">
                           <BookOpen className="text-primary h-5 w-5" />
                           {product.name}
                         </CardTitle>
-                        <CardDescription>{product.months} Months Premium Access</CardDescription>
+                        <CardDescription className="font-bold text-xs uppercase">{product.months} Months Premium Access</CardDescription>
                       </CardHeader>
                       <CardContent className="flex-grow flex flex-col justify-center items-center space-y-6">
                          <div className="space-y-1">

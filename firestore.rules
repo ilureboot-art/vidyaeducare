@@ -1,4 +1,3 @@
-
 rules_version = '2';
 
 service cloud.firestore {
@@ -13,7 +12,6 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // Direct check against the admins collection for high-performance role verification
     // Robust check: ensures document exists before accessing properties to prevent evaluation crashes
     function isAdmin() {
       return isAuthenticated() && 
@@ -30,10 +28,7 @@ service cloud.firestore {
     }
 
     match /admins/{userId} {
-      // CRITICAL: Allow users to read their own admin doc to verify their role during login.
       allow get: if isOwner(userId);
-      
-      // Full management only for Head Admins
       allow read, write: if isHeadAdmin();
     }
 

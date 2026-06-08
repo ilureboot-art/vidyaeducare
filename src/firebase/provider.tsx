@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
@@ -22,7 +21,7 @@ const DbContext = createContext<Firestore | undefined>(undefined);
 const AuthServiceContext = createContext<Auth | undefined>(undefined);
 
 // Synchronous role cache to prevent hydration mismatches and sequential load lag
-const ROLE_CACHE_KEY = 'vidya_auth_role_v13';
+const ROLE_CACHE_KEY = 'vidya_auth_role_v14';
 
 const getCachedRoles = () => {
     if (typeof window === 'undefined') return null;
@@ -94,9 +93,9 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     try {
       const adminDocRef = doc(db, "admins", user.uid);
       
-      // Hardened getDoc with localized catch to prevent Unhandled Runtime Error
+      // Hardened getDoc with localized catch to prevent Unhandled Runtime Error during offline states
       const adminDocSnap = await getDoc(adminDocRef).catch((e: any) => {
-          console.warn("Firestore role resolution suppressed error:", e.message);
+          console.warn("Firestore role resolution suppressed error (Likely Offline):", e.message);
           return null; 
       });
       
@@ -148,7 +147,6 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     if (authState.loading || !authState.isResolved || !services) return;
 
     const { user, isAdmin } = authState;
-    // Normalize path: handle trailing slashes consistently
     const cleanPath = pathname === '/' ? '/' : pathname.replace(/\/$/, '');
     
     const isPublicRoute = ['/', '/how-to-play', '/admin/setup', '/check-head-admin', '/forgot-password', '/ai-tutor', '/ai-notes', '/trial-mock-test'].includes(cleanPath);
@@ -180,7 +178,6 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     if (targetPath && targetPath !== cleanPath && navigationLock.current !== targetPath) {
       navigationLock.current = targetPath;
       router.replace(targetPath);
-      // Mutex cooldown to prevent redirect feedback loops
       const timer = setTimeout(() => { navigationLock.current = null; }, 1500);
       return () => clearTimeout(timer);
     }

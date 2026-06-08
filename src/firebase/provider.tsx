@@ -51,7 +51,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   });
 
   const router = useRouter();
-  const pathname = usePathname();
+  const pathname = usePathname() || "";
   const navigationLock = useRef<string | null>(null);
 
   const processSnap = useCallback((snap: DocumentSnapshot | null, uid: string) => {
@@ -73,7 +73,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
   const resolveUserRole = useCallback(async (user: User | null, db: Firestore) => {
     if (!user) {
-      sessionStorage.removeItem(ROLE_CACHE_KEY);
+      if (typeof window !== 'undefined') sessionStorage.removeItem(ROLE_CACHE_KEY);
       return { isAdmin: false, isHeadAdmin: false };
     }
 
@@ -83,7 +83,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      // Explicitly fetch role from Firestore to ensure admin@vidyaeducare.com is correctly identified
+      // Explicitly fetch role from Firestore
       const adminDocRef = doc(db, "admins", user.uid);
       const adminDocSnap = await getDoc(adminDocRef).catch((e) => {
           console.warn("Administrative check skipped due to connectivity/rules:", e.message);
@@ -116,7 +116,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) {
-          sessionStorage.removeItem(ROLE_CACHE_KEY);
+          if (typeof window !== 'undefined') sessionStorage.removeItem(ROLE_CACHE_KEY);
           setAuthState({ user: null, loading: false, isAdmin: false, isHeadAdmin: false, isResolved: true });
           return;
       }

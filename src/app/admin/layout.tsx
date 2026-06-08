@@ -1,4 +1,3 @@
-
 "use client";
 
 import { AdminSidebar } from "@/components/AdminSidebar";
@@ -12,11 +11,12 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
+  const pathname = usePathname() || "";
+  const cleanPath = pathname === '/' ? '/' : pathname.replace(/\/$/, '');
 
   // Do not render the main admin sidebar/header or enforce protection 
   // on the login and setup pages. This prevents a Catch-22 for initialization.
-  if (pathname === '/admin/login' || pathname === '/admin/setup') {
+  if (cleanPath === '/admin/login' || cleanPath === '/admin/setup') {
     return <>{children}</>;
   }
 

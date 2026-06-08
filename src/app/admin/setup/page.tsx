@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -68,6 +69,11 @@ export default function SetupAdminPage() {
         transaction.delete(adminDocRef);
       }
     });
+
+    // Clear role cache to force re-resolution
+    if (typeof window !== 'undefined') {
+        sessionStorage.clear();
+    }
   };
 
   const createHeadAdmin = async () => {
@@ -82,27 +88,21 @@ export default function SetupAdminPage() {
         } catch (e: any) {
             if (e.code === 'auth/email-already-in-use') {
                 try {
-                    // Force a re-mapping for existing auth user
+                    // Try to get UID via background login
                     const signInRes = await signInWithEmailAndPassword(auth, HEAD_ADMIN_EMAIL, HEAD_ADMIN_PASSWORD);
                     uid = signInRes.user.uid;
                 } catch (signInErr) {
                     const q = query(collection(db, "users"), where("email", "==", HEAD_ADMIN_EMAIL));
                     const snap = await getDocs(q);
                     if (!snap.empty) uid = snap.docs[0].id;
-                    else throw new Error("Administrator exists in Auth but mapping failed. Verify console.");
+                    else throw new Error("Account exists but profile mapping failed. Please check credentials.");
                 }
             } else throw e;
         }
 
         await ensureRecords(uid, 'admin');
-        
-        // Force re-resolution for the current session
-        if (typeof window !== 'undefined') {
-            sessionStorage.clear();
-        }
-        
         setStatus('success');
-        toast({ title: "Admin Account Correctly Mapped", description: "Head Admin privileges established." });
+        toast({ title: "Admin Mapping Established", description: "Master credentials synchronized." });
     } catch (error: any) {
         console.error(error);
         setErrorMessage(error.message);
@@ -128,13 +128,13 @@ export default function SetupAdminPage() {
                     const q = query(collection(db, "users"), where("email", "==", TEST_USER_EMAIL));
                     const snap = await getDocs(q);
                     if (!snap.empty) uid = snap.docs[0].id;
-                    else throw new Error("Student exists in Auth but UID lookup failed.");
+                    else throw new Error("Student exists but UID lookup failed.");
                 }
             } else throw e;
         }
 
         await ensureRecords(uid, 'student');
-        toast({ title: "Student Account Mapped", description: "Access restored." });
+        toast({ title: "Student Access Restored", description: "Mapping verified." });
     } catch (error: any) {
         toast({ variant: 'destructive', title: "Sync Failed", description: error.message });
     } finally {
@@ -150,7 +150,7 @@ export default function SetupAdminPage() {
             <Shield className="w-6 h-6" /> ROLE INITIALIZATION
           </CardTitle>
           <CardDescription>
-            Map and synchronize accounts to their respective roles.
+            Definitively map accounts to their administrative or student roles.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">

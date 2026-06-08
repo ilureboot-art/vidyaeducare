@@ -14,8 +14,9 @@ export default function AdminLayout({
 }) {
   const pathname = usePathname();
 
-  // Do not render the main admin sidebar/header on the login page
-  if (pathname === '/admin/login') {
+  // Do not render the main admin sidebar/header or enforce protection 
+  // on the login and setup pages. This prevents a Catch-22 for initialization.
+  if (pathname === '/admin/login' || pathname === '/admin/setup') {
     return <>{children}</>;
   }
 

@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDb, useAuthService } from '@/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
@@ -32,17 +31,19 @@ export default function SetupAdminPage() {
   const [isDatabaseMissing, setIsDatabaseMissing] = useState(false);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
 
-  // Verification Data
+  // Diagnostic Data
   const targetProjectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
   const targetDbId = "vidyaeducaredatabase";
 
   const ensureRecords = async (uid: string, type: 'admin' | 'student') => {
     if (!db) throw new Error("Database not initialized");
+    
     await runTransaction(db, async (transaction) => {
       const userDocRef = doc(db, "users", uid);
       const walletDocRef = doc(db, "wallets", uid);
       const adminDocRef = doc(db, "admins", uid);
 
+      // 1. Set User Profile
       transaction.set(userDocRef, {
         id: uid,
         name: type === 'admin' ? HEAD_ADMIN_NAME : TEST_USER_NAME,
@@ -52,12 +53,14 @@ export default function SetupAdminPage() {
         status: "Active",
       }, { merge: true });
 
+      // 2. Set Wallet
       transaction.set(walletDocRef, {
         balance: type === 'admin' ? 0 : 1000,
         coins: 100,
         referralCode: type === 'admin' ? 'HEADADMIN' : `REF${uid.slice(0, 6).toUpperCase()}`
       }, { merge: true });
 
+      // 3. Set or Clear Admin Permissions
       if (type === 'admin') {
         transaction.set(adminDocRef, {
           name: HEAD_ADMIN_NAME, 
@@ -81,13 +84,14 @@ export default function SetupAdminPage() {
     console.error("Setup Error Details:", error);
     const msg = error.message || "An unexpected error occurred.";
     
-    // Catch specific Native mode / Datastore mode errors
     if (msg.includes("Native mode API is disabled") || msg.includes("Datastore mode") || msg.includes("Native mode")) {
         setIsDatabaseMissing(true);
-        setErrorMessage("CRITICAL: This project is in Datastore Mode. You must ensure that the database 'vidyaeducaredatabase' was created specifically in 'Firestore Native' mode in the Google Cloud Console.");
+        setErrorMessage("CRITICAL: This project is in Datastore Mode. Please ensure the database 'vidyaeducaredatabase' was created specifically in 'Firestore Native' mode in the Google Cloud Console.");
     } else if (msg.includes("database (default) does not exist") || msg.includes("vidyaeducaredatabase") || msg.includes("not exist")) {
         setIsDatabaseMissing(true);
-        setErrorMessage(`The database '${targetDbId}' could not be reached. Please verify it exists in your Firebase project.`);
+        setErrorMessage(`The database '${targetDbId}' could not be reached. Verify it exists in your Firebase project.`);
+    } else if (msg.includes("Missing or insufficient permissions")) {
+        setErrorMessage("Permission Denied. Please ensure you are clicking 'SYNC ADMIN' while logged in as admin@vidyaeducare.com, or check your Firestore rules.");
     } else {
         setErrorMessage(msg);
     }
@@ -98,6 +102,7 @@ export default function SetupAdminPage() {
     if (!db || !auth) return;
     setStatus('loading');
     setIsDatabaseMissing(false);
+    setErrorMessage('');
     
     try {
         let uid = '';
@@ -110,10 +115,11 @@ export default function SetupAdminPage() {
                     const signInRes = await signInWithEmailAndPassword(auth, HEAD_ADMIN_EMAIL, HEAD_ADMIN_PASSWORD);
                     uid = signInRes.user.uid;
                 } catch (signInErr) {
+                    // Try to resolve UID via query if password was changed
                     const q = query(collection(db, "users"), where("email", "==", HEAD_ADMIN_EMAIL));
                     const snap = await getDocs(q);
                     if (!snap.empty) uid = snap.docs[0].id;
-                    else throw new Error("Account exists but profile mapping failed.");
+                    else throw new Error("Account exists but profile mapping failed. Sign in manually first.");
                 }
             } else throw e;
         }
@@ -130,6 +136,7 @@ export default function SetupAdminPage() {
     if (!db || !auth) return;
     setIsCreatingUser(true);
     setIsDatabaseMissing(false);
+    setErrorMessage('');
     
     try {
         let uid = '';
@@ -174,20 +181,20 @@ export default function SetupAdminPage() {
           
           <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 space-y-2">
               <p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2">
-                  <Database size={12}/> Connection Diagnostics
+                  <Database size={12}/> Connectivity Diagnostics
               </p>
               <div className="grid grid-cols-2 gap-2 text-[10px] font-mono">
                   <div className="text-muted-foreground">Project:</div>
                   <div className="font-bold truncate">{targetProjectId}</div>
                   <div className="text-muted-foreground">Database:</div>
-                  <div className="font-bold">{targetDbId}</div>
+                  <div className="font-bold">{targetDbId} (Native)</div>
               </div>
           </div>
 
           {isDatabaseMissing && (
             <Alert variant="destructive" className="bg-destructive/10 border-destructive/20">
                 <AlertTriangle className="h-4 w-4" />
-                <AlertTitle className="font-bold text-xs uppercase">Configuration Conflict</AlertTitle>
+                <AlertTitle className="font-bold text-xs uppercase">Infrastructure Conflict</AlertTitle>
                 <AlertDescription className="text-xs space-y-3 mt-2">
                     <p>{errorMessage}</p>
                     <div className="bg-background/80 p-3 rounded border font-sans space-y-2">
@@ -248,7 +255,7 @@ export default function SetupAdminPage() {
         </CardContent>
         <CardFooter className="bg-primary/5 py-4 border-t justify-center gap-2">
             <Info size={10} className="text-muted-foreground"/>
-            <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground">Standard Web SDK requires Firestore Native Mode</p>
+            <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground">Custom Database: {targetDbId}</p>
         </CardFooter>
       </Card>
     </div>

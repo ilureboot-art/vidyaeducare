@@ -28,12 +28,16 @@ service cloud.firestore {
     }
 
     match /admins/{userId} {
-      allow get: if isOwner(userId);
-      allow read, write: if isHeadAdmin();
+      allow get: if isOwner(userId) || isAdmin();
+      // Allow the master email to create the first admin record to bootstrap the system
+      allow create: if isOwner(userId) && (isHeadAdmin() || request.auth.token.email == 'admin@vidyaeducare.com');
+      allow update, delete: if isHeadAdmin();
     }
 
     match /users/{userId} {
-      allow read, write: if isOwner(userId) || isAdmin();
+      // Allow read/list for setup and admin checks
+      allow read: if isOwner(userId) || isAdmin() || isAuthenticated();
+      allow write: if isOwner(userId) || isAdmin();
     }
 
     match /wallets/{userId} {
@@ -47,7 +51,6 @@ service cloud.firestore {
     }
     
     match /transactions/{txId} {
-        // Combined read allows get and list for owners/admins
         allow read: if isAuthenticated() && (
           resource == null || resource.data.user == request.auth.uid || isAdmin()
         );

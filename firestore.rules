@@ -12,45 +12,53 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
+    // BOOTSTRAP HELPER: Identifies the master email allowed to initialize the project
+    function isBootstrap() {
+      return isAuthenticated() && request.auth.token.email == 'admin@vidyaeducare.com';
+    }
+
     // Robust check: ensures document exists before accessing properties to prevent evaluation crashes
     function isAdmin() {
-      return isAuthenticated() && 
-             exists(/databases/$(database)/documents/admins/$(request.auth.uid)) && (
-             get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.status == 'Active' ||
-             get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'Head Admin'
+      if (!isAuthenticated()) return false;
+      if (isBootstrap()) return true; // Bootstrap email is always an admin
+      
+      let adminPath = /databases/$(database)/documents/admins/$(request.auth.uid);
+      return exists(adminPath) && (
+             get(adminPath).data.status == 'Active' ||
+             get(adminPath).data.role == 'Head Admin'
       );
     }
 
     function isHeadAdmin() {
-      return isAuthenticated() && 
-             exists(/databases/$(database)/documents/admins/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'Head Admin';
+      if (!isAuthenticated()) return false;
+      if (isBootstrap()) return true;
+
+      let adminPath = /databases/$(database)/documents/admins/$(request.auth.uid);
+      return exists(adminPath) && get(adminPath).data.role == 'Head Admin';
     }
 
     match /admins/{userId} {
       allow get: if isOwner(userId) || isAdmin();
-      // BOOTSTRAP RULE: Allow the master email to bootstrap the first admin record.
-      allow create, update: if isOwner(userId) && (isHeadAdmin() || request.auth.token.email == 'admin@vidyaeducare.com');
-      allow delete: if isHeadAdmin() || isOwner(userId);
+      // Allow bootstrap email or existing Head Admin to create/update admin records
+      allow write: if isBootstrap() || isOwner(userId) && isHeadAdmin();
+      allow delete: if isHeadAdmin() || isBootstrap();
     }
 
     match /users/{userId} {
-      // REQUIRED: Allow listing so setup can find UID by email
       allow list: if isAuthenticated();
       allow get: if isOwner(userId) || isAdmin() || isAuthenticated();
-      allow write: if isOwner(userId) || isAdmin();
+      allow write: if isOwner(userId) || isAdmin() || isBootstrap();
     }
 
     match /wallets/{userId} {
-      // REQUIRED: Allow listing so signup can verify referral codes
       allow list: if isAuthenticated();
-      allow get, write: if isOwner(userId) || isAdmin();
+      allow get, write: if isOwner(userId) || isAdmin() || isBootstrap();
     }
 
     match /students/{studentId} {
       allow list: if isAuthenticated();
       allow get, write: if isAuthenticated() && (
-        resource == null || resource.data.parentId == request.auth.uid || isAdmin()
+        resource == null || resource.data.parentId == request.auth.uid || isAdmin() || isBootstrap()
       );
     }
     
@@ -76,7 +84,7 @@ service cloud.firestore {
     }
 
     match /activationCodes/{userId} {
-        allow read, write: if isOwner(userId) || isAdmin();
+        allow read, write: if isOwner(userId) || isAdmin() || isBootstrap();
     }
 
     match /testSets/{testSetId} {
@@ -92,7 +100,7 @@ service cloud.firestore {
     match /testResults/{resultId} {
         allow create: if isAuthenticated();
         allow read: if isAuthenticated() && (
-          resource.data.studentId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.students || isAdmin()
+          isAdmin() || resource.data.studentId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.students
         );
     }
 
@@ -118,7 +126,7 @@ service cloud.firestore {
     }
     
     match /referbolt/{userId} {
-        allow read, write: if isOwner(userId) || isAdmin();
+        allow read, write: if isOwner(userId) || isAdmin() || isBootstrap();
     }
     
     match /clients/{clientId} {

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDb, useAuthService } from '@/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
-import { doc, runTransaction, getDocs, collection, query, where } from 'firebase/firestore';
+import { doc, writeBatch, collection } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, CheckCircle, Shield, RefreshCcw, AlertTriangle, ExternalLink, Database, Info } from 'lucide-react';
@@ -38,44 +38,46 @@ export default function SetupAdminPage() {
   const ensureRecords = async (uid: string, type: 'admin' | 'student') => {
     if (!db) throw new Error("Database not initialized");
     
-    await runTransaction(db, async (transaction) => {
-      const userDocRef = doc(db, "users", uid);
-      const walletDocRef = doc(db, "wallets", uid);
-      const adminDocRef = doc(db, "admins", uid);
+    const batch = writeBatch(db);
+    const userDocRef = doc(db, "users", uid);
+    const walletDocRef = doc(db, "wallets", uid);
+    const adminDocRef = doc(db, "admins", uid);
 
-      // 1. Set User Profile
-      transaction.set(userDocRef, {
-        id: uid,
-        name: type === 'admin' ? HEAD_ADMIN_NAME : TEST_USER_NAME,
-        email: type === 'admin' ? HEAD_ADMIN_EMAIL : TEST_USER_EMAIL,
-        phone: type === 'admin' ? HEAD_ADMIN_PHONE : "0000000000",
+    // 1. Set User Profile
+    batch.set(userDocRef, {
+      id: uid,
+      name: type === 'admin' ? HEAD_ADMIN_NAME : TEST_USER_NAME,
+      email: type === 'admin' ? HEAD_ADMIN_EMAIL : TEST_USER_EMAIL,
+      phone: type === 'admin' ? HEAD_ADMIN_PHONE : "0000000000",
+      joinDate: new Date().toISOString(),
+      status: "Active",
+    }, { merge: true });
+
+    // 2. Set Wallet
+    batch.set(walletDocRef, {
+      balance: type === 'admin' ? 0 : 1000,
+      coins: 100,
+      referralCode: type === 'admin' ? 'HEADADMIN' : `REF${uid.slice(0, 6).toUpperCase()}`
+    }, { merge: true });
+
+    // 3. Set or Clear Admin Permissions
+    if (type === 'admin') {
+      batch.set(adminDocRef, {
+        name: HEAD_ADMIN_NAME, 
+        email: HEAD_ADMIN_EMAIL, 
+        phone: HEAD_ADMIN_PHONE,
+        role: "Head Admin", 
+        status: "Active", 
         joinDate: new Date().toISOString(),
-        status: "Active",
       }, { merge: true });
+    } else {
+      // Students should not be in the admin collection
+      batch.delete(adminDocRef);
+    }
 
-      // 2. Set Wallet
-      transaction.set(walletDocRef, {
-        balance: type === 'admin' ? 0 : 1000,
-        coins: 100,
-        referralCode: type === 'admin' ? 'HEADADMIN' : `REF${uid.slice(0, 6).toUpperCase()}`
-      }, { merge: true });
+    await batch.commit();
 
-      // 3. Set or Clear Admin Permissions
-      if (type === 'admin') {
-        transaction.set(adminDocRef, {
-          name: HEAD_ADMIN_NAME, 
-          email: HEAD_ADMIN_EMAIL, 
-          phone: HEAD_ADMIN_PHONE,
-          role: "Head Admin", 
-          status: "Active", 
-          joinDate: new Date().toISOString(),
-        }, { merge: true });
-      } else {
-        // If syncing a student, we explicitly remove them from admins collection
-        transaction.delete(adminDocRef);
-      }
-    });
-
+    // Clear session cache to force permission re-verification
     if (typeof window !== 'undefined') {
         sessionStorage.clear();
     }
@@ -90,9 +92,9 @@ export default function SetupAdminPage() {
         setErrorMessage("CRITICAL: Infrastructure Mismatch. Ensure 'vidyaeducaredatabase' is created in 'Firestore Native' mode.");
     } else if (msg.includes("database (default) does not exist") || msg.includes("not exist")) {
         setIsDatabaseMissing(true);
-        setErrorMessage(`Database '${targetDbId}' not found. Check console.`);
-    } else if (msg.includes("Missing or insufficient permissions")) {
-        setErrorMessage("Permission Denied. Ensure you are 'Syncing' while logged in as admin@vidyaeducare.com.");
+        setErrorMessage(`Database '${targetDbId}' not found. Check Google Cloud console.`);
+    } else if (msg.includes("Missing or insufficient permissions") || msg.includes("permission-denied")) {
+        setErrorMessage("Permission Denied. Please ensure you are logged in as admin@vidyaeducare.com and the database rules are applied.");
     } else {
         setErrorMessage(msg);
     }
@@ -118,11 +120,11 @@ export default function SetupAdminPage() {
         }
 
         // Token propagation buffer
-        await new Promise(r => setTimeout(r, 800));
+        await new Promise(r => setTimeout(r, 1000));
 
         await ensureRecords(uid, 'admin');
         setStatus('success');
-        toast({ title: "Admin Mapping Verified", description: "Identity synchronized with master credentials." });
+        toast({ title: "Sync Complete", description: "Admin identity mapping updated in " + targetDbId });
     } catch (error: any) {
         handleError(error);
     }
@@ -146,10 +148,10 @@ export default function SetupAdminPage() {
             } else throw e;
         }
 
-        await new Promise(r => setTimeout(r, 800));
+        await new Promise(r => setTimeout(r, 1000));
 
         await ensureRecords(uid, 'student');
-        toast({ title: "Student Access Restored", description: "Test profile mapping verified." });
+        toast({ title: "Student Synced", description: "Test profile initialized in " + targetDbId });
     } catch (error: any) {
         handleError(error);
     } finally {
@@ -162,22 +164,22 @@ export default function SetupAdminPage() {
       <Card className="w-full max-w-md shadow-2xl">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-black flex items-center justify-center gap-2 text-primary">
-            <Shield className="w-6 h-6" /> ROLE INITIALIZATION
+            <Shield className="w-6 h-6" /> SYSTEM INITIALIZATION
           </CardTitle>
           <CardDescription>
-            Map accounts to their administrative or student roles.
+            Bootstrap your administrative roles and test accounts.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           
           <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 space-y-2">
               <p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2">
-                  <Database size={12}/> Connectivity Diagnostics
+                  <Database size={12}/> Connectivity Hub
               </p>
               <div className="grid grid-cols-2 gap-2 text-[10px] font-mono">
                   <div className="text-muted-foreground">Project:</div>
                   <div className="font-bold truncate">{targetProjectId}</div>
-                  <div className="text-muted-foreground">Database:</div>
+                  <div className="text-muted-foreground">Database ID:</div>
                   <div className="font-bold">{targetDbId}</div>
               </div>
           </div>
@@ -185,20 +187,20 @@ export default function SetupAdminPage() {
           {isDatabaseMissing && (
             <Alert variant="destructive" className="bg-destructive/10 border-destructive/20">
                 <AlertTriangle className="h-4 w-4" />
-                <AlertTitle className="font-bold text-xs uppercase tracking-tight">Infrastructure Configuration Error</AlertTitle>
+                <AlertTitle className="font-bold text-xs uppercase tracking-tight">Infrastructure Alert</AlertTitle>
                 <AlertDescription className="text-xs space-y-3 mt-2">
                     <p>{errorMessage}</p>
                     <div className="bg-background/80 p-3 rounded border font-sans space-y-2">
                       <p className="font-bold text-primary italic">Required Action:</p>
                       <ol className="list-decimal list-inside space-y-1 opacity-80">
-                        <li>Go to Firebase Console (Firestore).</li>
-                        <li>Verify <b>Database ID</b> is exactly <b>{targetDbId}</b></li>
+                        <li>Go to Firebase Console.</li>
+                        <li>Ensure <b>Database ID</b> is exactly <b>{targetDbId}</b></li>
                         <li>Ensure it was created in <b>Native mode</b>.</li>
                       </ol>
                     </div>
                     <Button asChild variant="destructive" size="sm" className="w-full font-bold">
                         <a href={`https://console.firebase.google.com/project/${targetProjectId}/firestore/databases`} target="_blank" rel="noopener noreferrer">
-                            VERIFY IN CONSOLE <ExternalLink className="ml-2 h-3 w-3" />
+                            FIX IN CONSOLE <ExternalLink className="ml-2 h-3 w-3" />
                         </a>
                     </Button>
                 </AlertDescription>
@@ -207,7 +209,7 @@ export default function SetupAdminPage() {
 
           <div className="space-y-4">
             <h3 className="font-bold text-xs uppercase tracking-widest text-muted-foreground border-b pb-2 flex items-center gap-2">
-                Administrator Access
+                Administrative Setup
             </h3>
             {status === 'success' ? (
                 <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 p-4 rounded-xl space-y-3">
@@ -245,7 +247,7 @@ export default function SetupAdminPage() {
         </CardContent>
         <CardFooter className="bg-primary/5 py-4 border-t justify-center gap-2">
             <Info size={10} className="text-muted-foreground"/>
-            <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground">Custom Database: {targetDbId}</p>
+            <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground">Targeting Named Database: {targetDbId}</p>
         </CardFooter>
       </Card>
     </div>

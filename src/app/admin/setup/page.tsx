@@ -1,14 +1,14 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDb, useAuthService } from '@/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, runTransaction, getDocs, collection, query, where } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, CheckCircle, Shield, RefreshCcw, AlertTriangle, ExternalLink, Database } from 'lucide-react';
+import { Loader2, CheckCircle, Shield, RefreshCcw, AlertTriangle, ExternalLink, Database, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -31,6 +31,10 @@ export default function SetupAdminPage() {
   const [errorMessage, setErrorMessage] = useState('');
   const [isDatabaseMissing, setIsDatabaseMissing] = useState(false);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
+
+  // Verification Data
+  const targetProjectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+  const targetDbId = "vidyaeducaredatabase";
 
   const ensureRecords = async (uid: string, type: 'admin' | 'student') => {
     if (!db) throw new Error("Database not initialized");
@@ -74,16 +78,16 @@ export default function SetupAdminPage() {
   };
 
   const handleError = (error: any) => {
-    console.error(error);
+    console.error("Setup Error Details:", error);
     const msg = error.message || "An unexpected error occurred.";
     
     // Catch specific Native mode / Datastore mode errors
     if (msg.includes("Native mode API is disabled") || msg.includes("Datastore mode") || msg.includes("Native mode")) {
         setIsDatabaseMissing(true);
-        setErrorMessage("Your project is in Datastore Mode. Please ensure 'vidyaeducaredatabase' is created as a Firestore Native database in the Google Cloud Console.");
+        setErrorMessage("CRITICAL: This project is in Datastore Mode. You must ensure that the database 'vidyaeducaredatabase' was created specifically in 'Firestore Native' mode in the Google Cloud Console.");
     } else if (msg.includes("database (default) does not exist") || msg.includes("vidyaeducaredatabase") || msg.includes("not exist")) {
         setIsDatabaseMissing(true);
-        setErrorMessage("The database 'vidyaeducaredatabase' could not be reached. Ensure the name is correct and it is initialized in Native Mode.");
+        setErrorMessage(`The database '${targetDbId}' could not be reached. Please verify it exists in your Firebase project.`);
     } else {
         setErrorMessage(msg);
     }
@@ -157,29 +161,47 @@ export default function SetupAdminPage() {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-muted p-4">
-      <Card className="w-full max-md shadow-2xl">
+      <Card className="w-full max-w-md shadow-2xl">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-black flex items-center justify-center gap-2 text-primary">
             <Shield className="w-6 h-6" /> ROLE INITIALIZATION
           </CardTitle>
           <CardDescription>
-            Definitively map accounts to their administrative or student roles.
+            Map accounts to their administrative or student roles.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           
+          <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 space-y-2">
+              <p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2">
+                  <Database size={12}/> Connection Diagnostics
+              </p>
+              <div className="grid grid-cols-2 gap-2 text-[10px] font-mono">
+                  <div className="text-muted-foreground">Project:</div>
+                  <div className="font-bold truncate">{targetProjectId}</div>
+                  <div className="text-muted-foreground">Database:</div>
+                  <div className="font-bold">{targetDbId}</div>
+              </div>
+          </div>
+
           {isDatabaseMissing && (
             <Alert variant="destructive" className="bg-destructive/10 border-destructive/20">
                 <AlertTriangle className="h-4 w-4" />
-                <AlertTitle className="font-bold text-xs uppercase">Connectivity & Configuration Alert</AlertTitle>
+                <AlertTitle className="font-bold text-xs uppercase">Configuration Conflict</AlertTitle>
                 <AlertDescription className="text-xs space-y-3 mt-2">
                     <p>{errorMessage}</p>
-                    <div className="bg-background/50 p-2 rounded border font-mono text-[10px]">
-                      Target: vidyaeducaredatabase (Native Mode)
+                    <div className="bg-background/80 p-3 rounded border font-sans space-y-2">
+                      <p className="font-bold text-primary">Required Action:</p>
+                      <ol className="list-decimal list-inside space-y-1 opacity-80">
+                        <li>Go to Google Cloud Console (Firestore).</li>
+                        <li>Click "Create Database".</li>
+                        <li>Select <b>Native mode</b> (NOT Datastore).</li>
+                        <li>Set Database ID to: <b>{targetDbId}</b></li>
+                      </ol>
                     </div>
                     <Button asChild variant="destructive" size="sm" className="w-full font-bold">
-                        <a href="https://console.firebase.google.com/project/vidyaeducare/firestore/databases" target="_blank" rel="noopener noreferrer">
-                            MANAGE DATABASES <ExternalLink className="ml-2 h-3 w-3" />
+                        <a href={`https://console.firebase.google.com/project/${targetProjectId}/firestore/databases`} target="_blank" rel="noopener noreferrer">
+                            FIX IN CONSOLE <ExternalLink className="ml-2 h-3 w-3" />
                         </a>
                     </Button>
                 </AlertDescription>
@@ -188,7 +210,7 @@ export default function SetupAdminPage() {
 
           <div className="space-y-4">
             <h3 className="font-bold text-xs uppercase tracking-widest text-muted-foreground border-b pb-2 flex items-center gap-2">
-                <Database size={12}/> Target: vidyaeducaredatabase
+                Administrator Access
             </h3>
             {status === 'success' ? (
                 <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 p-4 rounded-xl space-y-3">
@@ -201,10 +223,10 @@ export default function SetupAdminPage() {
             ) : status === 'error' && !isDatabaseMissing ? (
                 <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 p-4 rounded-xl">
                     <p className="text-xs font-bold text-red-700">{errorMessage}</p>
-                    <Button variant="outline" size="sm" className="w-full mt-4 font-bold" onClick={() => setStatus('idle')}>Retry Mapping</Button>
+                    <Button variant="outline" size="sm" className="w-full mt-4 font-bold" onClick={() => setStatus('idle')}>Retry Sync</Button>
                 </div>
             ) : (
-                <Button className="w-full py-6 text-lg font-black shadow-lg" onClick={createHeadAdmin} disabled={status === 'loading'}>
+                <Button className="w-full py-6 text-lg font-black shadow-lg" onClick={createHeadAdmin} disabled={status === 'loading' || isDatabaseMissing}>
                     {status === 'loading' ? <Loader2 className="animate-spin mr-2" /> : <Shield className="mr-2 h-5 w-5" />}
                     SYNC ADMIN PROFILE
                 </Button>
@@ -212,20 +234,21 @@ export default function SetupAdminPage() {
           </div>
 
           <div className="space-y-4 pt-6 border-t">
-            <h3 className="font-bold text-xs uppercase tracking-widest text-muted-foreground border-b pb-2">Student Mapping</h3>
+            <h3 className="font-bold text-xs uppercase tracking-widest text-muted-foreground border-b pb-2">Student Access</h3>
             <div className="bg-muted p-4 rounded-xl space-y-3">
                 <div className="text-xs font-mono bg-background p-3 rounded-lg border border-dashed text-center">
                     {TEST_USER_EMAIL}
                 </div>
-                <Button variant="secondary" className="w-full font-bold" onClick={createTestUser} disabled={isCreatingUser}>
+                <Button variant="secondary" className="w-full font-bold" onClick={createTestUser} disabled={isCreatingUser || isDatabaseMissing}>
                     {isCreatingUser ? <Loader2 className="animate-spin mr-2" /> : <RefreshCcw className="mr-2 h-4 w-4" />}
                     SYNC TEST STUDENT
                 </Button>
             </div>
           </div>
         </CardContent>
-        <CardFooter className="bg-primary/5 py-4 border-t justify-center">
-            <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground">Database Mode: Firestore Native Required</p>
+        <CardFooter className="bg-primary/5 py-4 border-t justify-center gap-2">
+            <Info size={10} className="text-muted-foreground"/>
+            <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground">Standard Web SDK requires Firestore Native Mode</p>
         </CardFooter>
       </Card>
     </div>

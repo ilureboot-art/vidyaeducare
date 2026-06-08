@@ -29,8 +29,8 @@ export function getFirebaseServices(): { app: FirebaseApp; auth: Auth; db: Fires
   
   /**
    * IMPORTANT: We must use the specific name 'vidyaeducaredatabase'.
-   * If your project is in Datastore mode, the (default) database is restricted.
-   * Named databases are always created in Firestore Native mode.
+   * In projects where the (default) database was created in Datastore mode, 
+   * you MUST use a named database created in 'Firestore Native' mode.
    */
   const db = getFirestore(app, "vidyaeducaredatabase");
   

@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
@@ -85,13 +86,9 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     try {
       const adminDocRef = doc(db, "admins", user.uid);
       const adminDocSnap = await getDoc(adminDocRef).catch((e) => {
-          // If the database itself doesn't exist, we skip the role check
-          // and let the setup page handle the infrastructure error UI.
-          if (e.message?.includes("database (default) does not exist")) {
-              console.warn("Firestore database missing. Defaulting to student role for UI stability.");
-          } else {
-              console.warn("Administrative check skipped:", e.message);
-          }
+          // If the database itself is misconfigured (Datastore mode), 
+          // we gracefully bypass the role check to allow setup access.
+          console.warn("Administrative check bypassed due to infrastructure state:", e.message);
           return null;
       });
       return processSnap(adminDocSnap, user.uid);
@@ -102,6 +99,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   }, [processSnap]);
 
   useEffect(() => {
+    // Initial mount hydration safety
     const cached = getCachedRoles();
     if (cached) {
       setAuthState(prev => ({

@@ -29,18 +29,21 @@ service cloud.firestore {
 
     match /admins/{userId} {
       allow get: if isOwner(userId) || isAdmin();
-      // Allow the master email to create the first admin record to bootstrap the system
-      allow create: if isOwner(userId) && (isHeadAdmin() || request.auth.token.email == 'admin@vidyaeducare.com');
-      allow update, delete: if isHeadAdmin();
+      // BOOTSTRAP RULE: Allow the master email to create or update their own admin record to initialize the system.
+      allow create, update: if isOwner(userId) && (isHeadAdmin() || request.auth.token.email == 'admin@vidyaeducare.com');
+      // Allow Head Admins to delete others, or users to delete their own record (cleaning up during setup).
+      allow delete: if isHeadAdmin() || isOwner(userId);
     }
 
     match /users/{userId} {
-      // Allow read/list for setup and admin checks
+      // Allow general read for profile resolution and setup checks
       allow read: if isOwner(userId) || isAdmin() || isAuthenticated();
+      // Allow owners to write their own profile (crucial for signup/setup)
       allow write: if isOwner(userId) || isAdmin();
     }
 
     match /wallets/{userId} {
+      // Allow owners to see and manage their wallets (required for store/referral logic)
       allow read, write: if isOwner(userId) || isAdmin();
     }
 
@@ -51,6 +54,7 @@ service cloud.firestore {
     }
     
     match /transactions/{txId} {
+        // Essential: Allow users to list/query their own transactions for dashboards
         allow read: if isAuthenticated() && (
           resource == null || resource.data.user == request.auth.uid || isAdmin()
         );

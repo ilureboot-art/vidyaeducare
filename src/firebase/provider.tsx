@@ -22,7 +22,7 @@ const DbContext = createContext<Firestore | undefined>(undefined);
 const AuthServiceContext = createContext<Auth | undefined>(undefined);
 
 // Synchronous role cache to prevent hydration mismatches and sequential load lag
-const ROLE_CACHE_KEY = 'vidya_auth_role_v9';
+const ROLE_CACHE_KEY = 'vidya_auth_role_v10';
 
 const getCachedRoles = () => {
     if (typeof window === 'undefined') return null;
@@ -72,8 +72,8 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
     // Safety: If client is offline, getDoc will throw if document is not cached.
     if (typeof window !== 'undefined' && !window.navigator.onLine) {
-        console.warn("Firestore: Client is offline. Using cached roles if available.");
-        return cached?.uid === user.uid ? cached : { isAdmin: false, isHeadAdmin: false };
+        console.warn("Firestore: Client is offline. Using cached roles or defaults.");
+        return (cached && cached.uid === user.uid) ? { isAdmin: cached.isAdmin, isHeadAdmin: cached.isHeadAdmin } : { isAdmin: false, isHeadAdmin: false };
     }
 
     try {
@@ -83,17 +83,17 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       try {
         adminDocSnap = await getDoc(adminDocRef);
       } catch (e: any) {
-        // Handle "Offline" or "Unavailable" errors gracefully
+        // Handle "Offline" or "Unavailable" errors gracefully without crashing the app
         if (e.code === 'unavailable' || e.message?.toLowerCase().includes('offline')) {
           console.warn("Firestore unavailable for role check, using defaults.");
-          return cached?.uid === user.uid ? cached : { isAdmin: false, isHeadAdmin: false };
+          return (cached && cached.uid === user.uid) ? { isAdmin: cached.isAdmin, isHeadAdmin: cached.isHeadAdmin } : { isAdmin: false, isHeadAdmin: false };
         }
         throw e;
       }
       
       // Replication lag buffer: retry once if document not immediately found (happens during setup)
       if (!adminDocSnap?.exists() && retry) {
-          await new Promise(r => setTimeout(r, 1200));
+          await new Promise(r => setTimeout(r, 1500));
           adminDocSnap = await getDoc(adminDocRef).catch(() => null);
       }
       
@@ -111,13 +111,13 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       return roles;
     } catch (e) {
       console.error("Role resolution failed:", e);
-      return cached?.uid === user.uid ? cached : { isAdmin: false, isHeadAdmin: false };
+      return (cached && cached.uid === user.uid) ? { isAdmin: cached.isAdmin, isHeadAdmin: cached.isHeadAdmin } : { isAdmin: false, isHeadAdmin: false };
     }
   }, []);
 
   useEffect(() => {
     if (!services) {
-        setAuthState(prev => ({ ...prev, loading: false }));
+        setAuthState(prev => ({ ...prev, loading: false, isResolved: true }));
         return;
     }
 
@@ -136,8 +136,8 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     });
 
     const timeout = setTimeout(() => {
-        setAuthState(prev => ({ ...prev, loading: false }));
-    }, 8000);
+        setAuthState(prev => ({ ...prev, loading: false, isResolved: true }));
+    }, 10000);
 
     return () => {
         unsubscribe();

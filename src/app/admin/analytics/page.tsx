@@ -44,6 +44,11 @@ export default function AnalyticsPage() {
       
       setError(null);
       try {
+          // Safety: Check if user is online
+          if (typeof window !== 'undefined' && !window.navigator.onLine) {
+              throw new Error("You are currently offline. Check your internet connection.");
+          }
+
           const today = new Date();
           today.setHours(0, 0, 0, 0);
           const todayTimestamp = Timestamp.fromDate(today);
@@ -64,7 +69,10 @@ export default function AnalyticsPage() {
               getCountFromServer(usersCol),
               getCountFromServer(resultsCol)
           ]).catch(e => {
-              if (e.message?.includes('offline')) throw new Error("Offline: Check your network connection.");
+              console.error("Dashboard Parallel Fetch Error:", e);
+              if (e.message?.toLowerCase().includes('offline') || e.code === 'unavailable') {
+                  throw new Error("Unable to reach database. You might be offline.");
+              }
               throw e;
           });
 

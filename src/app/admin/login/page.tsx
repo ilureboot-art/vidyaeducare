@@ -23,6 +23,7 @@ export default function AdminLoginPage() {
   const auth = useAuthService();
 
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -33,7 +34,6 @@ export default function AdminLoginPage() {
     if (!auth || isLoading || isVerifying) return;
     
     setIsLoading(true);
-    const password = (e.currentTarget.querySelector('#password-login') as HTMLInputElement).value;
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
@@ -50,7 +50,7 @@ export default function AdminLoginPage() {
       
     } catch (error: any) {
        let errorMessage = "Access Denied.";
-       if (error.code === 'auth/invalid-credential') {
+       if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
            errorMessage = "Invalid admin credentials.";
        }
        toast({ variant: "destructive", title: "Login Failed", description: errorMessage });
@@ -78,19 +78,40 @@ export default function AdminLoginPage() {
             <CardContent className="space-y-4">
                     <div className="space-y-2">
                         <Label htmlFor="email-login">Admin Email</Label>
-                        <Input id="email-login" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} disabled={isVerifying} />
+                        <Input 
+                            id="email-login" 
+                            type="email" 
+                            required 
+                            value={email} 
+                            onChange={(e) => setEmail(e.target.value)} 
+                            disabled={isVerifying || isLoading} 
+                        />
                     </div>
                     <div className="space-y-2 relative">
                         <Label htmlFor="password-login">Secure Password</Label>
                         <div className="relative">
-                            <Input id="password-login" type={showPassword ? "text" : "password"} required disabled={isVerifying} />
-                            <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1 h-8 w-8" onClick={() => setShowPassword(prev => !prev)} disabled={isVerifying}>
+                            <Input 
+                                id="password-login" 
+                                type={showPassword ? "text" : "password"} 
+                                required 
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                disabled={isVerifying || isLoading} 
+                            />
+                            <Button 
+                                type="button" 
+                                variant="ghost" 
+                                size="icon" 
+                                className="absolute right-1 top-1 h-8 w-8" 
+                                onClick={() => setShowPassword(prev => !prev)} 
+                                disabled={isVerifying || isLoading}
+                            >
                                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                             </Button>
                         </div>
                     </div>
                     <div className="flex items-center space-x-2">
-                        <Checkbox id="remember-me-admin" checked={rememberMe} onCheckedChange={(checked) => setRememberMe(checked as boolean)} disabled={isVerifying} />
+                        <Checkbox id="remember-me-admin" checked={rememberMe} onCheckedChange={(checked) => setRememberMe(checked as boolean)} disabled={isVerifying || isLoading} />
                         <Label htmlFor="remember-me-admin" className="text-sm font-normal">Stay logged in</Label>
                     </div>
                     <Button type="submit" className="w-full !mt-6 py-6 text-lg font-bold" disabled={isLoading || !auth || isVerifying}>

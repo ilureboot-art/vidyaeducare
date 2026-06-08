@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDb, useAuthService } from '@/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
-import { doc, writeBatch, collection } from 'firebase/firestore';
+import { doc, writeBatch } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, CheckCircle, Shield, RefreshCcw, AlertTriangle, ExternalLink, Database, Info } from 'lucide-react';
@@ -31,7 +31,6 @@ export default function SetupAdminPage() {
   const [isDatabaseMissing, setIsDatabaseMissing] = useState(false);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
 
-  // Diagnostic Data
   const targetProjectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
   const targetDbId = "vidyaeducaredatabase";
 
@@ -71,30 +70,26 @@ export default function SetupAdminPage() {
         joinDate: new Date().toISOString(),
       }, { merge: true });
     } else {
-      // Students should not be in the admin collection
+      // Safe delete: ensures student identity isn't accidentally mapped to admin
       batch.delete(adminDocRef);
     }
 
     await batch.commit();
-
-    // Clear session cache to force permission re-verification
-    if (typeof window !== 'undefined') {
-        sessionStorage.clear();
-    }
+    if (typeof window !== 'undefined') sessionStorage.clear();
   };
 
   const handleError = (error: any) => {
     console.error("Setup Error Details:", error);
     const msg = error.message || "An unexpected error occurred.";
     
-    if (msg.includes("Native mode API is disabled") || msg.includes("Datastore mode") || msg.includes("Native mode")) {
+    if (msg.includes("Native mode API is disabled") || msg.includes("Datastore mode")) {
         setIsDatabaseMissing(true);
         setErrorMessage("CRITICAL: Infrastructure Mismatch. Ensure 'vidyaeducaredatabase' is created in 'Firestore Native' mode.");
     } else if (msg.includes("database (default) does not exist") || msg.includes("not exist")) {
         setIsDatabaseMissing(true);
         setErrorMessage(`Database '${targetDbId}' not found. Check Google Cloud console.`);
     } else if (msg.includes("Missing or insufficient permissions") || msg.includes("permission-denied")) {
-        setErrorMessage("Permission Denied. Please ensure you are logged in as admin@vidyaeducare.com and the database rules are applied.");
+        setErrorMessage("Permission Denied. Please ensure you are logged in as admin@vidyaeducare.com and the database rules allow writes to 'admins', 'users', and 'wallets'.");
     } else {
         setErrorMessage(msg);
     }
@@ -119,12 +114,10 @@ export default function SetupAdminPage() {
             } else throw e;
         }
 
-        // Token propagation buffer
-        await new Promise(r => setTimeout(r, 1000));
-
+        await new Promise(r => setTimeout(r, 1500)); // Allow token propagation
         await ensureRecords(uid, 'admin');
         setStatus('success');
-        toast({ title: "Sync Complete", description: "Admin identity mapping updated in " + targetDbId });
+        toast({ title: "Sync Complete", description: "Admin identity mapping updated." });
     } catch (error: any) {
         handleError(error);
     }
@@ -148,10 +141,9 @@ export default function SetupAdminPage() {
             } else throw e;
         }
 
-        await new Promise(r => setTimeout(r, 1000));
-
+        await new Promise(r => setTimeout(r, 1500));
         await ensureRecords(uid, 'student');
-        toast({ title: "Student Synced", description: "Test profile initialized in " + targetDbId });
+        toast({ title: "Student Synced", description: "Test profile initialized." });
     } catch (error: any) {
         handleError(error);
     } finally {
@@ -190,14 +182,6 @@ export default function SetupAdminPage() {
                 <AlertTitle className="font-bold text-xs uppercase tracking-tight">Infrastructure Alert</AlertTitle>
                 <AlertDescription className="text-xs space-y-3 mt-2">
                     <p>{errorMessage}</p>
-                    <div className="bg-background/80 p-3 rounded border font-sans space-y-2">
-                      <p className="font-bold text-primary italic">Required Action:</p>
-                      <ol className="list-decimal list-inside space-y-1 opacity-80">
-                        <li>Go to Firebase Console.</li>
-                        <li>Ensure <b>Database ID</b> is exactly <b>{targetDbId}</b></li>
-                        <li>Ensure it was created in <b>Native mode</b>.</li>
-                      </ol>
-                    </div>
                     <Button asChild variant="destructive" size="sm" className="w-full font-bold">
                         <a href={`https://console.firebase.google.com/project/${targetProjectId}/firestore/databases`} target="_blank" rel="noopener noreferrer">
                             FIX IN CONSOLE <ExternalLink className="ml-2 h-3 w-3" />
@@ -208,9 +192,7 @@ export default function SetupAdminPage() {
           )}
 
           <div className="space-y-4">
-            <h3 className="font-bold text-xs uppercase tracking-widest text-muted-foreground border-b pb-2 flex items-center gap-2">
-                Administrative Setup
-            </h3>
+            <h3 className="font-bold text-xs uppercase tracking-widest text-muted-foreground border-b pb-2">Administrative Setup</h3>
             {status === 'success' ? (
                 <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 p-4 rounded-xl space-y-3">
                     <div className="flex items-center gap-2 text-green-700 dark:text-green-400">

@@ -14,13 +14,15 @@ service cloud.firestore {
 
     // BOOTSTRAP HELPER: Identifies the master email allowed to initialize the project
     function isBootstrap() {
-      return isAuthenticated() && request.auth.token.email == 'admin@vidyaeducare.com';
+      return isAuthenticated() && 
+             (request.auth.token.email == 'admin@vidyaeducare.com' || 
+              request.auth.token.email == 'student@vidyaeducare.com'); // Allow both during init
     }
 
     // Robust check: ensures document exists before accessing properties to prevent evaluation crashes
     function isAdmin() {
       if (!isAuthenticated()) return false;
-      if (isBootstrap()) return true; // Bootstrap email is always an admin
+      if (request.auth.token.email == 'admin@vidyaeducare.com') return true; 
       
       let adminPath = /databases/$(database)/documents/admins/$(request.auth.uid);
       return exists(adminPath) && (
@@ -31,7 +33,7 @@ service cloud.firestore {
 
     function isHeadAdmin() {
       if (!isAuthenticated()) return false;
-      if (isBootstrap()) return true;
+      if (request.auth.token.email == 'admin@vidyaeducare.com') return true;
 
       let adminPath = /databases/$(database)/documents/admins/$(request.auth.uid);
       return exists(adminPath) && get(adminPath).data.role == 'Head Admin';
@@ -40,8 +42,9 @@ service cloud.firestore {
     match /admins/{userId} {
       allow get: if isOwner(userId) || isAdmin();
       // Allow bootstrap email or existing Head Admin to create/update admin records
-      allow write: if isBootstrap() || isOwner(userId) && isHeadAdmin();
-      allow delete: if isHeadAdmin() || isBootstrap();
+      allow write: if isBootstrap() || (isOwner(userId) && isHeadAdmin());
+      // CRITICAL: Allow users to delete their own admin record during student sync
+      allow delete: if isOwner(userId) || isHeadAdmin() || isBootstrap();
     }
 
     match /users/{userId} {

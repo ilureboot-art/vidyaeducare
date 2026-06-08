@@ -71,6 +71,7 @@ export default function SetupAdminPage() {
           joinDate: new Date().toISOString(),
         }, { merge: true });
       } else {
+        // If syncing a student, we explicitly remove them from admins collection
         transaction.delete(adminDocRef);
       }
     });
@@ -86,12 +87,12 @@ export default function SetupAdminPage() {
     
     if (msg.includes("Native mode API is disabled") || msg.includes("Datastore mode") || msg.includes("Native mode")) {
         setIsDatabaseMissing(true);
-        setErrorMessage("CRITICAL: This project is in Datastore Mode. Please ensure the database 'vidyaeducaredatabase' was created specifically in 'Firestore Native' mode in the Google Cloud Console.");
-    } else if (msg.includes("database (default) does not exist") || msg.includes("vidyaeducaredatabase") || msg.includes("not exist")) {
+        setErrorMessage("CRITICAL: Infrastructure Mismatch. Ensure 'vidyaeducaredatabase' is created in 'Firestore Native' mode.");
+    } else if (msg.includes("database (default) does not exist") || msg.includes("not exist")) {
         setIsDatabaseMissing(true);
-        setErrorMessage(`The database '${targetDbId}' could not be reached. Verify it exists in your Firebase project.`);
+        setErrorMessage(`Database '${targetDbId}' not found. Check console.`);
     } else if (msg.includes("Missing or insufficient permissions")) {
-        setErrorMessage("Permission Denied. Please ensure you are clicking 'SYNC ADMIN' while logged in as admin@vidyaeducare.com, or check your Firestore rules.");
+        setErrorMessage("Permission Denied. Ensure you are 'Syncing' while logged in as admin@vidyaeducare.com.");
     } else {
         setErrorMessage(msg);
     }
@@ -111,22 +112,17 @@ export default function SetupAdminPage() {
             uid = userCredential.user.uid;
         } catch (e: any) {
             if (e.code === 'auth/email-already-in-use') {
-                try {
-                    const signInRes = await signInWithEmailAndPassword(auth, HEAD_ADMIN_EMAIL, HEAD_ADMIN_PASSWORD);
-                    uid = signInRes.user.uid;
-                } catch (signInErr) {
-                    // Try to resolve UID via query if password was changed
-                    const q = query(collection(db, "users"), where("email", "==", HEAD_ADMIN_EMAIL));
-                    const snap = await getDocs(q);
-                    if (!snap.empty) uid = snap.docs[0].id;
-                    else throw new Error("Account exists but profile mapping failed. Sign in manually first.");
-                }
+                const signInRes = await signInWithEmailAndPassword(auth, HEAD_ADMIN_EMAIL, HEAD_ADMIN_PASSWORD);
+                uid = signInRes.user.uid;
             } else throw e;
         }
 
+        // Token propagation buffer
+        await new Promise(r => setTimeout(r, 800));
+
         await ensureRecords(uid, 'admin');
         setStatus('success');
-        toast({ title: "Admin Mapping Established", description: "Master credentials synchronized." });
+        toast({ title: "Admin Mapping Verified", description: "Identity synchronized with master credentials." });
     } catch (error: any) {
         handleError(error);
     }
@@ -145,20 +141,15 @@ export default function SetupAdminPage() {
             uid = userCredential.user.uid;
         } catch (e: any) {
             if (e.code === 'auth/email-already-in-use') {
-                try {
-                    const signInRes = await signInWithEmailAndPassword(auth, TEST_USER_EMAIL, TEST_USER_PASSWORD);
-                    uid = signInRes.user.uid;
-                } catch (signInErr) {
-                    const q = query(collection(db, "users"), where("email", "==", TEST_USER_EMAIL));
-                    const snap = await getDocs(q);
-                    if (!snap.empty) uid = snap.docs[0].id;
-                    else throw new Error("Student exists but lookup failed.");
-                }
+                const signInRes = await signInWithEmailAndPassword(auth, TEST_USER_EMAIL, TEST_USER_PASSWORD);
+                uid = signInRes.user.uid;
             } else throw e;
         }
 
+        await new Promise(r => setTimeout(r, 800));
+
         await ensureRecords(uid, 'student');
-        toast({ title: "Student Access Restored", description: "Mapping verified." });
+        toast({ title: "Student Access Restored", description: "Test profile mapping verified." });
     } catch (error: any) {
         handleError(error);
     } finally {
@@ -187,28 +178,27 @@ export default function SetupAdminPage() {
                   <div className="text-muted-foreground">Project:</div>
                   <div className="font-bold truncate">{targetProjectId}</div>
                   <div className="text-muted-foreground">Database:</div>
-                  <div className="font-bold">{targetDbId} (Native)</div>
+                  <div className="font-bold">{targetDbId}</div>
               </div>
           </div>
 
           {isDatabaseMissing && (
             <Alert variant="destructive" className="bg-destructive/10 border-destructive/20">
                 <AlertTriangle className="h-4 w-4" />
-                <AlertTitle className="font-bold text-xs uppercase">Infrastructure Conflict</AlertTitle>
+                <AlertTitle className="font-bold text-xs uppercase tracking-tight">Infrastructure Configuration Error</AlertTitle>
                 <AlertDescription className="text-xs space-y-3 mt-2">
                     <p>{errorMessage}</p>
                     <div className="bg-background/80 p-3 rounded border font-sans space-y-2">
-                      <p className="font-bold text-primary">Required Action:</p>
+                      <p className="font-bold text-primary italic">Required Action:</p>
                       <ol className="list-decimal list-inside space-y-1 opacity-80">
-                        <li>Go to Google Cloud Console (Firestore).</li>
-                        <li>Click "Create Database".</li>
-                        <li>Select <b>Native mode</b> (NOT Datastore).</li>
-                        <li>Set Database ID to: <b>{targetDbId}</b></li>
+                        <li>Go to Firebase Console (Firestore).</li>
+                        <li>Verify <b>Database ID</b> is exactly <b>{targetDbId}</b></li>
+                        <li>Ensure it was created in <b>Native mode</b>.</li>
                       </ol>
                     </div>
                     <Button asChild variant="destructive" size="sm" className="w-full font-bold">
                         <a href={`https://console.firebase.google.com/project/${targetProjectId}/firestore/databases`} target="_blank" rel="noopener noreferrer">
-                            FIX IN CONSOLE <ExternalLink className="ml-2 h-3 w-3" />
+                            VERIFY IN CONSOLE <ExternalLink className="ml-2 h-3 w-3" />
                         </a>
                     </Button>
                 </AlertDescription>

@@ -26,6 +26,9 @@ export type MockTestPackage = {
     bestValue: boolean;
     gstRate: number;
     hsnSacCode: string;
+    baseDiscount: number;      // Fixed discount for all users
+    referralDiscount: number;  // Discount given if an IBA code is used
+    specialDiscount: number;   // Extra discount admin can add/remove (e.g. holiday sale)
 };
 
 export type GameSettings = {
@@ -60,8 +63,28 @@ export const defaultStoreConfig: StoreConfig = {
     packages: [],
     
     mockTestPackages: [
-        { name: "1 Year Subscription", price: 3000, months: 12, bestValue: true, gstRate: 18, hsnSacCode: '999294' },
-        { name: "6 Months Subscription", price: 1500, months: 6, bestValue: false, gstRate: 18, hsnSacCode: '999294' },
+        { 
+            name: "1 Year Subscription", 
+            price: 3000, 
+            months: 12, 
+            bestValue: true, 
+            gstRate: 18, 
+            hsnSacCode: '999294',
+            baseDiscount: 5,
+            referralDiscount: 10,
+            specialDiscount: 0
+        },
+        { 
+            name: "6 Months Subscription", 
+            price: 1500, 
+            months: 6, 
+            bestValue: false, 
+            gstRate: 18, 
+            hsnSacCode: '999294',
+            baseDiscount: 5,
+            referralDiscount: 10,
+            specialDiscount: 0
+        },
     ],
 
     referboltSubscription: {

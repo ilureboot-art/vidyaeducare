@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
-import { PlusCircle, Trash2, Zap, BookOpen, GraduationCap, Percent, Loader2, Users } from "lucide-react";
+import { PlusCircle, Trash2, Zap, BookOpen, GraduationCap, Percent, Loader2, Users, IndianRupee } from "lucide-react";
 import type { TicketPackage, ReferboltSubscription, MockTestPackage, ReferboltSettings, GameSettings, StoreConfig, RecommendationSettings } from "@/lib/store-config";
 import type { AcademicConfig } from "@/lib/academic-config";
 import { Switch } from "@/components/ui/switch";
@@ -49,7 +49,7 @@ export default function AdminStoreSettingsPage() {
     const newPackages = [...storeConfig.mockTestPackages];
     const pkg = { ...newPackages[index] };
 
-    if (field === 'price' || field === 'months' || field === 'gstRate') {
+    if (['price', 'months', 'gstRate', 'baseDiscount', 'referralDiscount', 'specialDiscount'].includes(field)) {
         value = Number(value) || 0;
     }
     
@@ -92,7 +92,17 @@ export default function AdminStoreSettingsPage() {
 
   const addMockTestPackage = () => {
     if (!storeConfig) return;
-    const newPackages = [...storeConfig.mockTestPackages, { name: 'New Subscription', price: 0, months: 1, bestValue: false, gstRate: 18, hsnSacCode: '999294' }];
+    const newPackages = [...storeConfig.mockTestPackages, { 
+        name: 'New Subscription', 
+        price: 0, 
+        months: 1, 
+        bestValue: false, 
+        gstRate: 18, 
+        hsnSacCode: '999294',
+        baseDiscount: 0,
+        referralDiscount: 0,
+        specialDiscount: 0
+    }];
     setStoreConfig(prev => prev ? ({...prev, mockTestPackages: newPackages}) : null);
   };
   
@@ -185,46 +195,74 @@ export default function AdminStoreSettingsPage() {
         <Card className="mt-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><BookOpen /> Mock Test Subscriptions</CardTitle>
-            <CardDescription>Configure mock test subscription packages.</CardDescription>
+            <CardDescription>Configure packages, taxes, and dynamic discount structures.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-8">
             {storeConfig.mockTestPackages.map((pkg, index) => (
-                <div key={index} className="p-4 border rounded-lg space-y-4 relative">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div key={index} className="p-6 border rounded-xl space-y-6 relative bg-muted/20">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                         <div className="space-y-2 col-span-full lg:col-span-2">
+                            <Label className="text-xs uppercase font-black text-muted-foreground">Package Name</Label>
+                            <Input value={pkg.name} onChange={(e) => handleMockTestPackageChange(index, 'name', e.target.value)} placeholder="e.g., 1 Year Subscription" />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-xs uppercase font-black text-muted-foreground">Base Price (₹)</Label>
+                            <Input type="number" value={pkg.price} onChange={(e) => handleMockTestPackageChange(index, 'price', e.target.value)} />
+                        </div>
                          <div className="space-y-2">
-                            <Label htmlFor={`mt-name-${index}`}>Package Name</Label>
-                            <Input id={`mt-name-${index}`} type="text" value={pkg.name} onChange={(e) => handleMockTestPackageChange(index, 'name', e.target.value)} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor={`mt-price-${index}`}>Base Price (₹)</Label>
-                            <Input id={`mt-price-${index}`} type="number" value={pkg.price} onChange={(e) => handleMockTestPackageChange(index, 'price', e.target.value)} />
-                        </div>
-                         <div className="space-y-2">
-                            <Label htmlFor={`mt-months-${index}`}>Duration (Months)</Label>
-                            <Input id={`mt-months-${index}`} type="number" value={pkg.months} onChange={(e) => handleMockTestPackageChange(index, 'months', e.target.value)} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor={`mt-gst-${index}`}>GST Rate (%)</Label>
-                            <Input id={`mt-gst-${index}`} type="number" value={pkg.gstRate} onChange={(e) => handleMockTestPackageChange(index, 'gstRate', e.target.value)} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor={`mt-hsn-${index}`}>HSN/SAC Code</Label>
-                            <Input id={`mt-hsn-${index}`} type="text" value={pkg.hsnSacCode} onChange={(e) => handleMockTestPackageChange(index, 'hsnSacCode', e.target.value)} />
+                            <Label className="text-xs uppercase font-black text-muted-foreground">Duration (Months)</Label>
+                            <Input type="number" value={pkg.months} onChange={(e) => handleMockTestPackageChange(index, 'months', e.target.value)} />
                         </div>
                     </div>
-                     <div className="flex items-center space-x-2 pt-2">
-                        <Checkbox id={`mt-best-value-${index}`} checked={pkg.bestValue} onCheckedChange={(checked) => handleMockTestPackageChange(index, 'bestValue', !!checked)} />
-                        <Label htmlFor={`mt-best-value-${index}`}>Mark as 'Best Value'</Label>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 bg-background rounded-lg border">
+                        <div className="space-y-2">
+                            <Label className="text-[10px] uppercase font-black text-primary">GST Rate (%)</Label>
+                            <Input type="number" value={pkg.gstRate} onChange={(e) => handleMockTestPackageChange(index, 'gstRate', e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-[10px] uppercase font-black text-primary">HSN/SAC Code</Label>
+                            <Input type="text" value={pkg.hsnSacCode} onChange={(e) => handleMockTestPackageChange(index, 'hsnSacCode', e.target.value)} />
+                        </div>
+                        <div className="space-y-2 col-span-full lg:col-span-2 flex items-end pb-2">
+                             <div className="flex items-center space-x-2">
+                                <Checkbox id={`mt-best-value-${index}`} checked={pkg.bestValue} onCheckedChange={(checked) => handleMockTestPackageChange(index, 'bestValue', !!checked)} />
+                                <Label htmlFor={`mt-best-value-${index}`} className="text-sm font-bold">Mark as 'Best Value'</Label>
+                            </div>
+                        </div>
                     </div>
-                    <Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2 text-muted-foreground hover:text-destructive" onClick={() => removeMockTestPackage(index)}>
+
+                    <div className="space-y-3">
+                        <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                            <Percent size={14} className="text-accent"/> Customizable Discounts
+                        </Label>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div className="space-y-2">
+                                <Label className="text-[10px] font-bold">Base Discount (%)</Label>
+                                <Input type="number" value={pkg.baseDiscount} onChange={(e) => handleMockTestPackageChange(index, 'baseDiscount', e.target.value)} />
+                                <p className="text-[9px] text-muted-foreground">Applied to all users automatically.</p>
+                            </div>
+                            <div className="space-y-2">
+                                <Label className="text-[10px] font-bold">IBA (Referral) Discount (%)</Label>
+                                <Input type="number" value={pkg.referralDiscount} onChange={(e) => handleMockTestPackageChange(index, 'referralDiscount', e.target.value)} />
+                                <p className="text-[9px] text-muted-foreground">Applied only when using an IBA code.</p>
+                            </div>
+                            <div className="space-y-2">
+                                <Label className="text-[10px] font-bold">Special Discount (%)</Label>
+                                <Input type="number" value={pkg.specialDiscount} onChange={(e) => handleMockTestPackageChange(index, 'specialDiscount', e.target.value)} />
+                                <p className="text-[9px] text-muted-foreground">Seasonal or promotional extra discount.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <Button type="button" variant="destructive" size="icon" className="absolute top-4 right-4 h-8 w-8" onClick={() => removeMockTestPackage(index)}>
                         <Trash2 className="h-4 w-4" />
-                        <span className="sr-only">Remove Package</span>
                     </Button>
                 </div>
             ))}
-             <Button type="button" variant="outline" className="w-full" onClick={addMockTestPackage}>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add New Subscription
+             <Button type="button" variant="outline" className="w-full py-6 border-dashed" onClick={addMockTestPackage}>
+                <PlusCircle className="mr-2 h-5 w-5" />
+                Add New Package Configuration
             </Button>
           </CardContent>
         </Card>
@@ -242,7 +280,7 @@ export default function AdminStoreSettingsPage() {
                     value={storeConfig.recommendationSettings?.additionalDiscount || 0} 
                     onChange={(e) => handleRecSettingsChange('additionalDiscount', Number(e.target.value))} 
                 />
-                <p className="text-[10px] text-muted-foreground">Applied on top of base and IBA discounts.</p>
+                <p className="text-[10px] text-muted-foreground">Applied on top of all other active discounts.</p>
               </div>
               <div className="space-y-2">
                 <Label>Required Referrals</Label>
@@ -339,8 +377,10 @@ export default function AdminStoreSettingsPage() {
         </Card>
 
 
-        <div className="mt-6 flex justify-end">
-          <Button type="submit">Save Changes</Button>
+        <div className="mt-8 flex justify-end">
+          <Button type="submit" size="lg" className="px-12 font-black shadow-xl">
+             <IndianRupee className="mr-2 h-5 w-5"/> SAVE ALL CONFIGURATIONS
+          </Button>
         </div>
       </form>
     </div>

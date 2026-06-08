@@ -58,7 +58,6 @@ function StorePageContent() {
             lastPurchaseDate = d instanceof Timestamp ? d.toDate() : new Date(d);
         }
 
-        // Window starts from latest of Join Date or Last Purchase
         const anchorDate = lastPurchaseDate && lastPurchaseDate > joinDate ? lastPurchaseDate : joinDate;
         const windowEnd = new Date(anchorDate.getTime() + (config.recommendationSettings.windowDays * 24 * 60 * 60 * 1000));
         const now = new Date();
@@ -69,7 +68,6 @@ function StorePageContent() {
             return;
         }
 
-        // Count referrals within the current active window
         const qC = query(collection(db, "clients"), where("referrerId", "==", userId));
         const cSnap = await getDocs(qC);
         let validCount = 0;
@@ -122,12 +120,17 @@ function StorePageContent() {
 
     let priceDetails;
     if (type === 'mock') {
-        const baseDiscount = 0.05;
-        const referralDiscount = referralCode1.trim() !== "" ? 0.10 : 0;
+        const mockItem = item as MockTestPackage;
+        // ADMIN DEFINED DISCOUNTS
+        const baseDiscount = (mockItem.baseDiscount || 0) / 100;
+        const referralDiscount = referralCode1.trim() !== "" ? (mockItem.referralDiscount || 0) / 100 : 0;
+        const specialDiscount = (mockItem.specialDiscount || 0) / 100;
+        
+        // RECOMMENDATION DISCOUNT (UNLOCKED)
         const recommendationDiscount = isEligibleForRecDiscount ? (storeConfig.recommendationSettings?.additionalDiscount || 0) / 100 : 0;
         
-        const totalDiscount = baseDiscount + referralDiscount + recommendationDiscount;
-        const discountedBasePrice = item.price * (1 - totalDiscount);
+        const totalDiscountFactor = baseDiscount + referralDiscount + specialDiscount + recommendationDiscount;
+        const discountedBasePrice = item.price * (1 - totalDiscountFactor);
         const gstAmount = discountedBasePrice * (item.gstRate / 100);
         const finalPrice = discountedBasePrice + gstAmount;
         priceDetails = { finalPrice, basePrice: item.price, hasReferral: referralCode1.trim() !== "" };
@@ -201,7 +204,7 @@ function StorePageContent() {
         });
 
         toast({ title: "Purchase Successful!", description: `You have successfully purchased ${item.name}.`, duration: 7000 });
-        checkRecEligibility(db, user.uid, storeConfig); // Refresh eligibility for next time
+        checkRecEligibility(db, user.uid, storeConfig);
     } catch (e: any) {
         toast({ variant: "destructive", title: "Purchase Failed", description: e.message || "An error occurred." });
     } finally {
@@ -289,11 +292,13 @@ function StorePageContent() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
                 {storeConfig.mockTestPackages.map((product, index) => {
-                    const baseDiscount = 0.05;
-                    const referralDiscount = referralCode1.trim() !== "" ? 0.10 : 0;
-                    const recommendationDiscount = isEligibleForRecDiscount ? (storeConfig.recommendationSettings?.additionalDiscount || 0) / 100 : 0;
+                    // DYNAMIC DISCOUNT CALCULATION
+                    const baseDisc = (product.baseDiscount || 0) / 100;
+                    const referralDisc = referralCode1.trim() !== "" ? (product.referralDiscount || 0) / 100 : 0;
+                    const specialDisc = (product.specialDiscount || 0) / 100;
+                    const recommendationDisc = isEligibleForRecDiscount ? (storeConfig.recommendationSettings?.additionalDiscount || 0) / 100 : 0;
                     
-                    const totalDiscount = baseDiscount + referralDiscount + recommendationDiscount;
+                    const totalDiscount = baseDisc + referralDisc + specialDisc + recommendationDisc;
                     const discountedBasePrice = product.price * (1 - totalDiscount);
                     const gstAmount = discountedBasePrice * (product.gstRate / 100);
                     const finalPrice = discountedBasePrice + gstAmount;
@@ -321,18 +326,22 @@ function StorePageContent() {
                          <div>
                             <p className="text-muted-foreground line-through">₹{product.price}</p>
                             <p className="text-4xl font-bold">₹{finalPrice.toFixed(0)}</p>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-[10px] text-muted-foreground mt-1">
                                 (Base: ₹{discountedBasePrice.toFixed(0)} + GST @ {product.gstRate}%)
                             </p>
-                            <p className="text-sm font-semibold text-accent mt-1">You save {(totalDiscount * 100).toFixed(0)}%!</p>
+                            {totalDiscount > 0 && (
+                                <p className="text-sm font-black text-accent mt-2 bg-accent/10 py-1 px-3 rounded-full inline-block">
+                                    YOU SAVE {(totalDiscount * 100).toFixed(0)}%!
+                                </p>
+                            )}
                         </div>
                         <Button 
                           size="lg" 
-                          className="w-full"
+                          className="w-full font-bold"
                           onClick={() => handlePurchase(product, 'mock')}
                           disabled={isPurchasing !== null}
                         >
-                          {isPurchasing === product.name ? <Loader2 className="animate-spin" /> : "Buy Now"}
+                          {isPurchasing === product.name ? <Loader2 className="animate-spin" /> : "Purchase Package"}
                         </Button>
                       </CardContent>
                     </Card>
@@ -346,9 +355,9 @@ function StorePageContent() {
                          <CardDescription>{storeConfig.referboltSubscription.description}</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        <p className="text-4xl font-bold">₹{storeConfig.referboltSubscription.price + (storeConfig.referboltSubscription.price * (storeConfig.referboltSubscription.gstRate / 100))}</p>
+                        <p className="text-4xl font-bold">₹{(storeConfig.referboltSubscription.price + (storeConfig.referboltSubscription.price * (storeConfig.referboltSubscription.gstRate / 100))).toFixed(0)}</p>
                          <p className="text-xs text-muted-foreground">(Incl. GST)</p>
-                        <Button size="lg" className="w-full" onClick={() => handlePurchase(storeConfig.referboltSubscription, 'referbolt')} disabled={isPurchasing !== null}>
+                        <Button size="lg" className="w-full font-bold" onClick={() => handlePurchase(storeConfig.referboltSubscription, 'referbolt')} disabled={isPurchasing !== null}>
                             {isPurchasing === storeConfig.referboltSubscription.name ? <Loader2 className="animate-spin"/> : "Subscribe Now"}
                         </Button>
                     </CardContent>

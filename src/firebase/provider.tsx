@@ -42,15 +42,13 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const [authState, setAuthState] = useState<AuthState>(() => {
-      const cached = getCachedRoles();
-      return {
-        user: null,
-        loading: true,
-        isAdmin: cached?.isAdmin || false,
-        isHeadAdmin: cached?.isHeadAdmin || false,
-        isResolved: false,
-      };
+  // Hydration Safe: Initialize with static values and load cache in useEffect
+  const [authState, setAuthState] = useState<AuthState>({
+    user: null,
+    loading: true,
+    isAdmin: false,
+    isHeadAdmin: false,
+    isResolved: false,
   });
 
   const router = useRouter();
@@ -62,7 +60,6 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       
       if (snap && snap.exists()) {
         const adminData = snap.data() as Admin;
-        // Definitive Admin Check: Must be Active OR be the Head Admin
         roles = {
             isAdmin: adminData.status === 'Active' || adminData.role === 'Head Admin',
             isHeadAdmin: adminData.role === 'Head Admin'
@@ -88,15 +85,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
     try {
       const adminDocRef = doc(db, "admins", user.uid);
-      
-      const adminDocSnap = await getDoc(adminDocRef).catch((e: any) => {
-          const isOffline = e.message?.toLowerCase().includes('offline') || e.code === 'unavailable';
-          if (isOffline) {
-              console.warn("Offline: Defaulting to student mode for safety.");
-          }
-          return null; 
-      });
-      
+      const adminDocSnap = await getDoc(adminDocRef).catch(() => null);
       return processSnap(adminDocSnap, user.uid);
     } catch (e) {
       console.error("Role resolution failure:", e);
@@ -105,6 +94,16 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   }, [processSnap]);
 
   useEffect(() => {
+    // Client-side hydration: apply cached roles if they exist
+    const cached = getCachedRoles();
+    if (cached) {
+      setAuthState(prev => ({
+        ...prev,
+        isAdmin: cached.isAdmin,
+        isHeadAdmin: cached.isHeadAdmin,
+      }));
+    }
+
     if (!services) {
         setAuthState(prev => ({ ...prev, loading: false, isResolved: true }));
         return;
@@ -125,14 +124,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       setAuthState({ user, loading: false, ...roles, isResolved: true });
     });
 
-    const timeout = setTimeout(() => {
-        setAuthState(prev => ({ ...prev, loading: false, isResolved: true }));
-    }, 10000);
-
-    return () => {
-        unsubscribe();
-        clearTimeout(timeout);
-    };
+    return () => unsubscribe();
   }, [services, resolveUserRole]);
 
   useEffect(() => {
@@ -149,18 +141,15 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
     if (user) {
       if (isAdmin) {
-        // Force admins into the admin panel if they try to access public landing or auth pages
         if (isAuthRoute || cleanPath === '/' || (!isAdminArea && !isPublicRoute)) {
           targetPath = '/admin/analytics';
         }
       } else {
-        // Force students into their profile if they try to access admin areas or landing pages
         if (isAdminArea || isAuthRoute || cleanPath === '/') {
           if (!isPublicRoute) targetPath = '/profile';
         }
       }
     } else {
-      // Unauthenticated users must be on public or auth routes
       if (!isPublicRoute && !isAuthRoute) {
         targetPath = '/';
       }

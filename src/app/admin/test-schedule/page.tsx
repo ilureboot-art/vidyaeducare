@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -36,8 +35,10 @@ export default function TestSchedulePage() {
 
     const [allSchedules, setAllSchedules] = useState<ScheduledTestWithStatus[] | null>(null);
     const [testSets, setTestSets] = useState<TestSet[] | null>(null);
-    const [date, setDate] = useState<Date | undefined>(new Date());
-    const [time, setTime] = useState('10:00'); // Default time
+    
+    // Hydration safe state
+    const [date, setDate] = useState<Date | undefined>(undefined);
+    const [time, setTime] = useState('10:00'); 
     const [selectedTestSetId, setSelectedTestSetId] = useState('');
     
     const fetchPageData = async () => {
@@ -56,6 +57,8 @@ export default function TestSchedulePage() {
 
     useEffect(() => {
         if(db) fetchPageData();
+        // Initialize date on client only to prevent hydration error
+        setDate(new Date());
     }, [db]);
     
     const refreshSchedules = (schedules: ScheduledTest[]) => {
@@ -124,7 +127,6 @@ export default function TestSchedulePage() {
                 description: `"${testSet.name}" has been added to the calendar for ${format(combinedDateTime, "PPP p")}.`
             });
             
-            // Reset form
             setSelectedTestSetId('');
             setDate(new Date());
             setTime('10:00');

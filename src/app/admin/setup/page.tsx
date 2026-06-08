@@ -35,8 +35,13 @@ export default function SetupAdminPage() {
   const targetDbId = "vidyaeducaredatabase";
 
   const ensureRecords = async (uid: string, type: 'admin' | 'student') => {
-    if (!db) throw new Error("Database not initialized");
+    if (!db || !auth) throw new Error("Services not initialized");
     
+    // FORCE TOKEN REFRESH: Ensure Firestore sees the latest Auth state
+    if (auth.currentUser) {
+        await auth.currentUser.getIdToken(true);
+    }
+
     const batch = writeBatch(db);
     const userDocRef = doc(db, "users", uid);
     const walletDocRef = doc(db, "wallets", uid);
@@ -120,7 +125,7 @@ export default function SetupAdminPage() {
         }
 
         // DELAY: Wait for Authentication state to fully propagate to Firestore rules
-        await new Promise(r => setTimeout(r, 4000));
+        await new Promise(r => setTimeout(r, 4500));
         await ensureRecords(uid, 'admin');
         setStatus('success');
         toast({ title: "Sync Complete", description: "Head Admin mapping verified." });
@@ -148,7 +153,7 @@ export default function SetupAdminPage() {
         }
 
         // DELAY: Wait for Identity Propagation
-        await new Promise(r => setTimeout(r, 4000));
+        await new Promise(r => setTimeout(r, 4500));
         await ensureRecords(uid, 'student');
         toast({ title: "Student Synced", description: "Test profile initialized." });
     } catch (error: any) {

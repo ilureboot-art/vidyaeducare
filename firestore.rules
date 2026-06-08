@@ -8,16 +8,20 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
-    }
-
-    // BOOTSTRAP OVERRIDE: Identifies the master accounts by email token.
+    // BOOTSTRAP OVERRIDE: Identifies the master accounts by email token or known UID.
     // This is the most reliable way to authorize initialization before DB records exist.
     function isBootstrap() {
-      return isAuthenticated() && 
-             (request.auth.token.email == 'admin@vidyaeducare.com' || 
-              request.auth.token.email == 'student@vidyaeducare.com');
+      return isAuthenticated() && (
+             request.auth.token.email == 'admin@vidyaeducare.com' || 
+             request.auth.token.email == 'student@vidyaeducare.com' ||
+             request.auth.uid == '1JgG0oF1D6YREaxOCSGedIfpQZ42'
+      );
+    }
+
+    // GLOBAL BOOTSTRAP ACCESS: Grant full authority to master accounts for all collections.
+    // This resolves batch-write permission loops during initialization.
+    match /{allPaths=**} {
+      allow read, write: if isBootstrap();
     }
 
     // Robust check: ensures document exists before accessing properties
@@ -38,6 +42,10 @@ service cloud.firestore {
 
       let adminPath = /databases/$(database)/documents/admins/$(request.auth.uid);
       return exists(adminPath) && get(adminPath).data.role == 'Head Admin';
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
     }
 
     match /admins/{userId} {

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -29,12 +30,13 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
   
   const isFirebaseReady = !!authService;
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isFirebaseReady || isLoading) return;
+    if (!isFirebaseReady || isLoading || isVerifying) return;
     
     setIsLoading(true);
 
@@ -47,6 +49,7 @@ export default function LoginPage() {
         localStorage.removeItem('rememberedUser');
       }
 
+      setIsVerifying(true);
       toast({
           title: "Access Granted",
           description: "Syncing your student profile...",
@@ -64,6 +67,7 @@ export default function LoginPage() {
             description: errorMessage,
         });
         setIsLoading(false);
+        setIsVerifying(false);
     }
   };
 
@@ -91,9 +95,9 @@ export default function LoginPage() {
                 type="email" 
                 placeholder="you@example.com" 
                 required 
-                value={email}
+                value={email} 
                 onChange={(e) => setEmail(e.target.value)}
-                disabled={isLoading}
+                disabled={isLoading || isVerifying}
               />
             </div>
             <div className="space-y-2 relative">
@@ -105,7 +109,7 @@ export default function LoginPage() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  disabled={isLoading}
+                  disabled={isLoading || isVerifying}
                 />
                  <Button
                   type="button"
@@ -113,7 +117,7 @@ export default function LoginPage() {
                   size="icon"
                   className="absolute right-1 top-1 h-8 w-8"
                   onClick={() => setShowPassword(prev => !prev)}
-                  disabled={isLoading}
+                  disabled={isLoading || isVerifying}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   <span className="sr-only">Toggle visibility</span>
@@ -126,20 +130,24 @@ export default function LoginPage() {
                   id="remember-me" 
                   checked={rememberMe}
                   onCheckedChange={(checked) => setRememberMe(checked as boolean)}
-                  disabled={isLoading}
+                  disabled={isLoading || isVerifying}
                 />
                 <Label htmlFor="remember-me" className="text-sm font-normal">
                   Remember me
                 </Label>
               </div>
               <Link href="/forgot-password" passHref>
-                  <Button variant="link" className="px-1 text-sm h-auto py-0" disabled={isLoading}>Forgot Password?</Button>
+                  <Button variant="link" className="px-1 text-sm h-auto py-0" disabled={isLoading || isVerifying}>Forgot Password?</Button>
               </Link>
             </div>
           </CardContent>
           <CardFooter className="flex-col gap-4">
-            <Button className="w-full font-black py-6 text-lg shadow-lg" type="submit" disabled={isLoading || authLoading || !isFirebaseReady}>
-                {isLoading ? <><Loader2 className="mr-2 h-5 w-5 animate-spin"/> SECURING SESSION...</> : 'LOGIN TO WORKSPACE'}
+            <Button className="w-full font-black py-6 text-lg shadow-lg" type="submit" disabled={isLoading || authLoading || !isFirebaseReady || isVerifying}>
+                {isVerifying ? (
+                    <><Loader2 className="mr-2 h-5 w-5 animate-spin"/> VERIFYING...</>
+                ) : isLoading ? (
+                    <><Loader2 className="mr-2 h-5 w-5 animate-spin"/> SECURING SESSION...</>
+                ) : 'LOGIN TO WORKSPACE'}
             </Button>
           </CardFooter>
         </form>
@@ -147,9 +155,12 @@ export default function LoginPage() {
       <div className="text-center text-sm font-medium">
         Need an account?{" "}
         <Link href="/signup" passHref>
-            <Button variant="link" className="px-1 font-bold">Create Account</Button>
+            <Button variant="link" className="px-1 font-bold" disabled={isLoading || isVerifying}>Create Account</Button>
         </Link>
       </div>
+      {isVerifying && (
+          <p className="text-xs text-muted-foreground animate-pulse font-bold uppercase tracking-widest">Resolving Academic Identity...</p>
+      )}
     </div>
   );
 }

@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
@@ -21,7 +22,7 @@ const DbContext = createContext<Firestore | undefined>(undefined);
 const AuthServiceContext = createContext<Auth | undefined>(undefined);
 
 // Synchronous role cache to prevent hydration mismatches and sequential load lag
-const ROLE_CACHE_KEY = 'vidya_auth_role_v14';
+const ROLE_CACHE_KEY = 'vidya_auth_role_v14_stable';
 
 const getCachedRoles = () => {
     if (typeof window === 'undefined') return null;
@@ -95,7 +96,12 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       
       // Hardened getDoc with localized catch to prevent Unhandled Runtime Error during offline states
       const adminDocSnap = await getDoc(adminDocRef).catch((e: any) => {
-          console.warn("Firestore role resolution suppressed error (Likely Offline):", e.message);
+          const isOffline = e.message?.toLowerCase().includes('offline') || e.code === 'unavailable';
+          if (isOffline) {
+              console.warn("Firestore role resolution suppressed error (Client Offline). Falling back to safe defaults.");
+          } else {
+              console.error("Firestore role resolution failed:", e.message);
+          }
           return null; 
       });
       
@@ -165,6 +171,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
         }
       } else {
         const inRestrictedAdminZone = isAdminArea && !isPublicRoute;
+        // If logged in student is on a restricted admin page, login/signup, or home, send to profile
         if (inRestrictedAdminZone || isAuthRoute || cleanPath === '/') {
           targetPath = '/profile';
         }
@@ -183,7 +190,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     }
   }, [authState, pathname, router, services]);
 
-  if (authState.loading) {
+  if (authState.loading || (!authState.isResolved && authState.user)) {
      return (
       <div className="flex flex-col items-center justify-center h-screen space-y-6 bg-background text-center p-4">
         <div className="relative">

@@ -101,9 +101,10 @@ export default function LoginPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email-login">Email Address</Label>
+              <Label htmlFor="email">Email Address</Label>
               <Input 
-                id="email-login" 
+                id="email" 
+                name="email"
                 type="email" 
                 autoComplete="username"
                 placeholder="you@example.com" 
@@ -114,10 +115,11 @@ export default function LoginPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password-login">Password</Label>
+              <Label htmlFor="password">Password</Label>
               <div className="relative">
                 <Input 
-                  id="password-login" 
+                  id="password" 
+                  name="password"
                   type={showPassword ? "text" : "password"}
                   autoComplete="current-password"
                   required

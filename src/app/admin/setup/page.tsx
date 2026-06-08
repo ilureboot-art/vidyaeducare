@@ -3,11 +3,11 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDb, useAuthService } from '@/firebase';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, runTransaction, getDocs, collection, query, where, deleteDoc } from 'firebase/firestore';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
+import { doc, runTransaction, getDocs, collection, query, where } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, CheckCircle, AlertTriangle, User, Shield, RefreshCcw } from 'lucide-react';
+import { Loader2, CheckCircle, Shield, RefreshCcw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const HEAD_ADMIN_EMAIL = 'admin@vidyaeducare.com';
@@ -48,7 +48,7 @@ export default function SetupAdminPage() {
 
       // 2. Unified Wallet Record
       transaction.set(walletDocRef, {
-        balance: type === 'admin' ? 0 : 500, // Give test student some starting money
+        balance: type === 'admin' ? 0 : 1000, // Give test student starting money
         coins: 100,
         referralCode: type === 'admin' ? 'HEADADMIN' : `REF${uid.slice(0, 6).toUpperCase()}`
       }, { merge: true });
@@ -81,10 +81,15 @@ export default function SetupAdminPage() {
             uid = userCredential.user.uid;
         } catch (e: any) {
             if (e.code === 'auth/email-already-in-use') {
-                const q = query(collection(db, "users"), where("email", "==", HEAD_ADMIN_EMAIL));
-                const snap = await getDocs(q);
-                if (!snap.empty) uid = snap.docs[0].id;
-                else throw new Error("Auth user exists but no record found. Clear Firebase Auth for this email manually.");
+                try {
+                    const signInRes = await signInWithEmailAndPassword(auth, HEAD_ADMIN_EMAIL, HEAD_ADMIN_PASSWORD);
+                    uid = signInRes.user.uid;
+                } catch (signInErr) {
+                    const q = query(collection(db, "users"), where("email", "==", HEAD_ADMIN_EMAIL));
+                    const snap = await getDocs(q);
+                    if (!snap.empty) uid = snap.docs[0].id;
+                    else throw new Error("Auth user exists but no database record found. Reset manually.");
+                }
             } else throw e;
         }
 
@@ -110,10 +115,15 @@ export default function SetupAdminPage() {
             uid = userCredential.user.uid;
         } catch (e: any) {
             if (e.code === 'auth/email-already-in-use') {
-                const q = query(collection(db, "users"), where("email", "==", TEST_USER_EMAIL));
-                const snap = await getDocs(q);
-                if (!snap.empty) uid = snap.docs[0].id;
-                else throw new Error("Test student exists in Auth but not in DB.");
+                try {
+                    const signInRes = await signInWithEmailAndPassword(auth, TEST_USER_EMAIL, TEST_USER_PASSWORD);
+                    uid = signInRes.user.uid;
+                } catch (signInErr) {
+                    const q = query(collection(db, "users"), where("email", "==", TEST_USER_EMAIL));
+                    const snap = await getDocs(q);
+                    if (!snap.empty) uid = snap.docs[0].id;
+                    else throw new Error("Student exists in Auth but UID lookup failed.");
+                }
             } else throw e;
         }
 

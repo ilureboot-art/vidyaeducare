@@ -42,7 +42,6 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Hydration Safe: Initialize with static values and load cache in useEffect
   const [authState, setAuthState] = useState<AuthState>({
     user: null,
     loading: true,
@@ -94,7 +93,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   }, [processSnap]);
 
   useEffect(() => {
-    // Client-side hydration: apply cached roles if they exist
+    // Client-side hydration: load cache after mount
     const cached = getCachedRoles();
     if (cached) {
       setAuthState(prev => ({

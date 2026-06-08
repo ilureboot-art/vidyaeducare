@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A flow for generating personalized study notes for students.
@@ -33,10 +34,6 @@ const GenerateNotesOutputSchema = z.object({
 });
 export type GenerateNotesOutput = z.infer<typeof GenerateNotesOutputSchema>;
 
-export async function generateStudyNotes(input: GenerateNotesInput): Promise<GenerateNotesOutput> {
-  return generateStudyNotesFlow(input);
-}
-
 const prompt = ai.definePrompt({
   name: 'generateStudyNotesPrompt',
   model: googleAI.model('gemini-2.5-flash'),
@@ -58,10 +55,6 @@ const prompt = ai.definePrompt({
   PERSONALIZATION CONTEXT: {{{performanceContext}}} (Focus on explaining these areas clearly).
   {{/if}}
   
-  {{#if topics}}
-  MAIN TOPICS: {{#each topics}}{{{this}}}, {{/each}}
-  {{/if}}
-
   REQUIREMENTS:
   1. Provide a concise, clear title.
   2. Create 3 detailed sections focusing on core concepts.
@@ -73,17 +66,10 @@ const prompt = ai.definePrompt({
   Tone: Educational, clear, and professional.`,
 });
 
-const generateStudyNotesFlow = ai.defineFlow(
-  {
-    name: 'generateStudyNotesFlow',
-    inputSchema: GenerateNotesInputSchema,
-    outputSchema: GenerateNotesOutputSchema,
-  },
-  async (input) => {
-    const { output } = await prompt(input);
-    if (!output) {
-      throw new Error('Failed to generate study notes. The AI was unable to process the request.');
-    }
-    return output;
+export async function generateStudyNotes(input: GenerateNotesInput): Promise<GenerateNotesOutput> {
+  const { output } = await prompt(input);
+  if (!output) {
+    throw new Error('Failed to generate study notes. The AI was unable to process the request.');
   }
-);
+  return output;
+}

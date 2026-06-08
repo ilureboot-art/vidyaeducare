@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A flow for generating multiple-choice questions.
@@ -41,11 +42,6 @@ const GenerateQuestionsOutputSchema = z.object({
 });
 export type GenerateQuestionsOutput = z.infer<typeof GenerateQuestionsOutputSchema>;
 
-
-export async function generateQuestions(input: GenerateQuestionsInput): Promise<GenerateQuestionsOutput> {
-  return generateQuestionsFlow(input);
-}
-
 const prompt = ai.definePrompt({
   name: 'generateQuestionsPrompt',
   model: googleAI.model('gemini-2.5-flash'),
@@ -65,27 +61,21 @@ const prompt = ai.definePrompt({
   The difficulty level must be appropriate for a {{{standard}}} student.`,
 });
 
-const generateQuestionsFlow = ai.defineFlow(
-  {
-    name: 'generateQuestionsFlow',
-    inputSchema: GenerateQuestionsInputSchema,
-    outputSchema: GenerateQuestionsOutputSchema,
-  },
-  async (input) => {
-    const { output } = await prompt(input);
-    if (!output) {
-      throw new Error('Failed to generate questions. The AI model did not return a valid response.');
-    }
-    // Ensure the output matches the requested number of questions
-    output.questions = output.questions.slice(0, input.numQuestions);
-    while (output.questions.length < input.numQuestions) {
-        output.questions.push({
-            id: `temp-${output.questions.length}`,
-            text: { en: '', mr: '' },
-            options: { en: ['', '', '', ''], mr: ['', '', '', ''] },
-            correctAnswer: { en: '', mr: '' }
-        });
-    }
-    return output;
+export async function generateQuestions(input: GenerateQuestionsInput): Promise<GenerateQuestionsOutput> {
+  const { output } = await prompt(input);
+  if (!output) {
+    throw new Error('Failed to generate questions. The AI model did not return a valid response.');
   }
-);
+  
+  // Ensure the output matches the requested number of questions
+  let finalQuestions = output.questions.slice(0, input.numQuestions);
+  while (finalQuestions.length < input.numQuestions) {
+      finalQuestions.push({
+          id: `temp-${finalQuestions.length}`,
+          text: { en: '', mr: '' },
+          options: { en: ['', '', '', ''], mr: ['', '', '', ''] },
+          correctAnswer: { en: '', mr: '' }
+      });
+  }
+  return { questions: finalQuestions };
+}

@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A flow for solving student doubts about academic topics or specific MCQs.
@@ -35,16 +36,12 @@ const SolveDoubtOutputSchema = z.object({
 });
 export type SolveDoubtOutput = z.infer<typeof SolveDoubtOutputSchema>;
 
-export async function solveDoubt(input: SolveDoubtInput): Promise<SolveDoubtOutput> {
-  return solveDoubtFlow(input);
-}
-
 const prompt = ai.definePrompt({
   name: 'solveDoubtPrompt',
   model: googleAI.model('gemini-2.5-flash'),
   input: { schema: SolveDoubtInputSchema },
   output: { schema: SolveDoubtOutputSchema },
-  prompt: `You are an expert tutor for the {{{context.board}}} board, teaching {{{context.standard}}} {{{#if context.subject}}}{{{context.subject}}}{{{/if}}}.
+  prompt: `You are an expert tutor for the {{{context.board}}} board, teaching {{{context.standard}}} students.
 
   {{#if question}}
   A student has a doubt about this specific Multiple Choice Question:
@@ -70,17 +67,10 @@ const prompt = ai.definePrompt({
   Tone: Friendly, academic, and supportive.`,
 });
 
-const solveDoubtFlow = ai.defineFlow(
-  {
-    name: 'solveDoubtFlow',
-    inputSchema: SolveDoubtInputSchema,
-    outputSchema: SolveDoubtOutputSchema,
-  },
-  async (input) => {
-    const { output } = await prompt(input);
-    if (!output) {
-      throw new Error('The AI tutor was unable to generate an explanation at this time.');
-    }
-    return output;
+export async function solveDoubt(input: SolveDoubtInput): Promise<SolveDoubtOutput> {
+  const { output } = await prompt(input);
+  if (!output) {
+    throw new Error('The AI tutor was unable to generate an explanation at this time.');
   }
-);
+  return output;
+}

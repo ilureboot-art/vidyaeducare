@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -41,16 +40,12 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      // Standardize input
       const cleanEmail = email.trim();
-      const cleanPassword = password; // Passwords shouldn't be trimmed usually
-
-      if (!cleanEmail || !cleanPassword) {
+      if (!cleanEmail || !password) {
           throw new Error("Please enter both email and password.");
       }
 
-      // Direct Firebase Authentication
-      await signInWithEmailAndPassword(authService, cleanEmail, cleanPassword);
+      await signInWithEmailAndPassword(authService, cleanEmail, password);
 
       if (rememberMe) {
         localStorage.setItem('rememberedUser', cleanEmail);
@@ -60,14 +55,13 @@ export default function LoginPage() {
 
       setIsVerifying(true);
       toast({
-          title: "Access Granted",
-          description: "Syncing your academic profile...",
+          title: "Authenticated",
+          description: "Resolving your academic role...",
       });
-      // The FirebaseProvider handles the redirection to /profile once role is resolved
-
+      // Redirection is handled by FirebaseProvider
     } catch (error: any) {
-       console.error("Login Error:", error.code, error.message);
-       let errorMessage = "Invalid email or password.";
+       console.error("Login Error:", error.code);
+       let errorMessage = "Incorrect email or password.";
        
        if (error.code === 'auth/network-request-failed') {
            errorMessage = "Connection error. Please check your internet.";
@@ -76,9 +70,7 @@ export default function LoginPage() {
        } else if (error.code === 'auth/user-disabled') {
            errorMessage = "This account has been disabled.";
        } else if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-           errorMessage = "Incorrect email or password. Please try again.";
-       } else if (error.message) {
-           errorMessage = error.message;
+           errorMessage = "Invalid email or password.";
        }
 
         toast({
@@ -113,7 +105,7 @@ export default function LoginPage() {
               <Input 
                 id="email-login" 
                 type="email" 
-                autoComplete="email"
+                autoComplete="username"
                 placeholder="you@example.com" 
                 required 
                 value={email} 
@@ -121,7 +113,7 @@ export default function LoginPage() {
                 disabled={isLoading || isVerifying}
               />
             </div>
-            <div className="space-y-2 relative">
+            <div className="space-y-2">
               <Label htmlFor="password-login">Password</Label>
               <div className="relative">
                 <Input 
@@ -142,7 +134,6 @@ export default function LoginPage() {
                   disabled={isLoading || isVerifying}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  <span className="sr-only">Toggle visibility</span>
                 </Button>
               </div>
             </div>
@@ -154,16 +145,14 @@ export default function LoginPage() {
                   onCheckedChange={(checked) => setRememberMe(checked as boolean)}
                   disabled={isLoading || isVerifying}
                 />
-                <Label htmlFor="remember-me" className="text-sm font-normal">
-                  Remember me
-                </Label>
+                <Label htmlFor="remember-me" className="text-sm font-normal">Remember me</Label>
               </div>
-              <Link href="/forgot-password" passHref>
+              <Link href="/forgot-password">
                   <Button variant="link" className="px-1 text-sm h-auto py-0" disabled={isLoading || isVerifying}>Forgot Password?</Button>
               </Link>
             </div>
           </CardContent>
-          <CardFooter className="flex-col gap-4">
+          <CardFooter>
             <Button className="w-full font-black py-6 text-lg shadow-lg" type="submit" disabled={isLoading || authLoading || !isFirebaseReady || isVerifying}>
                 {isVerifying ? (
                     <><Loader2 className="mr-2 h-5 w-5 animate-spin"/> SYNCING ROLE...</>
@@ -176,12 +165,10 @@ export default function LoginPage() {
       </Card>
       <div className="text-center text-sm font-medium">
         Need an account?{" "}
-        <Link href="/signup" passHref>
-            <Button variant="link" className="px-1 font-bold" disabled={isLoading || isVerifying}>Create Account</Button>
-        </Link>
+        <Link href="/signup" className="text-primary font-bold hover:underline">Create Account</Link>
       </div>
       {(isVerifying || authLoading) && (
-          <p className="text-xs text-muted-foreground animate-pulse font-bold uppercase tracking-widest mt-4">Resolving Academic Identity...</p>
+          <p className="text-xs text-muted-foreground animate-pulse font-bold uppercase tracking-widest mt-4">Verifying Identity...</p>
       )}
     </div>
   );

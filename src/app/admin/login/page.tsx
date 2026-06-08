@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -16,11 +15,12 @@ import { Shield, Eye, EyeOff, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { useAuthService } from "@/firebase";
+import { useAuthService, useAuth } from "@/firebase";
 
 export default function AdminLoginPage() {
   const { toast } = useToast();
   const auth = useAuthService();
+  const { loading: authLoading } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -36,7 +36,7 @@ export default function AdminLoginPage() {
     setIsLoading(true);
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await signInWithEmailAndPassword(auth, email.trim(), password);
       
       if (rememberMe) {
           localStorage.setItem('rememberedAdmin', email);
@@ -45,13 +45,12 @@ export default function AdminLoginPage() {
       }
       
       setIsVerifying(true);
-      toast({ title: "Authorized", description: "Verifying administrative permissions..." });
-      // Redirection is handled globally by FirebaseProvider once the role is confirmed
-      
+      toast({ title: "Authenticated", description: "Verifying administrative rights..." });
+      // Role-based navigation is handled by FirebaseProvider
     } catch (error: any) {
-       let errorMessage = "Access Denied.";
+       let errorMessage = "Invalid admin credentials.";
        if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-           errorMessage = "Invalid admin credentials.";
+           errorMessage = "Incorrect admin email or password.";
        }
        toast({ variant: "destructive", title: "Login Failed", description: errorMessage });
        setIsLoading(false);
@@ -70,29 +69,31 @@ export default function AdminLoginPage() {
       <Card className="w-full shadow-2xl border-primary/10">
         <form onSubmit={handleLogin}>
             <CardHeader>
-                <CardTitle>Sign In</CardTitle>
+                <CardTitle>Admin Sign In</CardTitle>
                 <CardDescription>
-                    Access the system administration console.
+                    Secure access to the management console.
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
                     <div className="space-y-2">
-                        <Label htmlFor="email-login">Admin Email</Label>
+                        <Label htmlFor="admin-email">Admin Email</Label>
                         <Input 
-                            id="email-login" 
+                            id="admin-email" 
                             type="email" 
+                            autoComplete="username"
                             required 
                             value={email} 
                             onChange={(e) => setEmail(e.target.value)} 
                             disabled={isVerifying || isLoading} 
                         />
                     </div>
-                    <div className="space-y-2 relative">
-                        <Label htmlFor="password-login">Secure Password</Label>
+                    <div className="space-y-2">
+                        <Label htmlFor="admin-password">Secure Password</Label>
                         <div className="relative">
                             <Input 
-                                id="password-login" 
+                                id="admin-password" 
                                 type={showPassword ? "text" : "password"} 
+                                autoComplete="current-password"
                                 required 
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
@@ -114,18 +115,18 @@ export default function AdminLoginPage() {
                         <Checkbox id="remember-me-admin" checked={rememberMe} onCheckedChange={(checked) => setRememberMe(checked as boolean)} disabled={isVerifying || isLoading} />
                         <Label htmlFor="remember-me-admin" className="text-sm font-normal">Stay logged in</Label>
                     </div>
-                    <Button type="submit" className="w-full !mt-6 py-6 text-lg font-bold" disabled={isLoading || !auth || isVerifying}>
+                    <Button type="submit" className="w-full !mt-6 py-6 text-lg font-bold" disabled={isLoading || !auth || isVerifying || authLoading}>
                         {isVerifying ? (
-                            <><Loader2 className="mr-2 h-5 w-5 animate-spin"/> VERIFYING...</>
+                            <><Loader2 className="mr-2 h-5 w-5 animate-spin"/> VERIFYING ROLE...</>
                         ) : isLoading ? (
-                            <><Loader2 className="mr-2 h-5 w-5 animate-spin"/> SECURING SESSION...</>
+                            <><Loader2 className="mr-2 h-5 w-5 animate-spin"/> SECURING...</>
                         ) : 'ENTER DASHBOARD'}
                     </Button>
             </CardContent>
         </form>
       </Card>
       {isVerifying && (
-          <p className="mt-4 text-xs text-muted-foreground animate-pulse font-bold uppercase tracking-widest">Resolving Administrative Role...</p>
+          <p className="mt-4 text-xs text-muted-foreground animate-pulse font-bold uppercase tracking-widest">Checking Permissions...</p>
       )}
     </div>
   );

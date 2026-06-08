@@ -20,8 +20,7 @@ const AuthContext = createContext<AuthState | undefined>(undefined);
 const DbContext = createContext<Firestore | undefined>(undefined);
 const AuthServiceContext = createContext<Auth | undefined>(undefined);
 
-// Synchronous role cache to prevent hydration mismatches and sequential load lag
-const ROLE_CACHE_KEY = 'vidya_auth_role_v14_stable';
+const ROLE_CACHE_KEY = 'vidya_auth_role_v15_final';
 
 const getCachedRoles = () => {
     if (typeof window === 'undefined') return null;
@@ -63,6 +62,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       
       if (snap && snap.exists()) {
         const adminData = snap.data() as Admin;
+        // Definitive Admin Check: Must be Active OR be the Head Admin
         roles = {
             isAdmin: adminData.status === 'Active' || adminData.role === 'Head Admin',
             isHeadAdmin: adminData.role === 'Head Admin'
@@ -86,34 +86,20 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
         return { isAdmin: cached.isAdmin, isHeadAdmin: cached.isHeadAdmin };
     }
 
-    // Replication lag check: only wait if the account was created in the last 30 seconds
-    const creationTime = new Date(user.metadata.creationTime || 0).getTime();
-    const isNewAccount = (Date.now() - creationTime) < 30000;
-
     try {
       const adminDocRef = doc(db, "admins", user.uid);
       
-      // Hardened getDoc with localized catch to prevent Unhandled Runtime Error during offline states
       const adminDocSnap = await getDoc(adminDocRef).catch((e: any) => {
-          const isOffline = e.message?.toLowerCase().includes('offline') || e.code === 'unavailable' || e.code === 'permission-denied';
+          const isOffline = e.message?.toLowerCase().includes('offline') || e.code === 'unavailable';
           if (isOffline) {
-              console.warn("Firestore role resolution suppressed (Offline/Perms). Defaulting to student.");
-          } else {
-              console.error("Firestore role resolution failed:", e.message);
+              console.warn("Offline: Defaulting to student mode for safety.");
           }
           return null; 
       });
       
-      if (!adminDocSnap?.exists() && isNewAccount && typeof window !== 'undefined' && window.navigator.onLine) {
-          // Replication lag buffer: only retry for brand new accounts
-          await new Promise(r => setTimeout(r, 1500));
-          const retrySnap = await getDoc(adminDocRef).catch(() => null);
-          return processSnap(retrySnap, user.uid);
-      }
-      
       return processSnap(adminDocSnap, user.uid);
     } catch (e) {
-      console.error("Critical role resolution failure:", e);
+      console.error("Role resolution failure:", e);
       return { isAdmin: false, isHeadAdmin: false };
     }
   }, [processSnap]);
@@ -133,17 +119,15 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
           return;
       }
 
-      // Ensure state is cleared before starting resolution to trigger "Verifying..." UI
       setAuthState(prev => ({ ...prev, user, loading: false, isResolved: false }));
 
-      // Resolve roles definitively
       const roles = await resolveUserRole(user, db);
       setAuthState({ user, loading: false, ...roles, isResolved: true });
     });
 
     const timeout = setTimeout(() => {
         setAuthState(prev => ({ ...prev, loading: false, isResolved: true }));
-    }, 15000);
+    }, 10000);
 
     return () => {
         unsubscribe();
@@ -165,20 +149,18 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
     if (user) {
       if (isAdmin) {
-        const onRestrictedGuestPage = !isAdminArea && !isPublicRoute;
-        const onSetupPath = cleanPath === '/admin/setup' || cleanPath === '/check-head-admin';
-
-        if ((onRestrictedGuestPage || isAuthRoute || cleanPath === '/') && !onSetupPath) {
+        // Force admins into the admin panel if they try to access public landing or auth pages
+        if (isAuthRoute || cleanPath === '/' || (!isAdminArea && !isPublicRoute)) {
           targetPath = '/admin/analytics';
         }
       } else {
-        const inRestrictedAdminZone = isAdminArea && !isPublicRoute;
-        // If logged in student is on a restricted admin page, login/signup, or home, send to profile
-        if (inRestrictedAdminZone || isAuthRoute || cleanPath === '/') {
-          targetPath = '/profile';
+        // Force students into their profile if they try to access admin areas or landing pages
+        if (isAdminArea || isAuthRoute || cleanPath === '/') {
+          if (!isPublicRoute) targetPath = '/profile';
         }
       }
     } else {
+      // Unauthenticated users must be on public or auth routes
       if (!isPublicRoute && !isAuthRoute) {
         targetPath = '/';
       }
@@ -187,7 +169,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     if (targetPath && targetPath !== cleanPath && navigationLock.current !== targetPath) {
       navigationLock.current = targetPath;
       router.replace(targetPath);
-      const timer = setTimeout(() => { navigationLock.current = null; }, 1500);
+      const timer = setTimeout(() => { navigationLock.current = null; }, 1000);
       return () => clearTimeout(timer);
     }
   }, [authState, pathname, router, services]);
@@ -201,7 +183,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
         </div>
         <div className="space-y-2">
             <p className="text-xl font-black text-primary tracking-tighter uppercase italic">Vidya EduCare</p>
-            <p className="text-muted-foreground text-sm font-medium tracking-wide">Synchronizing Session...</p>
+            <p className="text-muted-foreground text-sm font-medium tracking-wide">Syncing Role Access...</p>
         </div>
       </div>
     );

@@ -12,17 +12,17 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // BOOTSTRAP HELPER: Identifies the master email allowed to initialize the project
+    // BOOTSTRAP HELPER: Identifies the master accounts allowed to initialize the project
     function isBootstrap() {
       return isAuthenticated() && 
-             (request.auth.token.email == 'admin@vidyaeducare.com' || 
-              request.auth.token.email == 'student@vidyaeducare.com'); // Allow both during init
+             (request.auth.token.email.lower() == 'admin@vidyaeducare.com' || 
+              request.auth.token.email.lower() == 'student@vidyaeducare.com');
     }
 
     // Robust check: ensures document exists before accessing properties to prevent evaluation crashes
     function isAdmin() {
       if (!isAuthenticated()) return false;
-      if (request.auth.token.email == 'admin@vidyaeducare.com') return true; 
+      if (request.auth.token.email.lower() == 'admin@vidyaeducare.com') return true; 
       
       let adminPath = /databases/$(database)/documents/admins/$(request.auth.uid);
       return exists(adminPath) && (
@@ -33,36 +33,33 @@ service cloud.firestore {
 
     function isHeadAdmin() {
       if (!isAuthenticated()) return false;
-      if (request.auth.token.email == 'admin@vidyaeducare.com') return true;
+      if (request.auth.token.email.lower() == 'admin@vidyaeducare.com') return true;
 
       let adminPath = /databases/$(database)/documents/admins/$(request.auth.uid);
       return exists(adminPath) && get(adminPath).data.role == 'Head Admin';
     }
 
     match /admins/{userId} {
-      allow get: if isOwner(userId) || isAdmin();
-      // Allow bootstrap email or existing Head Admin to create/update admin records
-      allow write: if isBootstrap() || (isOwner(userId) && isHeadAdmin());
-      // CRITICAL: Allow users to delete their own admin record during student sync
-      allow delete: if isOwner(userId) || isHeadAdmin() || isBootstrap();
+      allow read: if isAuthenticated();
+      // Allow bootstrap email or existing Head Admin to create/update/delete records
+      allow write, delete: if isBootstrap() || (isOwner(userId) && isHeadAdmin());
     }
 
     match /users/{userId} {
-      allow list: if isAuthenticated();
-      allow get: if isOwner(userId) || isAdmin() || isAuthenticated();
-      allow write: if isOwner(userId) || isAdmin() || isBootstrap();
+      allow list, get: if isAuthenticated();
+      allow write: if isBootstrap() || isOwner(userId) || isAdmin();
     }
 
     match /wallets/{userId} {
       allow list: if isAuthenticated();
-      allow get, write: if isOwner(userId) || isAdmin() || isBootstrap();
+      allow get: if isOwner(userId) || isAdmin();
+      allow write: if isBootstrap() || isOwner(userId) || isAdmin();
     }
 
     match /students/{studentId} {
       allow list: if isAuthenticated();
-      allow get, write: if isAuthenticated() && (
-        resource == null || resource.data.parentId == request.auth.uid || isAdmin() || isBootstrap()
-      );
+      allow get: if isAuthenticated();
+      allow write: if isBootstrap() || isAdmin() || (resource != null && resource.data.parentId == request.auth.uid);
     }
     
     match /transactions/{txId} {
@@ -83,7 +80,7 @@ service cloud.firestore {
 
     match /configs/{configId} {
       allow read: if true;
-      allow write: if isHeadAdmin();
+      allow write: if isHeadAdmin() || isBootstrap();
     }
 
     match /activationCodes/{userId} {
@@ -92,12 +89,12 @@ service cloud.firestore {
 
     match /testSets/{testSetId} {
         allow read: if true;
-        allow write: if isHeadAdmin();
+        allow write: if isHeadAdmin() || isBootstrap();
     }
 
     match /scheduledTests/{testId} {
         allow read: if true;
-        allow write: if isHeadAdmin();
+        allow write: if isHeadAdmin() || isBootstrap();
     }
 
     match /testResults/{resultId} {
@@ -114,7 +111,7 @@ service cloud.firestore {
 
     match /quizClashTournaments/{tournamentId} {
         allow read: if true;
-        allow write: if isAdmin();
+        allow write: if isAdmin() || isBootstrap();
     }
 
     match /quizClashResults/{resultId} {
@@ -125,7 +122,7 @@ service cloud.firestore {
     match /notifications/{notifId} {
         allow list: if isAuthenticated();
         allow get: if isAuthenticated() && (resource.data.userId == request.auth.uid || (resource.data.userId == 'admin' && isAdmin()));
-        allow write: if isAdmin();
+        allow write: if isAdmin() || isBootstrap();
     }
     
     match /referbolt/{userId} {
@@ -135,7 +132,7 @@ service cloud.firestore {
     match /clients/{clientId} {
         allow list: if isAuthenticated();
         allow get: if isAuthenticated() && (resource.data.referrerId == request.auth.uid || isAdmin());
-        allow write: if isAdmin();
+        allow write: if isAdmin() || isBootstrap();
     }
   }
 }

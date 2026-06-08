@@ -75,7 +75,10 @@ export default function SetupAdminPage() {
     }
 
     await batch.commit();
-    if (typeof window !== 'undefined') sessionStorage.clear();
+    if (typeof window !== 'undefined') {
+        sessionStorage.clear();
+        localStorage.removeItem('vidya_auth_role_v15_final');
+    }
   };
 
   const handleError = (error: any) => {
@@ -84,12 +87,12 @@ export default function SetupAdminPage() {
     
     if (msg.includes("Native mode API is disabled") || msg.includes("Datastore mode")) {
         setIsDatabaseMissing(true);
-        setErrorMessage("CRITICAL: Infrastructure Mismatch. Ensure 'vidyaeducaredatabase' is created in 'Firestore Native' mode.");
+        setErrorMessage(`CRITICAL: Infrastructure Mode Conflict. Ensure '${targetDbId}' is in 'Firestore Native' mode.`);
     } else if (msg.includes("database (default) does not exist") || msg.includes("not exist")) {
         setIsDatabaseMissing(true);
-        setErrorMessage(`Database '${targetDbId}' not found. Check Google Cloud console.`);
-    } else if (msg.includes("Missing or insufficient permissions") || msg.includes("permission-denied")) {
-        setErrorMessage("Permission Denied. Please ensure you are logged in as admin@vidyaeducare.com and the database rules allow writes to 'admins', 'users', and 'wallets'.");
+        setErrorMessage(`Database '${targetDbId}' target not found. Please verify the ID in Google Cloud.`);
+    } else if (msg.includes("permission-denied") || msg.includes("insufficient permissions")) {
+        setErrorMessage(`Permission Denied. identity: ${auth?.currentUser?.email || 'unauthenticated'}. UID: ${auth?.currentUser?.uid || 'none'}. Ensure your Firestore rules are deployed to database '${targetDbId}'.`);
     } else {
         setErrorMessage(msg);
     }
@@ -114,10 +117,11 @@ export default function SetupAdminPage() {
             } else throw e;
         }
 
-        await new Promise(r => setTimeout(r, 1500)); // Allow token propagation
+        // Buffer for Identity Propagation
+        await new Promise(r => setTimeout(r, 3000));
         await ensureRecords(uid, 'admin');
         setStatus('success');
-        toast({ title: "Sync Complete", description: "Admin identity mapping updated." });
+        toast({ title: "Sync Complete", description: "Head Admin mapping verified." });
     } catch (error: any) {
         handleError(error);
     }
@@ -141,7 +145,8 @@ export default function SetupAdminPage() {
             } else throw e;
         }
 
-        await new Promise(r => setTimeout(r, 1500));
+        // Buffer for Identity Propagation
+        await new Promise(r => setTimeout(r, 3000));
         await ensureRecords(uid, 'student');
         toast({ title: "Student Synced", description: "Test profile initialized." });
     } catch (error: any) {
@@ -166,13 +171,15 @@ export default function SetupAdminPage() {
           
           <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 space-y-2">
               <p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2">
-                  <Database size={12}/> Connectivity Hub
+                  <Database size={12}/> Target Configuration
               </p>
               <div className="grid grid-cols-2 gap-2 text-[10px] font-mono">
                   <div className="text-muted-foreground">Project:</div>
                   <div className="font-bold truncate">{targetProjectId}</div>
                   <div className="text-muted-foreground">Database ID:</div>
                   <div className="font-bold">{targetDbId}</div>
+                  <div className="text-muted-foreground">Current Auth:</div>
+                  <div className="font-bold truncate text-primary">{auth?.currentUser?.email || 'NONE'}</div>
               </div>
           </div>
 
@@ -203,7 +210,7 @@ export default function SetupAdminPage() {
                 </div>
             ) : status === 'error' && !isDatabaseMissing ? (
                 <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 p-4 rounded-xl">
-                    <p className="text-xs font-bold text-red-700">{errorMessage}</p>
+                    <p className="text-[10px] font-bold text-red-700 leading-tight">{errorMessage}</p>
                     <Button variant="outline" size="sm" className="w-full mt-4 font-bold" onClick={() => setStatus('idle')}>Retry Sync</Button>
                 </div>
             ) : (
@@ -229,7 +236,7 @@ export default function SetupAdminPage() {
         </CardContent>
         <CardFooter className="bg-primary/5 py-4 border-t justify-center gap-2">
             <Info size={10} className="text-muted-foreground"/>
-            <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground">Targeting Named Database: {targetDbId}</p>
+            <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground">Targeting Native DB: {targetDbId}</p>
         </CardFooter>
       </Card>
     </div>

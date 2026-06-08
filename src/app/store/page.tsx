@@ -42,7 +42,7 @@ function StorePageContent() {
     try {
         const userDoc = await getDoc(doc(db, "users", userId));
         if (!userDoc.exists()) return;
-        const joinDate = new Date(userDoc.data().joinDate);
+        const joinDate = userDoc.data().joinDate ? new Date(userDoc.data().joinDate) : new Date();
 
         const qT = query(
             collection(db, "transactions"), 
@@ -51,9 +51,9 @@ function StorePageContent() {
             orderBy("date", "desc"), 
             limit(1)
         );
-        const tSnap = await getDocs(qT);
+        const tSnap = await getDocs(qT).catch(() => null);
         let lastPurchaseDate = null;
-        if (!tSnap.empty) {
+        if (tSnap && !tSnap.empty) {
             const d = tSnap.docs[0].data().date;
             lastPurchaseDate = d instanceof Timestamp ? d.toDate() : new Date(d);
         }
@@ -69,15 +69,17 @@ function StorePageContent() {
         }
 
         const qC = query(collection(db, "clients"), where("referrerId", "==", userId));
-        const cSnap = await getDocs(qC);
+        const cSnap = await getDocs(qC).catch(() => null);
         let validCount = 0;
-        cSnap.forEach(doc => {
-            const data = doc.data();
-            const pDate = data.purchaseDate instanceof Timestamp ? data.purchaseDate.toDate() : new Date(data.purchaseDate);
-            if (pDate >= anchorDate && pDate <= windowEnd) {
-                validCount++;
-            }
-        });
+        if (cSnap) {
+            cSnap.forEach(doc => {
+                const data = doc.data();
+                const pDate = data.purchaseDate instanceof Timestamp ? data.purchaseDate.toDate() : new Date(data.purchaseDate);
+                if (pDate >= anchorDate && pDate <= windowEnd) {
+                    validCount++;
+                }
+            });
+        }
 
         setRecommendationCount(validCount);
         setIsEligibleForRecDiscount(validCount >= config.recommendationSettings.requiredCount);
@@ -97,13 +99,16 @@ function StorePageContent() {
             const [walletSnap, configSnap] = await Promise.all([
                 getDoc(walletDocRef),
                 getDoc(storeConfigRef)
-            ]);
+            ]).catch(e => {
+                console.error("Store init fetch error:", e);
+                return [null, null];
+            });
 
-            if(walletSnap.exists()) {
+            if(walletSnap && walletSnap.exists()) {
                 setWalletData(walletSnap.data() as WalletData);
             }
             
-            if(configSnap.exists()) {
+            if(configSnap && configSnap.exists()) {
                 const config = configSnap.data() as StoreConfig;
                 setStoreConfig(config);
                 checkRecEligibility(db, user.uid, config);
@@ -121,12 +126,9 @@ function StorePageContent() {
     let priceDetails;
     if (type === 'mock') {
         const mockItem = item as MockTestPackage;
-        // ADMIN DEFINED DISCOUNTS
         const baseDiscount = (mockItem.baseDiscount || 0) / 100;
         const referralDiscount = referralCode1.trim() !== "" ? (mockItem.referralDiscount || 0) / 100 : 0;
         const specialDiscount = (mockItem.specialDiscount || 0) / 100;
-        
-        // RECOMMENDATION DISCOUNT (UNLOCKED)
         const recommendationDiscount = isEligibleForRecDiscount ? (storeConfig.recommendationSettings?.additionalDiscount || 0) / 100 : 0;
         
         const totalDiscountFactor = baseDiscount + referralDiscount + specialDiscount + recommendationDiscount;
@@ -141,16 +143,35 @@ function StorePageContent() {
     }
 
     if (walletData.balance < priceDetails.finalPrice) {
-        toast({ variant: "destructive", title: "Purchase Failed", description: "Insufficient wallet balance." });
+        toast({ variant: "destructive", title: "Purchase Failed", description: "Insufficient wallet balance. Please add funds to your wallet." });
         setIsPurchasing(null);
         return;
     }
 
     try {
+        // PRE-RESOLUTION: Resolve referral codes to UIDs outside of transaction (queries not allowed in transactions)
+        const ibaUids: string[] = [];
+        if (priceDetails.hasReferral) {
+            const codes = [referralCode1.trim()];
+            if (referralCode2.trim()) codes.push(referralCode2.trim());
+            
+            for (const code of codes) {
+                const q = query(collection(db, "wallets"), where("referralCode", "==", code));
+                const snap = await getDocs(q);
+                if (!snap.empty) {
+                    ibaUids.push(snap.docs[0].id);
+                }
+            }
+        }
+
         await runTransaction(db, async (transaction) => {
             const userWalletRef = doc(db, "wallets", user.uid);
             const userWalletDoc = await transaction.get(userWalletRef);
-            const currentBalance = userWalletDoc.exists() ? userWalletDoc.data().balance : 0;
+            if (!userWalletDoc.exists()) throw new Error("User wallet record not found.");
+            
+            const currentBalance = userWalletDoc.data().balance;
+            if (currentBalance < priceDetails.finalPrice) throw new Error("Insufficient balance.");
+
             transaction.update(userWalletRef, { balance: currentBalance - priceDetails.finalPrice });
 
             const purchaseTxRef = doc(collection(db, "transactions"));
@@ -163,27 +184,21 @@ function StorePageContent() {
                 type: "Purchase",
             });
 
-            if (priceDetails.hasReferral && referralCode1.trim()) {
-                const ibasToPay = [referralCode1.trim()];
-                if (referralCode2.trim()) ibasToPay.push(referralCode2.trim());
+            if (ibaUids.length > 0) {
                 const baseCommissionRate = 0.1765;
-                const commissionAmount = (priceDetails.basePrice * baseCommissionRate) / ibasToPay.length;
+                const commissionAmount = (priceDetails.basePrice * baseCommissionRate) / ibaUids.length;
 
-                for (const ibaCode of ibasToPay) {
-                    const q = query(collection(db, "wallets"), where("referralCode", "==", ibaCode));
-                    const ibaQuerySnapshot = await getDocs(q); 
-                    if (!ibaQuerySnapshot.empty) {
-                        const ibaUserDoc = ibaQuerySnapshot.docs[0];
-                        const ibaId = ibaUserDoc.id;
-                        const ibaWalletRef = doc(db, "wallets", ibaId);
-                        const ibaWalletDoc = await transaction.get(ibaWalletRef);
-                        const ibaCurrentBalance = ibaWalletDoc.exists() ? ibaWalletDoc.data().balance : 0;
+                for (const ibaId of ibaUids) {
+                    const ibaWalletRef = doc(db, "wallets", ibaId);
+                    const ibaWalletDoc = await transaction.get(ibaWalletRef);
+                    if (ibaWalletDoc.exists()) {
+                        const ibaCurrentBalance = ibaWalletDoc.data().balance || 0;
                         transaction.update(ibaWalletRef, { balance: ibaCurrentBalance + commissionAmount });
                         
                         const ibaCommissionTxRef = doc(collection(db, "transactions"));
                         transaction.set(ibaCommissionTxRef, {
                             user: ibaId, amount: commissionAmount, date: serverTimestamp(),
-                            description: `Commission from ${user.email}`,
+                            description: `Commission from student purchase`,
                             status: "Completed", type: "Commission",
                         });
                     }
@@ -203,10 +218,11 @@ function StorePageContent() {
             }
         });
 
-        toast({ title: "Purchase Successful!", description: `You have successfully purchased ${item.name}.`, duration: 7000 });
+        toast({ title: "Purchase Successful!", description: `You have successfully purchased ${item.name}. Activation code added to your profile.`, duration: 7000 });
         checkRecEligibility(db, user.uid, storeConfig);
     } catch (e: any) {
-        toast({ variant: "destructive", title: "Purchase Failed", description: e.message || "An error occurred." });
+        console.error("Store Purchase Error:", e);
+        toast({ variant: "destructive", title: "Purchase Failed", description: e.message || "An unexpected error occurred during checkout." });
     } finally {
         setIsPurchasing(null);
     }
@@ -214,8 +230,9 @@ function StorePageContent() {
 
   if (!walletData || !storeConfig) {
     return (
-        <div className="w-full max-w-4xl mx-auto flex justify-center items-center h-64">
-            <Loader2 className="animate-spin text-primary" size={32}/>
+        <div className="w-full max-w-4xl mx-auto flex flex-col items-center justify-center h-64 gap-4">
+            <Loader2 className="animate-spin text-primary" size={40}/>
+            <p className="text-muted-foreground animate-pulse text-sm font-medium">Connecting to Secure Store...</p>
         </div>
     )
   }
@@ -229,14 +246,14 @@ function StorePageContent() {
             Product Store
           </CardTitle>
           <CardDescription>
-            Your balance: <span className="font-bold">₹{walletData.balance.toFixed(2)}</span>
+            Your current wallet balance: <span className="font-bold text-primary">₹{walletData.balance.toFixed(2)}</span>
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="tests" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="tests">Mock Tests</TabsTrigger>
-              <TabsTrigger value="referbolt">ReferBolt</TabsTrigger>
+              <TabsTrigger value="tests">Mock Test Packs</TabsTrigger>
+              <TabsTrigger value="referbolt">ReferBolt Access</TabsTrigger>
             </TabsList>
             <TabsContent value="tests" className="space-y-6 pt-6">
                  
@@ -252,12 +269,12 @@ function StorePageContent() {
                                 <div>
                                     <p className="font-bold text-sm">
                                         {isEligibleForRecDiscount 
-                                            ? `Fast-Mover Discount Unlocked!` 
+                                            ? `Fast-Mover Bonus Applied!` 
                                             : `Unlock +${storeConfig.recommendationSettings?.additionalDiscount}% Extra Discount`}
                                     </p>
                                     <p className="text-xs text-muted-foreground">
                                         {isEligibleForRecDiscount 
-                                            ? `You've recommended ${recommendationCount} customers within the window. Bonus applied!` 
+                                            ? `You've recommended ${recommendationCount} customers within your joining window. Congrats!` 
                                             : `Recommend ${storeConfig.recommendationSettings?.requiredCount} customers within ${storeConfig.recommendationSettings?.windowDays} days to unlock.`}
                                     </p>
                                 </div>
@@ -269,30 +286,35 @@ function StorePageContent() {
                     </Card>
                  )}
 
-                 <div className="max-w-md mx-auto space-y-4 p-4 border rounded-lg bg-muted/50 mt-4">
-                    <p className="text-sm text-center font-semibold">Enter IBA code(s) to get a discount and support your associates.</p>
+                 <div className="max-w-md mx-auto space-y-4 p-5 border rounded-xl bg-muted/30 mt-4">
+                    <div className="text-center space-y-1 mb-2">
+                        <p className="text-sm font-bold">Have an IBA referral code?</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-black">Support your associate & get a discount</p>
+                    </div>
                     <div className="space-y-2">
-                        <Label htmlFor="referralCode1">Referral Code 1 (For Discount & Commission)</Label>
+                        <Label htmlFor="referralCode1" className="text-[10px] font-bold uppercase">Primary IBA Code</Label>
                         <Input 
                             id="referralCode1" 
-                            placeholder="Enter first IBA code"
+                            placeholder="Enter IBA code here"
                             value={referralCode1}
                             onChange={(e) => setReferralCode1(e.target.value)}
+                            className="bg-background"
                         />
                     </div>
                      <div className="space-y-2">
-                        <Label htmlFor="referralCode2">Referral Code 2 (For Commission Split - Optional)</Label>
+                        <Label htmlFor="referralCode2" className="text-[10px] font-bold uppercase">Secondary Code (Optional Split)</Label>
                         <Input 
                             id="referralCode2" 
-                            placeholder="Enter second IBA code to split commission"
+                            placeholder="Enter second code if any"
                             value={referralCode2}
                             onChange={(e) => setReferralCode2(e.target.value)}
+                            className="bg-background"
                         />
                     </div>
                 </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
                 {storeConfig.mockTestPackages.map((product, index) => {
-                    // DYNAMIC DISCOUNT CALCULATION
                     const baseDisc = (product.baseDiscount || 0) / 100;
                     const referralDisc = referralCode1.trim() !== "" ? (product.referralDiscount || 0) / 100 : 0;
                     const specialDisc = (product.specialDiscount || 0) / 100;
@@ -306,42 +328,43 @@ function StorePageContent() {
                   return (
                     <Card
                       key={index}
-                      className={`flex flex-col text-center transition-all relative ${product.bestValue ? 'border-primary border-2 shadow-primary/20 shadow-lg' : ''}`}
+                      className={`flex flex-col text-center transition-all relative ${product.bestValue ? 'border-primary border-2 shadow-primary/10 shadow-lg' : 'hover:shadow-md'}`}
                     >
                       {product.bestValue && (
                           <div className="absolute top-0 right-0 -mt-3 -mr-3">
-                            <div className="bg-primary text-primary-foreground text-xs font-bold rounded-full px-3 py-1 flex items-center gap-1">
-                              <Sparkles className="w-4 h-4" />
-                              Best Value
+                            <div className="bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-tighter rounded-full px-3 py-1 flex items-center gap-1 shadow-lg">
+                              <Sparkles className="w-3 h-3" />
+                              Most Popular
                             </div>
                           </div>
                         )}
                       <CardHeader>
                         <CardTitle className="text-2xl font-bold flex items-center justify-center gap-2">
-                          <BookOpen className="text-primary" />
+                          <BookOpen className="text-primary h-5 w-5" />
                           {product.name}
                         </CardTitle>
+                        <CardDescription>{product.months} Months Premium Access</CardDescription>
                       </CardHeader>
-                      <CardContent className="flex-grow flex flex-col justify-center items-center space-y-4">
-                         <div>
-                            <p className="text-muted-foreground line-through">₹{product.price}</p>
-                            <p className="text-4xl font-bold">₹{finalPrice.toFixed(0)}</p>
-                            <p className="text-[10px] text-muted-foreground mt-1">
-                                (Base: ₹{discountedBasePrice.toFixed(0)} + GST @ {product.gstRate}%)
+                      <CardContent className="flex-grow flex flex-col justify-center items-center space-y-6">
+                         <div className="space-y-1">
+                            <p className="text-muted-foreground line-through text-sm">₹{product.price}</p>
+                            <p className="text-5xl font-black text-primary tracking-tighter">₹{finalPrice.toFixed(0)}</p>
+                            <p className="text-[9px] text-muted-foreground uppercase font-bold">
+                                (Base: ₹{discountedBasePrice.toFixed(0)} + {product.gstRate}% GST)
                             </p>
                             {totalDiscount > 0 && (
-                                <p className="text-sm font-black text-accent mt-2 bg-accent/10 py-1 px-3 rounded-full inline-block">
-                                    YOU SAVE {(totalDiscount * 100).toFixed(0)}%!
-                                </p>
+                                <Badge variant="secondary" className="mt-4 bg-accent/10 text-accent border-none font-black text-[11px] py-1 px-4 rounded-full">
+                                    YOU SAVE {(totalDiscount * 100).toFixed(0)}% TODAY
+                                </Badge>
                             )}
                         </div>
                         <Button 
                           size="lg" 
-                          className="w-full font-bold"
+                          className="w-full font-black py-7 text-lg shadow-xl"
                           onClick={() => handlePurchase(product, 'mock')}
                           disabled={isPurchasing !== null}
                         >
-                          {isPurchasing === product.name ? <Loader2 className="animate-spin" /> : "Purchase Package"}
+                          {isPurchasing === product.name ? <><Loader2 className="animate-spin mr-2" /> PROCESSING...</> : "ACTIVATE NOW"}
                         </Button>
                       </CardContent>
                     </Card>
@@ -349,21 +372,24 @@ function StorePageContent() {
                 </div>
             </TabsContent>
             <TabsContent value="referbolt" className="pt-6">
-                <Card className="flex flex-col text-center items-center max-w-md mx-auto">
+                <Card className="flex flex-col text-center items-center max-w-md mx-auto p-4 border-2 border-dashed border-primary/20 bg-primary/5">
                     <CardHeader>
-                        <CardTitle className="text-2xl flex items-center gap-2"><Zap className="text-primary"/> {storeConfig.referboltSubscription.name} Subscription</CardTitle>
-                         <CardDescription>{storeConfig.referboltSubscription.description}</CardDescription>
+                        <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <Zap className="text-primary w-8 h-8 fill-primary" />
+                        </div>
+                        <CardTitle className="text-2xl font-black">{storeConfig.referboltSubscription.name} Access</CardTitle>
+                         <CardDescription className="font-medium">{storeConfig.referboltSubscription.description}</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        <p className="text-4xl font-bold">₹{(storeConfig.referboltSubscription.price + (storeConfig.referboltSubscription.price * (storeConfig.referboltSubscription.gstRate / 100))).toFixed(0)}</p>
-                         <p className="text-xs text-muted-foreground">(Incl. GST)</p>
-                        <Button size="lg" className="w-full font-bold" onClick={() => handlePurchase(storeConfig.referboltSubscription, 'referbolt')} disabled={isPurchasing !== null}>
-                            {isPurchasing === storeConfig.referboltSubscription.name ? <Loader2 className="animate-spin"/> : "Subscribe Now"}
+                        <p className="text-5xl font-black text-primary tracking-tighter">₹{(storeConfig.referboltSubscription.price + (storeConfig.referboltSubscription.price * (storeConfig.referboltSubscription.gstRate / 100))).toFixed(0)}</p>
+                         <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Inclusive of all taxes</p>
+                        <Button size="lg" className="w-full font-black py-7 mt-4" onClick={() => handlePurchase(storeConfig.referboltSubscription, 'referbolt')} disabled={isPurchasing !== null}>
+                            {isPurchasing === storeConfig.referboltSubscription.name ? <Loader2 className="animate-spin"/> : "START EARNING CYCLES"}
                         </Button>
                     </CardContent>
                      <CardContent>
-                        <Button asChild variant="link">
-                            <Link href="/referbolt">Learn More about ReferBolt</Link>
+                        <Button asChild variant="link" className="text-xs font-bold opacity-70">
+                            <Link href="/referbolt">View Detailed Earning Structure →</Link>
                         </Button>
                     </CardContent>
                 </Card>

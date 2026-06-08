@@ -14,7 +14,8 @@ export function getFirebaseServices(): { app: FirebaseApp; auth: Auth; db: Fires
   if (getApps().length > 0) {
     const app = getApp();
     const auth = getAuth(app);
-    const db = getFirestore(app);
+    // Ensure the custom database ID is used even on hot-reload/existing app
+    const db = getFirestore(app, "vidyaeducaredatabase");
     return { app, auth, db };
   }
 
@@ -37,7 +38,8 @@ export function getFirebaseServices(): { app: FirebaseApp; auth: Auth; db: Fires
   try {
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    const db = getFirestore(app);
+    // Explicitly target the named database 'vidyaeducaredatabase'
+    const db = getFirestore(app, "vidyaeducaredatabase");
     
     return { app, auth, db };
   } catch (error) {

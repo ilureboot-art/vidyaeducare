@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -7,7 +8,7 @@ import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'fire
 import { doc, runTransaction, getDocs, collection, query, where } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, CheckCircle, Shield, RefreshCcw, AlertTriangle, ExternalLink } from 'lucide-react';
+import { Loader2, CheckCircle, Shield, RefreshCcw, AlertTriangle, ExternalLink, Database } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -75,9 +76,9 @@ export default function SetupAdminPage() {
   const handleError = (error: any) => {
     console.error(error);
     const msg = error.message || "An unexpected error occurred.";
-    if (msg.includes("database (default) does not exist") || msg.includes("Datastore or Cloud Firestore database")) {
+    if (msg.includes("database (default) does not exist") || msg.includes("vidyaeducaredatabase") || msg.includes("not exist") || msg.includes("Datastore or Cloud Firestore database")) {
         setIsDatabaseMissing(true);
-        setErrorMessage("The Firestore database has not been created yet in the Firebase Console.");
+        setErrorMessage("Ensure the Firestore database exists and the name 'vidyaeducaredatabase' is correctly configured.");
     } else {
         setErrorMessage(msg);
     }
@@ -165,12 +166,12 @@ export default function SetupAdminPage() {
           {isDatabaseMissing && (
             <Alert variant="destructive" className="bg-destructive/10 border-destructive/20">
                 <AlertTriangle className="h-4 w-4" />
-                <AlertTitle className="font-bold">Firestore Database Missing</AlertTitle>
+                <AlertTitle className="font-bold">Database Connectivity Alert</AlertTitle>
                 <AlertDescription className="text-xs space-y-3">
-                    <p>The database for project <b>vidyaeducare</b> does not exist yet. You must initialize it in the Google Cloud Console.</p>
+                    <p>The system is trying to connect to <b>vidyaeducaredatabase</b>. If this error persists, ensure your database name exactly matches this string in the Firebase Console.</p>
                     <Button asChild variant="destructive" size="sm" className="w-full font-bold">
-                        <a href="https://console.cloud.google.com/datastore/setup?project=vidyaeducare" target="_blank" rel="noopener noreferrer">
-                            INITIALIZE DATABASE <ExternalLink className="ml-2 h-3 w-3" />
+                        <a href="https://console.firebase.google.com/project/vidyaeducare/firestore" target="_blank" rel="noopener noreferrer">
+                            OPEN FIRESTORE CONSOLE <ExternalLink className="ml-2 h-3 w-3" />
                         </a>
                     </Button>
                 </AlertDescription>
@@ -178,7 +179,9 @@ export default function SetupAdminPage() {
           )}
 
           <div className="space-y-4">
-            <h3 className="font-bold text-xs uppercase tracking-widest text-muted-foreground border-b pb-2">Administrator Mapping</h3>
+            <h3 className="font-bold text-xs uppercase tracking-widest text-muted-foreground border-b pb-2 flex items-center gap-2">
+                <Database size={12}/> Target: vidyaeducaredatabase
+            </h3>
             {status === 'success' ? (
                 <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 p-4 rounded-xl space-y-3">
                     <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
@@ -214,7 +217,7 @@ export default function SetupAdminPage() {
           </div>
         </CardContent>
         <CardFooter className="bg-primary/5 py-4 border-t justify-center">
-            <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground">Vidya EduCare Session Engine</p>
+            <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground">Using Database: vidyaeducaredatabase</p>
         </CardFooter>
       </Card>
     </div>

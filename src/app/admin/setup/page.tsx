@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDb, useAuthService } from '@/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'firebase/auth';
-import { doc, writeBatch } from 'firebase/firestore';
+import { doc, writeBatch, getDoc } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, CheckCircle, Shield, RefreshCcw, Database, Activity, Info, ExternalLink, Timer, AlertCircle } from 'lucide-react';
+import { Loader2, CheckCircle, Shield, Database, Activity, Info, ExternalLink, Timer, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const HEAD_ADMIN_EMAIL = 'admin@vidyaeducare.com';
@@ -46,9 +46,15 @@ export default function SetupAdminPage() {
   const ensureRecords = async (uid: string, type: 'admin' | 'student') => {
     if (!db || !auth || !auth.currentUser) throw new Error("Sync Interrupted: Identity context lost.");
     
-    logProgress(`Final Verification: ${auth.currentUser.email}`);
-    // Force one last token refresh immediately before write
-    await auth.currentUser.getIdToken(true);
+    logProgress("PRE-FLIGHT: Testing bootstrap permissions...");
+    try {
+        // Try a read first to check if rules have propagated
+        await getDoc(doc(db, "users", uid));
+        logProgress("PRE-FLIGHT: Permission verified.");
+    } catch (e: any) {
+        logProgress(`PRE-FLIGHT FAILED: ${e.message}`);
+        throw new Error(`Permission Propagation Error: Firestore has not yet registered your session. Please try again in a few seconds.`);
+    }
 
     const batch = writeBatch(db);
     const userDocRef = doc(db, "users", uid);
@@ -113,13 +119,13 @@ export default function SetupAdminPage() {
             } else throw e;
         }
 
-        logProgress("IDENTITY HANDSHAKE START (30s MANDATORY WAIT)");
+        logProgress("IDENTITY HANDSHAKE START (20s MANDATORY WAIT)");
         // Force token propagation with repeated heartbeats
-        for (let i = 30; i > 0; i--) {
+        for (let i = 20; i > 0; i--) {
             setCountdown(i);
-            if (i % 5 === 0) {
+            if (i % 2 === 0) {
                 await auth.currentUser?.getIdToken(true);
-                logProgress(`Token Heartbeat: Refreshing claims (${i}s remaining)...`);
+                logProgress(`Identity Heartbeat... claims refreshed (${i}s remaining)`);
             }
             await new Promise(r => setTimeout(r, 1000));
         }
@@ -155,7 +161,7 @@ export default function SetupAdminPage() {
             <Shield className="w-6 h-6" /> Supreme Initialization
           </CardTitle>
           <CardDescription>
-            Definitively mapping master identities to vidyaeducaredatabase.
+            Mapping master bootstrap identities to vidyaeducaredatabase.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -178,7 +184,7 @@ export default function SetupAdminPage() {
               <p className="text-[9px] font-bold text-white/50 uppercase flex items-center gap-2">
                   <Activity size={10}/> Sync Console
               </p>
-              <div className="space-y-1 min-h-[200px]">
+              <div className="space-y-1 min-h-[180px]">
                   {progressLog.length > 0 ? progressLog.map((log, i) => (
                       <p key={i} className="text-[10px] font-mono text-green-400 animate-in fade-in slide-in-from-left-2">> {log}</p>
                   )) : (
@@ -204,7 +210,7 @@ export default function SetupAdminPage() {
                     {status === 'loading' ? (
                         <div className="flex flex-col items-center">
                             <Loader2 className="animate-spin mb-1" />
-                            <span className="text-[10px]">SUPREME SYNC (30S WAIT)...</span>
+                            <span className="text-[10px]">SYNCING (DO NOT CLOSE)...</span>
                         </div>
                     ) : (
                         <><Shield className="mr-2 h-6 w-6" /> SYNC ADMIN PROFILE</>
@@ -223,10 +229,10 @@ export default function SetupAdminPage() {
                          {studentStatus === 'loading' ? (
                             <div className="flex flex-col items-center">
                                 <Loader2 className="animate-spin mb-1" />
-                                <span className="text-[10px]">SUPREME SYNC (30S WAIT)...</span>
+                                <span className="text-[10px]">SYNCING (DO NOT CLOSE)...</span>
                             </div>
                         ) : (
-                            <><RefreshCcw className="mr-2 h-4 w-4" /> SYNC TEST STUDENT</>
+                            <><Activity className="mr-2 h-4 w-4" /> SYNC TEST STUDENT</>
                         )}
                     </Button>
                 )
@@ -243,7 +249,7 @@ export default function SetupAdminPage() {
         </CardContent>
         <CardFooter className="bg-primary/5 py-4 border-t justify-center gap-2">
             <Info size={10} className="text-muted-foreground"/>
-            <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground italic">Target: vidyaeducaredatabase</p>
+            <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground italic">Target Instance: vidyaeducaredatabase</p>
         </CardFooter>
       </Card>
     </div>

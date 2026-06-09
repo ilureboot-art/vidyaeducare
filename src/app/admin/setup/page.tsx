@@ -40,13 +40,13 @@ export default function SetupAdminPage() {
   }, [auth]);
 
   const logProgress = (msg: string) => {
-      setProgressLog(prev => [...prev.slice(-15), msg]);
+      setProgressLog(prev => [...prev.slice(-12), msg]);
   };
 
   const commitWithRetry = async (uid: string, type: 'admin' | 'student', attempt = 1): Promise<void> => {
     if (!db || !auth || !auth.currentUser) throw new Error("Sync Interrupted: Identity context lost.");
     
-    logProgress(`Write Attempt ${attempt}: Targeting vidyaeducaredatabase...`);
+    logProgress(`Attempt ${attempt}/20: Committing to vidyaeducaredatabase...`);
 
     const batch = writeBatch(db);
     const userDocRef = doc(db, "users", uid);
@@ -81,14 +81,14 @@ export default function SetupAdminPage() {
 
     try {
         await batch.commit();
-        logProgress(`SUCCESS: ${type.toUpperCase()} records committed.`);
+        logProgress(`SUCCESS: Mapping confirmed for ${type.toUpperCase()}.`);
     } catch (e: any) {
-        console.warn(`Firestore Rejection: ${e.code} - ${e.message}`);
+        console.warn(`Infrastructure Response: ${e.code} - ${e.message}`);
         
         if (e.code === 'permission-denied' && attempt < 20) {
-            logProgress(`RETRY ${attempt}: Refreshing Identity Claims...`);
+            logProgress(`RETRY: Refreshing Identity Handshake...`);
             await auth.currentUser.getIdToken(true);
-            logProgress(`Waiting 3s for propagation...`);
+            logProgress(`Waiting 3s for cross-region propagation...`);
             await new Promise(r => setTimeout(r, 3000));
             return commitWithRetry(uid, type, attempt + 1);
         }
@@ -107,27 +107,28 @@ export default function SetupAdminPage() {
     setProgressLog([`INITIATING ${type.toUpperCase()} SUPREME SYNC...`]);
     
     try {
-        logProgress("Purging stale session...");
+        logProgress("Clearing stale local state...");
         await signOut(auth);
 
         let uid = '';
-        logProgress(`Authenticating as ${email}...`);
+        logProgress(`Requesting Auth for ${email}...`);
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             uid = userCredential.user.uid;
-            logProgress(`New Profile Created: ${uid}`);
+            logProgress(`Profile Registered: ${uid}`);
         } catch (e: any) {
             if (e.code === 'auth/email-already-in-use') {
                 const signInRes = await signInWithEmailAndPassword(auth, email, password);
                 uid = signInRes.user.uid;
-                logProgress(`Existing Profile Linked: ${uid}`);
+                logProgress(`Profile Linked: ${uid}`);
             } else throw e;
         }
 
-        logProgress("Hardening Identity Handshake...");
+        logProgress("Forcing Identity Handshake...");
         await auth.currentUser?.getIdToken(true);
         
         // Initial wait to let Google's global identity services know about the new session
+        logProgress("Cooling down for regional propagation...");
         for (let i = 10; i > 0; i--) {
             setCountdown(i);
             await new Promise(r => setTimeout(r, 1000));
@@ -139,13 +140,13 @@ export default function SetupAdminPage() {
         if (type === 'admin') setStatus('success');
         else setStudentStatus('success');
 
-        logProgress(`SYNC COMPLETE: ${type.toUpperCase()} authorized.`);
+        logProgress(`MAPPING COMPLETE: ${type.toUpperCase()} verified.`);
         toast({ title: `${type.toUpperCase()} Sync Successful` });
     } catch (error: any) {
-        console.error("Critical Sync Failure:", error);
+        console.error("Critical Failure:", error);
         if (type === 'admin') setStatus('error');
         else setStudentStatus('error');
-        logProgress(`FATAL ERROR: ${error.message}`);
+        logProgress(`ERROR: ${error.message}`);
         toast({ variant: 'destructive', title: "Sync Failed", description: error.message });
     }
   };
@@ -164,21 +165,19 @@ export default function SetupAdminPage() {
             <Shield className="w-6 h-6" /> INFRASTRUCTURE SYNC
           </CardTitle>
           <CardDescription>
-            Definitively mapping identities to vidyaeducaredatabase.
+            Target Database: <span className="font-mono text-xs font-bold">vidyaeducaredatabase</span>
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           
           <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 space-y-2">
               <p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2">
-                  <Database size={12}/> Target Configuration
+                  <Database size={12}/> Connection Details
               </p>
               <div className="grid grid-cols-2 gap-2 text-[10px] font-mono">
-                  <div className="text-muted-foreground">Instance:</div>
-                  <div className="font-bold">vidyaeducaredatabase</div>
-                  <div className="text-muted-foreground">Current Auth:</div>
-                  <div className="font-bold truncate text-primary">{currentIdentity.email || 'None'}</div>
-                  <div className="text-muted-foreground">Active UID:</div>
+                  <div className="text-muted-foreground">Identity:</div>
+                  <div className="font-bold truncate text-primary">{currentIdentity.email || 'Awaiting Sync...'}</div>
+                  <div className="text-muted-foreground">Auth UID:</div>
                   <div className="font-bold truncate">{currentIdentity.uid || 'N/A'}</div>
               </div>
           </div>
@@ -187,16 +186,16 @@ export default function SetupAdminPage() {
               <p className="text-[9px] font-bold text-white/50 uppercase flex items-center gap-2">
                   <Activity size={10}/> Sync Console
               </p>
-              <div className="space-y-1 min-h-[220px]">
+              <div className="space-y-1 min-h-[220px] overflow-hidden">
                   {progressLog.length > 0 ? progressLog.map((log, i) => (
                       <p key={i} className="text-[10px] font-mono text-green-400 animate-in fade-in slide-in-from-left-2">> {log}</p>
                   )) : (
-                      <p className="text-[10px] font-mono text-white/30 italic">Awaiting initiation...</p>
+                      <p className="text-[10px] font-mono text-white/30 italic">Select a profile to begin mapping...</p>
                   )}
                   {countdown > 0 && (
                       <div className="flex items-center gap-2 pt-2 text-yellow-400">
                           <Timer size={12} className="animate-pulse" />
-                          <span className="text-[10px] font-bold uppercase">Propagation Buffer: {countdown}s Remaining</span>
+                          <span className="text-[10px] font-bold uppercase">Propagation: {countdown}s Left</span>
                       </div>
                   )}
               </div>
@@ -213,7 +212,7 @@ export default function SetupAdminPage() {
                     {status === 'loading' ? (
                         <div className="flex flex-col items-center">
                             <Loader2 className="animate-spin mb-1" />
-                            <span className="text-[10px]">HANDLING PERMISSION DENIED...</span>
+                            <span className="text-[10px]">SYNCING (DO NOT CLOSE)...</span>
                         </div>
                     ) : (
                         <><Shield className="mr-2 h-6 w-6" /> SYNC ADMIN PROFILE</>
@@ -232,7 +231,7 @@ export default function SetupAdminPage() {
                          {studentStatus === 'loading' ? (
                             <div className="flex flex-col items-center">
                                 <Loader2 className="animate-spin mb-1" />
-                                <span className="text-[10px]">SYNCING (DO NOT INTERRUPT)...</span>
+                                <span className="text-[10px]">VERIFYING STUDENT CLAIM...</span>
                             </div>
                         ) : (
                             <><RefreshCw className="mr-2 h-4 w-4" /> SYNC TEST STUDENT</>

@@ -34,17 +34,14 @@ export default function SetupAdminPage() {
   const [currentIdentity, setCurrentIdentity] = useState<{ email: string | null; uid: string | null }>({ email: null, uid: null });
 
   const logProgress = (msg: string) => {
-      setProgressLog(prev => [...prev.slice(-12), msg]);
+      setProgressLog(prev => [...prev.slice(-12), `${new Date().toLocaleTimeString().split(' ')[0]} > ${msg}`]);
   };
 
   const runSystemAudit = useCallback(async () => {
     if (!db) return;
     setAuditStatus(prev => ({ ...prev, loading: true }));
     try {
-        // Check Admin by specific UID and email
         const adminDoc = await getDoc(doc(db, "admins", FIXED_ADMIN_UID));
-        
-        // Check Student by email query (UID might vary if rules were broken during first signup)
         const studentQuery = query(collection(db, "users"), where("email", "==", TEST_USER_EMAIL));
         const studentSnap = await getDocs(studentQuery);
 
@@ -64,6 +61,12 @@ export default function SetupAdminPage() {
     if (!auth) return;
     const unsub = onAuthStateChanged(auth, (user) => {
       setCurrentIdentity({ email: user?.email || null, uid: user?.uid || null });
+      if (user) {
+          setAuthStatus('success');
+          logProgress(`AUTH ACTIVE: ${user.email}`);
+      } else {
+          setAuthStatus('idle');
+      }
     });
     if (db) runSystemAudit();
     return () => unsub();
@@ -228,7 +231,7 @@ export default function SetupAdminPage() {
              <Button 
                 className="w-full py-10 text-lg font-black bg-accent hover:bg-accent/90 shadow-lg" 
                 onClick={handleMapToDatabase} 
-                disabled={authStatus !== 'success' || mapStatus === 'loading'}
+                disabled={!currentIdentity.uid || mapStatus === 'loading'}
              >
                  {mapStatus === 'loading' ? (
                      <div className="flex flex-col items-center">

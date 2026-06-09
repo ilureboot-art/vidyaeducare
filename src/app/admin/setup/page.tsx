@@ -4,10 +4,10 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDb, useAuthService } from '@/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'firebase/auth';
-import { doc, writeBatch, getDoc } from 'firebase/firestore';
+import { doc, writeBatch } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, CheckCircle, Shield, Database, Activity, Info, ExternalLink, Timer, AlertCircle } from 'lucide-react';
+import { Loader2, CheckCircle, Shield, Database, Activity, Info, ExternalLink, Timer, AlertCircle, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const HEAD_ADMIN_EMAIL = 'admin@vidyaeducare.com';
@@ -40,28 +40,18 @@ export default function SetupAdminPage() {
   }, [auth]);
 
   const logProgress = (msg: string) => {
-      setProgressLog(prev => [...prev.slice(-10), msg]);
+      setProgressLog(prev => [...prev.slice(-12), msg]);
   };
 
-  const ensureRecords = async (uid: string, type: 'admin' | 'student') => {
+  const commitWithRetry = async (uid: string, type: 'admin' | 'student', attempt = 1): Promise<void> => {
     if (!db || !auth || !auth.currentUser) throw new Error("Sync Interrupted: Identity context lost.");
     
-    logProgress("PRE-FLIGHT: Testing bootstrap permissions...");
-    try {
-        // Try a read first to check if rules have propagated
-        await getDoc(doc(db, "users", uid));
-        logProgress("PRE-FLIGHT: Permission verified.");
-    } catch (e: any) {
-        logProgress(`PRE-FLIGHT FAILED: ${e.message}`);
-        throw new Error(`Permission Propagation Error: Firestore has not yet registered your session. Please try again in a few seconds.`);
-    }
+    logProgress(`Attempt ${attempt}: Executing Batch Mapping...`);
 
     const batch = writeBatch(db);
     const userDocRef = doc(db, "users", uid);
     const walletDocRef = doc(db, "wallets", uid);
     const adminDocRef = doc(db, "admins", uid);
-
-    logProgress(`Mapping collections for ${type}...`);
 
     batch.set(userDocRef, {
       id: uid,
@@ -89,8 +79,19 @@ export default function SetupAdminPage() {
       }, { merge: true });
     }
 
-    logProgress("Committing supreme mapping to database...");
-    return batch.commit();
+    try {
+        await batch.commit();
+        logProgress(`SUCCESS: ${type.toUpperCase()} records committed.`);
+    } catch (e: any) {
+        if (e.code === 'permission-denied' && attempt < 10) {
+            logProgress(`SYNC DELAY: Identity propagation in progress (database sync)...`);
+            await auth.currentUser.getIdToken(true);
+            logProgress(`RETRY: Identity claims refreshed. Waiting 3s...`);
+            await new Promise(r => setTimeout(r, 3000));
+            return commitWithRetry(uid, type, attempt + 1);
+        }
+        throw e;
+    }
   };
 
   const syncProfile = async (type: 'admin' | 'student') => {
@@ -119,24 +120,22 @@ export default function SetupAdminPage() {
             } else throw e;
         }
 
-        logProgress("IDENTITY HANDSHAKE START (20s MANDATORY WAIT)");
-        // Force token propagation with repeated heartbeats
-        for (let i = 20; i > 0; i--) {
+        logProgress("Establishing Secure Handshake...");
+        await auth.currentUser?.getIdToken(true);
+        
+        // Initial wait to let Google's global identity services know about the new session
+        for (let i = 10; i > 0; i--) {
             setCountdown(i);
-            if (i % 2 === 0) {
-                await auth.currentUser?.getIdToken(true);
-                logProgress(`Identity Heartbeat... claims refreshed (${i}s remaining)`);
-            }
             await new Promise(r => setTimeout(r, 1000));
         }
         setCountdown(0);
         
-        await ensureRecords(uid, type);
+        await commitWithRetry(uid, type);
         
         if (type === 'admin') setStatus('success');
         else setStudentStatus('success');
 
-        logProgress(`SYNC COMPLETE: ${type.toUpperCase()} verified.`);
+        logProgress(`SYNC COMPLETE: ${type.toUpperCase()} identity verified.`);
         toast({ title: `${type.charAt(0).toUpperCase() + type.slice(1)} Sync Successful` });
     } catch (error: any) {
         console.error("Sync Error:", error);
@@ -158,25 +157,23 @@ export default function SetupAdminPage() {
       <Card className="w-full max-w-md shadow-2xl border-primary/20">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-black flex items-center justify-center gap-2 text-primary tracking-tighter uppercase italic">
-            <Shield className="w-6 h-6" /> Supreme Initialization
+            <Shield className="w-6 h-6" /> Infrastructure Sync
           </CardTitle>
           <CardDescription>
-            Mapping master bootstrap identities to vidyaeducaredatabase.
+            Mapping identities to vidyaeducaredatabase instance.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           
           <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 space-y-2">
               <p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2">
-                  <Database size={12}/> Target Infrastructure
+                  <Database size={12}/> Target Instance
               </p>
               <div className="grid grid-cols-2 gap-2 text-[10px] font-mono">
                   <div className="text-muted-foreground">Database:</div>
                   <div className="font-bold">vidyaeducaredatabase</div>
-                  <div className="text-muted-foreground">Auth Email:</div>
+                  <div className="text-muted-foreground">Auth:</div>
                   <div className="font-bold truncate text-primary">{currentIdentity.email || 'None'}</div>
-                  <div className="text-muted-foreground">Current UID:</div>
-                  <div className="font-bold truncate text-primary">{currentIdentity.uid || 'None'}</div>
               </div>
           </div>
 
@@ -188,7 +185,7 @@ export default function SetupAdminPage() {
                   {progressLog.length > 0 ? progressLog.map((log, i) => (
                       <p key={i} className="text-[10px] font-mono text-green-400 animate-in fade-in slide-in-from-left-2">> {log}</p>
                   )) : (
-                      <p className="text-[10px] font-mono text-white/30 italic">Awaiting Authorization Sequence...</p>
+                      <p className="text-[10px] font-mono text-white/30 italic">Awaiting sync initiation...</p>
                   )}
                   {countdown > 0 && (
                       <div className="flex items-center gap-2 pt-2 text-yellow-400">
@@ -203,14 +200,14 @@ export default function SetupAdminPage() {
             {status === 'success' ? (
                 <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 p-4 rounded-xl flex items-center gap-3 animate-in slide-in-from-top-2">
                     <CheckCircle className="text-green-600" />
-                    <span className="font-black text-xs uppercase text-green-700">Admin Identity Synced</span>
+                    <span className="font-black text-xs uppercase text-green-700">Admin Mapping Successful</span>
                 </div>
             ) : (
                 <Button className="w-full py-10 text-lg font-black shadow-xl" onClick={() => syncProfile('admin')} disabled={status === 'loading' || studentStatus === 'loading'}>
                     {status === 'loading' ? (
                         <div className="flex flex-col items-center">
                             <Loader2 className="animate-spin mb-1" />
-                            <span className="text-[10px]">SYNCING (DO NOT CLOSE)...</span>
+                            <span className="text-[10px]">RETRYING ON PERMISSION DENIED...</span>
                         </div>
                     ) : (
                         <><Shield className="mr-2 h-6 w-6" /> SYNC ADMIN PROFILE</>
@@ -222,7 +219,7 @@ export default function SetupAdminPage() {
                 studentStatus === 'success' ? (
                     <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 p-4 rounded-xl flex items-center gap-3 animate-in fade-in">
                         <CheckCircle className="text-green-600" />
-                        <span className="font-black text-xs uppercase text-green-700">Student Identity Synced</span>
+                        <span className="font-black text-xs uppercase text-green-700">Student Mapping Successful</span>
                     </div>
                 ) : (
                     <Button variant="secondary" className="w-full py-8 font-black shadow-lg" onClick={() => syncProfile('student')} disabled={studentStatus === 'loading'}>
@@ -232,7 +229,7 @@ export default function SetupAdminPage() {
                                 <span className="text-[10px]">SYNCING (DO NOT CLOSE)...</span>
                             </div>
                         ) : (
-                            <><Activity className="mr-2 h-4 w-4" /> SYNC TEST STUDENT</>
+                            <><RefreshCw className="mr-2 h-4 w-4" /> SYNC TEST STUDENT</>
                         )}
                     </Button>
                 )
@@ -249,7 +246,7 @@ export default function SetupAdminPage() {
         </CardContent>
         <CardFooter className="bg-primary/5 py-4 border-t justify-center gap-2">
             <Info size={10} className="text-muted-foreground"/>
-            <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground italic">Target Instance: vidyaeducaredatabase</p>
+            <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground italic text-center">Named DB Targeting Enabled: Vidyaeducaredatabase</p>
         </CardFooter>
       </Card>
     </div>

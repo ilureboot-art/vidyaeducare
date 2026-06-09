@@ -1,19 +1,21 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDb, useAuthService } from '@/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'firebase/auth';
-import { doc, writeBatch } from 'firebase/firestore';
+import { doc, writeBatch, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, CheckCircle, Shield, Database, Activity, Info, ExternalLink, UserCheck, KeyRound, AlertTriangle } from 'lucide-react';
+import { Loader2, CheckCircle, Shield, Database, Activity, Info, ExternalLink, UserCheck, Search, AlertCircle, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 
 const HEAD_ADMIN_EMAIL = 'admin@vidyaeducare.com';
 const HEAD_ADMIN_PASSWORD = 'password123';
 const HEAD_ADMIN_NAME = 'Main Admin';
+const FIXED_ADMIN_UID = '1JgG0oF1D6YREaxOCSGedIfpQZ42';
 
 const TEST_USER_EMAIL = 'student@vidyaeducare.com';
 const TEST_USER_PASSWORD = 'password123';
@@ -27,20 +29,45 @@ export default function SetupAdminPage() {
   
   const [authStatus, setAuthStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [mapStatus, setMapStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [auditStatus, setAuditStatus] = useState<{ admin: boolean; student: boolean; loading: boolean }>({ admin: false, student: false, loading: false });
   const [progressLog, setProgressLog] = useState<string[]>([]);
   const [currentIdentity, setCurrentIdentity] = useState<{ email: string | null; uid: string | null }>({ email: null, uid: null });
+
+  const logProgress = (msg: string) => {
+      setProgressLog(prev => [...prev.slice(-12), msg]);
+  };
+
+  const runSystemAudit = useCallback(async () => {
+    if (!db) return;
+    setAuditStatus(prev => ({ ...prev, loading: true }));
+    try {
+        // Check Admin by specific UID and email
+        const adminDoc = await getDoc(doc(db, "admins", FIXED_ADMIN_UID));
+        
+        // Check Student by email query (UID might vary if rules were broken during first signup)
+        const studentQuery = query(collection(db, "users"), where("email", "==", TEST_USER_EMAIL));
+        const studentSnap = await getDocs(studentQuery);
+
+        setAuditStatus({
+            admin: adminDoc.exists(),
+            student: !studentSnap.empty,
+            loading: false
+        });
+        logProgress(`AUDIT: Admin [${adminDoc.exists() ? 'OK' : 'MISSING'}] | Student [${!studentSnap.empty ? 'OK' : 'MISSING'}]`);
+    } catch (e: any) {
+        logProgress(`AUDIT ERROR: ${e.message}`);
+        setAuditStatus(prev => ({ ...prev, loading: false }));
+    }
+  }, [db]);
 
   useEffect(() => {
     if (!auth) return;
     const unsub = onAuthStateChanged(auth, (user) => {
       setCurrentIdentity({ email: user?.email || null, uid: user?.uid || null });
     });
+    if (db) runSystemAudit();
     return () => unsub();
-  }, [auth]);
-
-  const logProgress = (msg: string) => {
-      setProgressLog(prev => [...prev.slice(-12), msg]);
-  };
+  }, [auth, db, runSystemAudit]);
 
   const handleAuthenticate = async (type: 'admin' | 'student') => {
     if (!auth) return;
@@ -49,22 +76,22 @@ export default function SetupAdminPage() {
 
     setAuthStatus('loading');
     setMapStatus('idle');
-    setProgressLog([`AUTH: Requesting login for ${email}...`]);
+    setProgressLog([`AUTH: Requesting session for ${email}...`]);
 
     try {
         await signOut(auth);
         try {
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            logProgress(`AUTH SUCCESS: New account created for ${type.toUpperCase()}.`);
+            await createUserWithEmailAndPassword(auth, email, password);
+            logProgress(`AUTH SUCCESS: Created new ${type} account.`);
         } catch (e: any) {
             if (e.code === 'auth/email-already-in-use') {
                 await signInWithEmailAndPassword(auth, email, password);
-                logProgress(`AUTH SUCCESS: Identity linked for ${type.toUpperCase()}.`);
+                logProgress(`AUTH SUCCESS: Identity verified for ${type}.`);
             } else throw e;
         }
         await auth.currentUser?.getIdToken(true);
         setAuthStatus('success');
-        toast({ title: "Authenticated", description: "Identity confirmed. Proceed to step 2." });
+        toast({ title: "Identity Verified", description: "Proceed to step 2." });
     } catch (error: any) {
         logProgress(`AUTH ERROR: ${error.message}`);
         setAuthStatus('error');
@@ -74,7 +101,7 @@ export default function SetupAdminPage() {
 
   const handleMapToDatabase = async () => {
     if (!db || !auth || !auth.currentUser) {
-        toast({ variant: 'destructive', title: "Identity Required", description: "Please complete Step 1 first." });
+        toast({ variant: 'destructive', title: "Identity Required", description: "Complete Step 1 first." });
         return;
     }
 
@@ -82,10 +109,10 @@ export default function SetupAdminPage() {
     const uid = auth.currentUser.uid;
 
     setMapStatus('loading');
-    setProgressLog(prev => [...prev, `MAP: Pushing metadata to vidyaeducaredatabase...`]);
+    setProgressLog(prev => [...prev, `MAP: Committing infrastructure for ${type.toUpperCase()}...`]);
 
     try {
-        logProgress("MAP: Forcing identity handshake...");
+        logProgress("MAP: Fetching fresh security token...");
         await auth.currentUser.getIdToken(true);
 
         const batch = writeBatch(db);
@@ -102,9 +129,9 @@ export default function SetupAdminPage() {
         }, { merge: true });
 
         batch.set(walletDocRef, {
-            balance: type === 'admin' ? 0 : 1000,
+            balance: type === 'admin' ? 0 : 5000,
             coins: 100,
-            referralCode: type === 'admin' ? 'HEADADMIN' : `REF${uid.slice(0, 6).toUpperCase()}`
+            referralCode: type === 'admin' ? 'HEADADMIN' : `TESTSTUDENT`
         }, { merge: true });
 
         if (type === 'admin') {
@@ -118,19 +145,20 @@ export default function SetupAdminPage() {
         }
 
         await batch.commit();
-        logProgress(`SUCCESS: Infrastructure initialized for ${type.toUpperCase()}.`);
+        logProgress(`SUCCESS: ${type.toUpperCase()} mapped to vidyaeducaredatabase.`);
         setMapStatus('success');
         toast({ title: "Mapping Complete!" });
+        runSystemAudit();
     } catch (e: any) {
-        console.warn(`Infrastructure Error: ${e.code} - ${e.message}`);
+        console.error(e);
         setMapStatus('error');
         if (e.code === 'permission-denied') {
-            logProgress("MAP FAIL: Permission Denied. Rules propagation pending.");
-            logProgress("TIP: Wait 5 seconds and click 'STEP 2' again.");
+            logProgress("FAIL: Permission Denied. Rules propagation still in progress.");
+            logProgress("TIP: Wait 10 seconds and click STEP 2 again.");
         } else {
-            logProgress(`MAP ERROR: ${e.message}`);
+            logProgress(`ERROR: ${e.message}`);
         }
-        toast({ variant: 'destructive', title: "Mapping Failed", description: "Permissions not yet propagated. Retry in 5 seconds." });
+        toast({ variant: 'destructive', title: "Mapping Failed", description: "Permissions not yet propagated. Retry in 10 seconds." });
     }
   };
 
@@ -148,18 +176,29 @@ export default function SetupAdminPage() {
             <Shield className="w-6 h-6" /> INFRASTRUCTURE SETUP
           </CardTitle>
           <CardDescription>
-            Manual Mapping Mode for <span className="font-mono text-xs font-bold text-black">vidyaeducaredatabase</span>
+            Target Instance: <span className="font-mono text-xs font-bold text-black">vidyaeducaredatabase</span>
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           
-          <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 space-y-2">
-              <p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2">
-                  <UserCheck size={12}/> Identity Handshake
-              </p>
-              <div className="space-y-1">
-                  <p className="text-[10px] font-mono"><span className="text-muted-foreground">Email:</span> <span className="font-bold text-primary">{currentIdentity.email || 'None (Step 1 Needed)'}</span></p>
-                  <p className="text-[10px] font-mono"><span className="text-muted-foreground">Auth UID:</span> <span className="font-bold truncate block">{currentIdentity.uid || 'N/A'}</span></p>
+          <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 space-y-4">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2">
+                    <Search size={12}/> System Audit
+                </p>
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={runSystemAudit} disabled={auditStatus.loading}>
+                    <RefreshCw size={12} className={auditStatus.loading ? 'animate-spin' : ''} />
+                </Button>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                  <div className={`p-2 rounded-lg border flex flex-col items-center justify-center gap-1 ${auditStatus.admin ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                      <p className="text-[9px] font-bold uppercase">Admin Profile</p>
+                      {auditStatus.admin ? <CheckCircle size={16} className="text-green-600"/> : <AlertCircle size={16} className="text-red-600"/>}
+                  </div>
+                   <div className={`p-2 rounded-lg border flex flex-col items-center justify-center gap-1 ${auditStatus.student ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                      <p className="text-[9px] font-bold uppercase">Student Profile</p>
+                      {auditStatus.student ? <CheckCircle size={16} className="text-green-600"/> : <AlertCircle size={16} className="text-red-600"/>}
+                  </div>
               </div>
           </div>
 
@@ -167,11 +206,11 @@ export default function SetupAdminPage() {
               <p className="text-[9px] font-bold text-white/50 uppercase flex items-center gap-2">
                   <Activity size={10}/> Sync Console
               </p>
-              <div className="space-y-1 min-h-[150px] overflow-hidden">
+              <div className="space-y-1 min-h-[140px] overflow-hidden">
                   {progressLog.length > 0 ? progressLog.map((log, i) => (
                       <p key={i} className="text-[10px] font-mono text-green-400 animate-in fade-in slide-in-from-left-2">> {log}</p>
                   )) : (
-                      <p className="text-[10px] font-mono text-white/30 italic">Ready for bootstrap...</p>
+                      <p className="text-[10px] font-mono text-white/30 italic">Handshaking with infrastructure...</p>
                   )}
               </div>
           </div>
@@ -194,23 +233,23 @@ export default function SetupAdminPage() {
                  {mapStatus === 'loading' ? (
                      <div className="flex flex-col items-center">
                          <Loader2 className="animate-spin mb-1" />
-                         <span className="text-[10px]">COMMITTING TO DATABASE...</span>
+                         <span className="text-[10px]">COMMITTING...</span>
                      </div>
                  ) : (
                      <><Database className="mr-2 h-6 w-6" /> STEP 2: MAP TO DATABASE</>
                  )}
              </Button>
 
-             {mapStatus === 'error' && (
-                 <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg flex items-center gap-2 animate-in slide-in-from-top-2">
-                    <AlertTriangle className="text-amber-600 w-4 h-4 shrink-0" />
-                    <span className="text-[9px] font-bold text-amber-700 uppercase leading-tight">Rules still loading. Click STEP 2 again in 5 seconds.</span>
-                 </div>
-             )}
+             <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg flex items-center gap-3">
+                <Info className="text-amber-600 w-5 h-5 shrink-0" />
+                <p className="text-[9px] font-bold text-amber-800 leading-tight uppercase">
+                    If Step 2 fails with "Permission Denied", wait 10 seconds for the cloud rules to refresh and click STEP 2 again.
+                </p>
+             </div>
           </div>
 
-          {mapStatus === 'success' && (
-              <div className="pt-4 animate-in zoom-in duration-500">
+          {(auditStatus.admin && auditStatus.student) && (
+              <div className="pt-2 animate-in zoom-in duration-500">
                   <Button className="w-full py-8 text-xl font-black bg-green-600 hover:bg-green-700 shadow-2xl" onClick={handleEnterDashboard}>
                       PROCEED TO DASHBOARD <ExternalLink className="ml-2 h-5 w-5"/>
                   </Button>
@@ -218,8 +257,8 @@ export default function SetupAdminPage() {
           )}
         </CardContent>
         <CardFooter className="bg-primary/5 py-4 border-t justify-center gap-2">
-            <Info size={10} className="text-muted-foreground"/>
-            <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground italic text-center">Infrastructure Status: Target Named Database Ready</p>
+            <UserCheck size={10} className="text-muted-foreground"/>
+            <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground italic text-center">Infrastructure ready for academic volume</p>
         </CardFooter>
       </Card>
     </div>

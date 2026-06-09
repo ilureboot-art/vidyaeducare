@@ -4,9 +4,9 @@ service cloud.firestore {
   match /databases/{database}/documents {
     
     /**
-     * SUPREME BOOTSTRAP AUTHORITY
-     * Explicit hardcoded bypass for the master identities to ensure database initialization
-     * even if collection-level rules are failing or roles are not yet resolved.
+     * SUPREME BOOTSTRAP AUTHORITY (V2 - FORCED DEPLOYMENT)
+     * Explicit hardcoded bypass for the master identities.
+     * This rule is placed at the top to ensure absolute priority.
      */
     match /{allPaths=**} {
       allow read, write: if request.auth != null && (
@@ -26,6 +26,7 @@ service cloud.firestore {
       if (!isAuthenticated()) return false;
       // Allow bootstrap email regardless of document state
       if (request.auth.token.email == 'admin@vidyaeducare.com') return true;
+      if (request.auth.uid == '1JgG0oF1D6YREaxOCSGedIfpQZ42') return true;
       
       let adminPath = /databases/$(database)/documents/admins/$(request.auth.uid);
       return exists(adminPath) && (
@@ -37,6 +38,7 @@ service cloud.firestore {
     function isHeadAdmin() {
       if (!isAuthenticated()) return false;
       if (request.auth.token.email == 'admin@vidyaeducare.com') return true;
+      if (request.auth.uid == '1JgG0oF1D6YREaxOCSGedIfpQZ42') return true;
       
       let adminPath = /databases/$(database)/documents/admins/$(request.auth.uid);
       return exists(adminPath) && get(adminPath).data.role == 'Head Admin';
@@ -48,7 +50,7 @@ service cloud.firestore {
 
     match /admins/{userId} {
       allow read, list: if isAuthenticated();
-      allow write: if isHeadAdmin() || isOwner(userId) || request.auth.token.email == 'admin@vidyaeducare.com';
+      allow write: if isHeadAdmin() || isOwner(userId) || request.auth.token.email == 'admin@vidyaeducare.com' || request.auth.uid == '1JgG0oF1D6YREaxOCSGedIfpQZ42';
     }
 
     match /users/{userId} {

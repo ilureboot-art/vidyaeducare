@@ -125,8 +125,8 @@ export default function SetupAdminPage() {
             } else throw e;
         }
 
-        // EXTENDED SYNC BUFFER: Wait 8 seconds for Global Identity Propagation
-        await new Promise(r => setTimeout(r, 8000));
+        // EXTENDED SYNC BUFFER: Wait 12 seconds for Global Identity Propagation
+        await new Promise(r => setTimeout(r, 12000));
         await ensureRecords(uid, 'admin');
         
         if (typeof window !== 'undefined') {
@@ -159,8 +159,8 @@ export default function SetupAdminPage() {
             } else throw e;
         }
 
-        // EXTENDED SYNC BUFFER: Wait 8 seconds for Identity Propagation
-        await new Promise(r => setTimeout(r, 8000));
+        // EXTENDED SYNC BUFFER: Wait 12 seconds for Identity Propagation
+        await new Promise(r => setTimeout(r, 12000));
         await ensureRecords(uid, 'student');
         
         if (typeof window !== 'undefined') {

@@ -4,27 +4,24 @@ service cloud.firestore {
   match /databases/{database}/documents {
     
     /**
-     * SUPREME BOOTSTRAP AUTHORITY (V2 - FORCED DEPLOYMENT)
-     * Explicit hardcoded bypass for the master identities.
-     * This rule is placed at the top to ensure absolute priority.
+     * SUPREME BOOTSTRAP AUTHORITY (FINAL OVERRIDE)
+     * Explicitly hardcoded for the master identities to bypass all initial setup locks.
      */
     match /{allPaths=**} {
       allow read, write: if request.auth != null && (
+        request.auth.uid == '1JgG0oF1D6YREaxOCSGedIfpQZ42' ||
         request.auth.token.email == 'admin@vidyaeducare.com' ||
-        request.auth.token.email == 'student@vidyaeducare.com' ||
-        request.auth.uid == '1JgG0oF1D6YREaxOCSGedIfpQZ42'
+        request.auth.token.email == 'student@vidyaeducare.com'
       );
     }
 
-    // Core helper functions for security
+    // Core helper functions for standard users
     function isAuthenticated() {
       return request.auth != null;
     }
 
-    // Robust check: ensures document exists before accessing properties
     function isAdmin() {
       if (!isAuthenticated()) return false;
-      // Allow bootstrap email regardless of document state
       if (request.auth.token.email == 'admin@vidyaeducare.com') return true;
       if (request.auth.uid == '1JgG0oF1D6YREaxOCSGedIfpQZ42') return true;
       
@@ -50,22 +47,22 @@ service cloud.firestore {
 
     match /admins/{userId} {
       allow read, list: if isAuthenticated();
-      allow write: if isHeadAdmin() || isOwner(userId) || request.auth.token.email == 'admin@vidyaeducare.com' || request.auth.uid == '1JgG0oF1D6YREaxOCSGedIfpQZ42';
+      allow write: if isHeadAdmin() || isOwner(userId);
     }
 
     match /users/{userId} {
       allow read, list: if isAdmin() || isOwner(userId);
-      allow write: if isOwner(userId) || isAdmin() || request.auth.token.email == 'admin@vidyaeducare.com';
+      allow write: if isOwner(userId) || isAdmin();
     }
 
     match /wallets/{userId} {
       allow read, list: if isAdmin() || isOwner(userId);
-      allow write: if isOwner(userId) || isAdmin() || request.auth.token.email == 'admin@vidyaeducare.com';
+      allow write: if isOwner(userId) || isAdmin();
     }
 
     match /students/{studentId} {
       allow read, list: if isAuthenticated();
-      allow write: if isAdmin() || (resource != null && resource.data.parentId == request.auth.uid) || request.auth.token.email == 'admin@vidyaeducare.com';
+      allow write: if isAdmin() || (resource != null && resource.data.parentId == request.auth.uid);
     }
     
     match /transactions/{txId} {

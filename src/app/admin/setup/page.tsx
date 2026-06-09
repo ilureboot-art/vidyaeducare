@@ -7,9 +7,8 @@ import { createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthState
 import { doc, writeBatch } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, CheckCircle, Shield, RefreshCcw, AlertTriangle, ExternalLink, Database, Info, Activity } from 'lucide-react';
+import { Loader2, CheckCircle, Shield, RefreshCcw, Database, Activity, Info, ExternalLink } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const HEAD_ADMIN_EMAIL = 'admin@vidyaeducare.com';
 const HEAD_ADMIN_PASSWORD = 'password123';
@@ -28,13 +27,8 @@ export default function SetupAdminPage() {
   
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [studentStatus, setStudentStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
-  const [errorMessage, setErrorMessage] = useState('');
   const [progressLog, setProgressLog] = useState<string[]>([]);
-  const [isDatabaseMissing, setIsDatabaseMissing] = useState(false);
   const [currentIdentity, setCurrentIdentity] = useState<{ email: string | null; uid: string | null }>({ email: null, uid: null });
-
-  const targetProjectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-  const targetDbId = "vidyaeducaredatabase";
 
   useEffect(() => {
     if (!auth) return;
@@ -45,13 +39,13 @@ export default function SetupAdminPage() {
   }, [auth]);
 
   const logProgress = (msg: string) => {
-      setProgressLog(prev => [...prev.slice(-4), msg]);
+      setProgressLog(prev => [...prev.slice(-6), msg]);
   };
 
   const ensureRecords = async (uid: string, type: 'admin' | 'student') => {
-    if (!db || !auth || !auth.currentUser) throw new Error("Authentication session lost during sync.");
+    if (!db || !auth || !auth.currentUser) throw new Error("Sync Interrupted: Identity Lost.");
     
-    logProgress("Performing identity handshake...");
+    // Final Token Refresh
     await auth.currentUser.getIdToken(true);
 
     const batch = writeBatch(db);
@@ -89,30 +83,21 @@ export default function SetupAdminPage() {
       batch.delete(adminDocRef);
     }
 
-    logProgress("Committing transaction...");
+    logProgress("Committing global registry write...");
     return batch.commit();
-  };
-
-  const handleError = (error: any, target: 'admin' | 'student') => {
-    console.error(`Sync Error (${target}):`, error);
-    const msg = error.message || "An unexpected error occurred.";
-    setErrorMessage(msg);
-    if (target === 'admin') setStatus('error');
-    else setStudentStatus('error');
-    logProgress(`ERROR: ${msg.slice(0, 30)}...`);
   };
 
   const syncAdmin = async () => {
     if (!db || !auth) return;
     setStatus('loading');
-    setProgressLog(["Initializing Admin Sync..."]);
+    setProgressLog(["Initiating Bootstrap..."]);
     
     try {
-        logProgress("Clearing stale sessions...");
         await signOut(auth);
+        logProgress("Session cleared.");
 
         let uid = '';
-        logProgress("Authenticating admin@vidyaeducare.com...");
+        logProgress("Authenticating credentials...");
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, HEAD_ADMIN_EMAIL, HEAD_ADMIN_PASSWORD);
             uid = userCredential.user.uid;
@@ -123,41 +108,36 @@ export default function SetupAdminPage() {
             } else throw e;
         }
 
-        logProgress("Identity Handshake: Refreshing Claims...");
-        await auth.currentUser?.getIdToken(true);
-
-        logProgress("Propagating permissions (20s wait)...");
-        for (let i = 1; i <= 4; i++) {
+        logProgress("REFRESHING TOKENS (15s MANDATORY WAIT)...");
+        // Force refresh loop to bypass eventual consistency
+        for (let i = 1; i <= 3; i++) {
             await new Promise(r => setTimeout(r, 5000));
             await auth.currentUser?.getIdToken(true);
-            logProgress(`Sync heart-beat ${i}/4...`);
+            logProgress(`Propagation Sync: Heartbeat ${i}/3...`);
         }
         
         await ensureRecords(uid, 'admin');
         
-        if (typeof window !== 'undefined') {
-            sessionStorage.clear();
-            localStorage.clear();
-        }
-        
         setStatus('success');
-        logProgress("SYNC COMPLETE: Admin profile verified.");
-        toast({ title: "Bootstrap Complete", description: "Admin identity synced." });
+        logProgress("SYNC COMPLETE: Admin authority established.");
+        toast({ title: "Bootstrap Successful" });
     } catch (error: any) {
-        handleError(error, 'admin');
+        console.error("Sync Error:", error);
+        setStatus('error');
+        logProgress(`FAILURE: ${error.message}`);
     }
   };
 
   const syncStudent = async () => {
     if (!db || !auth) return;
     setStudentStatus('loading');
-    setProgressLog(["Initializing Student Sync..."]);
+    setProgressLog(["Initiating Student Sync..."]);
     
     try {
         await signOut(auth);
 
         let uid = '';
-        logProgress("Authenticating student@vidyaeducare.com...");
+        logProgress("Authenticating student profile...");
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, TEST_USER_EMAIL, TEST_USER_PASSWORD);
             uid = userCredential.user.uid;
@@ -168,126 +148,120 @@ export default function SetupAdminPage() {
             } else throw e;
         }
 
-        logProgress("Propagating permissions (20s wait)...");
-        for (let i = 1; i <= 4; i++) {
+        logProgress("REFRESHING TOKENS (15s MANDATORY WAIT)...");
+        for (let i = 1; i <= 3; i++) {
             await new Promise(r => setTimeout(r, 5000));
             await auth.currentUser?.getIdToken(true);
-            logProgress(`Sync heart-beat ${i}/4...`);
+            logProgress(`Student Sync: Heartbeat ${i}/3...`);
         }
         
         await ensureRecords(uid, 'student');
-        
-        if (typeof window !== 'undefined') {
-            sessionStorage.clear();
-            localStorage.clear();
-        }
-
         setStudentStatus('success');
-        logProgress("SYNC COMPLETE: Student profile verified.");
-        toast({ title: "Student Synced", description: "Test profile initialized." });
+        logProgress("SYNC COMPLETE: Mock student environment ready.");
     } catch (error: any) {
-        handleError(error, 'student');
+        console.error("Student Sync Error:", error);
+        setStudentStatus('error');
+        logProgress(`FAILURE: ${error.message}`);
     }
   }
+
+  const handleEnterDashboard = () => {
+      sessionStorage.clear();
+      localStorage.clear();
+      router.push('/admin/login');
+  };
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-muted p-4">
       <Card className="w-full max-w-md shadow-2xl border-primary/20">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-black flex items-center justify-center gap-2 text-primary tracking-tighter">
-            <Shield className="w-6 h-6" /> SYSTEM INITIALIZATION
+          <CardTitle className="text-2xl font-black flex items-center justify-center gap-2 text-primary tracking-tighter uppercase italic">
+            <Shield className="w-6 h-6" /> System Initialization
           </CardTitle>
           <CardDescription>
-            Bypassing security locks to map master identities.
+            Bypassing eventually-consistent locks to map master identities.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           
           <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 space-y-2">
               <p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2">
-                  <Database size={12}/> Global Registry Targeting
+                  <Database size={12}/> Target Configuration
               </p>
               <div className="grid grid-cols-2 gap-2 text-[10px] font-mono">
-                  <div className="text-muted-foreground">Target DB:</div>
-                  <div className="font-bold">{targetDbId}</div>
-                  <div className="text-muted-foreground">Active Session:</div>
-                  <div className="font-bold truncate text-primary">{currentIdentity.email || 'UNAUTHENTICATED'}</div>
-                  <div className="text-muted-foreground">Active UID:</div>
-                  <div className="font-bold truncate text-primary">{currentIdentity.uid || 'NONE'}</div>
+                  <div className="text-muted-foreground">Database:</div>
+                  <div className="font-bold">vidyaeducaredatabase</div>
+                  <div className="text-muted-foreground">Current Auth:</div>
+                  <div className="font-bold truncate text-primary">{currentIdentity.email || 'None'}</div>
+                  <div className="text-muted-foreground">Current UID:</div>
+                  <div className="font-bold truncate text-primary">{currentIdentity.uid || 'None'}</div>
               </div>
           </div>
 
           <div className="bg-black/90 p-4 rounded-xl border border-white/10 space-y-1">
               <p className="text-[9px] font-bold text-white/50 uppercase flex items-center gap-2">
-                  <Activity size={10}/> Real-time Sync Log
+                  <Activity size={10}/> Sync Console
               </p>
-              <div className="space-y-1 min-h-[80px]">
+              <div className="space-y-1 min-h-[120px]">
                   {progressLog.length > 0 ? progressLog.map((log, i) => (
                       <p key={i} className="text-[10px] font-mono text-green-400 animate-in fade-in slide-in-from-left-2">> {log}</p>
                   )) : (
-                      <p className="text-[10px] font-mono text-white/30 italic">Awaiting action...</p>
+                      <p className="text-[10px] font-mono text-white/30 italic">System Idle. Awaiting Authorization...</p>
                   )}
               </div>
           </div>
 
           <div className="space-y-4">
-            <h3 className="font-bold text-xs uppercase tracking-widest text-muted-foreground border-b pb-2">Step 1: Admin Authority</h3>
             {status === 'success' ? (
-                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 p-4 rounded-xl space-y-3">
-                    <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
-                        <CheckCircle className="w-5 h-5" />
-                        <span className="font-black text-sm uppercase">Admin Profile Synced</span>
-                    </div>
+                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 p-4 rounded-xl flex items-center gap-3">
+                    <CheckCircle className="text-green-600" />
+                    <span className="font-black text-xs uppercase text-green-700">Admin Synced Successfully</span>
                 </div>
             ) : (
-                <Button className="w-full py-7 text-lg font-black shadow-xl" onClick={syncAdmin} disabled={status === 'loading' || studentStatus === 'loading'}>
+                <Button className="w-full py-8 text-lg font-black shadow-xl" onClick={syncAdmin} disabled={status === 'loading' || studentStatus === 'loading'}>
                     {status === 'loading' ? (
                         <div className="flex flex-col items-center">
                             <Loader2 className="animate-spin mb-1" />
-                            <span className="text-[10px]">SYNCING (20S HANDSHAKE)...</span>
+                            <span className="text-[10px]">SYNCING (15S WAIT)...</span>
                         </div>
                     ) : (
                         <><Shield className="mr-2 h-5 w-5" /> SYNC ADMIN PROFILE</>
                     )}
                 </Button>
             )}
-          </div>
 
-          <div className="space-y-4 pt-6 border-t">
-            <h3 className="font-bold text-xs uppercase tracking-widest text-muted-foreground border-b pb-2">Step 2: Mock Environment</h3>
-            {studentStatus === 'success' ? (
-                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 p-4 rounded-xl space-y-3">
-                    <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
-                        <CheckCircle className="w-5 h-5" />
-                        <span className="font-black text-sm uppercase">Student Profile Synced</span>
+            {status === 'success' && (
+                studentStatus === 'success' ? (
+                    <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 p-4 rounded-xl flex items-center gap-3 animate-in fade-in">
+                        <CheckCircle className="text-green-600" />
+                        <span className="font-black text-xs uppercase text-green-700">Student Synced Successfully</span>
                     </div>
-                </div>
-            ) : (
-                <Button variant="secondary" className="w-full py-7 font-black shadow-lg" onClick={syncStudent} disabled={studentStatus === 'loading' || status === 'loading'}>
-                    {studentStatus === 'loading' ? (
-                        <div className="flex flex-col items-center">
-                            <Loader2 className="animate-spin mb-1" />
-                            <span className="text-[10px]">SYNCING (20S HANDSHAKE)...</span>
-                        </div>
-                    ) : (
-                        <><RefreshCcw className="mr-2 h-4 w-4" /> SYNC TEST STUDENT</>
-                    )}
-                </Button>
+                ) : (
+                    <Button variant="secondary" className="w-full py-8 font-black shadow-lg" onClick={syncStudent} disabled={studentStatus === 'loading'}>
+                         {studentStatus === 'loading' ? (
+                            <div className="flex flex-col items-center">
+                                <Loader2 className="animate-spin mb-1" />
+                                <span className="text-[10px]">SYNCING (15S WAIT)...</span>
+                            </div>
+                        ) : (
+                            <><RefreshCcw className="mr-2 h-4 w-4" /> SYNC TEST STUDENT</>
+                        )}
+                    </Button>
+                )
             )}
           </div>
 
           {(status === 'success' && studentStatus === 'success') && (
-              <div className="pt-4 animate-in zoom-in duration-300">
-                  <Button className="w-full py-8 text-xl font-black bg-accent hover:bg-accent/90 shadow-2xl" onClick={() => router.push('/admin/login')}>
+              <div className="pt-4 animate-in zoom-in">
+                  <Button className="w-full py-8 text-xl font-black bg-accent hover:bg-accent/90 shadow-2xl" onClick={handleEnterDashboard}>
                       ENTER DASHBOARD <ExternalLink className="ml-2 h-5 w-5"/>
                   </Button>
-                  <p className="text-center text-[10px] text-muted-foreground mt-4 italic font-bold">Both master identities are verified and mapped to {targetDbId}.</p>
               </div>
           )}
         </CardContent>
         <CardFooter className="bg-primary/5 py-4 border-t justify-center gap-2">
             <Info size={10} className="text-muted-foreground"/>
-            <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground italic">Target Instance: {targetDbId}</p>
+            <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground italic">Target: vidyaeducaredatabase</p>
         </CardFooter>
       </Card>
     </div>

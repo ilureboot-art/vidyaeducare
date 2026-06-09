@@ -2,7 +2,7 @@ rules_version = '2';
 
 /**
  * Vidya EduCare - Supreme Security Layer
- * Last Updated: 2024-05-21 14:30 (Forced Deployment Sync)
+ * Last Updated: 2024-05-21 16:45 (Bootstrap Authority Sync)
  * Targeting Instance: vidyaeducaredatabase
  */
 service cloud.firestore {

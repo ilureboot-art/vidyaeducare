@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDb, useAuthService } from '@/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'firebase/auth';
@@ -10,7 +10,6 @@ import { Button } from '@/components/ui/button';
 import { Loader2, CheckCircle, Shield, Database, Activity, Info, ExternalLink, UserCheck, Search, AlertCircle, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 
 const HEAD_ADMIN_EMAIL = 'admin@vidyaeducare.com';
 const HEAD_ADMIN_PASSWORD = 'password123';
@@ -32,6 +31,7 @@ export default function SetupAdminPage() {
   const [auditStatus, setAuditStatus] = useState<{ admin: boolean; student: boolean; loading: boolean }>({ admin: false, student: false, loading: false });
   const [progressLog, setProgressLog] = useState<string[]>([]);
   const [currentIdentity, setCurrentIdentity] = useState<{ email: string | null; uid: string | null }>({ email: null, uid: null });
+  const isRetrying = useRef(false);
 
   const logProgress = (msg: string) => {
       setProgressLog(prev => [...prev.slice(-12), `${new Date().toLocaleTimeString().split(' ')[0]} > ${msg}`]);
@@ -94,7 +94,7 @@ export default function SetupAdminPage() {
         }
         await auth.currentUser?.getIdToken(true);
         setAuthStatus('success');
-        toast({ title: "Identity Verified", description: "Proceed to step 2." });
+        toast({ title: "Identity Verified", description: "Step 2 is now unlocked." });
     } catch (error: any) {
         logProgress(`AUTH ERROR: ${error.message}`);
         setAuthStatus('error');
@@ -112,56 +112,71 @@ export default function SetupAdminPage() {
     const uid = auth.currentUser.uid;
 
     setMapStatus('loading');
-    setProgressLog(prev => [...prev, `MAP: Committing infrastructure for ${type.toUpperCase()}...`]);
+    isRetrying.current = true;
+    let attempt = 0;
+    const maxAttempts = 5;
+
+    const attemptSync = async (): Promise<boolean> => {
+        attempt++;
+        logProgress(`MAP: Attempt ${attempt}/${maxAttempts}...`);
+        try {
+            // Force refresh token to ensure rules engine sees latest claims
+            await auth.currentUser?.getIdToken(true);
+            
+            const batch = writeBatch(db);
+            const userDocRef = doc(db, "users", uid);
+            const walletDocRef = doc(db, "wallets", uid);
+            const adminDocRef = doc(db, "admins", uid);
+
+            batch.set(userDocRef, {
+                id: uid,
+                name: type === 'admin' ? HEAD_ADMIN_NAME : TEST_USER_NAME,
+                email: auth.currentUser?.email,
+                joinDate: new Date().toISOString(),
+                status: "Active",
+            }, { merge: true });
+
+            batch.set(walletDocRef, {
+                balance: type === 'admin' ? 0 : 5000,
+                coins: 100,
+                referralCode: type === 'admin' ? 'HEADADMIN' : `TESTSTUDENT`
+            }, { merge: true });
+
+            if (type === 'admin') {
+                batch.set(adminDocRef, {
+                    name: HEAD_ADMIN_NAME, 
+                    email: HEAD_ADMIN_EMAIL, 
+                    role: "Head Admin", 
+                    status: "Active", 
+                    joinDate: new Date().toISOString(),
+                }, { merge: true });
+            }
+
+            await batch.commit();
+            return true;
+        } catch (e: any) {
+            if (e.code === 'permission-denied' && attempt < maxAttempts) {
+                logProgress("MAP: Access pending. Auto-retrying in 5s...");
+                await new Promise(resolve => setTimeout(resolve, 5000));
+                return attemptSync();
+            }
+            throw e;
+        }
+    };
 
     try {
-        logProgress("MAP: Fetching fresh security token...");
-        await auth.currentUser.getIdToken(true);
-
-        const batch = writeBatch(db);
-        const userDocRef = doc(db, "users", uid);
-        const walletDocRef = doc(db, "wallets", uid);
-        const adminDocRef = doc(db, "admins", uid);
-
-        batch.set(userDocRef, {
-            id: uid,
-            name: type === 'admin' ? HEAD_ADMIN_NAME : TEST_USER_NAME,
-            email: auth.currentUser.email,
-            joinDate: new Date().toISOString(),
-            status: "Active",
-        }, { merge: true });
-
-        batch.set(walletDocRef, {
-            balance: type === 'admin' ? 0 : 5000,
-            coins: 100,
-            referralCode: type === 'admin' ? 'HEADADMIN' : `TESTSTUDENT`
-        }, { merge: true });
-
-        if (type === 'admin') {
-            batch.set(adminDocRef, {
-                name: HEAD_ADMIN_NAME, 
-                email: HEAD_ADMIN_EMAIL, 
-                role: "Head Admin", 
-                status: "Active", 
-                joinDate: new Date().toISOString(),
-            }, { merge: true });
-        }
-
-        await batch.commit();
-        logProgress(`SUCCESS: ${type.toUpperCase()} mapped to vidyaeducaredatabase.`);
+        await attemptSync();
+        logProgress(`SUCCESS: ${type.toUpperCase()} infrastructure initialized.`);
         setMapStatus('success');
         toast({ title: "Mapping Complete!" });
         runSystemAudit();
     } catch (e: any) {
         console.error(e);
         setMapStatus('error');
-        if (e.code === 'permission-denied') {
-            logProgress("FAIL: Permission Denied. Rules propagation still in progress.");
-            logProgress("TIP: Wait 10 seconds and click STEP 2 again.");
-        } else {
-            logProgress(`ERROR: ${e.message}`);
-        }
-        toast({ variant: 'destructive', title: "Mapping Failed", description: "Permissions not yet propagated. Retry in 10 seconds." });
+        logProgress(`ERROR: ${e.message}`);
+        toast({ variant: 'destructive', title: "Sync Failed", description: "Permissions still propagating. Please try Step 2 again in 30 seconds." });
+    } finally {
+        isRetrying.current = false;
     }
   };
 
@@ -195,11 +210,11 @@ export default function SetupAdminPage() {
               </div>
               <div className="grid grid-cols-2 gap-2">
                   <div className={`p-2 rounded-lg border flex flex-col items-center justify-center gap-1 ${auditStatus.admin ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-                      <p className="text-[9px] font-bold uppercase">Admin Profile</p>
+                      <p className="text-[9px] font-bold uppercase text-center">Admin Profile</p>
                       {auditStatus.admin ? <CheckCircle size={16} className="text-green-600"/> : <AlertCircle size={16} className="text-red-600"/>}
                   </div>
                    <div className={`p-2 rounded-lg border flex flex-col items-center justify-center gap-1 ${auditStatus.student ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-                      <p className="text-[9px] font-bold uppercase">Student Profile</p>
+                      <p className="text-[9px] font-bold uppercase text-center">Student Profile</p>
                       {auditStatus.student ? <CheckCircle size={16} className="text-green-600"/> : <AlertCircle size={16} className="text-red-600"/>}
                   </div>
               </div>
@@ -220,11 +235,11 @@ export default function SetupAdminPage() {
 
           <div className="space-y-4 pt-2">
              <div className="grid grid-cols-2 gap-3">
-                <Button className="font-bold text-[10px] py-6" onClick={() => handleAuthenticate('admin')} disabled={authStatus === 'loading'}>
-                    {authStatus === 'loading' ? <Loader2 className="animate-spin" /> : "STEP 1: AUTH ADMIN"}
+                <Button className="font-bold text-[10px] py-6" onClick={() => handleAuthenticate('admin')} disabled={authStatus === 'loading' || mapStatus === 'loading'}>
+                    {authStatus === 'loading' && currentIdentity.email === HEAD_ADMIN_EMAIL ? <Loader2 className="animate-spin" /> : "STEP 1: AUTH ADMIN"}
                 </Button>
-                <Button variant="outline" className="font-bold text-[10px] py-6" onClick={() => handleAuthenticate('student')} disabled={authStatus === 'loading'}>
-                    {authStatus === 'loading' ? <Loader2 className="animate-spin" /> : "STEP 1: AUTH STUDENT"}
+                <Button variant="outline" className="font-bold text-[10px] py-6" onClick={() => handleAuthenticate('student')} disabled={authStatus === 'loading' || mapStatus === 'loading'}>
+                    {authStatus === 'loading' && currentIdentity.email === TEST_USER_EMAIL ? <Loader2 className="animate-spin" /> : "STEP 1: AUTH STUDENT"}
                 </Button>
              </div>
 
@@ -236,7 +251,7 @@ export default function SetupAdminPage() {
                  {mapStatus === 'loading' ? (
                      <div className="flex flex-col items-center">
                          <Loader2 className="animate-spin mb-1" />
-                         <span className="text-[10px]">COMMITTING...</span>
+                         <span className="text-[10px]">SYNCING INFRASTRUCTURE...</span>
                      </div>
                  ) : (
                      <><Database className="mr-2 h-6 w-6" /> STEP 2: MAP TO DATABASE</>
@@ -246,7 +261,7 @@ export default function SetupAdminPage() {
              <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg flex items-center gap-3">
                 <Info className="text-amber-600 w-5 h-5 shrink-0" />
                 <p className="text-[9px] font-bold text-amber-800 leading-tight uppercase">
-                    If Step 2 fails with "Permission Denied", wait 10 seconds for the cloud rules to refresh and click STEP 2 again.
+                    Step 2 will automatically retry 5 times. Stay on this page until the console shows SUCCESS.
                 </p>
              </div>
           </div>
@@ -261,7 +276,7 @@ export default function SetupAdminPage() {
         </CardContent>
         <CardFooter className="bg-primary/5 py-4 border-t justify-center gap-2">
             <UserCheck size={10} className="text-muted-foreground"/>
-            <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground italic text-center">Infrastructure ready for academic volume</p>
+            <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground italic text-center">Identity management synced with regional rules</p>
         </CardFooter>
       </Card>
     </div>

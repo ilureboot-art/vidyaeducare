@@ -7,7 +7,7 @@ import { createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthState
 import { doc, writeBatch } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, CheckCircle, Shield, RefreshCcw, AlertTriangle, ExternalLink, Database, Info } from 'lucide-react';
+import { Loader2, CheckCircle, Shield, RefreshCcw, AlertTriangle, ExternalLink, Database, Info, Activity } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -27,9 +27,10 @@ export default function SetupAdminPage() {
   const { toast } = useToast();
   
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [studentStatus, setStudentStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
+  const [progressLog, setProgressLog] = useState<string[]>([]);
   const [isDatabaseMissing, setIsDatabaseMissing] = useState(false);
-  const [isCreatingUser, setIsCreatingUser] = useState(false);
   const [currentIdentity, setCurrentIdentity] = useState<{ email: string | null; uid: string | null }>({ email: null, uid: null });
 
   const targetProjectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
@@ -43,17 +44,22 @@ export default function SetupAdminPage() {
     return () => unsub();
   }, [auth]);
 
+  const logProgress = (msg: string) => {
+      setProgressLog(prev => [...prev.slice(-4), msg]);
+  };
+
   const ensureRecords = async (uid: string, type: 'admin' | 'student') => {
-    if (!db || !auth || !auth.currentUser) throw new Error("Authentication session not ready.");
+    if (!db || !auth || !auth.currentUser) throw new Error("Authentication session lost during sync.");
     
-    // FORCED IDENTITY HANDSHAKE: Ensure Firestore rules receive the absolute latest verified claims.
-    console.log("Refreshing security token for identity synchronization...");
+    logProgress("Performing identity handshake...");
     await auth.currentUser.getIdToken(true);
 
     const batch = writeBatch(db);
     const userDocRef = doc(db, "users", uid);
     const walletDocRef = doc(db, "wallets", uid);
     const adminDocRef = doc(db, "admins", uid);
+
+    logProgress(`Mapping records for ${type}...`);
 
     batch.set(userDocRef, {
       id: uid,
@@ -83,38 +89,30 @@ export default function SetupAdminPage() {
       batch.delete(adminDocRef);
     }
 
+    logProgress("Committing transaction...");
     return batch.commit();
   };
 
-  const handleError = (error: any) => {
-    console.error("Setup Error Details:", error);
+  const handleError = (error: any, target: 'admin' | 'student') => {
+    console.error(`Sync Error (${target}):`, error);
     const msg = error.message || "An unexpected error occurred.";
-    
-    if (msg.includes("Native mode API is disabled") || msg.includes("Datastore mode")) {
-        setIsDatabaseMissing(true);
-        setErrorMessage(`CRITICAL: Infrastructure Mode Conflict. Ensure '${targetDbId}' is in 'Firestore Native' mode.`);
-    } else if (msg.includes("database (default) does not exist") || msg.includes("not exist")) {
-        setIsDatabaseMissing(true);
-        setErrorMessage(`Database '${targetDbId}' target not found. Please verify the ID in Google Cloud.`);
-    } else if (msg.includes("permission-denied") || msg.includes("insufficient permissions")) {
-        setErrorMessage(`Permission Denied. identity: ${auth?.currentUser?.email || 'UNAUTHENTICATED'}. UID: ${auth?.currentUser?.uid || 'NONE'}. Please ensure rules are correctly applied to '${targetDbId}'.`);
-    } else {
-        setErrorMessage(msg);
-    }
-    setStatus('error');
+    setErrorMessage(msg);
+    if (target === 'admin') setStatus('error');
+    else setStudentStatus('error');
+    logProgress(`ERROR: ${msg.slice(0, 30)}...`);
   };
 
-  const createHeadAdmin = async () => {
+  const syncAdmin = async () => {
     if (!db || !auth) return;
     setStatus('loading');
-    setIsDatabaseMissing(false);
-    setErrorMessage('');
+    setProgressLog(["Initializing Admin Sync..."]);
     
     try {
-        // Clear any stale sessions to ensure a fresh token is generated
+        logProgress("Clearing stale sessions...");
         await signOut(auth);
 
         let uid = '';
+        logProgress("Authenticating admin@vidyaeducare.com...");
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, HEAD_ADMIN_EMAIL, HEAD_ADMIN_PASSWORD);
             uid = userCredential.user.uid;
@@ -125,9 +123,15 @@ export default function SetupAdminPage() {
             } else throw e;
         }
 
-        // SUPREME IDENTITY SYNC BUFFER: Wait 20 seconds for cross-region propagation to named database.
-        console.log("Awaiting Identity Propagation (20s)...");
-        await new Promise(r => setTimeout(r, 20000));
+        logProgress("Identity Handshake: Refreshing Claims...");
+        await auth.currentUser?.getIdToken(true);
+
+        logProgress("Propagating permissions (20s wait)...");
+        for (let i = 1; i <= 4; i++) {
+            await new Promise(r => setTimeout(r, 5000));
+            await auth.currentUser?.getIdToken(true);
+            logProgress(`Sync heart-beat ${i}/4...`);
+        }
         
         await ensureRecords(uid, 'admin');
         
@@ -137,23 +141,23 @@ export default function SetupAdminPage() {
         }
         
         setStatus('success');
-        toast({ title: "Bootstrap Complete", description: "Head Admin mapping successfully verified." });
+        logProgress("SYNC COMPLETE: Admin profile verified.");
+        toast({ title: "Bootstrap Complete", description: "Admin identity synced." });
     } catch (error: any) {
-        handleError(error);
+        handleError(error, 'admin');
     }
   };
 
-  const createTestUser = async () => {
+  const syncStudent = async () => {
     if (!db || !auth) return;
-    setIsCreatingUser(true);
-    setIsDatabaseMissing(false);
-    setErrorMessage('');
+    setStudentStatus('loading');
+    setProgressLog(["Initializing Student Sync..."]);
     
     try {
-        // Clear previous session
         await signOut(auth);
 
         let uid = '';
+        logProgress("Authenticating student@vidyaeducare.com...");
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, TEST_USER_EMAIL, TEST_USER_PASSWORD);
             uid = userCredential.user.uid;
@@ -164,9 +168,12 @@ export default function SetupAdminPage() {
             } else throw e;
         }
 
-        // SUPREME IDENTITY SYNC BUFFER: Wait 20 seconds
-        console.log("Awaiting Identity Propagation (20s)...");
-        await new Promise(r => setTimeout(r, 20000));
+        logProgress("Propagating permissions (20s wait)...");
+        for (let i = 1; i <= 4; i++) {
+            await new Promise(r => setTimeout(r, 5000));
+            await auth.currentUser?.getIdToken(true);
+            logProgress(`Sync heart-beat ${i}/4...`);
+        }
         
         await ensureRecords(uid, 'student');
         
@@ -175,11 +182,11 @@ export default function SetupAdminPage() {
             localStorage.clear();
         }
 
+        setStudentStatus('success');
+        logProgress("SYNC COMPLETE: Student profile verified.");
         toast({ title: "Student Synced", description: "Test profile initialized." });
     } catch (error: any) {
-        handleError(error);
-    } finally {
-        setIsCreatingUser(false);
+        handleError(error, 'student');
     }
   }
 
@@ -191,7 +198,7 @@ export default function SetupAdminPage() {
             <Shield className="w-6 h-6" /> SYSTEM INITIALIZATION
           </CardTitle>
           <CardDescription>
-            Bypassing security locks to map administrative identities.
+            Bypassing security locks to map master identities.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -201,8 +208,6 @@ export default function SetupAdminPage() {
                   <Database size={12}/> Global Registry Targeting
               </p>
               <div className="grid grid-cols-2 gap-2 text-[10px] font-mono">
-                  <div className="text-muted-foreground">Project:</div>
-                  <div className="font-bold truncate">{targetProjectId}</div>
                   <div className="text-muted-foreground">Target DB:</div>
                   <div className="font-bold">{targetDbId}</div>
                   <div className="text-muted-foreground">Active Session:</div>
@@ -212,20 +217,18 @@ export default function SetupAdminPage() {
               </div>
           </div>
 
-          {isDatabaseMissing && (
-            <Alert variant="destructive" className="bg-destructive/10 border-destructive/20">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertTitle className="font-bold text-xs uppercase tracking-tight">Infrastructure Alert</AlertTitle>
-                <AlertDescription className="text-xs space-y-3 mt-2">
-                    <p>{errorMessage}</p>
-                    <Button asChild variant="destructive" size="sm" className="w-full font-bold">
-                        <a href={`https://console.firebase.google.com/project/${targetProjectId}/firestore/databases`} target="_blank" rel="noopener noreferrer">
-                            FIX IN CONSOLE <ExternalLink className="ml-2 h-3 w-3" />
-                        </a>
-                    </Button>
-                </AlertDescription>
-            </Alert>
-          )}
+          <div className="bg-black/90 p-4 rounded-xl border border-white/10 space-y-1">
+              <p className="text-[9px] font-bold text-white/50 uppercase flex items-center gap-2">
+                  <Activity size={10}/> Real-time Sync Log
+              </p>
+              <div className="space-y-1 min-h-[80px]">
+                  {progressLog.length > 0 ? progressLog.map((log, i) => (
+                      <p key={i} className="text-[10px] font-mono text-green-400 animate-in fade-in slide-in-from-left-2">> {log}</p>
+                  )) : (
+                      <p className="text-[10px] font-mono text-white/30 italic">Awaiting action...</p>
+                  )}
+              </div>
+          </div>
 
           <div className="space-y-4">
             <h3 className="font-bold text-xs uppercase tracking-widest text-muted-foreground border-b pb-2">Step 1: Admin Authority</h3>
@@ -233,21 +236,15 @@ export default function SetupAdminPage() {
                 <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 p-4 rounded-xl space-y-3">
                     <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
                         <CheckCircle className="w-5 h-5" />
-                        <span className="font-black text-sm uppercase">Permissions Verified</span>
+                        <span className="font-black text-sm uppercase">Admin Profile Synced</span>
                     </div>
-                    <Button variant="outline" size="sm" className="w-full font-bold" onClick={() => router.push('/admin/login')}>Proceed to Dashboard</Button>
-                </div>
-            ) : status === 'error' && !isDatabaseMissing ? (
-                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 p-4 rounded-xl">
-                    <p className="text-[10px] font-bold text-red-700 leading-tight mb-4">{errorMessage}</p>
-                    <Button variant="outline" size="sm" className="w-full font-bold" onClick={() => setStatus('idle')}>Retry Initialization</Button>
                 </div>
             ) : (
-                <Button className="w-full py-7 text-lg font-black shadow-xl" onClick={createHeadAdmin} disabled={status === 'loading' || isDatabaseMissing}>
+                <Button className="w-full py-7 text-lg font-black shadow-xl" onClick={syncAdmin} disabled={status === 'loading' || studentStatus === 'loading'}>
                     {status === 'loading' ? (
                         <div className="flex flex-col items-center">
                             <Loader2 className="animate-spin mb-1" />
-                            <span className="text-[10px]">SYNCING IDENTITY (20S)...</span>
+                            <span className="text-[10px]">SYNCING (20S HANDSHAKE)...</span>
                         </div>
                     ) : (
                         <><Shield className="mr-2 h-5 w-5" /> SYNC ADMIN PROFILE</>
@@ -258,22 +255,35 @@ export default function SetupAdminPage() {
 
           <div className="space-y-4 pt-6 border-t">
             <h3 className="font-bold text-xs uppercase tracking-widest text-muted-foreground border-b pb-2">Step 2: Mock Environment</h3>
-            <div className="bg-muted p-4 rounded-xl space-y-3">
-                <div className="text-[10px] font-mono bg-background p-2 rounded-lg border border-dashed text-center opacity-70">
-                    Target: {TEST_USER_EMAIL}
+            {studentStatus === 'success' ? (
+                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 p-4 rounded-xl space-y-3">
+                    <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
+                        <CheckCircle className="w-5 h-5" />
+                        <span className="font-black text-sm uppercase">Student Profile Synced</span>
+                    </div>
                 </div>
-                <Button variant="secondary" className="w-full font-bold" onClick={createTestUser} disabled={isCreatingUser || isDatabaseMissing || status === 'loading'}>
-                    {isCreatingUser ? (
+            ) : (
+                <Button variant="secondary" className="w-full py-7 font-black shadow-lg" onClick={syncStudent} disabled={studentStatus === 'loading' || status === 'loading'}>
+                    {studentStatus === 'loading' ? (
                         <div className="flex flex-col items-center">
                             <Loader2 className="animate-spin mb-1" />
-                            <span className="text-[10px]">SYNCING STUDENT (20S)...</span>
+                            <span className="text-[10px]">SYNCING (20S HANDSHAKE)...</span>
                         </div>
                     ) : (
                         <><RefreshCcw className="mr-2 h-4 w-4" /> SYNC TEST STUDENT</>
                     )}
                 </Button>
-            </div>
+            )}
           </div>
+
+          {(status === 'success' && studentStatus === 'success') && (
+              <div className="pt-4 animate-in zoom-in duration-300">
+                  <Button className="w-full py-8 text-xl font-black bg-accent hover:bg-accent/90 shadow-2xl" onClick={() => router.push('/admin/login')}>
+                      ENTER DASHBOARD <ExternalLink className="ml-2 h-5 w-5"/>
+                  </Button>
+                  <p className="text-center text-[10px] text-muted-foreground mt-4 italic font-bold">Both master identities are verified and mapped to {targetDbId}.</p>
+              </div>
+          )}
         </CardContent>
         <CardFooter className="bg-primary/5 py-4 border-t justify-center gap-2">
             <Info size={10} className="text-muted-foreground"/>

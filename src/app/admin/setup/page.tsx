@@ -40,13 +40,13 @@ export default function SetupAdminPage() {
   }, [auth]);
 
   const logProgress = (msg: string) => {
-      setProgressLog(prev => [...prev.slice(-12), msg]);
+      setProgressLog(prev => [...prev.slice(-15), msg]);
   };
 
   const commitWithRetry = async (uid: string, type: 'admin' | 'student', attempt = 1): Promise<void> => {
     if (!db || !auth || !auth.currentUser) throw new Error("Sync Interrupted: Identity context lost.");
     
-    logProgress(`Attempt ${attempt}: Executing Batch Mapping...`);
+    logProgress(`Write Attempt ${attempt}: Targeting vidyaeducaredatabase...`);
 
     const batch = writeBatch(db);
     const userDocRef = doc(db, "users", uid);
@@ -83,10 +83,12 @@ export default function SetupAdminPage() {
         await batch.commit();
         logProgress(`SUCCESS: ${type.toUpperCase()} records committed.`);
     } catch (e: any) {
-        if (e.code === 'permission-denied' && attempt < 15) {
-            logProgress(`SYNC DELAY: Identity propagation in progress (database sync)...`);
+        console.warn(`Firestore Rejection: ${e.code} - ${e.message}`);
+        
+        if (e.code === 'permission-denied' && attempt < 20) {
+            logProgress(`RETRY ${attempt}: Refreshing Identity Claims...`);
             await auth.currentUser.getIdToken(true);
-            logProgress(`RETRY: Identity claims refreshed. Waiting 3s...`);
+            logProgress(`Waiting 3s for propagation...`);
             await new Promise(r => setTimeout(r, 3000));
             return commitWithRetry(uid, type, attempt + 1);
         }
@@ -105,7 +107,7 @@ export default function SetupAdminPage() {
     setProgressLog([`INITIATING ${type.toUpperCase()} SUPREME SYNC...`]);
     
     try {
-        logProgress("Clearing stale session caches...");
+        logProgress("Purging stale session...");
         await signOut(auth);
 
         let uid = '';
@@ -113,14 +115,16 @@ export default function SetupAdminPage() {
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             uid = userCredential.user.uid;
+            logProgress(`New Profile Created: ${uid}`);
         } catch (e: any) {
             if (e.code === 'auth/email-already-in-use') {
                 const signInRes = await signInWithEmailAndPassword(auth, email, password);
                 uid = signInRes.user.uid;
+                logProgress(`Existing Profile Linked: ${uid}`);
             } else throw e;
         }
 
-        logProgress("Establishing Secure Handshake...");
+        logProgress("Hardening Identity Handshake...");
         await auth.currentUser?.getIdToken(true);
         
         // Initial wait to let Google's global identity services know about the new session
@@ -135,13 +139,13 @@ export default function SetupAdminPage() {
         if (type === 'admin') setStatus('success');
         else setStudentStatus('success');
 
-        logProgress(`SYNC COMPLETE: ${type.toUpperCase()} identity verified.`);
-        toast({ title: `${type.charAt(0).toUpperCase() + type.slice(1)} Sync Successful` });
+        logProgress(`SYNC COMPLETE: ${type.toUpperCase()} authorized.`);
+        toast({ title: `${type.toUpperCase()} Sync Successful` });
     } catch (error: any) {
-        console.error("Sync Error:", error);
+        console.error("Critical Sync Failure:", error);
         if (type === 'admin') setStatus('error');
         else setStudentStatus('error');
-        logProgress(`FATAL SYNC FAILURE: ${error.message}`);
+        logProgress(`FATAL ERROR: ${error.message}`);
         toast({ variant: 'destructive', title: "Sync Failed", description: error.message });
     }
   };
@@ -157,23 +161,25 @@ export default function SetupAdminPage() {
       <Card className="w-full max-w-md shadow-2xl border-primary/20">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-black flex items-center justify-center gap-2 text-primary tracking-tighter uppercase italic">
-            <Shield className="w-6 h-6" /> Infrastructure Sync
+            <Shield className="w-6 h-6" /> INFRASTRUCTURE SYNC
           </CardTitle>
           <CardDescription>
-            Mapping identities to vidyaeducaredatabase instance.
+            Definitively mapping identities to vidyaeducaredatabase.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           
           <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 space-y-2">
               <p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2">
-                  <Database size={12}/> Target Instance
+                  <Database size={12}/> Target Configuration
               </p>
               <div className="grid grid-cols-2 gap-2 text-[10px] font-mono">
-                  <div className="text-muted-foreground">Database:</div>
+                  <div className="text-muted-foreground">Instance:</div>
                   <div className="font-bold">vidyaeducaredatabase</div>
-                  <div className="text-muted-foreground">Auth:</div>
+                  <div className="text-muted-foreground">Current Auth:</div>
                   <div className="font-bold truncate text-primary">{currentIdentity.email || 'None'}</div>
+                  <div className="text-muted-foreground">Active UID:</div>
+                  <div className="font-bold truncate">{currentIdentity.uid || 'N/A'}</div>
               </div>
           </div>
 
@@ -181,16 +187,16 @@ export default function SetupAdminPage() {
               <p className="text-[9px] font-bold text-white/50 uppercase flex items-center gap-2">
                   <Activity size={10}/> Sync Console
               </p>
-              <div className="space-y-1 min-h-[180px]">
+              <div className="space-y-1 min-h-[220px]">
                   {progressLog.length > 0 ? progressLog.map((log, i) => (
                       <p key={i} className="text-[10px] font-mono text-green-400 animate-in fade-in slide-in-from-left-2">> {log}</p>
                   )) : (
-                      <p className="text-[10px] font-mono text-white/30 italic">Awaiting sync initiation...</p>
+                      <p className="text-[10px] font-mono text-white/30 italic">Awaiting initiation...</p>
                   )}
                   {countdown > 0 && (
                       <div className="flex items-center gap-2 pt-2 text-yellow-400">
                           <Timer size={12} className="animate-pulse" />
-                          <span className="text-[10px] font-bold uppercase">Propagation Buffer: {countdown}s Left</span>
+                          <span className="text-[10px] font-bold uppercase">Propagation Buffer: {countdown}s Remaining</span>
                       </div>
                   )}
               </div>
@@ -207,7 +213,7 @@ export default function SetupAdminPage() {
                     {status === 'loading' ? (
                         <div className="flex flex-col items-center">
                             <Loader2 className="animate-spin mb-1" />
-                            <span className="text-[10px]">RETRYING ON PERMISSION DENIED...</span>
+                            <span className="text-[10px]">HANDLING PERMISSION DENIED...</span>
                         </div>
                     ) : (
                         <><Shield className="mr-2 h-6 w-6" /> SYNC ADMIN PROFILE</>
@@ -226,7 +232,7 @@ export default function SetupAdminPage() {
                          {studentStatus === 'loading' ? (
                             <div className="flex flex-col items-center">
                                 <Loader2 className="animate-spin mb-1" />
-                                <span className="text-[10px]">SYNCING (DO NOT CLOSE)...</span>
+                                <span className="text-[10px]">SYNCING (DO NOT INTERRUPT)...</span>
                             </div>
                         ) : (
                             <><RefreshCw className="mr-2 h-4 w-4" /> SYNC TEST STUDENT</>
@@ -246,7 +252,7 @@ export default function SetupAdminPage() {
         </CardContent>
         <CardFooter className="bg-primary/5 py-4 border-t justify-center gap-2">
             <Info size={10} className="text-muted-foreground"/>
-            <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground italic text-center">Named DB Targeting Enabled: Vidyaeducaredatabase</p>
+            <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground italic text-center">Infrastructure Status: Target Named Database Ready</p>
         </CardFooter>
       </Card>
     </div>

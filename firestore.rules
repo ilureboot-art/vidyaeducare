@@ -1,17 +1,17 @@
 rules_version = '2';
 
 /**
- * Vidya EduCare - Global Infrastructure Rules
+ * Vidya EduCare - Supreme Infrastructure Rules
  * Target Instance: vidyaeducaredatabase
- * Last Rules Propagation: 2024-05-24 10:20 (SUPREME BOOTSTRAP OVERRIDE)
+ * Last Rules Propagation: 2024-05-24 11:45 (CRITICAL BOOTSTRAP OVERRIDE)
  */
 service cloud.firestore {
   match /databases/{database}/documents {
     
     /**
-     * GLOBAL BOOTSTRAP OVERRIDE
-     * Hardcoded master identities to bypass all locks during initial mapping.
-     * This rule is the supreme authority for vidyaeducaredatabase initialization.
+     * SUPREME BOOTSTRAP AUTHORITY
+     * This rule explicitly authorizes the master identities to bypass all locks.
+     * This is required for the initial mapping of vidyaeducaredatabase.
      */
     match /{allPaths=**} {
       allow read, write: if request.auth != null && (
@@ -21,7 +21,8 @@ service cloud.firestore {
       );
     }
 
-    // Core helper functions for standard users
+    // --- Standard Application Rules (Active after bootstrap) ---
+
     function isAuthenticated() {
       return request.auth != null;
     }

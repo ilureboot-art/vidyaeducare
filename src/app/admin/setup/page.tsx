@@ -9,7 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Loader2, CheckCircle, Shield, Database, Activity, Info, ExternalLink, UserCheck, Search, AlertCircle, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { Badge } from '@/components/ui/badge';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 const HEAD_ADMIN_EMAIL = 'admin@vidyaeducare.com';
 const HEAD_ADMIN_PASSWORD = 'password123';
@@ -110,74 +111,79 @@ export default function SetupAdminPage() {
 
     const type = auth.currentUser.email === HEAD_ADMIN_EMAIL ? 'admin' : 'student';
     const uid = auth.currentUser.uid;
+    const email = auth.currentUser.email;
 
     setMapStatus('loading');
     isRetrying.current = true;
     let attempt = 0;
     const maxAttempts = 5;
 
-    const attemptSync = async (): Promise<boolean> => {
+    const attemptSync = async (): Promise<void> => {
         attempt++;
         logProgress(`MAP: Attempt ${attempt}/${maxAttempts}...`);
-        try {
-            // Force refresh token to ensure rules engine sees latest claims
-            await auth.currentUser?.getIdToken(true);
-            
-            const batch = writeBatch(db);
-            const userDocRef = doc(db, "users", uid);
-            const walletDocRef = doc(db, "wallets", uid);
-            const adminDocRef = doc(db, "admins", uid);
+        
+        // Force refresh token to ensure rules engine sees latest claims
+        await auth.currentUser?.getIdToken(true);
+        
+        const batch = writeBatch(db);
+        const userDocRef = doc(db, "users", uid);
+        const walletDocRef = doc(db, "wallets", uid);
+        const adminDocRef = doc(db, "admins", uid);
 
-            batch.set(userDocRef, {
-                id: uid,
-                name: type === 'admin' ? HEAD_ADMIN_NAME : TEST_USER_NAME,
-                email: auth.currentUser?.email,
+        const userData = {
+            id: uid,
+            name: type === 'admin' ? HEAD_ADMIN_NAME : TEST_USER_NAME,
+            email: email,
+            joinDate: new Date().toISOString(),
+            status: "Active",
+        };
+
+        const walletData = {
+            balance: type === 'admin' ? 0 : 5000,
+            coins: 100,
+            referralCode: type === 'admin' ? 'HEADADMIN' : `TESTSTUDENT`
+        };
+
+        batch.set(userDocRef, userData, { merge: true });
+        batch.set(walletDocRef, walletData, { merge: true });
+
+        if (type === 'admin') {
+            batch.set(adminDocRef, {
+                name: HEAD_ADMIN_NAME, 
+                email: HEAD_ADMIN_EMAIL, 
+                role: "Head Admin", 
+                status: "Active", 
                 joinDate: new Date().toISOString(),
-                status: "Active",
             }, { merge: true });
-
-            batch.set(walletDocRef, {
-                balance: type === 'admin' ? 0 : 5000,
-                coins: 100,
-                referralCode: type === 'admin' ? 'HEADADMIN' : `TESTSTUDENT`
-            }, { merge: true });
-
-            if (type === 'admin') {
-                batch.set(adminDocRef, {
-                    name: HEAD_ADMIN_NAME, 
-                    email: HEAD_ADMIN_EMAIL, 
-                    role: "Head Admin", 
-                    status: "Active", 
-                    joinDate: new Date().toISOString(),
-                }, { merge: true });
-            }
-
-            await batch.commit();
-            return true;
-        } catch (e: any) {
-            if (e.code === 'permission-denied' && attempt < maxAttempts) {
-                logProgress("MAP: Access pending. Auto-retrying in 5s...");
-                await new Promise(resolve => setTimeout(resolve, 5000));
-                return attemptSync();
-            }
-            throw e;
         }
+
+        batch.commit()
+            .then(() => {
+                logProgress(`SUCCESS: ${type.toUpperCase()} infrastructure initialized.`);
+                setMapStatus('success');
+                toast({ title: "Mapping Complete!" });
+                runSystemAudit();
+                isRetrying.current = false;
+            })
+            .catch(async (serverError: any) => {
+                if (serverError.code === 'permission-denied' && attempt < maxAttempts) {
+                    logProgress("MAP: Access pending. Auto-retrying in 5s...");
+                    setTimeout(attemptSync, 5000);
+                } else {
+                    const permissionError = new FirestorePermissionError({
+                        path: userDocRef.path,
+                        operation: 'write',
+                        requestResourceData: userData,
+                    } satisfies SecurityRuleContext);
+
+                    errorEmitter.emit('permission-error', permissionError);
+                    setMapStatus('error');
+                    isRetrying.current = false;
+                }
+            });
     };
 
-    try {
-        await attemptSync();
-        logProgress(`SUCCESS: ${type.toUpperCase()} infrastructure initialized.`);
-        setMapStatus('success');
-        toast({ title: "Mapping Complete!" });
-        runSystemAudit();
-    } catch (e: any) {
-        console.error(e);
-        setMapStatus('error');
-        logProgress(`ERROR: ${e.message}`);
-        toast({ variant: 'destructive', title: "Sync Failed", description: "Permissions still propagating. Please try Step 2 again in 30 seconds." });
-    } finally {
-        isRetrying.current = false;
-    }
+    attemptSync();
   };
 
   const handleEnterDashboard = () => {

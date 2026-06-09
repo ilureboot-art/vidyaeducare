@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
@@ -8,20 +7,21 @@ import { Loader2, Shield } from 'lucide-react';
 import { getFirebaseServices } from './client-init';
 import type { Admin } from '@/lib/admin-data';
 import { usePathname, useRouter } from 'next/navigation';
+import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 
 interface AuthState {
   user: User | null;
   loading: boolean;
   isAdmin: boolean;
   isHeadAdmin: boolean;
-  isResolved: boolean; // Tracks if role check is complete for the current user
+  isResolved: boolean;
 }
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
 const DbContext = createContext<Firestore | undefined>(undefined);
 const AuthServiceContext = createContext<Auth | undefined>(undefined);
 
-const ROLE_CACHE_KEY = 'vidya_auth_role_v16_final';
+const ROLE_CACHE_KEY = 'vidya_auth_role_v17_diagnostics';
 const MASTER_ADMIN_EMAIL = 'admin@vidyaeducare.com';
 
 const getCachedRoles = () => {
@@ -59,7 +59,6 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   const processSnap = useCallback((snap: DocumentSnapshot | null, user: User) => {
       let roles = { isAdmin: false, isHeadAdmin: false };
       
-      // SUPREME FALLBACK: Master email always has admin navigation rights
       if (user.email?.toLowerCase() === MASTER_ADMIN_EMAIL) {
           roles = { isAdmin: true, isHeadAdmin: true };
       } else if (snap && snap.exists()) {
@@ -89,14 +88,9 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
     try {
       const adminDocRef = doc(db, "admins", user.uid);
-      const adminDocSnap = await getDoc(adminDocRef).catch((e) => {
-          console.warn("Administrative check bypassed due to infrastructure state:", e.message);
-          return null;
-      });
+      const adminDocSnap = await getDoc(adminDocRef);
       return processSnap(adminDocSnap, user);
     } catch (e) {
-      console.error("Role resolution failure:", e);
-      // Even on failure, check master email
       return user.email?.toLowerCase() === MASTER_ADMIN_EMAIL 
         ? { isAdmin: true, isHeadAdmin: true } 
         : { isAdmin: false, isHeadAdmin: false };
@@ -150,18 +144,15 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
     if (user) {
       if (isAdmin) {
-        // Admins should NOT be in the student profile or login pages
         if (isAuthRoute || cleanPath === '/' || (!isAdminArea && !isPublicRoute)) {
           targetPath = '/admin/analytics';
         }
       } else {
-        // Students should NOT be in the admin area
         if (isAdminArea || isAuthRoute || cleanPath === '/') {
           if (!isPublicRoute) targetPath = '/profile';
         }
       }
     } else {
-      // Unauthenticated users should go home unless on a public/auth page
       if (!isPublicRoute && !isAuthRoute) {
         targetPath = '/';
       }
@@ -194,6 +185,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     <AuthContext.Provider value={authState}>
       <DbContext.Provider value={services?.db}>
         <AuthServiceContext.Provider value={services?.auth}>
+            <FirebaseErrorListener />
             {children}
         </AuthServiceContext.Provider>
       </DbContext.Provider>

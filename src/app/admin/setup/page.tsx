@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDb, useAuthService } from '@/firebase';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
 import { doc, writeBatch } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -30,17 +30,25 @@ export default function SetupAdminPage() {
   const [errorMessage, setErrorMessage] = useState('');
   const [isDatabaseMissing, setIsDatabaseMissing] = useState(false);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const [currentIdentity, setCurrentIdentity] = useState<{ email: string | null; uid: string | null }>({ email: null, uid: null });
 
   const targetProjectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
   const targetDbId = "vidyaeducaredatabase";
 
+  useEffect(() => {
+    if (!auth) return;
+    const unsub = onAuthStateChanged(auth, (user) => {
+      setCurrentIdentity({ email: user?.email || null, uid: user?.uid || null });
+    });
+    return () => unsub();
+  }, [auth]);
+
   const ensureRecords = async (uid: string, type: 'admin' | 'student') => {
-    if (!db || !auth) throw new Error("Services not initialized");
+    if (!db || !auth || !auth.currentUser) throw new Error("Authentication session not ready.");
     
-    // FORCE TOKEN REFRESH: Ensure Firestore sees the latest Auth state
-    if (auth.currentUser) {
-        await auth.currentUser.getIdToken(true);
-    }
+    // CRITICAL: Force token refresh immediately before write
+    // This ensures that security rules see the verified identity claims
+    await auth.currentUser.getIdToken(true);
 
     const batch = writeBatch(db);
     const userDocRef = doc(db, "users", uid);
@@ -75,17 +83,10 @@ export default function SetupAdminPage() {
         joinDate: new Date().toISOString(),
       }, { merge: true });
     } else {
-      // Safe delete for students to ensure they are NOT admins
       batch.delete(adminDocRef);
     }
 
-    await batch.commit();
-    
-    // Clear all session caches to force role re-resolution
-    if (typeof window !== 'undefined') {
-        sessionStorage.clear();
-        localStorage.clear();
-    }
+    return batch.commit();
   };
 
   const handleError = (error: any) => {
@@ -99,7 +100,7 @@ export default function SetupAdminPage() {
         setIsDatabaseMissing(true);
         setErrorMessage(`Database '${targetDbId}' target not found. Please verify the ID in Google Cloud.`);
     } else if (msg.includes("permission-denied") || msg.includes("insufficient permissions")) {
-        setErrorMessage(`Permission Denied. identity: ${auth?.currentUser?.email || 'unauthenticated'}. UID: ${auth?.currentUser?.uid || 'none'}. Please ensure rules are correctly applied to '${targetDbId}'.`);
+        setErrorMessage(`Permission Denied. identity: ${auth?.currentUser?.email || 'UNAUTHENTICATED'}. UID: ${auth?.currentUser?.uid || 'NONE'}. Please ensure rules are correctly applied to '${targetDbId}'.`);
     } else {
         setErrorMessage(msg);
     }
@@ -124,9 +125,15 @@ export default function SetupAdminPage() {
             } else throw e;
         }
 
-        // EXTENDED DELAY: Wait 5 seconds for Authentication state to fully propagate to Firestore rules
-        await new Promise(r => setTimeout(r, 5000));
+        // EXTENDED DELAY: Wait 6 seconds for Authentication state to fully propagate globally
+        await new Promise(r => setTimeout(r, 6000));
         await ensureRecords(uid, 'admin');
+        
+        if (typeof window !== 'undefined') {
+            sessionStorage.clear();
+            localStorage.clear();
+        }
+        
         setStatus('success');
         toast({ title: "Sync Complete", description: "Head Admin mapping verified." });
     } catch (error: any) {
@@ -152,9 +159,15 @@ export default function SetupAdminPage() {
             } else throw e;
         }
 
-        // EXTENDED DELAY: Wait 5 seconds for Identity Propagation
-        await new Promise(r => setTimeout(r, 5000));
+        // EXTENDED DELAY: Wait 6 seconds for Identity Propagation
+        await new Promise(r => setTimeout(r, 6000));
         await ensureRecords(uid, 'student');
+        
+        if (typeof window !== 'undefined') {
+            sessionStorage.clear();
+            localStorage.clear();
+        }
+
         toast({ title: "Student Synced", description: "Test profile initialized." });
     } catch (error: any) {
         handleError(error);
@@ -186,9 +199,9 @@ export default function SetupAdminPage() {
                   <div className="text-muted-foreground">Database ID:</div>
                   <div className="font-bold">{targetDbId}</div>
                   <div className="text-muted-foreground">Current Auth:</div>
-                  <div className="font-bold truncate text-primary">{auth?.currentUser?.email || 'NONE'}</div>
+                  <div className="font-bold truncate text-primary">{currentIdentity.email || 'UNAUTHENTICATED'}</div>
                   <div className="text-muted-foreground">Current UID:</div>
-                  <div className="font-bold truncate text-primary">{auth?.currentUser?.uid || 'NONE'}</div>
+                  <div className="font-bold truncate text-primary">{currentIdentity.uid || 'NONE'}</div>
               </div>
           </div>
 

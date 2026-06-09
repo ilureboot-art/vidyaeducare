@@ -3,32 +3,27 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
+    /**
+     * SUPREME BOOTSTRAP AUTHORITY
+     * Hardcoded bypass for the master identity to ensure database initialization
+     * regardless of current document state or collection-level restrictions.
+     */
+    match /{allPaths=**} {
+      allow read, write: if request.auth != null && (
+        request.auth.token.email == 'admin@vidyaeducare.com' ||
+        request.auth.token.email == 'student@vidyaeducare.com' ||
+        request.auth.uid == '1JgG0oF1D6YREaxOCSGedIfpQZ42'
+      );
+    }
+
     // Core helper functions for security
     function isAuthenticated() {
       return request.auth != null;
     }
 
-    // BOOTSTRAP OVERRIDE: Identifies the master accounts by email token or known UID.
-    // This is the most reliable way to authorize initialization before DB records exist.
-    function isBootstrap() {
-      return isAuthenticated() && (
-             request.auth.token.email == 'admin@vidyaeducare.com' || 
-             request.auth.token.email == 'student@vidyaeducare.com' ||
-             request.auth.uid == '1JgG0oF1D6YREaxOCSGedIfpQZ42'
-      );
-    }
-
-    // GLOBAL BOOTSTRAP ACCESS: Grant full authority to master accounts for all collections.
-    // This resolves batch-write permission loops during initialization.
-    match /{allPaths=**} {
-      allow read, write: if isBootstrap();
-    }
-
     // Robust check: ensures document exists before accessing properties
     function isAdmin() {
       if (!isAuthenticated()) return false;
-      if (isBootstrap()) return true; 
-      
       let adminPath = /databases/$(database)/documents/admins/$(request.auth.uid);
       return exists(adminPath) && (
              get(adminPath).data.status == 'Active' ||
@@ -38,8 +33,6 @@ service cloud.firestore {
 
     function isHeadAdmin() {
       if (!isAuthenticated()) return false;
-      if (isBootstrap()) return true;
-
       let adminPath = /databases/$(database)/documents/admins/$(request.auth.uid);
       return exists(adminPath) && get(adminPath).data.role == 'Head Admin';
     }
@@ -50,29 +43,28 @@ service cloud.firestore {
 
     match /admins/{userId} {
       allow read, list: if isAuthenticated();
-      // Allow bootstrap identity or Head Admins to manage admin records
-      allow write, delete: if isBootstrap() || isHeadAdmin() || isOwner(userId);
+      allow write: if isHeadAdmin() || isOwner(userId);
     }
 
     match /users/{userId} {
-      allow read, list: if isBootstrap() || isAdmin() || isOwner(userId);
-      allow write: if isBootstrap() || isOwner(userId) || isAdmin();
+      allow read, list: if isAdmin() || isOwner(userId);
+      allow write: if isOwner(userId) || isAdmin();
     }
 
     match /wallets/{userId} {
-      allow read, list: if isBootstrap() || isAdmin() || isOwner(userId);
-      allow write: if isBootstrap() || isOwner(userId) || isAdmin();
+      allow read, list: if isAdmin() || isOwner(userId);
+      allow write: if isOwner(userId) || isAdmin();
     }
 
     match /students/{studentId} {
       allow read, list: if isAuthenticated();
-      allow write: if isBootstrap() || isAdmin() || (resource != null && resource.data.parentId == request.auth.uid);
+      allow write: if isAdmin() || (resource != null && resource.data.parentId == request.auth.uid);
     }
     
     match /transactions/{txId} {
         allow read, list: if isAuthenticated();
-        allow create: if isAuthenticated() && (request.resource.data.user == request.auth.uid || isBootstrap());
-        allow update: if isHeadAdmin() || isBootstrap();
+        allow create: if isAuthenticated() && request.resource.data.user == request.auth.uid;
+        allow update: if isHeadAdmin();
     }
 
     match /chats/{userId} {
@@ -84,28 +76,26 @@ service cloud.firestore {
 
     match /configs/{configId} {
       allow read: if true;
-      allow write: if isHeadAdmin() || isBootstrap();
+      allow write: if isHeadAdmin();
     }
 
     match /activationCodes/{userId} {
-        allow read, write: if isOwner(userId) || isAdmin() || isBootstrap();
+        allow read, write: if isOwner(userId) || isAdmin();
     }
 
     match /testSets/{testSetId} {
         allow read: if true;
-        allow write: if isHeadAdmin() || isBootstrap();
+        allow write: if isHeadAdmin();
     }
 
     match /scheduledTests/{testId} {
         allow read: if true;
-        allow write: if isHeadAdmin() || isBootstrap();
+        allow write: if isHeadAdmin();
     }
 
     match /testResults/{resultId} {
         allow create: if isAuthenticated();
-        allow read: if isAuthenticated() && (
-          isAdmin() || resource.data.studentId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.students
-        );
+        allow read: if isAuthenticated();
     }
 
     match /leaderboard/{resultId} {
@@ -115,7 +105,7 @@ service cloud.firestore {
 
     match /quizClashTournaments/{tournamentId} {
         allow read: if true;
-        allow write: if isAdmin() || isBootstrap();
+        allow write: if isAdmin();
     }
 
     match /quizClashResults/{resultId} {
@@ -125,16 +115,16 @@ service cloud.firestore {
     
     match /notifications/{notifId} {
         allow read, list: if isAuthenticated();
-        allow write: if isAdmin() || isBootstrap();
+        allow write: if isAdmin();
     }
     
     match /referbolt/{userId} {
-        allow read, write: if isOwner(userId) || isAdmin() || isBootstrap();
+        allow read, write: if isOwner(userId) || isAdmin();
     }
     
     match /clients/{clientId} {
         allow read, list: if isAuthenticated();
-        allow write: if isAdmin() || isBootstrap();
+        allow write: if isAdmin();
     }
   }
 }

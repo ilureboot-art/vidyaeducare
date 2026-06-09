@@ -46,8 +46,8 @@ export default function SetupAdminPage() {
   const ensureRecords = async (uid: string, type: 'admin' | 'student') => {
     if (!db || !auth || !auth.currentUser) throw new Error("Authentication session not ready.");
     
-    // CRITICAL: Force token refresh immediately before write
-    // This ensures that security rules see the verified identity claims
+    // CRITICAL: Force token refresh immediately before write.
+    // This ensures that the global match /{allPaths=**} rule sees the supreme bootstrap claims.
     await auth.currentUser.getIdToken(true);
 
     const batch = writeBatch(db);
@@ -125,8 +125,8 @@ export default function SetupAdminPage() {
             } else throw e;
         }
 
-        // EXTENDED DELAY: Wait 6 seconds for Authentication state to fully propagate globally
-        await new Promise(r => setTimeout(r, 6000));
+        // EXTENDED SYNC BUFFER: Wait 8 seconds for Global Identity Propagation
+        await new Promise(r => setTimeout(r, 8000));
         await ensureRecords(uid, 'admin');
         
         if (typeof window !== 'undefined') {
@@ -135,7 +135,7 @@ export default function SetupAdminPage() {
         }
         
         setStatus('success');
-        toast({ title: "Sync Complete", description: "Head Admin mapping verified." });
+        toast({ title: "Bootstrap Complete", description: "Head Admin mapping successfully written." });
     } catch (error: any) {
         handleError(error);
     }
@@ -159,8 +159,8 @@ export default function SetupAdminPage() {
             } else throw e;
         }
 
-        // EXTENDED DELAY: Wait 6 seconds for Identity Propagation
-        await new Promise(r => setTimeout(r, 6000));
+        // EXTENDED SYNC BUFFER: Wait 8 seconds for Identity Propagation
+        await new Promise(r => setTimeout(r, 8000));
         await ensureRecords(uid, 'student');
         
         if (typeof window !== 'undefined') {

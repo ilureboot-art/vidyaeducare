@@ -83,7 +83,7 @@ export default function SetupAdminPage() {
         await batch.commit();
         logProgress(`SUCCESS: ${type.toUpperCase()} records committed.`);
     } catch (e: any) {
-        if (e.code === 'permission-denied' && attempt < 10) {
+        if (e.code === 'permission-denied' && attempt < 15) {
             logProgress(`SYNC DELAY: Identity propagation in progress (database sync)...`);
             await auth.currentUser.getIdToken(true);
             logProgress(`RETRY: Identity claims refreshed. Waiting 3s...`);

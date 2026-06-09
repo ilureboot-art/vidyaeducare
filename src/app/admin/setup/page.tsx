@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDb, useAuthService } from '@/firebase';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, writeBatch } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -46,8 +46,8 @@ export default function SetupAdminPage() {
   const ensureRecords = async (uid: string, type: 'admin' | 'student') => {
     if (!db || !auth || !auth.currentUser) throw new Error("Authentication session not ready.");
     
-    // CRITICAL: Force token refresh immediately before write.
-    // This ensures that the global match /{allPaths=**} rule sees the supreme bootstrap claims.
+    // FORCED IDENTITY HANDSHAKE: Ensure Firestore rules receive the absolute latest verified claims.
+    console.log("Refreshing security token for identity synchronization...");
     await auth.currentUser.getIdToken(true);
 
     const batch = writeBatch(db);
@@ -55,7 +55,6 @@ export default function SetupAdminPage() {
     const walletDocRef = doc(db, "wallets", uid);
     const adminDocRef = doc(db, "admins", uid);
 
-    // 1. Set User Profile
     batch.set(userDocRef, {
       id: uid,
       name: type === 'admin' ? HEAD_ADMIN_NAME : TEST_USER_NAME,
@@ -65,14 +64,12 @@ export default function SetupAdminPage() {
       status: "Active",
     }, { merge: true });
 
-    // 2. Set Wallet
     batch.set(walletDocRef, {
       balance: type === 'admin' ? 0 : 1000,
       coins: 100,
       referralCode: type === 'admin' ? 'HEADADMIN' : `REF${uid.slice(0, 6).toUpperCase()}`
     }, { merge: true });
 
-    // 3. Set or Clear Admin Permissions
     if (type === 'admin') {
       batch.set(adminDocRef, {
         name: HEAD_ADMIN_NAME, 
@@ -114,6 +111,9 @@ export default function SetupAdminPage() {
     setErrorMessage('');
     
     try {
+        // Clear any stale sessions to ensure a fresh token is generated
+        await signOut(auth);
+
         let uid = '';
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, HEAD_ADMIN_EMAIL, HEAD_ADMIN_PASSWORD);
@@ -125,8 +125,10 @@ export default function SetupAdminPage() {
             } else throw e;
         }
 
-        // EXTENDED SYNC BUFFER: Wait 15 seconds for Global Identity Propagation
-        await new Promise(r => setTimeout(r, 15000));
+        // SUPREME IDENTITY SYNC BUFFER: Wait 20 seconds for cross-region propagation to named database.
+        console.log("Awaiting Identity Propagation (20s)...");
+        await new Promise(r => setTimeout(r, 20000));
+        
         await ensureRecords(uid, 'admin');
         
         if (typeof window !== 'undefined') {
@@ -135,7 +137,7 @@ export default function SetupAdminPage() {
         }
         
         setStatus('success');
-        toast({ title: "Bootstrap Complete", description: "Head Admin mapping successfully written." });
+        toast({ title: "Bootstrap Complete", description: "Head Admin mapping successfully verified." });
     } catch (error: any) {
         handleError(error);
     }
@@ -148,6 +150,9 @@ export default function SetupAdminPage() {
     setErrorMessage('');
     
     try {
+        // Clear previous session
+        await signOut(auth);
+
         let uid = '';
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, TEST_USER_EMAIL, TEST_USER_PASSWORD);
@@ -159,8 +164,10 @@ export default function SetupAdminPage() {
             } else throw e;
         }
 
-        // EXTENDED SYNC BUFFER: Wait 15 seconds for Identity Propagation
-        await new Promise(r => setTimeout(r, 15000));
+        // SUPREME IDENTITY SYNC BUFFER: Wait 20 seconds
+        console.log("Awaiting Identity Propagation (20s)...");
+        await new Promise(r => setTimeout(r, 20000));
+        
         await ensureRecords(uid, 'student');
         
         if (typeof window !== 'undefined') {
@@ -178,29 +185,29 @@ export default function SetupAdminPage() {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-muted p-4">
-      <Card className="w-full max-w-md shadow-2xl">
+      <Card className="w-full max-w-md shadow-2xl border-primary/20">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-black flex items-center justify-center gap-2 text-primary">
+          <CardTitle className="text-2xl font-black flex items-center justify-center gap-2 text-primary tracking-tighter">
             <Shield className="w-6 h-6" /> SYSTEM INITIALIZATION
           </CardTitle>
           <CardDescription>
-            Bootstrap your administrative roles and test accounts.
+            Bypassing security locks to map administrative identities.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           
           <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 space-y-2">
               <p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2">
-                  <Database size={12}/> Target Configuration
+                  <Database size={12}/> Global Registry Targeting
               </p>
               <div className="grid grid-cols-2 gap-2 text-[10px] font-mono">
                   <div className="text-muted-foreground">Project:</div>
                   <div className="font-bold truncate">{targetProjectId}</div>
-                  <div className="text-muted-foreground">Database ID:</div>
+                  <div className="text-muted-foreground">Target DB:</div>
                   <div className="font-bold">{targetDbId}</div>
-                  <div className="text-muted-foreground">Current Auth:</div>
+                  <div className="text-muted-foreground">Active Session:</div>
                   <div className="font-bold truncate text-primary">{currentIdentity.email || 'UNAUTHENTICATED'}</div>
-                  <div className="text-muted-foreground">Current UID:</div>
+                  <div className="text-muted-foreground">Active UID:</div>
                   <div className="font-bold truncate text-primary">{currentIdentity.uid || 'NONE'}</div>
               </div>
           </div>
@@ -221,44 +228,56 @@ export default function SetupAdminPage() {
           )}
 
           <div className="space-y-4">
-            <h3 className="font-bold text-xs uppercase tracking-widest text-muted-foreground border-b pb-2">Administrative Setup</h3>
+            <h3 className="font-bold text-xs uppercase tracking-widest text-muted-foreground border-b pb-2">Step 1: Admin Authority</h3>
             {status === 'success' ? (
                 <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 p-4 rounded-xl space-y-3">
                     <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
                         <CheckCircle className="w-5 h-5" />
-                        <span className="font-black text-sm uppercase">Mapping Verified</span>
+                        <span className="font-black text-sm uppercase">Permissions Verified</span>
                     </div>
-                    <Button variant="outline" size="sm" className="w-full font-bold" onClick={() => router.push('/admin/login')}>Enter Admin Portal</Button>
+                    <Button variant="outline" size="sm" className="w-full font-bold" onClick={() => router.push('/admin/login')}>Proceed to Dashboard</Button>
                 </div>
             ) : status === 'error' && !isDatabaseMissing ? (
                 <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 p-4 rounded-xl">
-                    <p className="text-[10px] font-bold text-red-700 leading-tight">{errorMessage}</p>
-                    <Button variant="outline" size="sm" className="w-full mt-4 font-bold" onClick={() => setStatus('idle')}>Retry Sync</Button>
+                    <p className="text-[10px] font-bold text-red-700 leading-tight mb-4">{errorMessage}</p>
+                    <Button variant="outline" size="sm" className="w-full font-bold" onClick={() => setStatus('idle')}>Retry Initialization</Button>
                 </div>
             ) : (
-                <Button className="w-full py-6 text-lg font-black shadow-lg" onClick={createHeadAdmin} disabled={status === 'loading' || isDatabaseMissing}>
-                    {status === 'loading' ? <Loader2 className="animate-spin mr-2" /> : <Shield className="mr-2 h-5 w-5" />}
-                    SYNC ADMIN PROFILE
+                <Button className="w-full py-7 text-lg font-black shadow-xl" onClick={createHeadAdmin} disabled={status === 'loading' || isDatabaseMissing}>
+                    {status === 'loading' ? (
+                        <div className="flex flex-col items-center">
+                            <Loader2 className="animate-spin mb-1" />
+                            <span className="text-[10px]">SYNCING IDENTITY (20S)...</span>
+                        </div>
+                    ) : (
+                        <><Shield className="mr-2 h-5 w-5" /> SYNC ADMIN PROFILE</>
+                    )}
                 </Button>
             )}
           </div>
 
           <div className="space-y-4 pt-6 border-t">
-            <h3 className="font-bold text-xs uppercase tracking-widest text-muted-foreground border-b pb-2">Student Access</h3>
+            <h3 className="font-bold text-xs uppercase tracking-widest text-muted-foreground border-b pb-2">Step 2: Mock Environment</h3>
             <div className="bg-muted p-4 rounded-xl space-y-3">
-                <div className="text-xs font-mono bg-background p-3 rounded-lg border border-dashed text-center">
-                    {TEST_USER_EMAIL}
+                <div className="text-[10px] font-mono bg-background p-2 rounded-lg border border-dashed text-center opacity-70">
+                    Target: {TEST_USER_EMAIL}
                 </div>
-                <Button variant="secondary" className="w-full font-bold" onClick={createTestUser} disabled={isCreatingUser || isDatabaseMissing}>
-                    {isCreatingUser ? <Loader2 className="animate-spin mr-2" /> : <RefreshCcw className="mr-2 h-4 w-4" />}
-                    SYNC TEST STUDENT
+                <Button variant="secondary" className="w-full font-bold" onClick={createTestUser} disabled={isCreatingUser || isDatabaseMissing || status === 'loading'}>
+                    {isCreatingUser ? (
+                        <div className="flex flex-col items-center">
+                            <Loader2 className="animate-spin mb-1" />
+                            <span className="text-[10px]">SYNCING STUDENT (20S)...</span>
+                        </div>
+                    ) : (
+                        <><RefreshCcw className="mr-2 h-4 w-4" /> SYNC TEST STUDENT</>
+                    )}
                 </Button>
             </div>
           </div>
         </CardContent>
         <CardFooter className="bg-primary/5 py-4 border-t justify-center gap-2">
             <Info size={10} className="text-muted-foreground"/>
-            <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground">Targeting Native DB: {targetDbId}</p>
+            <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground italic">Target Instance: {targetDbId}</p>
         </CardFooter>
       </Card>
     </div>

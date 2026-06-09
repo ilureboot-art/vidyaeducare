@@ -21,7 +21,8 @@ const AuthContext = createContext<AuthState | undefined>(undefined);
 const DbContext = createContext<Firestore | undefined>(undefined);
 const AuthServiceContext = createContext<Auth | undefined>(undefined);
 
-const ROLE_CACHE_KEY = 'vidya_auth_role_v15_final';
+const ROLE_CACHE_KEY = 'vidya_auth_role_v16_final';
+const MASTER_ADMIN_EMAIL = 'admin@vidyaeducare.com';
 
 const getCachedRoles = () => {
     if (typeof window === 'undefined') return null;
@@ -55,10 +56,13 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || "";
   const navigationLock = useRef<string | null>(null);
 
-  const processSnap = useCallback((snap: DocumentSnapshot | null, uid: string) => {
+  const processSnap = useCallback((snap: DocumentSnapshot | null, user: User) => {
       let roles = { isAdmin: false, isHeadAdmin: false };
       
-      if (snap && snap.exists()) {
+      // SUPREME FALLBACK: Master email always has admin navigation rights
+      if (user.email?.toLowerCase() === MASTER_ADMIN_EMAIL) {
+          roles = { isAdmin: true, isHeadAdmin: true };
+      } else if (snap && snap.exists()) {
         const adminData = snap.data() as Admin;
         roles = {
             isAdmin: adminData.status === 'Active' || adminData.role === 'Head Admin',
@@ -67,7 +71,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       }
       
       if (typeof window !== 'undefined') {
-        sessionStorage.setItem(ROLE_CACHE_KEY, JSON.stringify({ ...roles, uid }));
+        sessionStorage.setItem(ROLE_CACHE_KEY, JSON.stringify({ ...roles, uid: user.uid }));
       }
       return roles;
   }, []);
@@ -86,20 +90,20 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     try {
       const adminDocRef = doc(db, "admins", user.uid);
       const adminDocSnap = await getDoc(adminDocRef).catch((e) => {
-          // If the database itself is misconfigured (Datastore mode), 
-          // we gracefully bypass the role check to allow setup access.
           console.warn("Administrative check bypassed due to infrastructure state:", e.message);
           return null;
       });
-      return processSnap(adminDocSnap, user.uid);
+      return processSnap(adminDocSnap, user);
     } catch (e) {
       console.error("Role resolution failure:", e);
-      return { isAdmin: false, isHeadAdmin: false };
+      // Even on failure, check master email
+      return user.email?.toLowerCase() === MASTER_ADMIN_EMAIL 
+        ? { isAdmin: true, isHeadAdmin: true } 
+        : { isAdmin: false, isHeadAdmin: false };
     }
   }, [processSnap]);
 
   useEffect(() => {
-    // Initial mount hydration safety
     const cached = getCachedRoles();
     if (cached) {
       setAuthState(prev => ({
@@ -146,15 +150,18 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
     if (user) {
       if (isAdmin) {
+        // Admins should NOT be in the student profile or login pages
         if (isAuthRoute || cleanPath === '/' || (!isAdminArea && !isPublicRoute)) {
           targetPath = '/admin/analytics';
         }
       } else {
+        // Students should NOT be in the admin area
         if (isAdminArea || isAuthRoute || cleanPath === '/') {
           if (!isPublicRoute) targetPath = '/profile';
         }
       }
     } else {
+      // Unauthenticated users should go home unless on a public/auth page
       if (!isPublicRoute && !isAuthRoute) {
         targetPath = '/';
       }

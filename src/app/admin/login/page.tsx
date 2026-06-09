@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -36,7 +37,10 @@ export default function AdminLoginPage() {
     setIsLoading(true);
 
     try {
-      await signInWithEmailAndPassword(auth, email.trim(), password);
+      // CRITICAL: Clear any stale session data before admin login
+      sessionStorage.clear();
+      
+      const userCredential = await signInWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
       
       if (rememberMe) {
           localStorage.setItem('rememberedAdmin', email);
@@ -45,9 +49,12 @@ export default function AdminLoginPage() {
       }
       
       setIsVerifying(true);
-      toast({ title: "Authenticated", description: "Verifying administrative rights..." });
-      // Role-based navigation is handled by FirebaseProvider
+      toast({ title: "Authenticated", description: "Resolving administrative rights..." });
+      
+      // Navigation is handled automatically by the FirebaseProvider 
+      // which is now hardened with fallback authorization.
     } catch (error: any) {
+       console.error("Admin Login Error:", error.code);
        let errorMessage = "Invalid admin credentials.";
        if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
            errorMessage = "Incorrect admin email or password.";
@@ -85,6 +92,7 @@ export default function AdminLoginPage() {
                             value={email} 
                             onChange={(e) => setEmail(e.target.value)} 
                             disabled={isVerifying || isLoading} 
+                            placeholder="admin@vidyaeducare.com"
                         />
                     </div>
                     <div className="space-y-2">
@@ -117,16 +125,18 @@ export default function AdminLoginPage() {
                     </div>
                     <Button type="submit" className="w-full !mt-6 py-6 text-lg font-bold" disabled={isLoading || !auth || isVerifying || authLoading}>
                         {isVerifying ? (
-                            <><Loader2 className="mr-2 h-5 w-5 animate-spin"/> VERIFYING ROLE...</>
+                            <><Loader2 className="mr-2 h-5 w-5 animate-spin"/> SECURING SESSION...</>
                         ) : isLoading ? (
-                            <><Loader2 className="mr-2 h-5 w-5 animate-spin"/> SECURING...</>
+                            <><Loader2 className="mr-2 h-5 w-5 animate-spin"/> AUTHENTICATING...</>
                         ) : 'ENTER DASHBOARD'}
                     </Button>
             </CardContent>
         </form>
       </Card>
       {isVerifying && (
-          <p className="mt-4 text-xs text-muted-foreground animate-pulse font-bold uppercase tracking-widest">Checking Permissions...</p>
+          <p className="mt-4 text-xs text-muted-foreground animate-pulse font-bold uppercase tracking-widest text-center">
+            Synchronizing administrative workspace...
+          </p>
       )}
     </div>
   );

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -17,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Gamepad2, Loader2, Eye, EyeOff } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { doc, setDoc, getDoc, runTransaction, collection, query, where, getDocs, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, runTransaction, collection, query, where, getDocs, serverTimestamp } from "firebase/firestore";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { useAuthService, useDb } from "@/firebase";
 
@@ -47,18 +46,19 @@ export default function SignupPage() {
             if(storeConfigDoc.exists()) {
                 setReferralBonus(storeConfigDoc.data().referralBonus);
             } else {
-                setReferralBonus(0); // Set to 0 if config doesn't exist
+                setReferralBonus(0); 
             }
         } catch (e) {
+            console.error("Config fetch error:", e);
             setReferralBonus(0);
         }
     };
-    if (db) fetchConfig();
+    fetchConfig();
   }, [searchParams, db]);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isFirebaseReady) {
+    if (!isFirebaseReady || !auth || !db) {
          toast({
             variant: "destructive",
             title: "System Not Ready",
@@ -68,25 +68,30 @@ export default function SignupPage() {
     };
     setIsLoading(true);
     
-    const form = e.target as HTMLFormElement;
+    const form = e.currentTarget;
     const name = (form.elements.namedItem('name') as HTMLInputElement).value;
     const email = (form.elements.namedItem('email') as HTMLInputElement).value;
     const phone = (form.elements.namedItem('phone') as HTMLInputElement).value;
     const password = (form.elements.namedItem('password') as HTMLInputElement).value;
 
     try {
-      // Step 1: Perform reads *before* the transaction
+      // Step 1: Pre-resolve referral code
       let welcomeBonus = 0;
       let referrerId: string | null = null;
       
-      if (referralCode && referralBonus && referralBonus > 0) {
-        const q = query(collection(db, "wallets"), where("referralCode", "==", referralCode));
+      const cleanRefCode = referralCode.trim().toUpperCase();
+      if (cleanRefCode && referralBonus && referralBonus > 0) {
+        const q = query(collection(db, "wallets"), where("referralCode", "==", cleanRefCode));
         const querySnapshot = await getDocs(q);
         
         if (!querySnapshot.empty) {
           const referrerDoc = querySnapshot.docs[0];
           referrerId = referrerDoc.id;
           welcomeBonus = referralBonus;
+        } else if (cleanRefCode !== "") {
+            toast({ variant: 'destructive', title: "Invalid Referral Code", description: "The code you entered was not found." });
+            setIsLoading(false);
+            return;
         }
       }
 
@@ -112,7 +117,7 @@ export default function SignupPage() {
         // Create wallet for new user
         transaction.set(newWalletRef, {
             balance: welcomeBonus,
-            coins: 50, // Welcome coins
+            coins: 50, 
             referralCode: `REF${user.uid.slice(0, 6).toUpperCase()}`,
         });
 
@@ -158,6 +163,7 @@ export default function SignupPage() {
       router.push("/login");
 
     } catch (error: any) {
+      console.error("Signup Error:", error);
       toast({
         variant: "destructive",
         title: "Signup Failed",
@@ -171,12 +177,12 @@ export default function SignupPage() {
   return (
     <div className="w-full max-w-md mx-auto flex flex-col items-center justify-center min-h-screen space-y-4 p-4">
        <div className="text-center space-y-2">
-        <h1 className="text-4xl font-bold text-primary flex items-center gap-2 justify-center">
-            <Gamepad2 className="w-10 h-10" /> Vidya EduCare
+        <h1 className="text-4xl font-bold text-primary flex items-center gap-2 justify-center tracking-tighter">
+            <Gamepad2 className="w-10 h-10" /> VIDYA EDUCARE
         </h1>
-        <p className="text-muted-foreground">Create your account to start your journey.</p>
+        <p className="text-muted-foreground font-medium uppercase text-xs tracking-widest">Start Your Academic Journey</p>
       </div>
-      <Card className="w-full">
+      <Card className="w-full border-primary/10 shadow-xl">
         <form onSubmit={handleSignup}>
           <CardHeader>
             <CardTitle>Sign Up</CardTitle>
@@ -187,62 +193,60 @@ export default function SignupPage() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Full Name</Label>
-              <Input id="name" name="name" placeholder="Alex Doe" required />
-              <p className="text-xs text-muted-foreground">Your full name as it appears on your documents.</p>
+              <Input id="name" name="name" placeholder="Alex Doe" required disabled={isLoading} />
+              <p className="text-[10px] text-muted-foreground">Your full name as it appears on your documents.</p>
             </div>
             <div className="space-y-2">
                 <Label htmlFor="email">Email Address</Label>
-                <Input id="email" name="email" type="email" placeholder="you@example.com" required />
-                <p className="text-xs text-muted-foreground">Used for login and account recovery.</p>
+                <Input id="email" name="email" type="email" placeholder="you@example.com" required disabled={isLoading} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="phone">WhatsApp Number</Label>
-              <Input id="phone" name="phone" type="tel" placeholder="+91 12345 67890" required />
-              <p className="text-xs text-muted-foreground">We'll use this for important notifications.</p>
+              <Input id="phone" name="phone" type="tel" placeholder="+91 12345 67890" required disabled={isLoading} />
             </div>
             <div className="space-y-2 relative">
                 <Label htmlFor="password">Password</Label>
-                <Input id="password" name="password" type={showPassword ? "text" : "password"} required />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-1 top-6 h-7 w-7"
-                  onClick={() => setShowPassword(prev => !prev)}
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  <span className="sr-only">Toggle password visibility</span>
-                </Button>
-                <p className="text-xs text-muted-foreground">Choose a strong password with at least 6 characters.</p>
+                <div className="relative">
+                    <Input id="password" name="password" type={showPassword ? "text" : "password"} required disabled={isLoading} />
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-1 top-1 h-8 w-8"
+                        onClick={() => setShowPassword(prev => !prev)}
+                        disabled={isLoading}
+                    >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                </div>
+                <p className="text-[10px] text-muted-foreground">At least 6 characters.</p>
             </div>
             <Separator />
-            <div className="space-y-2">
-              <Label htmlFor="referral">Referral Code (Optional)</Label>
+            <div className="space-y-2 bg-primary/5 p-4 rounded-lg border border-primary/10">
+              <Label htmlFor="referral" className="text-primary font-bold">Referral Code (Optional)</Label>
               <Input 
                 id="referral" 
                 name="referral"
-                placeholder="Enter referral code"
+                placeholder="ENTER CODE"
                 value={referralCode}
-                onChange={(e) => setReferralCode(e.target.value)}
+                onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
                 readOnly={!!searchParams.get('ref')}
-                className={!!searchParams.get('ref') ? 'bg-muted/50' : ''}
+                className={!!searchParams.get('ref') ? 'bg-muted/50 border-primary' : 'bg-background'}
+                disabled={isLoading}
               />
-              {referralCode && <p className="text-xs text-green-500">Referral code applied! You'll receive a welcome bonus.</p>}
+              {referralCode && <p className="text-[10px] text-green-600 font-bold uppercase tracking-widest">Bonus will be applied after signup</p>}
             </div>
           </CardContent>
           <CardContent>
-            <Button className="w-full" type="submit" disabled={isLoading || !isFirebaseReady}>
-                {isLoading || !isFirebaseReady ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                {isFirebaseReady ? 'Create Account' : 'Loading...'}
+            <Button className="w-full py-6 text-lg font-black shadow-lg" type="submit" disabled={isLoading || !isFirebaseReady}>
+                {isLoading ? <><Loader2 className="mr-2 h-5 w-5 animate-spin"/> CREATING ACCOUNT...</> : 'JOIN VIDYA EDUCARE'}
             </Button>
           </CardContent>
         </form>
       </Card>
-      <div className="text-center text-sm">
+      <div className="text-center text-sm font-medium">
         Already have an account?{" "}
-         <Link href="/login" passHref>
-            <Button variant="link" className="px-1">Login</Button>
-        </Link>
+         <Link href="/login" className="text-primary font-bold hover:underline">Login here</Link>
       </div>
     </div>
   );

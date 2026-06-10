@@ -3,7 +3,7 @@ rules_version = '2';
 /**
  * Vidya EduCare - Production Infrastructure Rules
  * Target Instance: vidyaeducaredatabase
- * Deployment Salt: V44_GO_LIVE_FINAL
+ * Deployment Salt: V45_REGISTRATION_OPEN
  */
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -46,7 +46,6 @@ service cloud.firestore {
     }
 
     // --- PRIORITY: Global Configuration Access ---
-    // Essential for app synchronization on all pages
     match /configs/{configId} {
       allow read, get, list: if true;
       allow write: if isAdmin();
@@ -70,13 +69,14 @@ service cloud.firestore {
     }
 
     match /wallets/{userId} {
-      allow read, list: if isAdmin() || isOwner(userId);
+      // Authenticated users need read access to verify referral codes during signup
+      allow read, get, list: if isAuthenticated();
       allow write: if isOwner(userId) || isAdmin();
     }
 
     match /students/{studentId} {
       allow read, list: if isAuthenticated();
-      allow write: if isAdmin() || (resource != null && resource.data.parentId == request.auth.uid);
+      allow write: if isAdmin() || (resource != null && (resource.data.parentId == request.auth.uid)) || (request.resource != null && request.resource.data.parentId == request.auth.uid);
     }
     
     match /transactions/{txId} {

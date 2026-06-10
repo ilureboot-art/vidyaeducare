@@ -3,7 +3,7 @@ rules_version = '2';
 /**
  * Vidya EduCare - Production Infrastructure Rules
  * Target Instance: vidyaeducaredatabase
- * Deployment Salt: V47_STUDIO_HOSTING_SYNC
+ * Deployment Salt: V48_CONFIG_ACCESS_REINFORCED
  */
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -45,13 +45,14 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // --- PRIORITY: Global Configuration Access ---
+    // --- PRIORITY 1: Global Configuration Access ---
+    // These must be readable by the app logic to load settings, but only writable by admins.
     match /configs/{configId} {
       allow read, get, list: if true;
       allow write: if isAdmin();
     }
 
-    // --- SUPREME MASTER OVERRIDE ---
+    // --- PRIORITY 2: Supreme Master Override ---
     match /{allPaths=**} {
       allow read, write: if isMasterAdmin();
     }

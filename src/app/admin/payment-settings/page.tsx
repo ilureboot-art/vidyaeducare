@@ -30,16 +30,16 @@ const defaultPaymentMethods: AdminPaymentMethods = {
 export default function PaymentSettingsPage() {
     const { toast } = useToast();
     const db = useDb();
-    const { user } = useAuth();
+    const { user, isResolved } = useAuth();
     const [methods, setMethods] = useState<AdminPaymentMethods | null>(null);
     const [qrFile, setQrFile] = useState<File | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     
     useEffect(() => {
-        // CRITICAL: Wait for both database and resolved user session to prevent 
-        // permission errors during initial session resolution.
-        if (!db || !user) return;
+        // CRITICAL: Wait for database, user session, AND resolved auth claims
+        // to prevent permission errors during rule execution.
+        if (!db || !user || !isResolved) return;
 
         setIsLoading(true);
         const docRef = doc(db, "configs", "paymentMethods");
@@ -66,7 +66,7 @@ export default function PaymentSettingsPage() {
         });
 
         return () => unsubscribe();
-    }, [db, user]);
+    }, [db, user, isResolved]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;

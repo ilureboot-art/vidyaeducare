@@ -21,7 +21,7 @@ import { Badge } from "@/components/ui/badge";
 export default function AdminStoreSettingsPage() {
   const { toast } = useToast();
   const db = useDb();
-  const { user } = useAuth();
+  const { user, isResolved } = useAuth();
   
   const [storeConfig, setStoreConfig] = useState<StoreConfig | null>(null);
   const [academicConfig, setAcademicConfig] = useState<AcademicConfig | null>(null);
@@ -30,9 +30,9 @@ export default function AdminStoreSettingsPage() {
   const [syncError, setSyncError] = useState<string | null>(null);
 
   useEffect(() => {
-    // CRITICAL: Wait for both database and resolved user session to prevent 
+    // CRITICAL: Wait for both database and a fully RESOLVED user session to prevent 
     // permission errors during initial session resolution.
-    if (!db || !user) return;
+    if (!db || !user || !isResolved) return;
 
     setIsLoading(true);
     setSyncError(null);
@@ -85,7 +85,7 @@ export default function AdminStoreSettingsPage() {
         unsubStore();
         unsubAcademic();
     };
-  }, [db, user]);
+  }, [db, user, isResolved]);
 
   const handleMockTestPackageChange = (index: number, field: keyof MockTestPackage, value: string | number | boolean) => {
     if (!storeConfig) return;

@@ -21,7 +21,7 @@ import { Badge } from "@/components/ui/badge";
 export default function AdminStoreSettingsPage() {
   const { toast } = useToast();
   const db = useDb();
-  const { user, isResolved } = useAuth();
+  const { user, isResolved, isAdmin } = useAuth();
   
   const [storeConfig, setStoreConfig] = useState<StoreConfig | null>(null);
   const [academicConfig, setAcademicConfig] = useState<AcademicConfig | null>(null);

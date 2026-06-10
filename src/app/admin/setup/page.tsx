@@ -11,6 +11,8 @@ import { Loader2, CheckCircle, Shield, Database, Activity, Info, ExternalLink, U
 import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
+import { defaultAcademicConfig } from "@/lib/academic-config";
+import { defaultStoreConfig } from "@/lib/store-config";
 
 const HEAD_ADMIN_EMAIL = 'admin@vidyaeducare.com';
 const HEAD_ADMIN_PASSWORD = 'password123';
@@ -29,7 +31,7 @@ export default function SetupAdminPage() {
   
   const [authStatus, setAuthStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [mapStatus, setMapStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
-  const [auditStatus, setAuditStatus] = useState<{ admin: boolean; student: boolean; loading: boolean }>({ admin: false, student: false, loading: false });
+  const [auditStatus, setAuditStatus] = useState<{ admin: boolean; student: boolean; config: boolean; loading: boolean }>({ admin: false, student: false, config: false, loading: false });
   const [progressLog, setProgressLog] = useState<string[]>([]);
   const [currentIdentity, setCurrentIdentity] = useState<{ email: string | null; uid: string | null }>({ email: null, uid: null });
   const isRetrying = useRef(false);
@@ -45,13 +47,15 @@ export default function SetupAdminPage() {
         const adminDoc = await getDoc(doc(db, "admins", FIXED_ADMIN_UID));
         const studentQuery = query(collection(db, "users"), where("email", "==", TEST_USER_EMAIL));
         const studentSnap = await getDocs(studentQuery);
+        const configDoc = await getDoc(doc(db, "configs", "academic"));
 
         setAuditStatus({
             admin: adminDoc.exists(),
             student: !studentSnap.empty,
+            config: configDoc.exists(),
             loading: false
         });
-        logProgress(`AUDIT: Admin [${adminDoc.exists() ? 'OK' : 'MISSING'}] | Student [${!studentSnap.empty ? 'OK' : 'MISSING'}]`);
+        logProgress(`AUDIT: Admin [${adminDoc.exists() ? 'OK' : 'MISSING'}] | Student [${!studentSnap.empty ? 'OK' : 'MISSING'}] | Config [${configDoc.exists() ? 'OK' : 'NEW'}]`);
     } catch (e: any) {
         logProgress(`AUDIT ERROR: ${e.message}`);
         setAuditStatus(prev => ({ ...prev, loading: false }));
@@ -122,13 +126,14 @@ export default function SetupAdminPage() {
         attempt++;
         logProgress(`MAP: Attempt ${attempt}/${maxAttempts}...`);
         
-        // Force refresh token to ensure rules engine sees latest claims
         await auth.currentUser?.getIdToken(true);
         
         const batch = writeBatch(db);
         const userDocRef = doc(db, "users", uid);
         const walletDocRef = doc(db, "wallets", uid);
         const adminDocRef = doc(db, "admins", uid);
+        const academicConfigRef = doc(db, "configs", "academic");
+        const storeConfigRef = doc(db, "configs", "store");
 
         const userData = {
             id: uid,
@@ -155,6 +160,10 @@ export default function SetupAdminPage() {
                 status: "Active", 
                 joinDate: new Date().toISOString(),
             }, { merge: true });
+
+            // Initialize master configs only when mapping admin
+            batch.set(academicConfigRef, defaultAcademicConfig, { merge: true });
+            batch.set(storeConfigRef, defaultStoreConfig, { merge: true });
         }
 
         batch.commit()
@@ -214,14 +223,18 @@ export default function SetupAdminPage() {
                     <RefreshCw size={12} className={auditStatus.loading ? 'animate-spin' : ''} />
                 </Button>
               </div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                   <div className={`p-2 rounded-lg border flex flex-col items-center justify-center gap-1 ${auditStatus.admin ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-                      <p className="text-[9px] font-bold uppercase text-center">Admin Profile</p>
-                      {auditStatus.admin ? <CheckCircle size={16} className="text-green-600"/> : <AlertCircle size={16} className="text-red-600"/>}
+                      <p className="text-[9px] font-bold uppercase text-center">Admin</p>
+                      {auditStatus.admin ? <CheckCircle size={14} className="text-green-600"/> : <AlertCircle size={14} className="text-red-600"/>}
                   </div>
                    <div className={`p-2 rounded-lg border flex flex-col items-center justify-center gap-1 ${auditStatus.student ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-                      <p className="text-[9px] font-bold uppercase text-center">Student Profile</p>
-                      {auditStatus.student ? <CheckCircle size={16} className="text-green-600"/> : <AlertCircle size={16} className="text-red-600"/>}
+                      <p className="text-[9px] font-bold uppercase text-center">Student</p>
+                      {auditStatus.student ? <CheckCircle size={14} className="text-green-600"/> : <AlertCircle size={14} className="text-red-600"/>}
+                  </div>
+                   <div className={`p-2 rounded-lg border flex flex-col items-center justify-center gap-1 ${auditStatus.config ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
+                      <p className="text-[9px] font-bold uppercase text-center">Config</p>
+                      {auditStatus.config ? <CheckCircle size={14} className="text-green-600"/> : <Loader2 size={14} className="text-amber-600 animate-spin"/>}
                   </div>
               </div>
           </div>
@@ -267,7 +280,7 @@ export default function SetupAdminPage() {
              <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg flex items-center gap-3">
                 <Info className="text-amber-600 w-5 h-5 shrink-0" />
                 <p className="text-[9px] font-bold text-amber-800 leading-tight uppercase">
-                    Step 2 will automatically retry 5 times. Stay on this page until the console shows SUCCESS.
+                    Step 2 will automatically initialize master configurations and retry 5 times if needed.
                 </p>
              </div>
           </div>
@@ -282,7 +295,7 @@ export default function SetupAdminPage() {
         </CardContent>
         <CardFooter className="bg-primary/5 py-4 border-t justify-center gap-2">
             <UserCheck size={10} className="text-muted-foreground"/>
-            <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground italic text-center">Identity management synced with regional rules</p>
+            <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground italic text-center">Infrastructure synced with regional master rules</p>
         </CardFooter>
       </Card>
     </div>

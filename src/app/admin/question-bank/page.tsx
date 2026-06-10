@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
@@ -67,7 +66,7 @@ export default function TestSetManagementPage() {
   const [testSets, setTestSets] = useState<TestSet[]>([]);
   const [academicConfig, setAcademicConfig] = useState<AcademicConfig>(defaultAcademicConfig);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   const [isManualCreateOpen, setIsManualCreateOpen] = useState(false);
   const [isAiGenerateOpen, setIsAiGenerateOpen] = useState(false);
@@ -87,16 +86,16 @@ export default function TestSetManagementPage() {
   const fetchPageData = useCallback(async () => {
       if (!db) return;
       setIsLoading(true);
-      setError(null);
+      setSyncError(null);
       
       try {
-          // Fetch test sets
+          // 1. Fetch test sets
           const testSetsCollection = collection(db, "testSets");
           const testSetSnapshot = await getDocs(testSetsCollection);
           const testSetList = testSetSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TestSet));
           setTestSets(testSetList);
 
-          // Fetch config
+          // 2. Fetch config - Don't throw if not found, just use defaults
           const configRef = doc(db, "configs", 'academic');
           const configSnap = await getDoc(configRef);
           if (configSnap.exists()) {
@@ -104,7 +103,14 @@ export default function TestSetManagementPage() {
           }
       } catch (err: any) {
           console.error("Error fetching bank data:", err);
-          setError("Failed to load question bank. This may be due to regional propagation delays.");
+          // Only set error if it's a legitimate permission or connection issue
+          if (err.code === 'permission-denied') {
+              setSyncError("Permission Denied: Ensure you are logged in as the Head Admin.");
+          } else if (err.code === 'unavailable') {
+              setSyncError("Database Unavailable: Check your network connection.");
+          } else {
+              setSyncError("A synchronization delay occurred. Please try refreshing.");
+          }
       } finally {
           setIsLoading(false);
       }
@@ -328,18 +334,18 @@ const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold flex items-center gap-2"><BookCopy /> Test Set Management</h1>
-        {error && (
+        {syncError && (
             <Badge variant="destructive" className="animate-pulse">
-                <AlertTriangle className="mr-1 h-3 w-3"/> Partial Sync Delay
+                <AlertTriangle className="mr-1 h-3 w-3"/> System Sync Issue
             </Badge>
         )}
       </div>
 
-      {error && (
+      {syncError && (
           <Alert variant="destructive" className="bg-destructive/10">
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Synchronization Warning</AlertTitle>
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription>{syncError}</AlertDescription>
           </Alert>
       )}
 
@@ -587,7 +593,7 @@ const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" className="h-8 w-8 p-0">
                           <span className="sr-only">Open menu</span>
-                          <MoreHorizontal className="h-4 w-4" />
+                          < MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">

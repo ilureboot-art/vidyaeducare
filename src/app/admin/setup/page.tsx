@@ -1,18 +1,19 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDb, useAuthService } from '@/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, writeBatch, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, CheckCircle, Shield, Database, Activity, Info, ExternalLink, UserCheck, Search, AlertCircle, RefreshCw } from 'lucide-react';
+import { Loader2, CheckCircle, Shield, Database, Activity, Info, ExternalLink, UserCheck, Search, AlertCircle, RefreshCw, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import { defaultAcademicConfig } from "@/lib/academic-config";
 import { defaultStoreConfig } from "@/lib/store-config";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const HEAD_ADMIN_EMAIL = 'admin@vidyaeducare.com';
 const HEAD_ADMIN_PASSWORD = 'password123';
@@ -54,9 +55,9 @@ export default function SetupAdminPage() {
             config: configDoc.exists(),
             loading: false
         });
-        logProgress(`AUDIT: Admin [${adminDoc.exists() ? 'OK' : 'MISSING'}] | Student [${!studentSnap.empty ? 'OK' : 'MISSING'}]`);
+        logProgress(`AUDIT: Admin [${adminDoc.exists() ? 'OK' : 'MISSING'}] | Student [${!studentSnap.empty ? 'OK' : 'MISSING'}] | Config [${configDoc.exists() ? 'OK' : 'MISSING'}]`);
     } catch (e: any) {
-        logProgress(`AUDIT: Handshaking...`);
+        logProgress(`AUDIT: Handshaking with database...`);
         setAuditStatus(prev => ({ ...prev, loading: false }));
     }
   }, [db]);
@@ -115,15 +116,14 @@ export default function SetupAdminPage() {
 
     setMapStatus('loading');
     let attempt = 0;
-    const maxAttempts = 10;
+    const maxAttempts = 5;
 
     const attemptSync = async (): Promise<void> => {
         attempt++;
-        logProgress(`MAP: Attempt ${attempt}/${maxAttempts}...`);
+        logProgress(`MAP: Syncing Infrastructure (Attempt ${attempt}/${maxAttempts})...`);
         
         try {
             await auth.currentUser?.getIdToken(true);
-            logProgress("HANDSHAKE: Refreshed token.");
         } catch (e) {}
         
         const batch = writeBatch(db);
@@ -144,7 +144,7 @@ export default function SetupAdminPage() {
         const walletData = {
             balance: type === 'admin' ? 0 : 5000,
             coins: 100,
-            referralCode: type === 'admin' ? 'HEADADMIN' : `TESTSTUDENT`
+            referralCode: type === 'admin' ? 'HEADADMIN' : `STUDENT-${uid.slice(-4).toUpperCase()}`
         };
 
         batch.set(userDocRef, userData, { merge: true });
@@ -159,19 +159,23 @@ export default function SetupAdminPage() {
                 joinDate: new Date().toISOString(),
             }, { merge: true });
 
-            batch.set(academicConfigRef, defaultAcademicConfig, { merge: true });
-            batch.set(storeConfigRef, defaultStoreConfig, { merge: true });
+            // Only initialize defaults if they don't exist to prevent accidental resets
+            if (!auditStatus.config) {
+                batch.set(academicConfigRef, defaultAcademicConfig, { merge: true });
+                batch.set(storeConfigRef, defaultStoreConfig, { merge: true });
+            }
         }
 
         batch.commit()
             .then(() => {
-                logProgress(`SUCCESS: Infrastructure Synced.`);
+                logProgress(`SUCCESS: Infrastructure Mapped.`);
                 setMapStatus('success');
                 runSystemAudit();
+                toast({ title: "Setup Complete" });
             })
             .catch(async (serverError: any) => {
                 if (serverError.code === 'permission-denied' && attempt < maxAttempts) {
-                    logProgress("PENDING: Waiting for propagation...");
+                    logProgress("PENDING: Waiting for propagation (5s)...");
                     setTimeout(attemptSync, 5000);
                 } else {
                     const permissionError = new FirestorePermissionError({
@@ -181,7 +185,7 @@ export default function SetupAdminPage() {
                     } satisfies SecurityRuleContext);
                     errorEmitter.emit('permission-error', permissionError);
                     setMapStatus('error');
-                    logProgress(`FAILED: Permission denied.`);
+                    logProgress(`FAILED: Authorization denied.`);
                 }
             });
     };
@@ -194,15 +198,23 @@ export default function SetupAdminPage() {
       <Card className="w-full max-w-md shadow-2xl border-primary/20">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-black flex items-center justify-center gap-2 text-primary tracking-tighter uppercase italic">
-            <Shield className="w-6 h-6" /> INFRASTRUCTURE SETUP
+            <Shield className="w-6 h-6" /> CORE INFRASTRUCTURE
           </CardTitle>
           <CardDescription>Target: <span className="font-mono text-xs font-bold text-black">vidyaeducaredatabase</span></CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           
+          {auditStatus.config && (
+              <Alert className="bg-amber-50 border-amber-200">
+                  <AlertTriangle className="h-4 w-4 text-amber-600" />
+                  <AlertTitle className="text-amber-800 text-xs font-bold uppercase">System Active</AlertTitle>
+                  <AlertDescription className="text-[10px] text-amber-700">Configurations already exist. Mapping will update existing records without resetting package data.</AlertDescription>
+              </Alert>
+          )}
+
           <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 space-y-4">
               <div className="flex items-center justify-between">
-                <p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><Search size={12}/> System Audit</p>
+                <p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><Search size={12}/> Deployment Audit</p>
                 <Button variant="ghost" size="icon" className="h-6 w-6" onClick={runSystemAudit} disabled={auditStatus.loading}>
                     <RefreshCw size={12} className={auditStatus.loading ? 'animate-spin' : ''} />
                 </Button>
@@ -217,7 +229,7 @@ export default function SetupAdminPage() {
                       {auditStatus.student ? <CheckCircle size={14} className="text-green-600"/> : <AlertCircle size={14} className="text-red-600"/>}
                   </div>
                    <div className={`p-2 rounded-lg border flex flex-col items-center justify-center gap-1 ${auditStatus.config ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
-                      <p className="text-[9px] font-bold uppercase">Config</p>
+                      <p className="text-[9px] font-bold uppercase">Configs</p>
                       {auditStatus.config ? <CheckCircle size={14} className="text-green-600"/> : <Loader2 size={14} className="text-amber-600 animate-spin"/>}
                   </div>
               </div>
@@ -226,9 +238,11 @@ export default function SetupAdminPage() {
           <div className="bg-black/90 p-4 rounded-xl border border-white/10 space-y-1">
               <p className="text-[9px] font-bold text-white/50 uppercase flex items-center gap-2"><Activity size={10}/> Sync Console</p>
               <div className="space-y-1 min-h-[140px] overflow-hidden">
-                  {progressLog.map((log, i) => (
+                  {progressLog.length > 0 ? progressLog.map((log, i) => (
                       <p key={i} className="text-[10px] font-mono text-green-400 animate-in fade-in slide-in-from-left-2">> {log}</p>
-                  ))}
+                  )) : (
+                      <p className="text-[10px] font-mono text-white/20 italic">> Idle...</p>
+                  )}
               </div>
           </div>
 
@@ -250,7 +264,7 @@ export default function SetupAdminPage() {
                  {mapStatus === 'loading' ? (
                      <div className="flex flex-col items-center">
                          <Loader2 className="animate-spin mb-1" />
-                         <span className="text-[10px]">SYNC ACTIVE...</span>
+                         <span className="text-[10px]">SYNCING CLOUD...</span>
                      </div>
                  ) : (
                      <><Database className="mr-2 h-6 w-6" /> STEP 2: MAP TO DATABASE</>
@@ -267,7 +281,7 @@ export default function SetupAdminPage() {
           )}
         </CardContent>
         <CardFooter className="bg-primary/5 py-4 border-t justify-center gap-2">
-            <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground italic text-center">Infrastructure synced with regional master rules</p>
+            <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground italic text-center">Infrastructure synced with global native rules</p>
         </CardFooter>
       </Card>
     </div>

@@ -1,41 +1,35 @@
+# Vidya EduCare - Academic Excellence Platform
 
-# Vidya EduCare - Admin & User Platform
+A comprehensive NextJS platform for Vidya EduCare, combining regional academic preparation with AI-powered learning tools and a structured referral ecosystem.
 
-This is a comprehensive NextJS application for Vidya EduCare, combining academic excellence with AI-powered learning tools and a rewarding referral system.
+## 🚀 Readiness Checklist
 
-## 🔑 Login Credentials
+### 1. Infrastructure Setup
+If this is the first deployment to a new project:
+- Navigate to `/admin/setup`.
+- Click **"STEP 1: AUTH ADMIN"** to verify the master identity.
+- Click **"STEP 2: MAP TO DATABASE"** to initialize global configurations and security rules.
+- **IMPORTANT**: Once the Head Admin is created, change the default password in settings immediately.
 
-### 1. Administrator Account
+### 🔑 Default Master Credentials
 - **Access URL**: `/admin/login`
 - **Email**: `admin@vidyaeducare.com`
 - **Password**: `password123`
 
-### 2. Standard User (Test Account)
-- **Access URL**: `/login`
-- **Email**: `student@vidyaeducare.com`
-- **Password**: `password123`
-- *Note: Use the "Create Test User" tool at `/admin/setup` to initialize these accounts.*
+### 2. Live Operations
+- **Admin Management**: Add sub-admins via the dashboard to help manage student registrations.
+- **Store Settings**: Configure subscription packages and GST rates before accepting payments.
+- **Mock Tests**: Upload CSV question banks for SSC, CBSE, or ICSE boards.
 
-## 🚀 Key Features
+## 🛠️ Security Architecture
+- **Named Database**: Exclusively targets `vidyaeducaredatabase` for native Firestore performance.
+- **Regional Rules**: Multi-layered authorization ensuring strict isolation between administrators and students.
+- **AI Tutoring**: Integrated with Gemini 2.5 Flash for bilingual (Marathi/English) conceptual explanations.
 
-### For Students (Users)
-- **AI Doubt Solver**: Get instant bilingual (Marathi/English) conceptual explanations for any MCQ during test review.
-- **AI Notes Generator**: Personalized study notes created automatically based on your test performance.
-- **Quiz Clash**: Compete in live tournaments for prize pools or practice for glory.
-- **Wallet System**: Manage funds for subscriptions and tournament entries.
+## 📊 Business Intelligence
+- Real-time tracking of revenue, referral cycles, and academic engagement.
+- Automated commission calculation for Independent Business Associates (IBA).
+- ReferBolt passive income cycle management.
 
-### For Administrators
-- **Business Intelligence**: Real-time tracking of registrations, revenue, and academic volume.
-- **Test Set Management**: Create MCQs manually, via AI generation, or bulk-upload via **CSV format**.
-- **Recommendation Discount**: Dynamic pricing system that rewards users for referring 2 new customers within 30 days.
-- **Global Configuration**: Manage boards, standards, subjects, and payment gateway details.
-
-## 🛠️ Security & Stability
-- **Deterministic Navigation**: Implemented a navigation mutex to prevent infinite redirection loops.
-- **Role-Based Access**: Strict isolation between Admin and User zones.
-- **Role Caching**: Synchronous session caching for instant dashboard loading.
-
-## 📝 Setup Instructions
-1. Navigate to `/admin/setup`.
-2. Click **"Configure Head Admin"** to create the master account.
-3. Click **"Create Test User"** to set up a student profile for testing.
+---
+© 2024 Vidya EduCare. All rights reserved.

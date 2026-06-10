@@ -3,7 +3,7 @@ rules_version = '2';
 /**
  * Vidya EduCare - Supreme Infrastructure Rules
  * Target Instance: vidyaeducaredatabase
- * Deployment Salt: V32_FINAL_CONFIG_SYNC
+ * Deployment Salt: V33_ROBUST_CONFIG_ACCESS
  */
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -55,6 +55,12 @@ service cloud.firestore {
 
     // --- Collection Specific Rules ---
 
+    // System Configurations - PUBLIC READ
+    match /configs/{configId} {
+      allow read, get, list: if true;
+      allow write: if isAdmin();
+    }
+
     match /admins/{userId} {
       allow read, list: if isAuthenticated();
       allow write: if isHeadAdmin() || isOwner(userId);
@@ -92,12 +98,6 @@ service cloud.firestore {
           allow read, write, list: if isOwner(userId) || isAdmin();
         }
       }
-    }
-
-    // System Configurations
-    match /configs/{configId} {
-      allow read, get, list: if true;
-      allow write: if isAdmin();
     }
 
     match /activationCodes/{userId} {

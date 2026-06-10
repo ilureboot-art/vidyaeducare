@@ -1,21 +1,22 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
-import { PlusCircle, Trash2, Zap, BookOpen, GraduationCap, Percent, Loader2, Users, IndianRupee } from "lucide-react";
-import type { TicketPackage, ReferboltSubscription, MockTestPackage, ReferboltSettings, GameSettings, StoreConfig, RecommendationSettings } from "@/lib/store-config";
-import type { AcademicConfig } from "@/lib/academic-config";
+import { PlusCircle, Trash2, Zap, BookOpen, GraduationCap, Percent, Loader2, Users, IndianRupee, AlertCircle } from "lucide-react";
+import { type StoreConfig, type MockTestPackage, type ReferboltSubscription, type ReferboltSettings, type RecommendationSettings, defaultStoreConfig } from "@/lib/store-config";
+import { type AcademicConfig, defaultAcademicConfig } from "@/lib/academic-config";
 import { Switch } from "@/components/ui/switch";
 import { useDb } from "@/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function AdminStoreSettingsPage() {
   const { toast } = useToast();
@@ -23,50 +24,74 @@ export default function AdminStoreSettingsPage() {
   
   const [storeConfig, setStoreConfig] = useState<StoreConfig | null>(null);
   const [academicConfig, setAcademicConfig] = useState<AcademicConfig | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const fetchConfigs = useCallback(async () => {
     if (!db) return;
+    setIsLoading(true);
+    setSyncError(null);
     
-    const fetchConfigs = async () => {
-        try {
-            const storeRef = doc(db, "configs", "store");
-            const storeConfigDoc = await getDoc(storeRef).catch(async (e) => {
+    try {
+        const storeRef = doc(db, "configs", "store");
+        const storeConfigDoc = await getDoc(storeRef).catch(async (e) => {
+            if (e.code === 'permission-denied') {
                 const permissionError = new FirestorePermissionError({
                     path: storeRef.path,
                     operation: 'get',
                 } satisfies SecurityRuleContext);
                 errorEmitter.emit('permission-error', permissionError);
-                throw e;
-            });
-            if(storeConfigDoc.exists()) {
-                setStoreConfig(storeConfigDoc.data() as StoreConfig);
             }
+            throw e;
+        });
 
-            const academicRef = doc(db, "configs", "academic");
-            const academicConfigDoc = await getDoc(academicRef).catch(async (e) => {
+        if(storeConfigDoc.exists()) {
+            setStoreConfig(storeConfigDoc.data() as StoreConfig);
+        } else {
+            setStoreConfig(defaultStoreConfig);
+        }
+
+        const academicRef = doc(db, "configs", "academic");
+        const academicConfigDoc = await getDoc(academicRef).catch(async (e) => {
+             if (e.code === 'permission-denied') {
                 const permissionError = new FirestorePermissionError({
                     path: academicRef.path,
                     operation: 'get',
                 } satisfies SecurityRuleContext);
                 errorEmitter.emit('permission-error', permissionError);
-                throw e;
-            });
-            if(academicConfigDoc.exists()){
-                setAcademicConfig(academicConfigDoc.data() as AcademicConfig);
             }
-        } catch (error) {
-            console.error("Store Sync Error:", error);
+            throw e;
+        });
+
+        if(academicConfigDoc.exists()){
+            setAcademicConfig(academicConfigDoc.data() as AcademicConfig);
+        } else {
+            setAcademicConfig(defaultAcademicConfig);
         }
+    } catch (error: any) {
+        console.error("Store Sync Error:", error);
+        if (error.code !== 'permission-denied') {
+            setSyncError("Failed to synchronize configurations. Using system defaults.");
+            // Fallback to defaults to allow the UI to render and potentially re-save
+            setStoreConfig(defaultStoreConfig);
+            setAcademicConfig(defaultAcademicConfig);
+        }
+    } finally {
+        setIsLoading(false);
     }
+  }, [db]);
+
+  useEffect(() => {
     fetchConfigs();
-  }, [db, toast]);
+  }, [fetchConfigs]);
 
   const handleMockTestPackageChange = (index: number, field: keyof MockTestPackage, value: string | number | boolean) => {
     if (!storeConfig) return;
     const newPackages = [...storeConfig.mockTestPackages];
     const pkg = { ...newPackages[index] };
 
-    if (['price', 'months', 'gstRate', 'baseDiscount', 'referralDiscount', 'specialDiscount'].includes(field)) {
+    if (['price', 'months', 'gstRate', 'baseDiscount', 'referralDiscount', 'specialDiscount'].includes(field as string)) {
         value = Number(value) || 0;
     }
     
@@ -156,12 +181,14 @@ export default function AdminStoreSettingsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!storeConfig || !academicConfig || !db) return;
+    if (!storeConfig || !academicConfig || !db || isSaving) return;
     
+    setIsSaving(true);
     const storeRef = doc(db, "configs", "store");
+    const academicRef = doc(db, "configs", "academic");
+
     setDoc(storeRef, storeConfig)
         .then(() => {
-            const academicRef = doc(db, "configs", "academic");
             return setDoc(academicRef, academicConfig);
         })
         .then(() => {
@@ -177,7 +204,8 @@ export default function AdminStoreSettingsPage() {
                 requestResourceData: { storeConfig, academicConfig },
             } satisfies SecurityRuleContext);
             errorEmitter.emit('permission-error', permissionError);
-        });
+        })
+        .finally(() => setIsSaving(false));
   };
 
   const renderDynamicList = (
@@ -192,9 +220,9 @@ export default function AdminStoreSettingsPage() {
               {list.map((item, index) => (
                   <div key={index} className="flex items-center gap-2">
                       <Input value={item} onChange={(e) => handleDynamicListChange(setAcademicConfig, listName, index, e.target.value)} />
-                      <Button type="button" variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" onClick={() => removeFromList(setAcademicConfig, listName, index)}>
+                      <button type="button" className="p-2 text-muted-foreground hover:text-destructive" onClick={() => removeFromList(setAcademicConfig, listName, index)}>
                           <Trash2 className="h-4 w-4" />
-                      </Button>
+                      </button>
                   </div>
               ))}
               <Button type="button" variant="outline" className="w-full" onClick={() => addToList(setAcademicConfig, listName)}>
@@ -205,10 +233,11 @@ export default function AdminStoreSettingsPage() {
       );
   };
 
-  if (!storeConfig || !academicConfig) {
+  if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-96">
-        <Loader2 className="animate-spin text-primary" size={32} />
+      <div className="flex flex-col items-center justify-center h-96 space-y-4">
+        <Loader2 className="animate-spin text-primary" size={40} />
+        <p className="text-muted-foreground animate-pulse font-medium">Syncing Configurations...</p>
       </div>
     );
   }
@@ -216,15 +245,23 @@ export default function AdminStoreSettingsPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Store & Academic Settings</h1>
+
+      {syncError && (
+          <Alert variant="destructive" className="bg-destructive/10">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Synchronization Warning</AlertTitle>
+              <AlertDescription>{syncError}</AlertDescription>
+          </Alert>
+      )}
+
       <form onSubmit={handleSubmit}>
-        
         <Card className="mt-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><BookOpen /> Mock Test Subscriptions</CardTitle>
             <CardDescription>Configure packages, taxes, and dynamic discount structures.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-8">
-            {storeConfig.mockTestPackages.map((pkg, index) => (
+            {storeConfig?.mockTestPackages.map((pkg, index) => (
                 <div key={index} className="p-6 border rounded-xl space-y-6 relative bg-muted/20">
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                          <div className="space-y-2 col-span-full lg:col-span-2">
@@ -266,17 +303,14 @@ export default function AdminStoreSettingsPage() {
                             <div className="space-y-2">
                                 <Label className="text-[10px] font-bold">Base Discount (%)</Label>
                                 <Input type="number" value={pkg.baseDiscount} onChange={(e) => handleMockTestPackageChange(index, 'baseDiscount', e.target.value)} />
-                                <p className="text-[9px] text-muted-foreground">Applied to all users automatically.</p>
                             </div>
                             <div className="space-y-2">
                                 <Label className="text-[10px] font-bold">IBA (Referral) Discount (%)</Label>
                                 <Input type="number" value={pkg.referralDiscount} onChange={(e) => handleMockTestPackageChange(index, 'referralDiscount', e.target.value)} />
-                                <p className="text-[9px] text-muted-foreground">Applied only when using an IBA code.</p>
                             </div>
                             <div className="space-y-2">
                                 <Label className="text-[10px] font-bold">Special Discount (%)</Label>
                                 <Input type="number" value={pkg.specialDiscount} onChange={(e) => handleMockTestPackageChange(index, 'specialDiscount', e.target.value)} />
-                                <p className="text-[9px] text-muted-foreground">Seasonal or promotional extra discount.</p>
                             </div>
                         </div>
                     </div>
@@ -293,6 +327,8 @@ export default function AdminStoreSettingsPage() {
           </CardContent>
         </Card>
 
+        {storeConfig && (
+        <>
         <Card className="mt-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Users /> Recommendation Rewards</CardTitle>
@@ -306,7 +342,6 @@ export default function AdminStoreSettingsPage() {
                     value={storeConfig.recommendationSettings?.additionalDiscount || 0} 
                     onChange={(e) => handleRecSettingsChange('additionalDiscount', Number(e.target.value))} 
                 />
-                <p className="text-[10px] text-muted-foreground">Applied on top of all other active discounts.</p>
               </div>
               <div className="space-y-2">
                 <Label>Required Referrals</Label>
@@ -315,7 +350,6 @@ export default function AdminStoreSettingsPage() {
                     value={storeConfig.recommendationSettings?.requiredCount || 0} 
                     onChange={(e) => handleRecSettingsChange('requiredCount', Number(e.target.value))} 
                 />
-                <p className="text-[10px] text-muted-foreground">Customers needed to unlock discount.</p>
               </div>
               <div className="space-y-2">
                 <Label>Time Window (Days)</Label>
@@ -324,7 +358,6 @@ export default function AdminStoreSettingsPage() {
                     value={storeConfig.recommendationSettings?.windowDays || 0} 
                     onChange={(e) => handleRecSettingsChange('windowDays', Number(e.target.value))} 
                 />
-                <p className="text-[10px] text-muted-foreground">Since joining or last purchase.</p>
               </div>
           </CardContent>
         </Card>
@@ -365,9 +398,6 @@ export default function AdminStoreSettingsPage() {
                         value={storeConfig.referboltSettings.ibaBonusCommission} 
                         onChange={(e) => handleReferboltSettingsChange('ibaBonusCommission', Number(e.target.value) || 0)} 
                     />
-                    <p className="text-xs text-muted-foreground">
-                        Additional commission (%) for IBAs who are also ReferBolt subscribers.
-                    </p>
                 </div>
               </div>
             </div>
@@ -384,11 +414,12 @@ export default function AdminStoreSettingsPage() {
               <div className="space-y-2">
                 <Label htmlFor="referralBonus">Referral &amp; Welcome Bonus (₹)</Label>
                 <Input id="referralBonus" type="number" value={storeConfig.referralBonus} onChange={(e) => setStoreConfig(prev => prev ? ({...prev, referralBonus: Number(e.target.value)}) : null)} />
-                <p className="text-xs text-muted-foreground">This amount is given to both the referrer and the new user.</p>
               </div>
             </div>
           </CardContent>
         </Card>
+        </>
+        )}
 
         <Card className="mt-6">
             <CardHeader>
@@ -404,8 +435,9 @@ export default function AdminStoreSettingsPage() {
 
 
         <div className="mt-8 flex justify-end">
-          <Button type="submit" size="lg" className="px-12 font-black shadow-xl">
-             <IndianRupee className="mr-2 h-5 w-5"/> SAVE ALL CONFIGURATIONS
+          <Button type="submit" size="lg" className="px-12 font-black shadow-xl" disabled={isSaving}>
+             {isSaving ? <Loader2 className="animate-spin mr-2"/> : <IndianRupee className="mr-2 h-5 w-5"/>}
+             SAVE ALL CONFIGURATIONS
           </Button>
         </div>
       </form>

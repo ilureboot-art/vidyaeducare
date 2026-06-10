@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -15,42 +15,58 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
+const defaultPaymentMethods: AdminPaymentMethods = {
+    accountHolderName: "",
+    bankName: "",
+    accountNumber: "",
+    ifscCode: "",
+    upiId: "",
+    gpayNumber: "",
+    gpayUpiId: "",
+    phonepeNumber: "",
+    phonepeUpiId: "",
+    qrCodeUrl: ""
+};
+
 export default function PaymentSettingsPage() {
     const { toast } = useToast();
     const db = useDb();
     const [methods, setMethods] = useState<AdminPaymentMethods | null>(null);
     const [qrFile, setQrFile] = useState<File | null>(null);
     const [isSaving, setIsSaving] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
     
-    useEffect(() => {
-        const fetchPaymentMethods = async () => {
-            if (!db) return;
-            const docRef = doc(db, "configs", "paymentMethods");
-            try {
-                const docSnap = await getDoc(docRef).catch(async (e) => {
+    const fetchPaymentMethods = useCallback(async () => {
+        if (!db) return;
+        setIsLoading(true);
+        const docRef = doc(db, "configs", "paymentMethods");
+        try {
+            const docSnap = await getDoc(docRef).catch(async (e) => {
+                if (e.code === 'permission-denied') {
                     const permissionError = new FirestorePermissionError({
                         path: docRef.path,
                         operation: 'get',
                     } satisfies SecurityRuleContext);
                     errorEmitter.emit('permission-error', permissionError);
-                    throw e;
-                });
-                if (docSnap.exists()) {
-                    setMethods(docSnap.data() as AdminPaymentMethods);
-                } else {
-                    setMethods({
-                        accountHolderName: "", bankName: "", accountNumber: "", ifscCode: "",
-                        upiId: "", gpayNumber: "", gpayUpiId: "", phonepeNumber: "", phonepeUpiId: "", qrCodeUrl: ""
-                    });
                 }
-            } catch (error) {
-                console.error("Payment Settings Sync Error:", error);
+                throw e;
+            });
+            if (docSnap.exists()) {
+                setMethods(docSnap.data() as AdminPaymentMethods);
+            } else {
+                setMethods(defaultPaymentMethods);
             }
-        };
-        if (db) {
-            fetchPaymentMethods();
+        } catch (error) {
+            console.error("Payment Settings Sync Error:", error);
+            setMethods(defaultPaymentMethods);
+        } finally {
+            setIsLoading(false);
         }
-    }, [db])
+    }, [db]);
+
+    useEffect(() => {
+        fetchPaymentMethods();
+    }, [fetchPaymentMethods]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -101,13 +117,13 @@ export default function PaymentSettingsPage() {
         } else {
              updateConfig(methods);
         }
-
     }
 
-    if (!methods) {
+    if (isLoading || !methods) {
         return (
-          <div className="flex justify-center items-center h-96">
-            <Loader2 className="animate-spin text-primary" size={32} />
+          <div className="flex flex-col items-center justify-center h-96 space-y-4">
+            <Loader2 className="animate-spin text-primary" size={40} />
+            <p className="text-muted-foreground animate-pulse font-medium">Syncing Payment Workspace...</p>
           </div>
         );
     }

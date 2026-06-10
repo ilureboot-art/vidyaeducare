@@ -27,7 +27,6 @@ export default function AdminStoreSettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
-  const [isSyncing, setIsSyncing] = useState(false);
 
   useEffect(() => {
     if (!db) return;
@@ -37,9 +36,9 @@ export default function AdminStoreSettingsPage() {
 
     // 1. Observer for Store Config
     const storeRef = doc(db, "configs", "store");
-    const unsubStore = onSnapshot(storeRef, (doc) => {
-        if (doc.exists()) {
-            setStoreConfig(doc.data() as StoreConfig);
+    const unsubStore = onSnapshot(storeRef, (docSnap) => {
+        if (docSnap.exists()) {
+            setStoreConfig(docSnap.data() as StoreConfig);
         } else {
             setStoreConfig(defaultStoreConfig);
         }
@@ -49,7 +48,6 @@ export default function AdminStoreSettingsPage() {
             errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'configs/store', operation: 'get' }));
         } else {
             console.error("Store Config Sync Error:", error);
-            setSyncError("Partial Sync Failure: Store data could not be verified.");
             setStoreConfig(defaultStoreConfig);
         }
         setIsLoading(false);
@@ -57,9 +55,9 @@ export default function AdminStoreSettingsPage() {
 
     // 2. Observer for Academic Config
     const academicRef = doc(db, "configs", "academic");
-    const unsubAcademic = onSnapshot(academicRef, (doc) => {
-        if (doc.exists()) {
-            setAcademicConfig(doc.data() as AcademicConfig);
+    const unsubAcademic = onSnapshot(academicRef, (docSnap) => {
+        if (docSnap.exists()) {
+            setAcademicConfig(docSnap.data() as AcademicConfig);
         } else {
             setAcademicConfig(defaultAcademicConfig);
         }
@@ -192,8 +190,8 @@ export default function AdminStoreSettingsPage() {
         })
         .catch(async (error) => {
             const permissionError = new FirestorePermissionError({
-                path: 'configs',
-                operation: 'write',
+                path: 'configs/store',
+                operation: 'update',
                 requestResourceData: { storeConfig, academicConfig },
             } satisfies SecurityRuleContext);
             errorEmitter.emit('permission-error', permissionError);

@@ -3,7 +3,7 @@ rules_version = '2';
 /**
  * Vidya EduCare - Supreme Infrastructure Rules
  * Target Instance: vidyaeducaredatabase
- * Deployment Salt: V30_CONFIG_SYNC_RESILIENCE
+ * Deployment Salt: V32_FINAL_CONFIG_SYNC
  */
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -81,6 +81,7 @@ service cloud.firestore {
         allow update: if isHeadAdmin();
     }
 
+    // Support Chat Rules
     match /chats {
       allow list: if isAdmin();
       
@@ -93,8 +94,9 @@ service cloud.firestore {
       }
     }
 
+    // System Configurations
     match /configs/{configId} {
-      allow read: if true;
+      allow read, get, list: if true;
       allow write: if isAdmin();
     }
 

@@ -14,8 +14,8 @@ import { googleAI } from '@genkit-ai/google-genai';
 
 const GenerateNotesInputSchema = z.object({
     subject: z.string().describe('The academic subject.'),
-    standard: z.string().describe('The grade or standard.'),
-    board: z.string().describe('The educational board (e.g., SSC, CBSE).'),
+    standard: z.string().optional().describe('The grade or standard.'),
+    board: z.string().optional().describe('The educational board (e.g., SSC, CBSE).'),
     topics: z.array(z.string()).optional().describe('Specific topics to focus on.'),
     performanceContext: z.string().optional().describe('Context from a recent test to personalize notes.'),
     materialDescription: z.string().optional().describe('Text description or raw material from the student.'),
@@ -39,7 +39,11 @@ const prompt = ai.definePrompt({
   model: googleAI.model('gemini-2.5-flash'),
   input: { schema: GenerateNotesInputSchema },
   output: { schema: GenerateNotesOutputSchema },
-  prompt: `You are an expert educational content creator for the {{{board}}} board, teaching {{{standard}}} {{{subject}}}.
+  prompt: `You are an expert academic content creator.
+  
+  {{#if board}}Board Context: {{{board}}}{{/if}}
+  {{#if standard}}Level Context: {{{standard}}} Student{{/if}}
+  Subject: {{{subject}}}
 
   Your task is to generate highly effective, exam-oriented study notes.
   
@@ -60,10 +64,10 @@ const prompt = ai.definePrompt({
   2. Create 3 detailed sections focusing on core concepts.
   3. For EACH section, provide a heading and a clear explanation in BOTH English and Marathi.
   4. For EACH section, provide 3 bullet points (key points) in BOTH languages.
-  5. Provide a final pedagogical summary in both languages.
-  6. Ensure the Marathi is natural and appropriate for a {{{standard}}} student.
+  5. Provide a final summary in both languages.
+  6. Ensure the tone is educational, clear, and professional.
   
-  Tone: Educational, clear, and professional.`,
+  Tone: Clear and Academic.`,
 });
 
 export async function generateStudyNotes(input: GenerateNotesInput): Promise<GenerateNotesOutput> {

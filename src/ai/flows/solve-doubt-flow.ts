@@ -20,9 +20,9 @@ const SolveDoubtInputSchema = z.object({
     }).optional().describe('Optional MCQ context if the doubt is about a specific question.'),
     context: z.object({
         subject: z.string().optional(),
-        standard: z.string(),
-        board: z.string(),
-    }),
+        standard: z.string().optional(),
+        board: z.string().optional(),
+    }).optional(),
     userDoubt: z.string().describe('The student\'s question or specific doubt.'),
 });
 export type SolveDoubtInput = z.infer<typeof SolveDoubtInputSchema>;
@@ -41,7 +41,10 @@ const prompt = ai.definePrompt({
   model: googleAI.model('gemini-2.5-flash'),
   input: { schema: SolveDoubtInputSchema },
   output: { schema: SolveDoubtOutputSchema },
-  prompt: `You are an expert tutor for the {{{context.board}}} board, teaching {{{context.standard}}} students.
+  prompt: `You are an expert academic tutor. 
+  
+  {{#if context.board}}Target Board: {{{context.board}}}{{/if}}
+  {{#if context.standard}}Target Level: {{{context.standard}}} student{{/if}}
 
   {{#if question}}
   A student has a doubt about this specific Multiple Choice Question:
@@ -53,14 +56,14 @@ const prompt = ai.definePrompt({
 
   STUDENT'S SPECIFIC QUERY: "{{{userDoubt}}}"
   {{else}}
-  A student is asking a general academic question:
+  A student is asking a general academic question or expressing a doubt:
   "{{{userDoubt}}}"
   {{/if}}
 
   Your task:
   1. Provide a clear, step-by-step explanation or answer.
   2. If an MCQ was provided, explain why the correct answer is correct and why the other logic might be confusing.
-  3. Ensure the explanation is encouraging and easy for a {{{context.standard}}} student to understand.
+  3. Ensure the explanation is encouraging and easy to understand.
   4. You MUST provide the explanation in BOTH English and Marathi.
   5. Identify the "Key Concept" involved (e.g., "Photosynthesis", "Newton's First Law").
 

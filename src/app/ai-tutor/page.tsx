@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -67,13 +68,13 @@ function AiTutorPageContent() {
 
         const student = students.find(s => s.id === selectedStudentId);
         
-        // Trial Context if no student selected or not logged in
+        // Context if no student selected or not logged in
         const context = student ? {
             standard: student.academic.standard,
             board: student.academic.board,
         } : {
-            standard: "10th",
-            board: "SSC"
+            standard: "General Academic",
+            board: "Universal"
         };
 
         setIsSolving(true);
@@ -99,7 +100,6 @@ function AiTutorPageContent() {
         }
     };
 
-    const selectedStudent = students.find(s => s.id === selectedStudentId);
     const isLocked = !user && trialCount >= GUEST_TRIAL_LIMIT;
 
     return (
@@ -203,7 +203,7 @@ function AiTutorPageContent() {
                         <BrainCircuit className="w-12 h-12 text-primary animate-pulse" />
                         <Loader2 className="absolute inset-0 w-12 h-12 text-accent animate-spin opacity-40" />
                     </div>
-                    <p className="text-primary font-bold animate-pulse">AI Tutor is crafting your answer...</p>
+                    <p className="text-primary font-bold animate-pulse text-center">AI Tutor is crafting your answer...</p>
                 </div>
             )}
 
@@ -222,11 +222,11 @@ function AiTutorPageContent() {
                             <div className="space-y-4">
                                 <div className="p-5 bg-muted/30 rounded-2xl border-l-4 border-primary">
                                     <h4 className="font-bold text-xs uppercase tracking-widest text-muted-foreground mb-3">Marathi Explanation</h4>
-                                    <p className="text-xl font-medium leading-relaxed">{result.explanation.mr}</p>
+                                    <p className="text-xl font-medium leading-relaxed whitespace-pre-wrap">{result.explanation.mr}</p>
                                 </div>
                                 <div className="p-5 bg-muted/30 rounded-2xl border-l-4 border-accent">
                                     <h4 className="font-bold text-xs uppercase tracking-widest text-muted-foreground mb-3">English Explanation</h4>
-                                    <p className="text-lg leading-relaxed text-muted-foreground">{result.explanation.en}</p>
+                                    <p className="text-lg leading-relaxed text-muted-foreground whitespace-pre-wrap">{result.explanation.en}</p>
                                 </div>
                             </div>
                         </CardContent>

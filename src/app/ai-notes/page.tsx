@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -93,8 +94,8 @@ function AiNotesPageContent() {
             standard: student.academic.standard,
             board: student.academic.board,
         } : {
-            standard: "10th",
-            board: "SSC"
+            standard: "General Academic",
+            board: "Universal"
         };
 
         setIsGenerating(true);
@@ -126,7 +127,6 @@ function AiNotesPageContent() {
         }
     };
 
-    const selectedStudent = students.find(s => s.id === selectedStudentId);
     const isLocked = !user && trialCount >= GUEST_TRIAL_LIMIT;
 
     return (
@@ -328,7 +328,7 @@ function AiNotesPageContent() {
                             <Card className="bg-primary/5 border-none rounded-3xl overflow-hidden mt-12">
                                 <div className="bg-primary p-4 text-center">
                                     <p className="text-[10px] font-black uppercase tracking-widest text-primary-foreground opacity-80 flex items-center justify-center gap-2">
-                                        <BrainCircuit size={14}/> Pedagogical Summary • मुख्य सारांश
+                                        <BrainCircuit size={14}/> Summary • मुख्य सारांश
                                     </p>
                                 </div>
                                 <CardContent className="p-8 space-y-6">
@@ -366,12 +366,7 @@ function AiNotesPageContent() {
                     </div>
                     <div className="text-center space-y-2">
                         <h2 className="text-2xl font-black text-primary animate-pulse uppercase tracking-tighter italic">Analyzing Content...</h2>
-                        <p className="text-muted-foreground font-medium">Synthesizing bilingual study material for your academic material (Trial).</p>
-                    </div>
-                    <div className="flex gap-2">
-                        <Badge variant="outline" className="animate-bounce">Reading Text</Badge>
-                        <Badge variant="outline" className="animate-bounce [animation-delay:0.2s]">Translating Concept</Badge>
-                        <Badge variant="outline" className="animate-bounce [animation-delay:0.4s]">Structuring Notes</Badge>
+                        <p className="text-muted-foreground font-medium">Synthesizing bilingual study material for your academic material.</p>
                     </div>
                 </div>
             )}

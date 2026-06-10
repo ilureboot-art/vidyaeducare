@@ -149,7 +149,7 @@ function AiNotesPageContent() {
                     <AlertDescription className="text-xs">
                         {isLocked 
                             ? "You have reached the 5-page trial limit. Upgrade to generate unlimited notes." 
-                            : "Guest mode active. Notes will be generated for SSC 10th Standard level."}
+                            : "Guest mode active. Notes will be generated for your academic study material."}
                         <Link href="/signup" className="ml-2 underline font-bold">Sign up for full access.</Link>
                     </AlertDescription>
                 </Alert>
@@ -246,7 +246,7 @@ function AiNotesPageContent() {
 
                             <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 p-2 rounded-lg">
                                 <Info size={14} />
-                                <span>Notes will be generated for <b>{selectedStudent?.academic.board || "SSC"} {selectedStudent?.academic.standard || "10th"}</b> level.</span>
+                                <span>Notes will be generated for your academic study material.</span>
                             </div>
                         </CardContent>
                         <CardFooter className="bg-muted/30 border-t flex justify-between gap-4">
@@ -282,7 +282,7 @@ function AiNotesPageContent() {
                             </div>
                             <CardTitle className="text-3xl font-black text-primary uppercase tracking-tight">{result.title}</CardTitle>
                             <CardDescription className="font-bold text-xs uppercase tracking-widest mt-2">
-                                {selectedStudent?.academic.board || "SSC"} • {selectedStudent?.academic.standard || "10th"} • AI CURATED NOTES
+                                AI CURATED NOTES
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-10 pt-10">
@@ -366,7 +366,7 @@ function AiNotesPageContent() {
                     </div>
                     <div className="text-center space-y-2">
                         <h2 className="text-2xl font-black text-primary animate-pulse uppercase tracking-tighter italic">Analyzing Content...</h2>
-                        <p className="text-muted-foreground font-medium">Synthesizing bilingual study material for SSC 10th (Trial).</p>
+                        <p className="text-muted-foreground font-medium">Synthesizing bilingual study material for your academic material (Trial).</p>
                     </div>
                     <div className="flex gap-2">
                         <Badge variant="outline" className="animate-bounce">Reading Text</Badge>

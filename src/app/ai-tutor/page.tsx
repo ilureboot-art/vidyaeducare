@@ -122,7 +122,7 @@ function AiTutorPageContent() {
                     <AlertDescription className="text-xs">
                         {isLocked 
                             ? "You have used your 5 free trial queries. Please join Vidya EduCare for unlimited access." 
-                            : "Guests get 5 free questions using SSC 10th Standard context."}
+                            : "Guests get 5 free questions for your academic question or doubt."}
                         <Link href="/signup" className="ml-2 underline font-bold">Sign up now.</Link>
                     </AlertDescription>
                 </Alert>
@@ -132,7 +132,7 @@ function AiTutorPageContent() {
                 <CardHeader className="bg-primary/5 border-b">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div>
-                            <CardTitle className="text-lg">Ask Your Question or Doubt</CardTitle>
+                            <CardTitle className="text-lg font-black">Ask Your Academic Question or Doubt</CardTitle>
                             <CardDescription>Get instant bilingual conceptual clarity for any topic.</CardDescription>
                         </div>
                         {user && (
@@ -160,7 +160,7 @@ function AiTutorPageContent() {
                     <CardContent className="pt-6">
                         <div className="space-y-4">
                             <div className="space-y-2">
-                                <Label htmlFor="query">What is your question or doubt?</Label>
+                                <Label htmlFor="query">What is your academic question or doubt?</Label>
                                 <Textarea 
                                     id="query"
                                     placeholder={isLocked ? "Limit reached. Please sign up to ask more questions." : "e.g., Why do planets orbit the sun in ellipses? or Explain the 1857 revolt."}
@@ -173,7 +173,7 @@ function AiTutorPageContent() {
                             </div>
                             <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 p-2 rounded-lg">
                                 <Info size={14} />
-                                <span>AI will answer for your question or doubt at <b>{selectedStudent?.academic.board || "SSC"} {selectedStudent?.academic.standard || "10th"}</b> level.</span>
+                                <span>AI will answer for your academic question or doubt.</span>
                             </div>
                         </div>
                     </CardContent>

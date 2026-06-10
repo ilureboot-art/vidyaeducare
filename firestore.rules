@@ -3,14 +3,14 @@ rules_version = '2';
 /**
  * Vidya EduCare - Supreme Infrastructure Rules
  * Target Instance: vidyaeducaredatabase
- * Deployment Salt: V18_ABSOLUTE_AUTHORITY
+ * Deployment Salt: V20_ABSOLUTE_AUTHORITY_SYNC
  */
 service cloud.firestore {
   match /databases/{database}/documents {
     
     // --- SUPREME BOOTSTRAP AUTHORITY ---
     // Explicit global bypass for infrastructure setup and master admin access.
-    // This rule is evaluated first and grants absolute power to the listed identities.
+    // Authorized: Master UID and hardcoded bootstrap emails (case-insensitive).
     match /{allPaths=**} {
       allow read, write: if request.auth != null && (
         request.auth.uid == '1JgG0oF1D6YREaxOCSGedIfpQZ42' ||

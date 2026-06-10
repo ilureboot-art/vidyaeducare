@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Table,
   TableBody,
@@ -22,6 +21,8 @@ import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
 import { collection, getDocs, doc, updateDoc, writeBatch, getDoc, runTransaction, Timestamp, onSnapshot, orderBy, query } from "firebase/firestore";
 import { useDb } from "@/firebase";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -37,7 +38,7 @@ const getStatusBadgeVariant = (status: string) => {
 }
 
 const getTypeIcon = (type: string, amount: number) => {
-    if (type.includes("withdrawal") || type.includes("Purchase") || amount < 0) {
+    if (type.toLowerCase().includes("withdrawal") || type.toLowerCase().includes("purchase") || amount < 0) {
         return <ArrowUpRight className="w-4 h-4 text-red-500" />;
     }
     return <ArrowDownLeft className="w-4 h-4 text-green-500" />;
@@ -52,24 +53,35 @@ export default function TransactionsPage() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'rejected'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'deposit' | 'withdrawal'>('all');
   
-  const fetchTransactions = async () => {
+  const fetchTransactions = useCallback(async () => {
     if (!db) return;
-    setTransactions(null); // Show loader while fetching
+    setTransactions(null);
     const txsCollectionRef = collection(db, "transactions");
     const q = query(txsCollectionRef, orderBy("date", "desc"));
     
-    const querySnapshot = await getDocs(q);
-    const txs = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        const date = data.date instanceof Timestamp ? data.date.toDate().toISOString() : data.date;
-        return { id: doc.id, ...data, date } as Transaction;
-    });
-    setTransactions(txs);
-  };
+    try {
+        const querySnapshot = await getDocs(q).catch(async (e) => {
+             const permissionError = new FirestorePermissionError({
+                  path: txsCollectionRef.path,
+                  operation: 'list',
+              } satisfies SecurityRuleContext);
+              errorEmitter.emit('permission-error', permissionError);
+              throw e;
+        });
+        const txs = querySnapshot.docs.map(doc => {
+            const data = doc.data();
+            const date = data.date instanceof Timestamp ? data.date.toDate().toISOString() : data.date;
+            return { id: doc.id, ...data, date } as Transaction;
+        });
+        setTransactions(txs);
+    } catch (e) {
+        console.error("Fetch Transactions Error:", e);
+    }
+  }, [db]);
   
   useEffect(() => {
     if(db) fetchTransactions();
-  }, [db]);
+  }, [db, fetchTransactions]);
 
 
   const handleTransactionStatus = async (id: string, newStatus: "Completed" | "Rejected") => {
@@ -92,31 +104,30 @@ export default function TransactionsPage() {
                 userWalletDoc = await transaction.get(userWalletRef);
             }
 
-            // Only proceed with wallet logic if the wallet exists
             if (userWalletDoc && userWalletDoc.exists()) {
                 const walletData = userWalletDoc.data();
                 
                 if (newStatus === 'Completed') {
-                    // For a deposit, add the amount to the user's balance
                     if (txToUpdate.type === 'deposit') {
                         const newBalance = (walletData.balance || 0) + txToUpdate.amount;
                         transaction.update(userWalletRef!, { balance: newBalance });
                     }
-                    // For withdrawals, the balance is already reduced when the request is made.
-                    // Approving it just confirms the transaction status.
                 } else if (newStatus === 'Rejected') {
-                    // If a withdrawal is rejected, refund the money to the user's wallet
                     if (txToUpdate.type === 'withdrawal') {
-                        // Withdrawal amounts are negative, so we add it back
                         const newBalance = (walletData.balance || 0) - txToUpdate.amount; 
                         transaction.update(userWalletRef!, { balance: newBalance });
                     }
-                    // For deposits, if rejected, no change to balance is needed.
                 }
             }
-            
-            // Always update the transaction status
             transaction.update(txDocRef, { status: newStatus });
+        }).catch(async (e) => {
+             const permissionError = new FirestorePermissionError({
+                path: txDocRef.path,
+                operation: 'update',
+                requestResourceData: { status: newStatus },
+            } satisfies SecurityRuleContext);
+            errorEmitter.emit('permission-error', permissionError);
+            throw e;
         });
 
         toast({
@@ -124,12 +135,10 @@ export default function TransactionsPage() {
           description: `Transaction ${id} has been marked as ${newStatus}.`,
         });
         
-        // Refresh data after update
         fetchTransactions();
 
     } catch(error) {
-        console.error("Error updating transaction:", error);
-        toast({ variant: 'destructive', title: 'Error', description: 'Could not update transaction.' });
+        console.error("Transaction Update Error:", error);
     }
   };
 
@@ -220,29 +229,28 @@ export default function TransactionsPage() {
             <TableBody>
               {filteredTransactions.map((tx) => (
                 <TableRow key={tx.id}>
-                  <TableCell className="font-medium">{tx.user || 'System'}</TableCell>
+                  <TableCell className="font-medium text-xs font-mono">{tx.user || 'System'}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                         {getTypeIcon(tx.type, tx.amount)}
-                        <span>{tx.description}</span>
+                        <span className="text-xs">{tx.description}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-xs text-muted-foreground font-mono">
+                  <TableCell className="text-[10px] text-muted-foreground font-mono">
                     {typeof tx.id === 'string' && tx.id.length > 10 ? tx.id.substring(0, 10) + '...' : tx.id}
-                    {tx.referenceId && <div className="text-ellipsis overflow-hidden">Ref: {tx.referenceId}</div>}
                   </TableCell>
-                  <TableCell>{format(new Date(tx.date), 'P')}</TableCell>
+                  <TableCell className="text-xs">{format(new Date(tx.date), 'P')}</TableCell>
                   <TableCell>
-                    <Badge variant={getStatusBadgeVariant(tx.status)}>
+                    <Badge variant={getStatusBadgeVariant(tx.status)} className="text-[10px] py-0 h-5">
                       {tx.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right font-medium">₹{Math.abs(tx.amount).toFixed(2)}</TableCell>
+                  <TableCell className="text-right font-medium text-xs">₹{Math.abs(tx.amount).toFixed(2)}</TableCell>
                   <TableCell className="text-center">
                     {tx.status === "Pending" && (
-                        <div className="flex gap-2 justify-center">
-                            <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700" onClick={() => handleTransactionStatus(String(tx.id), "Completed")}>Approve</Button>
-                            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" onClick={() => handleTransactionStatus(String(tx.id), "Rejected")}>Reject</Button>
+                        <div className="flex gap-1 justify-center">
+                            <Button variant="ghost" size="sm" className="h-7 text-green-600 hover:text-green-700 px-2 text-[10px]" onClick={() => handleTransactionStatus(String(tx.id), "Completed")}>Approve</Button>
+                            <Button variant="ghost" size="sm" className="h-7 text-red-600 hover:text-red-700 px-2 text-[10px]" onClick={() => handleTransactionStatus(String(tx.id), "Rejected")}>Reject</Button>
                         </div>
                     )}
                   </TableCell>

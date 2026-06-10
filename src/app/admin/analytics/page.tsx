@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -9,6 +8,8 @@ import { useDb } from "@/firebase";
 import { collection, getDocs, query, where, Timestamp, getCountFromServer } from "firebase/firestore";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 interface ChartData {
     name: string;
@@ -44,9 +45,8 @@ export default function AnalyticsPage() {
       
       setError(null);
       try {
-          // Safety: Check if user is online before expensive parallel queries
           if (typeof window !== 'undefined' && !window.navigator.onLine) {
-              throw new Error("You are currently offline. Check your internet connection.");
+              throw new Error("You are currently offline.");
           }
 
           const today = new Date();
@@ -63,22 +63,27 @@ export default function AnalyticsPage() {
             where('status', '==', 'Completed')
           );
 
-          // PERFORMANCE: Run queries in parallel with robust error shielding
           const results = await Promise.allSettled([
               getDocs(revenueQuery),
               getCountFromServer(usersCol),
               getCountFromServer(resultsCol)
           ]);
 
+          // Contextual Error Check for Analytics
+          results.forEach((res, index) => {
+              if (res.status === 'rejected' && res.reason?.code === 'permission-denied') {
+                  const paths = [revenueQuery, usersCol, resultsCol];
+                  const permissionError = new FirestorePermissionError({
+                      path: (paths[index] as any).path || 'analytics-query',
+                      operation: 'list',
+                  } satisfies SecurityRuleContext);
+                  errorEmitter.emit('permission-error', permissionError);
+              }
+          });
+
           const revenueRes = results[0];
           const usersRes = results[1];
           const resultsCountRes = results[2];
-
-          // Check if any critical fetch failed due to connectivity
-          const isNetworkError = results.some(r => r.status === 'rejected' && (r.reason?.code === 'unavailable' || r.reason?.message?.toLowerCase().includes('offline')));
-          if (isNetworkError) {
-              throw new Error("Unable to reach database. You might be offline.");
-          }
 
           let totalRevenue = 0;
           if (revenueRes.status === 'fulfilled') {

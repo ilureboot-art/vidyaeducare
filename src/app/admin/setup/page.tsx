@@ -34,7 +34,6 @@ export default function SetupAdminPage() {
   const [auditStatus, setAuditStatus] = useState<{ admin: boolean; student: boolean; config: boolean; loading: boolean }>({ admin: false, student: false, config: false, loading: false });
   const [progressLog, setProgressLog] = useState<string[]>([]);
   const [currentIdentity, setCurrentIdentity] = useState<{ email: string | null; uid: string | null }>({ email: null, uid: null });
-  const isRetrying = useRef(false);
 
   const logProgress = (msg: string) => {
       setProgressLog(prev => [...prev.slice(-12), `${new Date().toLocaleTimeString().split(' ')[0]} > ${msg}`]);
@@ -55,9 +54,9 @@ export default function SetupAdminPage() {
             config: configDoc.exists(),
             loading: false
         });
-        logProgress(`AUDIT: Admin [${adminDoc.exists() ? 'OK' : 'MISSING'}] | Student [${!studentSnap.empty ? 'OK' : 'MISSING'}] | Config [${configDoc.exists() ? 'OK' : 'NEW'}]`);
+        logProgress(`AUDIT: Admin [${adminDoc.exists() ? 'OK' : 'MISSING'}] | Student [${!studentSnap.empty ? 'OK' : 'MISSING'}]`);
     } catch (e: any) {
-        logProgress(`AUDIT: Sync pending...`);
+        logProgress(`AUDIT: Handshaking...`);
         setAuditStatus(prev => ({ ...prev, loading: false }));
     }
   }, [db]);
@@ -90,52 +89,42 @@ export default function SetupAdminPage() {
         await signOut(auth);
         try {
             await createUserWithEmailAndPassword(auth, email, password);
-            logProgress(`AUTH SUCCESS: Created new ${type} account.`);
+            logProgress(`AUTH SUCCESS: Created new account.`);
         } catch (e: any) {
             if (e.code === 'auth/email-already-in-use') {
                 await signInWithEmailAndPassword(auth, email, password);
-                logProgress(`AUTH SUCCESS: Identity verified for ${type}.`);
+                logProgress(`AUTH SUCCESS: Identity verified.`);
             } else throw e;
         }
         
-        // Force a fresh token immediately
         await auth.currentUser?.getIdToken(true);
-        
         setAuthStatus('success');
-        toast({ title: "Identity Verified", description: "Step 2 is now unlocked." });
+        toast({ title: "Identity Verified" });
     } catch (error: any) {
         logProgress(`AUTH ERROR: ${error.message}`);
         setAuthStatus('error');
-        toast({ variant: 'destructive', title: "Auth Failed", description: error.message });
     }
   };
 
   const handleMapToDatabase = async () => {
-    if (!db || !auth || !auth.currentUser) {
-        toast({ variant: 'destructive', title: "Identity Required", description: "Complete Step 1 first." });
-        return;
-    }
+    if (!db || !auth || !auth.currentUser) return;
 
     const type = auth.currentUser.email === HEAD_ADMIN_EMAIL ? 'admin' : 'student';
     const uid = auth.currentUser.uid;
     const email = auth.currentUser.email;
 
     setMapStatus('loading');
-    isRetrying.current = true;
     let attempt = 0;
-    const maxAttempts = 10; // Increased retry window
+    const maxAttempts = 10;
 
     const attemptSync = async (): Promise<void> => {
         attempt++;
         logProgress(`MAP: Attempt ${attempt}/${maxAttempts}...`);
         
-        // CRITICAL: Refresh identity token before EVERY attempt to wake up Firestore rules
         try {
             await auth.currentUser?.getIdToken(true);
-            logProgress("HANDSHAKE: Refreshed security token.");
-        } catch (e) {
-            logProgress("HANDSHAKE: Token refresh heartbeat.");
-        }
+            logProgress("HANDSHAKE: Refreshed token.");
+        } catch (e) {}
         
         const batch = writeBatch(db);
         const userDocRef = doc(db, "users", uid);
@@ -176,40 +165,28 @@ export default function SetupAdminPage() {
 
         batch.commit()
             .then(() => {
-                logProgress(`SUCCESS: ${type.toUpperCase()} synced successfully.`);
+                logProgress(`SUCCESS: Infrastructure Synced.`);
                 setMapStatus('success');
-                toast({ title: "Mapping Complete!" });
                 runSystemAudit();
-                isRetrying.current = false;
             })
             .catch(async (serverError: any) => {
-                // If it's a permission error, we retry silently for the first few attempts
                 if (serverError.code === 'permission-denied' && attempt < maxAttempts) {
-                    logProgress("PENDING: Waiting for cloud propagation (5s)...");
+                    logProgress("PENDING: Waiting for propagation...");
                     setTimeout(attemptSync, 5000);
                 } else {
-                    // Only throw contextual error on definitive final failure
                     const permissionError = new FirestorePermissionError({
                         path: userDocRef.path,
                         operation: 'write',
                         requestResourceData: userData,
                     } satisfies SecurityRuleContext);
-
                     errorEmitter.emit('permission-error', permissionError);
                     setMapStatus('error');
-                    isRetrying.current = false;
-                    logProgress(`FAILED: ${serverError.message}`);
+                    logProgress(`FAILED: Permission denied.`);
                 }
             });
     };
 
     attemptSync();
-  };
-
-  const handleEnterDashboard = () => {
-      sessionStorage.clear();
-      localStorage.clear();
-      router.push('/admin/login');
   };
 
   return (
@@ -219,47 +196,39 @@ export default function SetupAdminPage() {
           <CardTitle className="text-2xl font-black flex items-center justify-center gap-2 text-primary tracking-tighter uppercase italic">
             <Shield className="w-6 h-6" /> INFRASTRUCTURE SETUP
           </CardTitle>
-          <CardDescription>
-            Target Instance: <span className="font-mono text-xs font-bold text-black">vidyaeducaredatabase</span>
-          </CardDescription>
+          <CardDescription>Target: <span className="font-mono text-xs font-bold text-black">vidyaeducaredatabase</span></CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           
           <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 space-y-4">
               <div className="flex items-center justify-between">
-                <p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2">
-                    <Search size={12}/> System Audit
-                </p>
+                <p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><Search size={12}/> System Audit</p>
                 <Button variant="ghost" size="icon" className="h-6 w-6" onClick={runSystemAudit} disabled={auditStatus.loading}>
                     <RefreshCw size={12} className={auditStatus.loading ? 'animate-spin' : ''} />
                 </Button>
               </div>
               <div className="grid grid-cols-3 gap-2">
                   <div className={`p-2 rounded-lg border flex flex-col items-center justify-center gap-1 ${auditStatus.admin ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-                      <p className="text-[9px] font-bold uppercase text-center">Admin</p>
+                      <p className="text-[9px] font-bold uppercase">Admin</p>
                       {auditStatus.admin ? <CheckCircle size={14} className="text-green-600"/> : <AlertCircle size={14} className="text-red-600"/>}
                   </div>
                    <div className={`p-2 rounded-lg border flex flex-col items-center justify-center gap-1 ${auditStatus.student ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-                      <p className="text-[9px] font-bold uppercase text-center">Student</p>
+                      <p className="text-[9px] font-bold uppercase">Student</p>
                       {auditStatus.student ? <CheckCircle size={14} className="text-green-600"/> : <AlertCircle size={14} className="text-red-600"/>}
                   </div>
                    <div className={`p-2 rounded-lg border flex flex-col items-center justify-center gap-1 ${auditStatus.config ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
-                      <p className="text-[9px] font-bold uppercase text-center">Config</p>
+                      <p className="text-[9px] font-bold uppercase">Config</p>
                       {auditStatus.config ? <CheckCircle size={14} className="text-green-600"/> : <Loader2 size={14} className="text-amber-600 animate-spin"/>}
                   </div>
               </div>
           </div>
 
           <div className="bg-black/90 p-4 rounded-xl border border-white/10 space-y-1">
-              <p className="text-[9px] font-bold text-white/50 uppercase flex items-center gap-2">
-                  <Activity size={10}/> Sync Console
-              </p>
+              <p className="text-[9px] font-bold text-white/50 uppercase flex items-center gap-2"><Activity size={10}/> Sync Console</p>
               <div className="space-y-1 min-h-[140px] overflow-hidden">
-                  {progressLog.length > 0 ? progressLog.map((log, i) => (
+                  {progressLog.map((log, i) => (
                       <p key={i} className="text-[10px] font-mono text-green-400 animate-in fade-in slide-in-from-left-2">> {log}</p>
-                  )) : (
-                      <p className="text-[10px] font-mono text-white/30 italic">Handshaking with infrastructure...</p>
-                  )}
+                  ))}
               </div>
           </div>
 
@@ -281,31 +250,23 @@ export default function SetupAdminPage() {
                  {mapStatus === 'loading' ? (
                      <div className="flex flex-col items-center">
                          <Loader2 className="animate-spin mb-1" />
-                         <span className="text-[10px]">RELIABILITY SYNC ACTIVE...</span>
+                         <span className="text-[10px]">SYNC ACTIVE...</span>
                      </div>
                  ) : (
                      <><Database className="mr-2 h-6 w-6" /> STEP 2: MAP TO DATABASE</>
                  )}
              </Button>
-
-             <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg flex items-center gap-3">
-                <Info className="text-amber-600 w-5 h-5 shrink-0" />
-                <p className="text-[9px] font-bold text-amber-800 leading-tight uppercase">
-                    Syncing uses force-token refreshing to ensure propagation across regional master nodes.
-                </p>
-             </div>
           </div>
 
           {(auditStatus.admin && auditStatus.student) && (
               <div className="pt-2 animate-in zoom-in duration-500">
-                  <Button className="w-full py-8 text-xl font-black bg-green-600 hover:bg-green-700 shadow-2xl" onClick={handleEnterDashboard}>
+                  <Button className="w-full py-8 text-xl font-black bg-green-600 hover:bg-green-700 shadow-2xl" onClick={() => router.push('/admin/login')}>
                       PROCEED TO DASHBOARD <ExternalLink className="ml-2 h-5 w-5"/>
                   </Button>
               </div>
           )}
         </CardContent>
         <CardFooter className="bg-primary/5 py-4 border-t justify-center gap-2">
-            <UserCheck size={10} className="text-muted-foreground"/>
             <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground italic text-center">Infrastructure synced with regional master rules</p>
         </CardFooter>
       </Card>

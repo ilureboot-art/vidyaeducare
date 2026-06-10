@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
@@ -24,6 +23,8 @@ import { collection, doc, updateDoc, getDocs, getDoc, query, where, orderBy, lim
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import type { StudentProfile } from "@/lib/student-data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 type UserStatus = "Active" | "Banned" | "Inactive";
 type UserSummary = {
@@ -62,7 +63,14 @@ export default function UserManagementPage() {
     try {
         const usersCollection = collection(db, "users");
         const q = query(usersCollection, orderBy("joinDate", "desc"), limit(100));
-        const userSnapshot = await getDocs(q);
+        const userSnapshot = await getDocs(q).catch(async (e) => {
+             const permissionError = new FirestorePermissionError({
+                  path: usersCollection.path,
+                  operation: 'list',
+              } satisfies SecurityRuleContext);
+              errorEmitter.emit('permission-error', permissionError);
+              throw e;
+        });
         
         const userList = userSnapshot.docs.map(doc => ({
             id: doc.id,
@@ -71,11 +79,11 @@ export default function UserManagementPage() {
         
         setUsers(userList);
     } catch (error) {
-        toast({ variant: 'destructive', title: "Sync Error", description: "Could not load user list." });
+        console.error("Fetch Users Error:", error);
     } finally {
         setIsRefreshing(false);
     }
-  }, [db, toast]);
+  }, [db]);
 
   useEffect(() => {
     if(db) fetchUsers();
@@ -90,13 +98,26 @@ export default function UserManagementPage() {
       setIsDetailsOpen(true);
 
       try {
-          // Lazy Fetch: Only fetch deep records when requested
           const studentsQuery = query(collection(db, "students"), where("parentId", "==", parent.id));
           const walletRef = doc(db, "wallets", parent.id);
           
           const [studentsSnap, walletSnap] = await Promise.all([
-              getDocs(studentsQuery),
-              getDoc(walletRef)
+              getDocs(studentsQuery).catch(async (e) => {
+                   const permissionError = new FirestorePermissionError({
+                        path: 'students',
+                        operation: 'list',
+                    } satisfies SecurityRuleContext);
+                    errorEmitter.emit('permission-error', permissionError);
+                    throw e;
+              }),
+              getDoc(walletRef).catch(async (e) => {
+                   const permissionError = new FirestorePermissionError({
+                        path: walletRef.path,
+                        operation: 'get',
+                    } satisfies SecurityRuleContext);
+                    errorEmitter.emit('permission-error', permissionError);
+                    throw e;
+              })
           ]);
 
           const students = studentsSnap.docs.map(d => ({ id: d.id, ...d.data() } as StudentProfile));
@@ -105,7 +126,7 @@ export default function UserManagementPage() {
           setParentStudents(students);
           setParentWallet(walletBalance);
       } catch (e) {
-          toast({ variant: 'destructive', title: "Error", description: "Could not load details." });
+          console.error("View Details Error:", e);
       } finally {
           setIsLoadingDetails(false);
       }
@@ -113,14 +134,22 @@ export default function UserManagementPage() {
 
   const handleStatusChange = async (userId: string, newStatus: UserStatus) => {
     if (!db) return;
-    try {
-        const userDocRef = doc(db, "users", userId);
-        await updateDoc(userDocRef, { status: newStatus });
-        setUsers(prev => prev ? prev.map(u => u.id === userId ? { ...u, status: newStatus } : u) : null);
-        toast({ title: `User ${newStatus}`, description: `Account updated to ${newStatus}.` });
-    } catch (error) {
-        toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not update user status.'});
-    }
+    const userDocRef = doc(db, "users", userId);
+    const updateData = { status: newStatus };
+
+    updateDoc(userDocRef, updateData)
+        .then(() => {
+            setUsers(prev => prev ? prev.map(u => u.id === userId ? { ...u, status: newStatus } : u) : null);
+            toast({ title: `User ${newStatus}`, description: `Account updated to ${newStatus}.` });
+        })
+        .catch(async (e) => {
+             const permissionError = new FirestorePermissionError({
+                path: userDocRef.path,
+                operation: 'update',
+                requestResourceData: updateData,
+            } satisfies SecurityRuleContext);
+            errorEmitter.emit('permission-error', permissionError);
+        });
   };
 
   const filteredUsers = useMemo(() => {

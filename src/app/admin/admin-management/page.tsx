@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -40,6 +39,8 @@ import { collection, onSnapshot, doc, setDoc, deleteDoc, updateDoc } from "fireb
 import { initializeApp, deleteApp } from "firebase/app";
 import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 import { useAuth, useDb } from "@/firebase";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 const WhatsAppIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-green-500">
@@ -59,7 +60,6 @@ export default function AdminManagementPage() {
   const [newAdminRole, setNewAdminRole] = useState<AdminRole | ''>('');
   const [isCreating, setIsCreating] = useState(false);
   
-  // Filter States
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
 
@@ -77,8 +77,12 @@ export default function AdminManagementPage() {
     const unsubscribe = onSnapshot(adminsCollection, (snapshot) => {
         const adminList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Admin));
         setAllAdmins(adminList);
-    }, (error) => {
-        console.error("Error fetching admins:", error);
+    }, async (error) => {
+        const permissionError = new FirestorePermissionError({
+            path: adminsCollection.path,
+            operation: 'list',
+        } satisfies SecurityRuleContext);
+        errorEmitter.emit('permission-error', permissionError);
         setAllAdmins([]);
     });
 
@@ -97,46 +101,33 @@ export default function AdminManagementPage() {
     }
   }
   
-  const openEditDialog = (admin: Admin) => {
-    setSelectedAdmin(admin);
-    setIsEditDialogOpen(true);
-  }
-  
-  const openResetPassDialog = (admin: Admin) => {
-    setSelectedAdmin(admin);
-    setIsResetPassOpen(true);
-  }
-
-  const handleSendWelcome = (admin: Admin) => {
-    const message = `Hello ${admin.name}, welcome to the Vidya EduCare Admin team! We're excited to have you on board as a ${admin.role}.`;
-    openWhatsApp(admin.phone, message);
-    toast({
-        title: "WhatsApp Opened",
-        description: `A welcome message for ${admin.name} is ready to be sent.`,
-    });
-  }
-
   const handleRequest = async (requestId: string, newStatus: "Active" | "Rejected") => {
     if (!allAdmins || !db) return;
     const requestToProcess = allAdmins.find(req => req.id === requestId);
     if (!requestToProcess) return;
 
-    try {
-        const adminDocRef = doc(db, "admins", requestId);
-        if (newStatus === "Active") {
-            await updateDoc(adminDocRef, { status: "Active" });
-        } else {
-            await deleteDoc(adminDocRef);
-        }
-        
-        toast({
-          title: `Request ${newStatus === 'Active' ? 'Approved' : 'Rejected'}`,
-          description: `The request from ${requestToProcess.name} has been ${newStatus.toLowerCase()}.`,
-        });
-
-    } catch (error) {
-        console.error("Error processing request:", error);
-        toast({ variant: 'destructive', title: "Error", description: "Could not process the request."});
+    const adminDocRef = doc(db, "admins", requestId);
+    if (newStatus === "Active") {
+        updateDoc(adminDocRef, { status: "Active" })
+            .then(() => toast({ title: `Request Approved` }))
+            .catch(async (e) => {
+                const permissionError = new FirestorePermissionError({
+                    path: adminDocRef.path,
+                    operation: 'update',
+                    requestResourceData: { status: 'Active' },
+                } satisfies SecurityRuleContext);
+                errorEmitter.emit('permission-error', permissionError);
+            });
+    } else {
+        deleteDoc(adminDocRef)
+            .then(() => toast({ title: `Request Rejected` }))
+            .catch(async (e) => {
+                const permissionError = new FirestorePermissionError({
+                    path: adminDocRef.path,
+                    operation: 'delete',
+                } satisfies SecurityRuleContext);
+                errorEmitter.emit('permission-error', permissionError);
+            });
     }
   };
 
@@ -151,13 +142,9 @@ export default function AdminManagementPage() {
     const password = (form.elements.namedItem('password') as HTMLInputElement).value;
     const role = newAdminRole;
 
-    if (!name || !email || !phone || !role || !password) {
-        toast({ variant: 'destructive', title: 'Missing Information', description: 'Please fill out all fields.'});
-        return;
-    }
+    if (!name || !email || !phone || !role || !password) return;
     
     setIsCreating(true);
-
     let secondaryApp;
     try {
         const firebaseConfig = {
@@ -171,94 +158,51 @@ export default function AdminManagementPage() {
 
         secondaryApp = initializeApp(firebaseConfig, "secondary-auth-" + Date.now());
         const secondaryAuth = getAuth(secondaryApp);
-        
         const userCredential = await createUserWithEmailAndPassword(secondaryAuth, email, password);
-        const tempUser = userCredential.user;
-
+        
         const newAdminData: Omit<Admin, 'id'> = {
-            name,
-            email,
-            phone,
-            role: role as AdminRole,
-            status: 'Active',
-            joinDate: new Date().toISOString(),
+            name, email, phone, role: role as AdminRole,
+            status: 'Active', joinDate: new Date().toISOString(),
         };
 
-        await setDoc(doc(db, "admins", tempUser.uid), newAdminData);
-        
-        toast({ title: 'Admin Created!', description: `${name} has been added to the system.`});
-        setIsCreateDialogOpen(false);
+        const adminDocRef = doc(db, "admins", userCredential.user.uid);
+        setDoc(adminDocRef, newAdminData)
+            .then(() => {
+                toast({ title: 'Admin Created!' });
+                setIsCreateDialogOpen(false);
+            })
+            .catch(async (e) => {
+                const permissionError = new FirestorePermissionError({
+                    path: adminDocRef.path,
+                    operation: 'create',
+                    requestResourceData: newAdminData,
+                } satisfies SecurityRuleContext);
+                errorEmitter.emit('permission-error', permissionError);
+            });
 
     } catch(error: any) {
-         console.error("Error creating admin:", error);
-         let errorMessage = error.message || 'An unknown error occurred.';
-         if (error.code === 'auth/email-already-in-use') {
-             errorMessage = 'This email is already in use by another user.';
-         }
-         toast({ variant: 'destructive', title: "Error creating admin", description: errorMessage});
+         toast({ variant: 'destructive', title: "Auth Error", description: error.message});
     } finally {
         if (secondaryApp) await deleteApp(secondaryApp);
         setIsCreating(false);
     }
   }
-  
-  const handleEditAdmin = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!selectedAdmin || !db) return;
-    const form = e.currentTarget;
-    const name = (form.elements.namedItem('name-edit') as HTMLInputElement).value;
-    const email = (form.elements.namedItem('email-edit') as HTMLInputElement).value;
-    const phone = (form.elements.namedItem('phone-edit') as HTMLInputElement).value;
-    const role = (form.querySelector('[name=role-edit]') as HTMLInputElement)?.value as AdminRole | undefined;
-
-    if (!name || !email || !phone || !role) {
-        toast({ variant: 'destructive', title: 'Missing Information', description: 'Please fill out all fields.'});
-        return;
-    }
-    
-    const updatedData = { name, email, phone, role };
-
-    try {
-        await updateDoc(doc(db, "admins", selectedAdmin.id), updatedData);
-        
-        toast({ title: 'Admin Updated', description: `${name}'s details have been saved.`});
-        setIsEditDialogOpen(false);
-    } catch (error) {
-        console.error("Error updating admin:", error);
-        toast({ variant: 'destructive', title: 'Error', description: 'Could not update admin details.'});
-    }
-  }
-  
-  const handleResetPassword = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    toast({
-        variant: "destructive",
-        title: 'Action Not Supported',
-        description: 'Resetting another user\'s password requires a backend function for security reasons.'
-    });
-    setIsResetPassOpen(false);
-  }
 
   const handleDeleteAdmin = async (adminId: string) => {
     if (!allAdmins || !db) return;
     const adminToDelete = allAdmins.find(admin => admin.id === adminId);
-    if (!adminToDelete) return;
-
-    if (adminToDelete.role === "Head Admin") {
-        toast({ variant: 'destructive', title: 'Action Not Allowed', description: 'Head Admins cannot be deleted.'});
-        return;
-    }
+    if (!adminToDelete || adminToDelete.role === "Head Admin") return;
     
-    try {
-        await deleteDoc(doc(db, "admins", adminId));
-        toast({
-            title: "Admin Deleted",
-            description: `Admin account for ${adminToDelete.name} has been removed.`,
-        })
-    } catch(error) {
-        console.error("Error deleting admin:", error);
-        toast({ variant: 'destructive', title: "Error", description: `Could not delete ${adminToDelete.name}.` });
-    }
+    const adminDocRef = doc(db, "admins", adminId);
+    deleteDoc(adminDocRef)
+        .then(() => toast({ title: "Admin Deleted" }))
+        .catch(async (e) => {
+            const permissionError = new FirestorePermissionError({
+                path: adminDocRef.path,
+                operation: 'delete',
+            } satisfies SecurityRuleContext);
+            errorEmitter.emit('permission-error', permissionError);
+        });
   }
 
   const filteredAdmins = useMemo(() => {
@@ -282,12 +226,7 @@ export default function AdminManagementPage() {
   if (!isHeadAdmin) {
       return (
           <div className="flex justify-center items-center h-96">
-              <Card>
-                  <CardHeader>
-                      <CardTitle>Access Denied</CardTitle>
-                      <CardDescription>Only the Head Admin can manage administrators.</CardDescription>
-                  </CardHeader>
-              </Card>
+              <Card><CardHeader><CardTitle>Access Denied</CardTitle></CardHeader></Card>
           </div>
       )
   }
@@ -301,9 +240,7 @@ export default function AdminManagementPage() {
        <Card>
         <CardHeader>
           <CardTitle>Sub-admin Requests</CardTitle>
-          <CardDescription>
-            Approve or reject requests from users who want to become sub-admins.
-          </CardDescription>
+          <CardDescription>Approve or reject applications.</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -311,7 +248,6 @@ export default function AdminManagementPage() {
               <TableRow>
                 <TableHead>Applicant Name</TableHead>
                 <TableHead>Phone Number</TableHead>
-                <TableHead>Request Date</TableHead>
                 <TableHead className="text-center">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -319,26 +255,16 @@ export default function AdminManagementPage() {
               {pendingRequests.length > 0 ? pendingRequests.map((req) => (
                 <TableRow key={req.id}>
                   <TableCell className="font-medium">{req.name}</TableCell>
-                  <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span>{req.phone}</span>
-                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openWhatsApp(req.phone)}>
-                            <WhatsAppIcon />
-                         </Button>
-                      </div>
-                  </TableCell>
-                  <TableCell>{req.joinDate ? format(new Date(req.joinDate), 'PP') : 'N/A'}</TableCell>
+                  <TableCell>{req.phone}</TableCell>
                   <TableCell className="text-center">
                     <div className="flex gap-2 justify-center">
-                        <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700" onClick={() => handleRequest(req.id, "Active")}>Approve</Button>
-                        <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" onClick={() => handleRequest(req.id, "Rejected")}>Reject</Button>
+                        <Button variant="ghost" size="sm" className="text-green-600" onClick={() => handleRequest(req.id, "Active")}>Approve</Button>
+                        <Button variant="ghost" size="sm" className="text-red-600" onClick={() => handleRequest(req.id, "Rejected")}>Reject</Button>
                     </div>
                   </TableCell>
                 </TableRow>
               )) : (
-                <TableRow>
-                    <TableCell colSpan={4} className="text-center text-muted-foreground h-24">No pending requests.</TableCell>
-                </TableRow>
+                <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground h-24">No pending requests.</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
@@ -350,85 +276,28 @@ export default function AdminManagementPage() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
                 <CardTitle>All Administrators</CardTitle>
-                <CardDescription>
-                    View and manage all active admin accounts.
-                </CardDescription>
+                <CardDescription>View and manage all active accounts.</CardDescription>
               </div>
               <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                <DialogTrigger asChild>
-                    <Button>
-                        <UserPlus className="mr-2 h-4 w-4" />
-                        Create Admin ID
-                    </Button>
-                </DialogTrigger>
+                <DialogTrigger asChild><Button><UserPlus className="mr-2 h-4 w-4" /> Create Admin ID</Button></DialogTrigger>
                 <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Create New Admin</DialogTitle>
-                        <DialogDescription>This will create a new administrator account without logging you out.</DialogDescription>
-                    </DialogHeader>
+                    <DialogHeader><DialogTitle>Create New Admin</DialogTitle></DialogHeader>
                     <form onSubmit={handleCreateAdmin} className="space-y-4">
+                        <div className="space-y-2"><Label>Full Name</Label><Input id="name" name="name" required /></div>
+                        <div className="space-y-2"><Label>Email</Label><Input id="email" name="email" type="email" required /></div>
+                        <div className="space-y-2"><Label>Phone</Label><Input id="phone" name="phone" required /></div>
+                        <div className="space-y-2"><Label>Password</Label><Input id="password" name="password" type="password" required /></div>
                         <div className="space-y-2">
-                            <Label htmlFor="name">Full Name</Label>
-                            <Input id="name" name="name" required />
-                        </div>
-                         <div className="space-y-2">
-                            <Label htmlFor="email">Email Address</Label>
-                            <Input id="email" name="email" type="email" required />
-                        </div>
-                         <div className="space-y-2">
-                            <Label htmlFor="phone">WhatsApp Number</Label>
-                            <Input id="phone" name="phone" type="tel" required placeholder="919876543210"/>
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="password">Password</Label>
-                            <Input id="password" name="password" type="password" required />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="role">Role</Label>
+                             <Label>Role</Label>
                              <Select name="role" required value={newAdminRole} onValueChange={(value) => setNewAdminRole(value as AdminRole)}>
-                                <SelectTrigger id="role">
-                                    <SelectValue placeholder="Select a role" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Head Admin">Head Admin</SelectItem>
-                                    <SelectItem value="Sub-admin">Sub-admin</SelectItem>
-                                </SelectContent>
+                                <SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger>
+                                <SelectContent><SelectItem value="Head Admin">Head Admin</SelectItem><SelectItem value="Sub-admin">Sub-admin</SelectItem></SelectContent>
                             </Select>
                         </div>
-                        <DialogFooter>
-                            <Button type="submit" disabled={isCreating}>
-                                {isCreating ? <Loader2 className="animate-spin mr-2"/> : null}
-                                Create Admin
-                            </Button>
-                        </DialogFooter>
+                        <DialogFooter><Button type="submit" disabled={isCreating}>{isCreating && <Loader2 className="animate-spin mr-2"/>} Create</Button></DialogFooter>
                     </form>
                 </DialogContent>
               </Dialog>
-            </div>
-
-            <div className="pt-6 grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-2xl">
-              <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  placeholder="Search by name or email..." 
-                  className="pl-8"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              <div className="flex gap-2">
-                <Select value={roleFilter} onValueChange={setRoleFilter}>
-                  <SelectTrigger><SelectValue placeholder="Filter by Role" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Roles</SelectItem>
-                    <SelectItem value="Head Admin">Head Admin</SelectItem>
-                    <SelectItem value="Sub-admin">Sub-admin</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button variant="ghost" size="icon" onClick={() => {setSearchTerm(""); setRoleFilter("all");}}>
-                  <FilterX className="h-4 w-4 text-muted-foreground" />
-                </Button>
-              </div>
             </div>
         </CardHeader>
         <CardContent>
@@ -438,139 +307,26 @@ export default function AdminManagementPage() {
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Phone Number</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredAdmins.length > 0 ? filteredAdmins.map((admin) => (
+              {filteredAdmins.map((admin) => (
                 <TableRow key={admin.id}>
                   <TableCell className="font-medium">{admin.name}</TableCell>
-                   <TableCell>{admin.email}</TableCell>
-                   <TableCell>
-                    <Badge variant={admin.role === "Head Admin" ? "default" : "secondary"}>
-                      {admin.role}
-                    </Badge>
-                  </TableCell>
+                   <TableCell className="text-xs font-mono">{admin.email}</TableCell>
+                   <TableCell><Badge variant={admin.role === "Head Admin" ? "default" : "secondary"}>{admin.role}</Badge></TableCell>
                   <TableCell>
-                     <Badge variant={admin.status === "Active" ? "default" : "destructive"}>
-                      {admin.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span>{admin.phone}</span>
-                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openWhatsApp(admin.phone)}>
-                            <WhatsAppIcon />
-                         </Button>
-                      </div>
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <span className="sr-only">Open menu</span>
-                          < MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => handleSendWelcome(admin)}>
-                            <MessageSquare className="mr-2 h-4 w-4"/>
-                            Send Welcome
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => openEditDialog(admin)} disabled={admin.id === user?.uid}>
-                            <Edit className="mr-2 h-4 w-4"/>
-                            Edit Details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => openResetPassDialog(admin)}>Reset Password</DropdownMenuItem>
-                         {admin.role !== "Head Admin" && (
-                            <DropdownMenuItem className="text-red-600 focus:text-red-500 focus:bg-red-950/50" onClick={() => handleDeleteAdmin(admin.id)}>
-                                <Trash2 className="mr-2 h-4 w-4"/>
-                                Delete Account
-                            </DropdownMenuItem>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    {admin.role !== "Head Admin" && (
+                        <Button variant="ghost" size="icon" onClick={() => handleDeleteAdmin(admin.id)} className="text-destructive"><Trash2 className="h-4 w-4"/></Button>
+                    )}
                   </TableCell>
                 </TableRow>
-              )) : (
-                <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                    No active admins found matching your criteria.
-                  </TableCell>
-                </TableRow>
-              )}
+              ))}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
-      
-      {/* Edit Admin Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
-            <DialogHeader>
-                <DialogTitle>Edit Admin Details</DialogTitle>
-            </DialogHeader>
-            {selectedAdmin && (
-                <form onSubmit={handleEditAdmin} className="space-y-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="name-edit">Full Name</Label>
-                        <Input id="name-edit" name="name-edit" defaultValue={selectedAdmin.name} required />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="email-edit">Email Address</Label>
-                        <Input id="email-edit" name="email-edit" type="email" defaultValue={selectedAdmin.email} required />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="phone-edit">WhatsApp Number</Label>
-                        <Input id="phone-edit" name="phone-edit" type="tel" defaultValue={selectedAdmin.phone} required />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="role-edit">Role</Label>
-                        <Select name="role-edit" defaultValue={selectedAdmin.role} required>
-                            <SelectTrigger id="role-edit">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="Head Admin">Head Admin</SelectItem>
-                                <SelectItem value="Sub-admin">Sub-admin</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <DialogFooter>
-                        <Button type="submit">Save Changes</Button>
-                    </DialogFooter>
-                </form>
-            )}
-        </DialogContent>
-      </Dialog>
-      
-      {/* Reset Password Dialog */}
-      <Dialog open={isResetPassOpen} onOpenChange={setIsResetPassOpen}>
-          <DialogContent>
-              <DialogHeader>
-                  <DialogTitle>Reset Password for {selectedAdmin?.name}</DialogTitle>
-                  <DialogDescription>
-                      Enter a new password. This change is immediate.
-                  </DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleResetPassword} className="space-y-4">
-                  <div className="space-y-2">
-                      <Label htmlFor="new-password">New Password</Label>
-                      <Input id="new-password" name="new-password" type="password" required />
-                  </div>
-                  <div className="space-y-2">
-                      <Label htmlFor="confirm-password">Confirm New Password</Label>
-                      <Input id="confirm-password" name="confirm-password" type="password" required />
-                  </div>
-                   <DialogFooter>
-                        <Button type="submit">Reset Password</Button>
-                    </DialogFooter>
-              </form>
-          </DialogContent>
-      </Dialog>
     </div>
   );
 }

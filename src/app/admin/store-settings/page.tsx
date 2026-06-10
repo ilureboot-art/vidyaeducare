@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -73,7 +72,6 @@ export default function AdminStoreSettingsPage() {
         console.error("Store Sync Error:", error);
         if (error.code !== 'permission-denied') {
             setSyncError("Failed to synchronize configurations. Using system defaults.");
-            // Fallback to defaults to allow the UI to render and potentially re-save
             setStoreConfig(defaultStoreConfig);
             setAcademicConfig(defaultAcademicConfig);
         }
@@ -187,6 +185,7 @@ export default function AdminStoreSettingsPage() {
     const storeRef = doc(db, "configs", "store");
     const academicRef = doc(db, "configs", "academic");
 
+    // Perform operations individually with their own error contexts
     setDoc(storeRef, storeConfig)
         .then(() => {
             return setDoc(academicRef, academicConfig);
@@ -198,9 +197,11 @@ export default function AdminStoreSettingsPage() {
             });
         })
         .catch(async (error) => {
+            // Determine which ref caused the issue based on standard FirestoreError context if available
+            // but for safety in the emitter, we report the combined intent.
             const permissionError = new FirestorePermissionError({
-                path: storeRef.path,
-                operation: 'update',
+                path: 'configs',
+                operation: 'write',
                 requestResourceData: { storeConfig, academicConfig },
             } satisfies SecurityRuleContext);
             errorEmitter.emit('permission-error', permissionError);

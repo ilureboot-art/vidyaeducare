@@ -69,12 +69,12 @@ export default function AnalyticsPage() {
               getCountFromServer(resultsCol)
           ]);
 
-          // Contextual Error Check for Analytics
+          // Contextual Error Check for Analytics with Granular Paths
           results.forEach((res, index) => {
-              if (res.status === 'rejected' && res.reason?.code === 'permission-denied') {
-                  const paths = [revenueQuery, usersCol, resultsCol];
+              if (res.status === 'rejected' && (res.reason?.code === 'permission-denied' || res.reason?.message?.includes('permissions'))) {
+                  const paths = ['transactions', 'users', 'testResults'];
                   const permissionError = new FirestorePermissionError({
-                      path: (paths[index] as any).path || 'analytics-query',
+                      path: paths[index],
                       operation: 'list',
                   } satisfies SecurityRuleContext);
                   errorEmitter.emit('permission-error', permissionError);

@@ -3,14 +3,14 @@ rules_version = '2';
 /**
  * Vidya EduCare - Supreme Infrastructure Rules
  * Target Instance: vidyaeducaredatabase
- * Deployment Salt: V20_ABSOLUTE_AUTHORITY_SYNC
+ * Deployment Salt: V21_MASTER_ACCESS_SYNC
  */
 service cloud.firestore {
   match /databases/{database}/documents {
     
     // --- SUPREME BOOTSTRAP AUTHORITY ---
     // Explicit global bypass for infrastructure setup and master admin access.
-    // Authorized: Master UID and hardcoded bootstrap emails (case-insensitive).
+    // This rule is prioritized at the root to ensure absolute authority.
     match /{allPaths=**} {
       allow read, write: if request.auth != null && (
         request.auth.uid == '1JgG0oF1D6YREaxOCSGedIfpQZ42' ||
@@ -19,7 +19,7 @@ service cloud.firestore {
       );
     }
 
-    // --- Standard Application Logic ---
+    // --- Helper Functions ---
 
     function isAuthenticated() {
       return request.auth != null;
@@ -27,17 +27,23 @@ service cloud.firestore {
 
     function isAdmin() {
       if (!isAuthenticated()) return false;
+      
+      // Direct Master Check
+      if (request.auth.token.email.lower() == 'admin@vidyaeducare.com' || 
+          request.auth.uid == '1JgG0oF1D6YREaxOCSGedIfpQZ42') {
+        return true;
+      }
+      
       let adminPath = /databases/$(database)/documents/admins/$(request.auth.uid);
-      return exists(adminPath) && (
-             get(adminPath).data.status == 'Active' ||
-             get(adminPath).data.role == 'Head Admin' ||
-             request.auth.token.email.lower() == 'admin@vidyaeducare.com'
-      );
+      return exists(adminPath) && get(adminPath).data.status == 'Active';
     }
 
     function isHeadAdmin() {
       if (!isAuthenticated()) return false;
-      if (request.auth.token.email.lower() == 'admin@vidyaeducare.com') return true;
+      if (request.auth.token.email.lower() == 'admin@vidyaeducare.com' || 
+          request.auth.uid == '1JgG0oF1D6YREaxOCSGedIfpQZ42') {
+        return true;
+      }
       
       let adminPath = /databases/$(database)/documents/admins/$(request.auth.uid);
       return exists(adminPath) && get(adminPath).data.role == 'Head Admin';
@@ -46,6 +52,8 @@ service cloud.firestore {
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
+
+    // --- Collection Specific Rules ---
 
     match /admins/{userId} {
       allow read, list: if isAuthenticated();

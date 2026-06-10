@@ -3,13 +3,14 @@ rules_version = '2';
 /**
  * Vidya EduCare - Supreme Infrastructure Rules
  * Target Instance: vidyaeducaredatabase
- * Deployment Salt: V25_EXPLICIT_CHAT_LISTING
+ * Deployment Salt: V26_CHAT_AUTHORITY_SYNC
  */
 service cloud.firestore {
   match /databases/{database}/documents {
     
     // --- SUPREME BOOTSTRAP AUTHORITY ---
     // Explicit global bypass for infrastructure setup and master admin access.
+    // This rule takes absolute precedence at the root level.
     match /{allPaths=**} {
       allow read, write, list: if request.auth != null && (
         request.auth.uid == '1JgG0oF1D6YREaxOCSGedIfpQZ42' ||
@@ -27,18 +28,20 @@ service cloud.firestore {
     function isAdmin() {
       if (!isAuthenticated()) return false;
       
-      // Direct Master Check
+      // Direct Master Identity Check
       if (request.auth.uid == '1JgG0oF1D6YREaxOCSGedIfpQZ42' || 
          (request.auth.token.email != null && request.auth.token.email.lower() == 'admin@vidyaeducare.com')) {
         return true;
       }
       
       let adminPath = /databases/$(database)/documents/admins/$(request.auth.uid);
-      return exists(adminPath) && get(adminPath).data.status == 'Active';
+      return exists(adminPath) && (get(adminPath).data.status == 'Active' || get(adminPath).data.role == 'Head Admin');
     }
 
     function isHeadAdmin() {
       if (!isAuthenticated()) return false;
+      
+      // Direct Master Authority Check
       if (request.auth.uid == '1JgG0oF1D6YREaxOCSGedIfpQZ42' || 
          (request.auth.token.email != null && request.auth.token.email.lower() == 'admin@vidyaeducare.com')) {
         return true;
@@ -80,7 +83,7 @@ service cloud.firestore {
         allow update: if isHeadAdmin();
     }
 
-    // Support Chat Rules
+    // --- Support Chat Security Group ---
     // Explicitly allow administrators to list all chats at the collection level.
     match /chats {
       allow list: if isAdmin();

@@ -30,8 +30,8 @@ export default function AdminStoreSettingsPage() {
   const [syncError, setSyncError] = useState<string | null>(null);
 
   useEffect(() => {
-    // CRITICAL: Ensure we have both a database connection AND an active user session
-    // before initializing listeners to prevent Firestore Permission Errors during startup.
+    // CRITICAL: Wait for both database and resolved user session to prevent 
+    // permission errors during initial session resolution.
     if (!db || !user) return;
 
     setIsLoading(true);
@@ -48,7 +48,11 @@ export default function AdminStoreSettingsPage() {
         setIsLoading(false);
     }, async (error) => {
         if (error.code === 'permission-denied') {
-            errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'configs/store', operation: 'get' }));
+            const permissionError = new FirestorePermissionError({
+                path: storeRef.path,
+                operation: 'get',
+            } satisfies SecurityRuleContext);
+            errorEmitter.emit('permission-error', permissionError);
         } else {
             console.error("Store Config Sync Error:", error);
             setStoreConfig(defaultStoreConfig);
@@ -66,7 +70,11 @@ export default function AdminStoreSettingsPage() {
         }
     }, async (error) => {
         if (error.code === 'permission-denied') {
-            errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'configs/academic', operation: 'get' }));
+            const permissionError = new FirestorePermissionError({
+                path: academicRef.path,
+                operation: 'get',
+            } satisfies SecurityRuleContext);
+            errorEmitter.emit('permission-error', permissionError);
         } else {
             console.error("Academic Config Sync Error:", error);
             setAcademicConfig(defaultAcademicConfig);

@@ -37,7 +37,7 @@ export default function PaymentSettingsPage() {
     const [isLoading, setIsLoading] = useState(true);
     
     useEffect(() => {
-        // CRITICAL: Wait for both database and user session to prevent 
+        // CRITICAL: Wait for both database and resolved user session to prevent 
         // permission errors during initial session resolution.
         if (!db || !user) return;
 
@@ -51,9 +51,13 @@ export default function PaymentSettingsPage() {
                 setMethods(defaultPaymentMethods);
             }
             setIsLoading(false);
-        }, (error) => {
+        }, async (error) => {
             if (error.code === 'permission-denied') {
-                errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'configs/paymentMethods', operation: 'get' }));
+                const permissionError = new FirestorePermissionError({
+                    path: docRef.path,
+                    operation: 'get',
+                } satisfies SecurityRuleContext);
+                errorEmitter.emit('permission-error', permissionError);
             } else {
                 console.error("Payment Sync Error:", error);
                 setMethods(defaultPaymentMethods);

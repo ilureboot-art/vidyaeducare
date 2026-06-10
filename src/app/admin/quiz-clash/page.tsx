@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useDb } from "@/firebase";
 import { collection, addDoc, getDocs, doc, setDoc, deleteDoc, getDoc } from "firebase/firestore";
-import { PlusCircle, Trash2, Puzzle, Loader2, Save } from "lucide-react";
+import { PlusCircle, Trash2, Puzzle, Loader2, Save, RefreshCw } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import type { TestSet } from "@/lib/question-bank";
@@ -36,6 +36,7 @@ export default function AdminQuizClashPage() {
     const [tournaments, setTournaments] = useState<QuizClashTournament[] | null>(null);
     const [testSets, setTestSets] = useState<TestSet[] | null>(null);
     const [autoConfig, setAutoConfig] = useState<QuizClashAutoCreateConfig | null>(null);
+    const [isRefreshing, setIsRefreshing] = useState(false);
     
     const [newTournament, setNewTournament] = useState({
         title: "",
@@ -45,59 +46,55 @@ export default function AdminQuizClashPage() {
         testSetId: ""
     });
 
-    const fetchTournamentsAndTestSets = async (db: any) => {
+    const fetchData = useCallback(async (manual = false) => {
+        if (!db) return;
+        if (manual) setIsRefreshing(true);
+        
         try {
-            // Fetch tournaments
-            const tourneyCol = collection(db, "quizClashTournaments");
-            const tournamentsSnapshot = await getDocs(tourneyCol).catch(async (e) => {
-                const permissionError = new FirestorePermissionError({
-                    path: tourneyCol.path,
-                    operation: 'list',
-                } satisfies SecurityRuleContext);
-                errorEmitter.emit('permission-error', permissionError);
-                throw e;
-            });
-            const tournamentList = tournamentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as QuizClashTournament));
-            setTournaments(tournamentList);
+            // Parallel settled fetches to prevent one failure from blocking others
+            const results = await Promise.allSettled([
+                getDocs(collection(db, "quizClashTournaments")),
+                getDocs(collection(db, "testSets")),
+                getDoc(doc(db, "configs", "quizClash"))
+            ]);
 
-            // Fetch test sets for manual creation
-            const testSetCol = collection(db, "testSets");
-            const testSetsSnapshot = await getDocs(testSetCol).catch(async (e) => {
-                const permissionError = new FirestorePermissionError({
-                    path: testSetCol.path,
-                    operation: 'list',
-                } satisfies SecurityRuleContext);
-                errorEmitter.emit('permission-error', permissionError);
-                throw e;
-            });
-            const testSetList = testSetsSnapshot.docs.map(doc => doc.data() as TestSet);
-            setTestSets(testSetList);
-            
-            // Fetch auto-create config
-            const configDocRef = doc(db, "configs", "quizClash");
-            const configDoc = await getDoc(configDocRef).catch(async (e) => {
-                const permissionError = new FirestorePermissionError({
-                    path: configDocRef.path,
-                    operation: 'get',
-                } satisfies SecurityRuleContext);
-                errorEmitter.emit('permission-error', permissionError);
-                throw e;
-            });
-            if (configDoc.exists()) {
-                setAutoConfig(configDoc.data() as QuizClashAutoCreateConfig);
+            // 1. Tournaments
+            const tourneyRes = results[0];
+            if (tourneyRes.status === 'fulfilled') {
+                setTournaments(tourneyRes.value.docs.map(doc => ({ id: doc.id, ...doc.data() } as QuizClashTournament)));
+            } else {
+                if (tourneyRes.reason?.code === 'permission-denied') {
+                    errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'quizClashTournaments', operation: 'list' }));
+                }
+                setTournaments([]);
+            }
+
+            // 2. Test Sets
+            const testSetRes = results[1];
+            if (testSetRes.status === 'fulfilled') {
+                setTestSets(testSetRes.value.docs.map(doc => ({ id: doc.id, ...doc.data() } as TestSet)));
+            } else {
+                setTestSets([]);
+            }
+
+            // 3. Config
+            const configRes = results[2];
+            if (configRes.status === 'fulfilled' && configRes.value.exists()) {
+                setAutoConfig(configRes.value.data() as QuizClashAutoCreateConfig);
             } else {
                 setAutoConfig(initialAutoConfig);
             }
-        } catch (error) {
-            console.error("Quiz Clash Init Error:", error);
-        }
-    };
 
-    useEffect(() => {
-        if(db) {
-            fetchTournamentsAndTestSets(db);
+        } catch (error) {
+            console.warn("Quiz Clash data sync error.");
+        } finally {
+            setIsRefreshing(false);
         }
     }, [db]);
+
+    useEffect(() => {
+        if(db) fetchData();
+    }, [db, fetchData]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -152,7 +149,7 @@ export default function AdminQuizClashPage() {
         const colRef = collection(db, "quizClashTournaments");
         addDoc(colRef, tournamentData)
             .then(async () => {
-                await fetchTournamentsAndTestSets(db);
+                fetchData(true);
                 toast({ title: "Tournament Created!", description: `${newTournament.title} has been scheduled.` });
                 setNewTournament({ title: "", startTime: "", type: "Pro", entryFee: 10, testSetId: "" });
             })
@@ -171,7 +168,7 @@ export default function AdminQuizClashPage() {
         const docRef = doc(db, "quizClashTournaments", id);
         deleteDoc(docRef)
             .then(async () => {
-                await fetchTournamentsAndTestSets(db);
+                fetchData(true);
                 toast({ title: "Tournament Deleted" });
             })
             .catch(async (error) => {
@@ -206,12 +203,23 @@ export default function AdminQuizClashPage() {
 
 
     if (!tournaments || !testSets || !autoConfig) {
-        return <div className="flex justify-center items-center h-96"><Loader2 className="animate-spin text-primary" size={32} /></div>;
+        return (
+            <div className="flex flex-col items-center justify-center h-96 gap-4">
+                <Loader2 className="animate-spin text-primary" size={32} />
+                <p className="text-sm text-muted-foreground animate-pulse font-medium">Syncing Quiz Clash Data...</p>
+            </div>
+        );
     }
 
     return (
         <div className="space-y-6">
-            <h1 className="text-3xl font-bold flex items-center gap-2"><Puzzle/> Quiz Clash Management</h1>
+            <div className="flex items-center justify-between">
+                <h1 className="text-3xl font-bold flex items-center gap-2"><Puzzle/> Quiz Clash Management</h1>
+                <Button variant="outline" size="sm" onClick={() => fetchData(true)} disabled={isRefreshing}>
+                    <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                    Refresh
+                </Button>
+            </div>
 
             <Card>
                 <CardHeader>
@@ -292,7 +300,11 @@ export default function AdminQuizClashPage() {
                             <Select name="testSetId" value={newTournament.testSetId} onValueChange={(v) => handleSelectChange('testSetId', v)} required>
                                 <SelectTrigger><SelectValue placeholder="Select a test set..."/></SelectTrigger>
                                 <SelectContent>
-                                    {testSets.map(ts => <SelectItem key={ts.id} value={ts.id}>{ts.name} ({ts.questions.length} Qs)</SelectItem>)}
+                                    {testSets.length > 0 ? testSets.map(ts => (
+                                        <SelectItem key={ts.id} value={ts.id}>{ts.name} ({ts.questions.length} Qs)</SelectItem>
+                                    )) : (
+                                        <SelectItem value="none" disabled>No test sets available.</SelectItem>
+                                    )}
                                 </SelectContent>
                             </Select>
                         </div>
@@ -322,7 +334,7 @@ export default function AdminQuizClashPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {tournaments.map(t => (
+                            {tournaments.length > 0 ? tournaments.map(t => (
                                 <TableRow key={t.id}>
                                     <TableCell>{t.title}</TableCell>
                                      <TableCell><Badge variant={t.type === 'Pro' ? 'default' : 'secondary'}>{t.type}</Badge></TableCell>
@@ -335,7 +347,11 @@ export default function AdminQuizClashPage() {
                                         </Button>
                                     </TableCell>
                                 </TableRow>
-                            ))}
+                            )) : (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="text-center text-muted-foreground h-24">No tournaments scheduled.</TableCell>
+                                </TableRow>
+                            )}
                         </TableBody>
                     </Table>
                 </CardContent>

@@ -13,6 +13,8 @@ import { collection, query, where, getDocs, doc, updateDoc, arrayUnion, runTrans
 import type { QuizClashTournament } from "@/lib/quiz-clash-data";
 import { Badge } from "@/components/ui/badge";
 import UserLayout from "@/components/UserLayout";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 
 function QuizClashPageContent() {
@@ -25,10 +27,26 @@ function QuizClashPageContent() {
   useEffect(() => {
     if (!db) return;
     const fetchTournaments = async () => {
-        const q = query(collection(db, "quizClashTournaments"), where("status", "==", "scheduled"));
-        const querySnapshot = await getDocs(q);
-        const tournamentList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as QuizClashTournament));
-        setTournaments(tournamentList);
+        const tourneyCol = collection(db, "quizClashTournaments");
+        const q = query(tourneyCol, where("status", "==", "scheduled"));
+        
+        try {
+            const querySnapshot = await getDocs(q).catch(async (e) => {
+                if (e.code === 'permission-denied' || e.message?.includes('permissions')) {
+                    const permissionError = new FirestorePermissionError({
+                        path: tourneyCol.path,
+                        operation: 'list',
+                    } satisfies SecurityRuleContext);
+                    errorEmitter.emit('permission-error', permissionError);
+                }
+                throw e;
+            });
+            const tournamentList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as QuizClashTournament));
+            setTournaments(tournamentList);
+        } catch (error) {
+            console.warn("Quiz Clash fetch interrupted.");
+            setTournaments([]); // Clear spinner
+        }
     };
     fetchTournaments();
   }, [db]);
@@ -88,12 +106,10 @@ function QuizClashPageContent() {
             description: `You have been registered for ${tournament.title}.`,
         });
 
-        // Optimistically update UI
-        setTournaments(prev => prev!.map(t => 
-            t.id === tournament.id 
-                ? { ...t, registeredUsers: [...t.registeredUsers, user.uid], prizePool: t.type === 'Pro' ? t.prizePool + t.entryFee : t.prizePool }
-                : t
-        ));
+        // Refresh tournaments
+        const q = query(collection(db, "quizClashTournaments"), where("status", "==", "scheduled"));
+        const snap = await getDocs(q);
+        setTournaments(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as QuizClashTournament)));
 
     } catch (error: any) {
         toast({
@@ -104,10 +120,11 @@ function QuizClashPageContent() {
     }
   };
   
-  if (!tournaments) {
+  if (tournaments === null) {
     return (
-      <div className="w-full max-w-4xl mx-auto flex justify-center items-center h-96">
-        <Loader2 className="animate-spin text-primary" size={32} />
+      <div className="w-full max-w-4xl mx-auto flex flex-col items-center justify-center h-96 gap-4">
+        <Loader2 className="animate-spin text-primary" size={40} />
+        <p className="text-muted-foreground animate-pulse text-sm font-medium">Entering Quiz Clash Arena...</p>
       </div>
     );
   }

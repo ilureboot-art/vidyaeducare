@@ -22,6 +22,8 @@ import { useAuth, useDb } from "@/firebase";
 import { doc, getDoc, collection, addDoc, serverTimestamp, runTransaction, type Firestore } from "firebase/firestore";
 import type { QuizClashTournament } from "@/lib/quiz-clash-data";
 import type { TestSet, Question } from "@/lib/question-bank";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 type Lifeline = "fiftyFifty" | "switchQuestion" | "aiHint";
 type GameState = "loading" | "playing" | "finished";
@@ -54,28 +56,51 @@ function QuizClashGameContent() {
         }
 
         const fetchGameData = async () => {
-            const tournamentDocRef = doc(db, "quizClashTournaments", tournamentId);
-            const tournamentSnap = await getDoc(tournamentDocRef);
+            try {
+                const tournamentDocRef = doc(db, "quizClashTournaments", tournamentId);
+                const tournamentSnap = await getDoc(tournamentDocRef).catch(async (e) => {
+                    if (e.code === 'permission-denied') {
+                        const permissionError = new FirestorePermissionError({
+                            path: tournamentDocRef.path,
+                            operation: 'get',
+                        } satisfies SecurityRuleContext);
+                        errorEmitter.emit('permission-error', permissionError);
+                    }
+                    throw e;
+                });
 
-            if (!tournamentSnap.exists()) {
-                toast({ variant: 'destructive', title: "Tournament not found." });
+                if (!tournamentSnap.exists()) {
+                    toast({ variant: 'destructive', title: "Tournament not found." });
+                    router.push('/quiz-clash');
+                    return;
+                }
+                const tourneyData = tournamentSnap.data() as QuizClashTournament;
+                setTournament(tourneyData);
+
+                const testSetDocRef = doc(db, "testSets", tourneyData.testSetId);
+                const testSetSnap = await getDoc(testSetDocRef).catch(async (e) => {
+                    if (e.code === 'permission-denied') {
+                        const permissionError = new FirestorePermissionError({
+                            path: testSetDocRef.path,
+                            operation: 'get',
+                        } satisfies SecurityRuleContext);
+                        errorEmitter.emit('permission-error', permissionError);
+                    }
+                    throw e;
+                });
+
+                if (!testSetSnap.exists()) {
+                    toast({ variant: 'destructive', title: "Question set not found." });
+                    router.push('/quiz-clash');
+                    return;
+                }
+                const testSetData = testSetSnap.data() as TestSet;
+                setQuestions(testSetData.questions);
+                setGameState("playing");
+            } catch (error) {
+                console.error("Game data sync error.");
                 router.push('/quiz-clash');
-                return;
             }
-            const tourneyData = tournamentSnap.data() as QuizClashTournament;
-            setTournament(tourneyData);
-
-            const testSetDocRef = doc(db, "testSets", tourneyData.testSetId);
-            const testSetSnap = await getDoc(testSetDocRef);
-
-             if (!testSetSnap.exists()) {
-                toast({ variant: 'destructive', title: "Question set not found." });
-                router.push('/quiz-clash');
-                return;
-            }
-            const testSetData = testSetSnap.data() as TestSet;
-            setQuestions(testSetData.questions);
-            setGameState("playing");
         };
 
         fetchGameData();
@@ -135,12 +160,25 @@ function QuizClashGameContent() {
         setGameState("finished");
         
         try {
-            await addDoc(collection(db, "quizClashResults"), {
+            const resultsColRef = collection(db, "quizClashResults");
+            const resultData = {
                 tournamentId: tournamentId,
                 userId: user.uid,
                 score: finalScore,
                 timeTaken: finalTime,
                 timestamp: serverTimestamp(),
+            };
+
+            await addDoc(resultsColRef, resultData).catch(async (e) => {
+                if (e.code === 'permission-denied') {
+                    const permissionError = new FirestorePermissionError({
+                        path: resultsColRef.path,
+                        operation: 'create',
+                        requestResourceData: resultData,
+                    } satisfies SecurityRuleContext);
+                    errorEmitter.emit('permission-error', permissionError);
+                }
+                throw e;
             });
 
              toast({
@@ -193,7 +231,12 @@ function QuizClashGameContent() {
 
 
     if (gameState === "loading" || !tournament) {
-        return <div className="flex justify-center items-center h-screen bg-primary/90 dark:bg-slate-900"><Loader2 className="animate-spin text-white" size={48} /></div>;
+        return (
+            <div className="flex flex-col items-center justify-center h-screen bg-primary/90 dark:bg-slate-900 gap-4">
+                <Loader2 className="animate-spin text-white" size={48} />
+                <p className="text-white animate-pulse font-bold tracking-widest uppercase text-xs">Synchronizing Challenge...</p>
+            </div>
+        );
     }
     
     if (gameState === "finished") {

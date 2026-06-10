@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
@@ -16,7 +17,7 @@ import { cn } from "@/lib/utils";
 import type { StudentProfile } from "@/lib/student-data";
 import type { Question, TestSet } from "@/lib/question-bank";
 import type { ScheduledTest } from "@/lib/test-schedule";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useDb } from "@/firebase";
 import UserLayout from "@/components/UserLayout";
@@ -178,6 +179,20 @@ function MockTestContent() {
                 });
             }
 
+            // --- SYNC PERFORMANCE TO STUDENT PROFILE ---
+            const studentRef = doc(db, "students", studentProfile.id);
+            const currentStats = studentProfile.stats || { totalEarnings: 0, testsTaken: 0, avgScore: 0, performance: [], recentActivity: [] };
+            
+            const newTestsTaken = (currentStats.testsTaken || 0) + 1;
+            const newAvgScore = Math.round(((currentStats.avgScore || 0) * (currentStats.testsTaken || 0) + finalScore) / newTestsTaken);
+            const newPerformance = [...(currentStats.performance || []), { name: scheduledTest.testSetName, score: Math.round(finalScore) }].slice(-10);
+            
+            await updateDoc(studentRef, {
+                "stats.testsTaken": newTestsTaken,
+                "stats.avgScore": newAvgScore,
+                "stats.performance": newPerformance,
+            });
+
             setTestState("completed");
             toast({
                 title: timeLeft <= 0 ? "Time's Up!" : "Test Submitted!",
@@ -223,7 +238,7 @@ function MockTestContent() {
         setAiNotes(null);
         setIsNotesDialogOpen(true);
 
-        // Extract context based on performance (incorrect answers)
+        // Extract context based on performance (incorrect topics)
         const incorrectTopics = activeQuestions
             .filter(q => answers[q.id]?.en !== q.correctAnswer.en)
             .map(q => q.text.en)

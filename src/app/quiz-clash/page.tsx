@@ -5,16 +5,18 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Puzzle, Users, IndianRupee, Loader2 } from "lucide-react";
+import { Puzzle, Users, IndianRupee, Loader2, GraduationCap, ChevronRight } from "lucide-react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useRouter } from "next/navigation";
 import { useAuth, useDb } from "@/firebase";
 import { collection, query, where, getDocs, doc, updateDoc, arrayUnion, runTransaction, serverTimestamp } from "firebase/firestore";
 import type { QuizClashTournament } from "@/lib/quiz-clash-data";
+import type { StudentProfile } from "@/lib/student-data";
 import { Badge } from "@/components/ui/badge";
 import UserLayout from "@/components/UserLayout";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 
 function QuizClashPageContent() {
@@ -22,7 +24,11 @@ function QuizClashPageContent() {
   const router = useRouter();
   const { user } = useAuth();
   const db = useDb();
+  
   const [tournaments, setTournaments] = useState<QuizClashTournament[] | null>(null);
+  const [students, setStudents] = useState<StudentProfile[]>([]);
+  const [isRegistering, setIsRegistering] = useState<QuizClashTournament | null>(null);
+  const [isLoadingStudents, setIsLoadingStudents] = useState(false);
 
   useEffect(() => {
     if (!db) return;
@@ -31,36 +37,30 @@ function QuizClashPageContent() {
         const q = query(tourneyCol, where("status", "==", "scheduled"));
         
         try {
-            const querySnapshot = await getDocs(q).catch(async (e) => {
-                if (e.code === 'permission-denied' || e.message?.includes('permissions')) {
-                    const permissionError = new FirestorePermissionError({
-                        path: tourneyCol.path,
-                        operation: 'list',
-                    } satisfies SecurityRuleContext);
-                    errorEmitter.emit('permission-error', permissionError);
-                }
-                throw e;
-            });
+            const querySnapshot = await getDocs(q);
             const tournamentList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as QuizClashTournament));
             setTournaments(tournamentList);
         } catch (error) {
             console.warn("Quiz Clash fetch interrupted.");
-            setTournaments([]); // Clear spinner
+            setTournaments([]);
         }
     };
     fetchTournaments();
-  }, [db]);
 
-  const handleRegister = async (tournament: QuizClashTournament) => {
-    if (!user || !db) {
-        toast({ variant: "destructive", title: "Not logged in" });
-        return;
+    if (user) {
+        const fetchStudents = async () => {
+            setIsLoadingStudents(true);
+            const q = query(collection(db, "students"), where("parentId", "==", user.uid));
+            const snap = await getDocs(q);
+            setStudents(snap.docs.map(d => ({ id: d.id, ...d.data() } as StudentProfile)));
+            setIsLoadingStudents(false);
+        };
+        fetchStudents();
     }
-    
-    if (tournament.registeredUsers.includes(user.uid)) {
-        toast({ title: "Already Registered", description: "You are already registered for this tournament."});
-        return;
-    }
+  }, [db, user]);
+
+  const handleRegister = async (tournament: QuizClashTournament, studentId: string) => {
+    if (!user || !db) return;
 
     try {
         if (tournament.type === 'Pro') {
@@ -73,17 +73,14 @@ function QuizClashPageContent() {
                     throw new Error("Insufficient wallet balance.");
                 }
 
-                // 1. Deduct fee and update wallet
                 const newBalance = userWalletDoc.data().balance - tournament.entryFee;
                 transaction.update(userWalletRef, { balance: newBalance });
 
-                // 2. Add user to tournament users list and update prize pool
                 transaction.update(tournamentRef, { 
                     registeredUsers: arrayUnion(user.uid),
                     prizePool: (tournament.prizePool || 0) + tournament.entryFee,
                 });
 
-                // 3. Log user's transaction
                 const purchaseTxRef = doc(collection(db, "transactions"));
                 transaction.set(purchaseTxRef, {
                     user: user.uid,
@@ -94,29 +91,21 @@ function QuizClashPageContent() {
                     type: "Purchase",
                 });
             });
-        } else { // For Practice tournaments
+        } else {
             const tournamentRef = doc(db, "quizClashTournaments", tournament.id);
             await updateDoc(tournamentRef, {
                 registeredUsers: arrayUnion(user.uid)
             });
         }
 
-        toast({
-            title: "Registration Successful!",
-            description: `You have been registered for ${tournament.title}.`,
-        });
-
-        // Refresh tournaments
-        const q = query(collection(db, "quizClashTournaments"), where("status", "==", "scheduled"));
-        const snap = await getDocs(q);
-        setTournaments(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as QuizClashTournament)));
+        toast({ title: "Registration Successful!", description: `You have been registered for ${tournament.title}.` });
+        setIsRegistering(null);
+        
+        // Push to game immediately with student context
+        router.push(`/quiz-clash/play?tournamentId=${tournament.id}&studentId=${studentId}`);
 
     } catch (error: any) {
-        toast({
-            variant: "destructive",
-            title: "Registration Failed",
-            description: error.message || "Could not complete registration.",
-        });
+        toast({ variant: "destructive", title: "Registration Failed", description: error.message || "Could not complete registration." });
     }
   };
   
@@ -139,14 +128,11 @@ function QuizClashPageContent() {
       </div>
 
       <Card>
-        <CardHeader>
-            <CardTitle>How It Works</CardTitle>
-        </CardHeader>
-        <CardContent className="text-sm text-muted-foreground space-y-2">
-            <p>1. Register for an upcoming tournament. Pro Clashes require an entry fee, Practice Clashes are free.</p>
-            <p>2. Join the quiz at the scheduled time. All participants play at the same time.</p>
-            <p>3. Answer as many questions correctly and as quickly as possible.</p>
-            <p>4. Top users on the leaderboard win a share of the prize pool in Pro Clashes, or bragging rights in Practice Clashes!</p>
+        <CardHeader><CardTitle>How It Works</CardTitle></CardHeader>
+        <CardContent className="text-sm text-muted-foreground space-y-2 text-center md:text-left">
+            <p>1. Register a student for an upcoming tournament. Pro Clashes require an entry fee.</p>
+            <p>2. Compete in a live time-bound challenge.</p>
+            <p>3. Performance and earnings are automatically synced to the student profile.</p>
         </CardContent>
       </Card>
 
@@ -156,8 +142,6 @@ function QuizClashPageContent() {
             <div className="space-y-4">
             {tournaments.map((tourney) => {
                 const isRegistered = user ? tourney.registeredUsers.includes(user.uid) : false;
-                const canPlay = new Date(tourney.startTime) <= new Date();
-
                 return (
                     <Card key={tourney.id} className="shadow-md">
                     <CardHeader>
@@ -184,32 +168,15 @@ function QuizClashPageContent() {
                             <h4 className="font-bold text-lg">{tourney.registeredUsers.length}</h4>
                             <p className="text-xs text-muted-foreground">Users Registered</p>
                         </div>
-                        {tourney.type === 'Pro' ? (
-                            <div className="p-3 bg-green-100 dark:bg-green-900/50 rounded-lg">
-                                <h4 className="font-bold text-lg text-green-700 dark:text-green-300">₹{tourney.prizePool}</h4>
-                                <p className="text-xs text-muted-foreground">Current Prize Pool</p>
-                            </div>
-                        ) : (
-                             <div className="p-3 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
-                                <h4 className="font-bold text-lg text-blue-700 dark:text-blue-300">Practice</h4>
-                                <p className="text-xs text-muted-foreground">For Glory</p>
-                            </div>
-                        )}
+                        <div className="p-3 bg-green-100 dark:bg-green-900/50 rounded-lg">
+                            <h4 className="font-bold text-lg text-green-700 dark:text-green-300">₹{tourney.prizePool}</h4>
+                            <p className="text-xs text-muted-foreground">Prize Pool</p>
+                        </div>
                     </CardContent>
                     <CardFooter>
-                        {isRegistered ? (
-                             canPlay ? (
-                                <Button className="w-full" onClick={() => router.push(`/quiz-clash/play?tournamentId=${tourney.id}`)}>
-                                    Enter Game
-                                </Button>
-                             ) : (
-                                <Button className="w-full" disabled>Registered</Button>
-                             )
-                        ) : (
-                            <Button className="w-full" onClick={() => handleRegister(tourney)}>
-                                {tourney.type === 'Pro' ? `Register Now (₹${tourney.entryFee})` : 'Register for Free'}
-                            </Button>
-                        )}
+                        <Button className="w-full" onClick={() => setIsRegistering(tourney)} disabled={isRegistered}>
+                            {isRegistered ? "Enter Arena (Session Active)" : tourney.type === 'Pro' ? `Select Student & Register (₹${tourney.entryFee})` : 'Select Student & Play Free'}
+                        </Button>
                     </CardFooter>
                     </Card>
                 )
@@ -223,6 +190,34 @@ function QuizClashPageContent() {
             </Card>
         )}
       </div>
+
+      <Dialog open={!!isRegistering} onOpenChange={(open) => !open && setIsRegistering(null)}>
+          <DialogContent className="max-w-md">
+              <DialogHeader>
+                  <DialogTitle>Who is playing?</DialogTitle>
+                  <DialogDescription>Select the student profile to associate with this tournament session.</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-3 pt-4">
+                  {students.length > 0 ? students.map(s => (
+                      <Button key={s.id} variant="outline" className="w-full h-auto p-4 justify-between group hover:border-primary" onClick={() => isRegistering && handleRegister(isRegistering, s.id)}>
+                          <div className="flex items-center gap-4">
+                              <div className="p-2 bg-primary/10 rounded-full group-hover:bg-primary/20 transition-colors"><GraduationCap className="w-5 h-5 text-primary"/></div>
+                              <div className="text-left">
+                                  <p className="font-bold">{s.name}</p>
+                                  <p className="text-[10px] uppercase font-black opacity-50">{s.academic.standard} • {s.academic.board}</p>
+                              </div>
+                          </div>
+                          <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-all"/>
+                      </Button>
+                  )) : (
+                      <div className="text-center py-8">
+                          <p className="text-sm text-muted-foreground">No students found. Add a student profile first.</p>
+                          <Button asChild variant="link" className="mt-2"><Link href="/profile">Add Student →</Link></Button>
+                      </div>
+                  )}
+              </div>
+          </DialogContent>
+      </Dialog>
     </div>
   );
 }

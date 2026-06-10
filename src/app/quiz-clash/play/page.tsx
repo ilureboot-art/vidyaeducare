@@ -19,7 +19,7 @@ import { Loader2, HelpCircle, RefreshCw, Star, Trophy, X, Check, Timer, Coins, S
 import { cn } from "@/lib/utils";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth, useDb } from "@/firebase";
-import { doc, getDoc, collection, addDoc, serverTimestamp, runTransaction, type Firestore } from "firebase/firestore";
+import { doc, getDoc, collection, addDoc, serverTimestamp } from "firebase/firestore";
 import type { QuizClashTournament } from "@/lib/quiz-clash-data";
 import type { TestSet, Question } from "@/lib/question-bank";
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -48,6 +48,7 @@ function QuizClashGameContent() {
     const [finalTime, setFinalTime] = useState(0);
     
     const tournamentId = searchParams.get('tournamentId');
+    const studentId = searchParams.get('studentId');
 
     useEffect(() => {
         if (!tournamentId || !user || !db) {
@@ -58,16 +59,7 @@ function QuizClashGameContent() {
         const fetchGameData = async () => {
             try {
                 const tournamentDocRef = doc(db, "quizClashTournaments", tournamentId);
-                const tournamentSnap = await getDoc(tournamentDocRef).catch(async (e) => {
-                    if (e.code === 'permission-denied') {
-                        const permissionError = new FirestorePermissionError({
-                            path: tournamentDocRef.path,
-                            operation: 'get',
-                        } satisfies SecurityRuleContext);
-                        errorEmitter.emit('permission-error', permissionError);
-                    }
-                    throw e;
-                });
+                const tournamentSnap = await getDoc(tournamentDocRef);
 
                 if (!tournamentSnap.exists()) {
                     toast({ variant: 'destructive', title: "Tournament not found." });
@@ -78,16 +70,7 @@ function QuizClashGameContent() {
                 setTournament(tourneyData);
 
                 const testSetDocRef = doc(db, "testSets", tourneyData.testSetId);
-                const testSetSnap = await getDoc(testSetDocRef).catch(async (e) => {
-                    if (e.code === 'permission-denied') {
-                        const permissionError = new FirestorePermissionError({
-                            path: testSetDocRef.path,
-                            operation: 'get',
-                        } satisfies SecurityRuleContext);
-                        errorEmitter.emit('permission-error', permissionError);
-                    }
-                    throw e;
-                });
+                const testSetSnap = await getDoc(testSetDocRef);
 
                 if (!testSetSnap.exists()) {
                     toast({ variant: 'destructive', title: "Question set not found." });
@@ -128,10 +111,7 @@ function QuizClashGameContent() {
     };
     
     const handleLockAnswer = () => {
-        if (!selectedOption) {
-            toast({ variant: "destructive", title: "No option selected", description: "Please select an answer to lock." });
-            return;
-        }
+        if (!selectedOption) return;
         setIsAnswerLocked(true);
         
         const currentQuestion = questions[currentQuestionIndex];
@@ -164,47 +144,28 @@ function QuizClashGameContent() {
             const resultData = {
                 tournamentId: tournamentId,
                 userId: user.uid,
+                studentId: studentId || "Unknown",
                 score: finalScore,
                 timeTaken: finalTime,
                 timestamp: serverTimestamp(),
             };
 
-            await addDoc(resultsColRef, resultData).catch(async (e) => {
-                if (e.code === 'permission-denied') {
-                    const permissionError = new FirestorePermissionError({
-                        path: resultsColRef.path,
-                        operation: 'create',
-                        requestResourceData: resultData,
-                    } satisfies SecurityRuleContext);
-                    errorEmitter.emit('permission-error', permissionError);
-                }
-                throw e;
-            });
+            await addDoc(resultsColRef, resultData);
+            
+            toast({ title: "Quiz Finished!", description: `${reason} Syncing results with profile...`, duration: 5000 });
 
-             toast({
-                title: timeLeft <= 0 ? "TIMEOUT!" : "Quiz Finished!",
-                description: `${reason} Your score is being submitted.`,
-                duration: 5000,
-            });
-
-            // Redirect to a results page after a delay
             setTimeout(() => {
-                router.push(`/quiz-clash/results?tournamentId=${tournamentId}`);
+                router.push(`/quiz-clash/results?tournamentId=${tournamentId}&studentId=${studentId}`);
             }, 2000);
 
         } catch (error) {
-             toast({
-                variant: 'destructive',
-                title: "Submission Failed",
-                description: "There was an error submitting your score.",
-            });
+             toast({ variant: 'destructive', title: "Submission Failed" });
              router.push('/quiz-clash');
         }
     };
 
     const useLifeline = (lifeline: Lifeline) => {
         if (usedLifelines.includes(lifeline)) return;
-        
         setUsedLifelines(prev => [...prev, lifeline]);
         
         if (lifeline === 'fiftyFifty') {
@@ -215,24 +176,19 @@ function QuizClashGameContent() {
             const newQuestions = [...questions];
             const currentOptions = newQuestions[currentQuestionIndex].options;
             newQuestions[currentQuestionIndex].options.mr = currentOptions.mr.filter(opt => !optionsToRemove.includes(opt));
-            // Also filter corresponding english options
             newQuestions[currentQuestionIndex].options.en = currentOptions.en.filter((_, i) => !optionsToRemove.includes(currentOptions.mr[i]));
             setQuestions(newQuestions);
-        }
-        else if (lifeline === 'switchQuestion') {
-             toast({ title: 'Lifeline Used: Switch', description: 'Question has been switched.'});
-             const nextIndex = currentQuestionIndex < questions.length - 1 ? currentQuestionIndex + 1 : 0;
-             setCurrentQuestionIndex(nextIndex);
-        }
-        else if (lifeline === 'aiHint') {
-             toast({ title: 'AI Hint', description: "The answer is often the most famous choice among the options."});
+        } else if (lifeline === 'switchQuestion') {
+             setCurrentQuestionIndex(prev => (prev < questions.length - 1 ? prev + 1 : 0));
+        } else if (lifeline === 'aiHint') {
+             toast({ title: 'AI Hint', description: "Focus on the logical derivation of the concept."});
         }
     };
 
 
     if (gameState === "loading" || !tournament) {
         return (
-            <div className="flex flex-col items-center justify-center h-screen bg-primary/90 dark:bg-slate-900 gap-4">
+            <div className="flex flex-col items-center justify-center h-screen bg-primary/90 gap-4">
                 <Loader2 className="animate-spin text-white" size={48} />
                 <p className="text-white animate-pulse font-bold tracking-widest uppercase text-xs">Synchronizing Challenge...</p>
             </div>
@@ -241,7 +197,7 @@ function QuizClashGameContent() {
     
     if (gameState === "finished") {
         return (
-             <div className="flex flex-col gap-4 justify-center items-center h-screen bg-primary/90 dark:bg-slate-900">
+             <div className="flex flex-col gap-4 justify-center items-center h-screen bg-primary/90">
                 <Trophy className="w-16 h-16 text-yellow-400"/>
                 <h1 className="text-2xl font-bold text-white">Quiz Complete!</h1>
                 <p className="text-white/80">Calculating results...</p>
@@ -253,7 +209,7 @@ function QuizClashGameContent() {
     const currentQuestion = questions[currentQuestionIndex];
 
     return (
-        <div className="bg-primary/90 dark:bg-slate-900 min-h-screen flex flex-col items-center justify-center p-4 font-sans text-white">
+        <div className="bg-primary/90 min-h-screen flex flex-col items-center justify-center p-4 font-sans text-white">
             <Card className="w-full max-w-2xl bg-primary-foreground/10 text-white border-primary-foreground/20 backdrop-blur-lg">
                 <CardHeader className="text-center pb-0">
                     <div className="flex justify-between items-center">
@@ -262,22 +218,11 @@ function QuizClashGameContent() {
                         </div>
                          <div className="relative w-24 h-24 flex items-center justify-center">
                             <svg className="absolute w-full h-full -rotate-90" viewBox="0 0 100 100">
-                                <circle 
-                                    className="text-white/10" 
-                                    strokeWidth="8" 
-                                    stroke="currentColor" 
-                                    fill="transparent" 
-                                    r="40" cx="50" cy="50"
-                                />
+                                <circle className="text-white/10" strokeWidth="8" stroke="currentColor" fill="transparent" r="40" cx="50" cy="50" />
                                 <circle 
                                     className={cn("transition-all duration-1000", timeLeft < 10 ? "text-red-500" : "text-yellow-400")}
-                                    strokeWidth="8"
-                                    strokeDasharray={2 * Math.PI * 40}
-                                    strokeDashoffset={2 * Math.PI * 40 * (1 - (timeLeft / 30))}
-                                    strokeLinecap="round"
-                                    stroke="currentColor"
-                                    fill="transparent"
-                                    r="40" cx="50" cy="50"
+                                    strokeWidth="8" strokeDasharray={2 * Math.PI * 40} strokeDashoffset={2 * Math.PI * 40 * (1 - (timeLeft / 30))}
+                                    strokeLinecap="round" stroke="currentColor" fill="transparent" r="40" cx="50" cy="50"
                                 />
                             </svg>
                             <span className={cn("text-3xl font-black z-10", timeLeft < 10 && "text-red-500 animate-pulse")}>{timeLeft}</span>
@@ -307,8 +252,8 @@ function QuizClashGameContent() {
                                         "h-auto py-4 px-6 text-lg whitespace-normal justify-start transition-all duration-300 flex flex-col items-start rounded-2xl",
                                         "bg-black/20 hover:bg-black/40 border-2 border-white/10",
                                         isSelected && !isAnswerLocked && "border-yellow-400 bg-yellow-900/40",
-                                        isAnswerLocked && isCorrect && "bg-green-500 border-green-300 animate-pulse text-white",
-                                        isAnswerLocked && isSelected && !isCorrect && "bg-red-500 border-red-300 text-white",
+                                        isAnswerLocked && isCorrect && "bg-green-50 border-green-300 animate-pulse text-white",
+                                        isAnswerLocked && isSelected && !isCorrect && "bg-red-50 border-red-300 text-white",
                                     )}
                                 >
                                     <div className="flex items-center gap-3">
@@ -326,7 +271,7 @@ function QuizClashGameContent() {
                 <CardFooter className="flex-col gap-4 pb-8">
                      <Button
                         size="lg"
-                        className="w-full h-16 bg-yellow-400 hover:bg-yellow-500 text-black font-black text-xl shadow-xl shadow-yellow-950/20 rounded-2xl"
+                        className="w-full h-16 bg-yellow-400 hover:bg-yellow-500 text-black font-black text-xl shadow-xl rounded-2xl"
                         onClick={handleLockAnswer}
                         disabled={isAnswerLocked || !selectedOption}
                       >
@@ -334,16 +279,13 @@ function QuizClashGameContent() {
                     </Button>
                     <div className="grid grid-cols-3 gap-4 w-full pt-6 border-t border-white/5">
                         <Button variant="ghost" className="flex-col h-auto py-3 rounded-xl hover:bg-white/5 disabled:opacity-20" onClick={() => useLifeline('fiftyFifty')} disabled={usedLifelines.includes('fiftyFifty')}>
-                            <ShieldHalf className="w-6 h-6 mb-1 text-yellow-400"/>
-                            <span className="text-[10px] font-black uppercase tracking-widest">50:50</span>
+                            <ShieldHalf className="w-6 h-6 mb-1 text-yellow-400"/><span className="text-[10px] font-black uppercase tracking-widest">50:50</span>
                         </Button>
                          <Button variant="ghost" className="flex-col h-auto py-3 rounded-xl hover:bg-white/5 disabled:opacity-20" onClick={() => useLifeline('switchQuestion')} disabled={usedLifelines.includes('switchQuestion')}>
-                            <RefreshCw className="w-6 h-6 mb-1 text-yellow-400"/>
-                            <span className="text-[10px] font-black uppercase tracking-widest">Switch</span>
+                            <RefreshCw className="w-6 h-6 mb-1 text-yellow-400"/><span className="text-[10px] font-black uppercase tracking-widest">Switch</span>
                         </Button>
                          <Button variant="ghost" className="flex-col h-auto py-3 rounded-xl hover:bg-white/5 disabled:opacity-20" onClick={() => useLifeline('aiHint')} disabled={usedLifelines.includes('aiHint')}>
-                            <BrainCircuit className="w-6 h-6 mb-1 text-yellow-400"/>
-                            <span className="text-[10px] font-black uppercase tracking-widest">AI Hint</span>
+                            <BrainCircuit className="w-6 h-6 mb-1 text-yellow-400"/><span className="text-[10px] font-black uppercase tracking-widest">AI Hint</span>
                         </Button>
                     </div>
                 </CardFooter>
@@ -351,15 +293,10 @@ function QuizClashGameContent() {
              <Dialog open={isQuitConfirmOpen} onOpenChange={setIsQuitConfirmOpen}>
                 <DialogTrigger asChild><Button variant="link" className="mt-4 text-white/30 hover:text-white/60 font-bold uppercase tracking-widest text-[10px]">Quit Challenge</Button></DialogTrigger>
                 <DialogContent className="text-black">
-                    <DialogHeader>
-                        <DialogTitle>Are you sure you want to quit?</DialogTitle>
-                        <DialogDescription>
-                            If you quit now, your current score will be submitted, but you cannot continue.
-                        </DialogDescription>
-                    </DialogHeader>
+                    <DialogHeader><DialogTitle>Are you sure?</DialogTitle></DialogHeader>
                     <DialogFooter>
                         <Button variant="secondary" onClick={() => setIsQuitConfirmOpen(false)}>Cancel</Button>
-                        <Button variant="destructive" onClick={() => handleGameOver("You quit the game.")}>Yes, Quit</Button>
+                        <Button variant="destructive" onClick={() => handleGameOver("You quit.")}>Yes, Quit</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -369,7 +306,7 @@ function QuizClashGameContent() {
 
 export default function QuizClashGamePage() {
     return (
-        <Suspense fallback={<div className="flex justify-center items-center h-screen bg-primary/90 dark:bg-slate-900"><Loader2 className="animate-spin text-white" size={48} /></div>}>
+        <Suspense fallback={<div className="flex justify-center items-center h-screen bg-primary/90"><Loader2 className="animate-spin text-white" size={48} /></div>}>
             <ProtectedRoute>
                 <div className="min-h-screen">
                     <QuizClashGameContent/>

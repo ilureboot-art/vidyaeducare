@@ -15,6 +15,7 @@ import UserLayout from "@/components/UserLayout";
 
 type Result = {
     userId: string;
+    studentId?: string;
     score: number;
     timeTaken: number;
     rank?: number;
@@ -34,6 +35,7 @@ function QuizClashResultsContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const tournamentId = searchParams.get('tournamentId');
+    const studentIdParam = searchParams.get('studentId');
     const db = useDb();
 
     const [tournament, setTournament] = useState<QuizClashTournament | null>(null);
@@ -55,7 +57,6 @@ function QuizClashResultsContent() {
             setTournament(tourneyData);
 
             if (tourneyData.status === 'completed') {
-                // If results are already calculated, just fetch them
                 const q = query(collection(db, "quizClashResults"), where("tournamentId", "==", tournamentId), orderBy("rank", "asc"));
                 const resultsSnap = await getDocs(q);
                 const resultsData = resultsSnap.docs.map(d => d.data() as Result);
@@ -63,12 +64,10 @@ function QuizClashResultsContent() {
                 const currentUserResult = resultsData.find(r => r.userId === user?.uid);
                 setUserResult(currentUserResult || null);
             } else {
-                // Calculate results
                 const q = query(collection(db, "quizClashResults"), where("tournamentId", "==", tournamentId), orderBy("score", "desc"), orderBy("timeTaken", "asc"));
                 const resultsSnap = await getDocs(q);
                 const fetchedResults = resultsSnap.docs.map(d => ({...d.data(), id: d.id}) as Result & { id: string });
 
-                // Fetch user names
                 for (let result of fetchedResults) {
                     const userDoc = await getDoc(doc(db, "users", result.userId));
                     result.userName = userDoc.exists() ? userDoc.data().name : "Unknown User";
@@ -77,7 +76,6 @@ function QuizClashResultsContent() {
                 let finalResults: Result[] = [];
 
                 if (tourneyData.type === 'Pro') {
-                    // Calculate prizes for Pro tournaments
                     const distributablePool = tourneyData.prizePool * 0.80;
                     const prizeDistribution = [0.40, 0.30, 0.20, 0.10];
                     const winners = fetchedResults.slice(0, 4);
@@ -89,7 +87,6 @@ function QuizClashResultsContent() {
                     
                     finalResults = fetchedResults.map((r, i) => ({ ...r, rank: r.rank || i + 1 }));
 
-                     // Save results and distribute prizes in a transaction
                     await runTransaction(db, async (transaction) => {
                         for (const winner of winners) {
                             if (winner.prize && winner.prize > 0) {
@@ -107,12 +104,21 @@ function QuizClashResultsContent() {
                                     status: "Completed",
                                     type: "Prize",
                                 });
+
+                                // --- SYNC EARNINGS TO STUDENT PROFILE ---
+                                if (winner.studentId) {
+                                    const studentRef = doc(db, "students", winner.studentId);
+                                    const studentSnap = await transaction.get(studentRef);
+                                    if (studentSnap.exists()) {
+                                        const currentEarnings = studentSnap.data().stats?.totalEarnings || 0;
+                                        transaction.update(studentRef, { "stats.totalEarnings": currentEarnings + winner.prize });
+                                    }
+                                }
                             }
                         }
                         transaction.update(tournamentDocRef, { status: "completed" });
                     });
                 } else {
-                    // Just rank for Practice tournaments
                     finalResults = fetchedResults.map((r, i) => ({ ...r, rank: i + 1 }));
                     await updateDoc(tournamentDocRef, { status: "completed" });
                 }
@@ -128,7 +134,7 @@ function QuizClashResultsContent() {
 
     if (!results || !tournament) {
         return (
-            <div className="flex flex-col gap-4 justify-center items-center h-screen bg-primary/90 dark:bg-slate-900">
+            <div className="flex flex-col gap-4 justify-center items-center h-screen bg-primary/90">
                 <Trophy className="w-16 h-16 text-yellow-400"/>
                 <h1 className="text-2xl font-bold text-white">Calculating Final Ranks...</h1>
                 <Loader2 className="animate-spin text-white" size={32} />
@@ -159,15 +165,13 @@ function QuizClashResultsContent() {
                                 )}
                             </div>
                         ) : (
-                            <p className="text-muted-foreground">You did not participate in this tournament.</p>
+                            <p className="text-muted-foreground">No participation record found.</p>
                         )}
                     </CardContent>
                 </Card>
                 
                 <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2"><Users/> Leaderboard</CardTitle>
-                    </CardHeader>
+                    <CardHeader><CardTitle className="flex items-center gap-2"><Users/> Leaderboard</CardTitle></CardHeader>
                     <CardContent>
                         <div className="space-y-2">
                             {results.slice(0,10).map((res) => (
@@ -190,9 +194,7 @@ function QuizClashResultsContent() {
                         </div>
                     </CardContent>
                     <CardFooter>
-                        <Button asChild className="w-full">
-                            <Link href="/quiz-clash">Back to Quiz Clash</Link>
-                        </Button>
+                        <Button asChild className="w-full"><Link href="/quiz-clash">Back to Arena</Link></Button>
                     </CardFooter>
                 </Card>
             </div>
@@ -203,7 +205,7 @@ function QuizClashResultsContent() {
 
 export default function QuizClashResultsPage() {
     return (
-        <Suspense fallback={<div className="flex justify-center items-center h-screen bg-primary/90 dark:bg-slate-900"><Loader2 className="animate-spin text-white" size={48} /></div>}>
+        <Suspense fallback={<div className="flex justify-center items-center h-screen bg-primary/90"><Loader2 className="animate-spin text-white" size={48} /></div>}>
             <ProtectedRoute>
                 <QuizClashResultsContent />
             </ProtectedRoute>

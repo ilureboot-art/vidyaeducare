@@ -48,11 +48,9 @@ export default function AdminStoreSettingsPage() {
         setIsLoading(false);
     }, async (error) => {
         if (error.code === 'permission-denied') {
-            const permissionError = new FirestorePermissionError({
-                path: storeRef.path,
-                operation: 'get',
-            } satisfies SecurityRuleContext);
-            errorEmitter.emit('permission-error', permissionError);
+            console.warn("Store config access restricted. Using local defaults.");
+            setSyncError("Configuration sync delayed. Check administrative rights.");
+            setStoreConfig(defaultStoreConfig);
         } else {
             console.error("Store Config Sync Error:", error);
             setStoreConfig(defaultStoreConfig);
@@ -70,11 +68,8 @@ export default function AdminStoreSettingsPage() {
         }
     }, async (error) => {
         if (error.code === 'permission-denied') {
-            const permissionError = new FirestorePermissionError({
-                path: academicRef.path,
-                operation: 'get',
-            } satisfies SecurityRuleContext);
-            errorEmitter.emit('permission-error', permissionError);
+            console.warn("Academic config access restricted.");
+            setAcademicConfig(defaultAcademicConfig);
         } else {
             console.error("Academic Config Sync Error:", error);
             setAcademicConfig(defaultAcademicConfig);

@@ -3,7 +3,7 @@ rules_version = '2';
 /**
  * Vidya EduCare - Supreme Infrastructure Rules
  * Target Instance: vidyaeducaredatabase
- * Deployment Salt: V27_SCHEDULE_SYNC_STABILITY
+ * Deployment Salt: V28_COLLECTION_SYNC_PRIORITY
  */
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -12,10 +12,9 @@ service cloud.firestore {
     // Explicit global bypass for infrastructure setup and master admin access.
     // This rule takes absolute precedence at the root level.
     match /{allPaths=**} {
-      allow read, write, list: if request.auth != null && (
+      allow read, write: if request.auth != null && (
         request.auth.uid == '1JgG0oF1D6YREaxOCSGedIfpQZ42' ||
-        (request.auth.token.email != null && request.auth.token.email.lower() == 'admin@vidyaeducare.com') ||
-        (request.auth.token.email != null && request.auth.token.email.lower() == 'student@vidyaeducare.com')
+        (request.auth.token.email != null && request.auth.token.email.lower() == 'admin@vidyaeducare.com')
       );
     }
 
@@ -84,7 +83,6 @@ service cloud.firestore {
     }
 
     // --- Support Chat Security Group ---
-    // Explicitly allow administrators to list all chats at the collection level.
     match /chats {
       allow list: if isAdmin();
       
@@ -107,12 +105,12 @@ service cloud.firestore {
     }
 
     match /testSets/{testSetId} {
-        allow read, list: if true;
+        allow read, list: if isAuthenticated();
         allow write: if isHeadAdmin();
     }
 
     match /scheduledTests/{testId} {
-        allow read, list: if true;
+        allow read, list: if isAuthenticated();
         allow write: if isHeadAdmin();
     }
 

@@ -1,12 +1,14 @@
-
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, Users, IndianRupee, Repeat, Loader2 } from "lucide-react";
+import { RefreshCw, Users, IndianRupee, Repeat, Loader2, Search, FilterX } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { useDb } from "@/firebase";
 import { collection, getDocs, query, Timestamp } from "firebase/firestore";
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -40,82 +42,110 @@ export default function ReferBoltManagementPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [cycles, setCycles] = useState<Cycle[] | null>(null);
   const [referrals, setReferrals] = useState<Referral[] | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
-  useEffect(() => {
-    const fetchData = async () => {
-        if (!db) return;
-        setStats(null);
+  // Filter States
+  const [searchTerm, setSearchTerm] = useState("");
+  const [cycleStatusFilter, setCycleStatusFilter] = useState("all");
+  const [subTypeFilter, setSubTypeFilter] = useState("all");
+  
+  const fetchData = async () => {
+    if (!db) return;
+    setIsRefreshing(true);
+    
+    try {
+        const referboltCol = collection(db, "referbolt");
+        const referboltSnapshot = await getDocs(referboltCol).catch(async (e) => {
+            const permissionError = new FirestorePermissionError({
+                path: referboltCol.path,
+                operation: 'list',
+            } satisfies SecurityRuleContext);
+            errorEmitter.emit('permission-error', permissionError);
+            throw e;
+        });
+        let totalCycles = 0;
+        let activeReferrers = 0;
+
+        const cycleList: Cycle[] = referboltSnapshot.docs.map(doc => {
+            const data = doc.data();
+            totalCycles += (data.cyclesCompleted || 0);
+            if (data.isSubscribed) {
+              activeReferrers++;
+            }
+            return {
+              id: doc.id,
+              referrer: data.userName || `User ${doc.id.substring(0, 5)}`,
+              referrals: data.cycleProgress || 0,
+              status: (data.cycleProgress || 0) >= 3 ? 'Completed' : 'In Progress',
+              subscriptionType: data.autoRenew ? 'Auto-Renewed' : 'Manual',
+            };
+        });
+
+        const txCol = collection(db, 'transactions');
+        const transactionsSnapshot = await getDocs(txCol).catch(async (e) => {
+            const permissionError = new FirestorePermissionError({
+                path: txCol.path,
+                operation: 'list',
+            } satisfies SecurityRuleContext);
+            errorEmitter.emit('permission-error', permissionError);
+            throw e;
+        });
+        let totalCommissions = 0;
+        const referralList: Referral[] = [];
+
+        transactionsSnapshot.forEach(doc => {
+            const tx = doc.data();
+            if (tx.type === 'Referral Bonus' || tx.type === 'Commission') {
+                totalCommissions += tx.amount;
+                const date = tx.date instanceof Timestamp ? tx.date.toDate().toISOString() : tx.date;
+                referralList.push({
+                    id: doc.id,
+                    referrer: tx.user,
+                    newUser: tx.description.split(' for ')[1] || tx.description.split(' from ')[1] || 'N/A',
+                    date: date,
+                    commission: `₹${tx.amount}`,
+                    status: tx.status
+                });
+            }
+        });
         
-        try {
-            const referboltCol = collection(db, "referbolt");
-            const referboltSnapshot = await getDocs(referboltCol).catch(async (e) => {
-                const permissionError = new FirestorePermissionError({
-                    path: referboltCol.path,
-                    operation: 'list',
-                } satisfies SecurityRuleContext);
-                errorEmitter.emit('permission-error', permissionError);
-                throw e;
-            });
-            let totalCycles = 0;
-            let activeReferrers = 0;
-
-            const cycleList: Cycle[] = referboltSnapshot.docs.map(doc => {
-                const data = doc.data();
-                totalCycles += (data.cyclesCompleted || 0);
-                if (data.isSubscribed) {
-                activeReferrers++;
-                }
-                return {
-                id: doc.id,
-                referrer: data.userName || `User ${doc.id.substring(0, 5)}`,
-                referrals: data.cycleProgress || 0,
-                status: (data.cycleProgress || 0) >= 3 ? 'Completed' : 'In Progress',
-                subscriptionType: data.autoRenew ? 'Auto-Renewed' : 'Manual',
-                };
-            });
-
-            const txCol = collection(db, 'transactions');
-            const transactionsSnapshot = await getDocs(txCol).catch(async (e) => {
-                const permissionError = new FirestorePermissionError({
-                    path: txCol.path,
-                    operation: 'list',
-                } satisfies SecurityRuleContext);
-                errorEmitter.emit('permission-error', permissionError);
-                throw e;
-            });
-            let totalCommissions = 0;
-            const referralList: Referral[] = [];
-
-            transactionsSnapshot.forEach(doc => {
-                const tx = doc.data();
-                if (tx.type === 'Referral Bonus' || tx.type === 'Commission') {
-                    totalCommissions += tx.amount;
-                    const date = tx.date instanceof Timestamp ? tx.date.toDate().toISOString() : tx.date;
-                    referralList.push({
-                        id: doc.id,
-                        referrer: tx.user,
-                        newUser: tx.description.split(' for ')[1] || tx.description.split(' from ')[1] || 'N/A',
-                        date: date,
-                        commission: `₹${tx.amount}`,
-                        status: tx.status
-                    });
-                }
-            });
-            
-            setStats({ totalCycles, totalCommissions, activeReferrers });
-            setCycles(cycleList);
-            setReferrals(referralList);
-        } catch (error) {
-            console.error("ReferBolt Sync Error:", error);
-            setStats({ totalCycles: 0, totalCommissions: 0, activeReferrers: 0 });
-            setCycles([]);
-            setReferrals([]);
-        }
-    };
-    if (db) {
-        fetchData();
+        setStats({ totalCycles, totalCommissions, activeReferrers });
+        setCycles(cycleList);
+        setReferrals(referralList);
+    } catch (error) {
+        console.error("ReferBolt Sync Error:", error);
+    } finally {
+        setIsRefreshing(false);
     }
+  };
+
+  useEffect(() => {
+    if (db) fetchData();
   }, [db]);
+
+  const filteredCycles = useMemo(() => {
+    if (!cycles) return [];
+    return cycles.filter(c => {
+      const matchesSearch = c.referrer.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = cycleStatusFilter === "all" || c.status === cycleStatusFilter;
+      const matchesType = subTypeFilter === "all" || c.subscriptionType === subTypeFilter;
+      return matchesSearch && matchesStatus && matchesType;
+    });
+  }, [cycles, searchTerm, cycleStatusFilter, subTypeFilter]);
+
+  const filteredReferrals = useMemo(() => {
+    if (!referrals) return [];
+    return referrals.filter(r => 
+      r.referrer.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      r.newUser.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [referrals, searchTerm]);
+
+  const resetFilters = () => {
+    setSearchTerm("");
+    setCycleStatusFilter("all");
+    setSubTypeFilter("all");
+  };
 
   if (!stats || !cycles || !referrals) {
     return (
@@ -127,7 +157,14 @@ export default function ReferBoltManagementPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">ReferBolt Management</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold">ReferBolt Management</h1>
+        <Button variant="outline" size="sm" onClick={fetchData} disabled={isRefreshing}>
+          <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+          Refresh Data
+        </Button>
+      </div>
+
       <div className="grid gap-6 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -173,8 +210,42 @@ export default function ReferBoltManagementPage() {
 
        <Card>
         <CardHeader>
-          <CardTitle>Referral Cycle Status</CardTitle>
-          <CardDescription>Track the progress of active referral cycles (3 referrals per cycle).</CardDescription>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <CardTitle>Referral Cycle Status</CardTitle>
+              <CardDescription>Track the progress of active referral cycles (3 referrals per cycle).</CardDescription>
+            </div>
+          </div>
+          <div className="pt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input 
+                placeholder="Search referrer..." 
+                className="pl-8"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <Select value={cycleStatusFilter} onValueChange={setCycleStatusFilter}>
+              <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="Completed">Completed</SelectItem>
+                <SelectItem value="In Progress">In Progress</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={subTypeFilter} onValueChange={setSubTypeFilter}>
+              <SelectTrigger><SelectValue placeholder="Subscription Type" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="Auto-Renewed">Auto-Renewed</SelectItem>
+                <SelectItem value="Manual">Manual</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button variant="ghost" className="text-muted-foreground" onClick={resetFilters}>
+              <FilterX className="mr-2 h-4 w-4" /> Reset
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -188,11 +259,11 @@ export default function ReferBoltManagementPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {cycles.length > 0 ? cycles.map((cycle) => (
+              {filteredCycles.length > 0 ? filteredCycles.map((cycle) => (
                 <TableRow key={cycle.id}>
                   <TableCell className="font-medium">{cycle.referrer}</TableCell>
                   <TableCell>
-                    <Progress value={(cycle.referrals / 3) * 100} className="w-full" />
+                    <Progress value={(cycle.referrals / 3) * 100} className="h-2 w-full" />
                   </TableCell>
                   <TableCell className="text-center">{cycle.referrals} / 3</TableCell>
                   <TableCell>
@@ -213,7 +284,7 @@ export default function ReferBoltManagementPage() {
                 </TableRow>
               )) : (
                 <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground h-24">No active cycles.</TableCell>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground h-24">No cycles match your filters.</TableCell>
                 </TableRow>
               )}
             </TableBody>
@@ -237,7 +308,7 @@ export default function ReferBoltManagementPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-                {referrals.length > 0 ? referrals.slice(0, 10).map((ref) => (
+                {filteredReferrals.length > 0 ? filteredReferrals.slice(0, 10).map((ref) => (
                      <TableRow key={ref.id}>
                         <TableCell className="font-medium">{ref.referrer}</TableCell>
                         <TableCell>{ref.newUser}</TableCell>
@@ -247,7 +318,7 @@ export default function ReferBoltManagementPage() {
                     </TableRow>
                 )) : (
                     <TableRow>
-                        <TableCell colSpan={5} className="text-center text-muted-foreground h-24">No referral activity yet.</TableCell>
+                        <TableCell colSpan={5} className="text-center text-muted-foreground h-24">No matching referral activity found.</TableCell>
                     </TableRow>
                 )}
             </TableBody>

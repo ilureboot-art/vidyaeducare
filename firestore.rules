@@ -3,7 +3,7 @@ rules_version = '2';
 /**
  * Vidya EduCare - Global Infrastructure Rules
  * Target Instance: vidyaeducaredatabase
- * Deployment Salt: V41_CORE_SYNC_RESOLVED
+ * Deployment Salt: V42_ABS_AUTH_PRIORITY
  */
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -15,8 +15,6 @@ service cloud.firestore {
     }
 
     function isMasterAdmin() {
-      // Direct validation for the master deployment identity
-      // Includes both the hardcoded UID and the known admin email
       return isAuthenticated() && (
         request.auth.uid == '1JgG0oF1D6YREaxOCSGedIfpQZ42' ||
         (request.auth.token.email != null && request.auth.token.email == 'admin@vidyaeducare.com')
@@ -48,8 +46,6 @@ service cloud.firestore {
 
     // --- PRIORITY RULES: Global Infrastructure ---
 
-    // Placed at the absolute top to ensure unrestricted access to system metadata.
-    // These documents contain public configurations like subjects, standards, and store prices.
     match /configs/{configId} {
       allow read, get, list: if true;
       allow write: if isAdmin();

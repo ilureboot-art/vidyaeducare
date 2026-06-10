@@ -29,6 +29,7 @@ export type MockTestPackage = {
     baseDiscount: number;      // Fixed discount for all users
     referralDiscount: number;  // Discount given if an IBA code is used
     specialDiscount: number;   // Extra discount admin can add/remove (e.g. holiday sale)
+    grantFreeReferbolt: boolean; // Whether this package grants free ReferBolt access
 };
 
 export type GameSettings = {
@@ -72,7 +73,8 @@ export const defaultStoreConfig: StoreConfig = {
             hsnSacCode: '999294',
             baseDiscount: 5,
             referralDiscount: 10,
-            specialDiscount: 0
+            specialDiscount: 0,
+            grantFreeReferbolt: true
         },
         { 
             name: "6 Months Subscription", 
@@ -83,7 +85,8 @@ export const defaultStoreConfig: StoreConfig = {
             hsnSacCode: '999294',
             baseDiscount: 5,
             referralDiscount: 10,
-            specialDiscount: 0
+            specialDiscount: 0,
+            grantFreeReferbolt: true
         },
     ],
 

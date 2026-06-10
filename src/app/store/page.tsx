@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -199,12 +200,14 @@ function StorePageContent() {
             }
 
             if (type === 'mock') {
+                const mockItem = item as MockTestPackage;
                 const activationCode = `PROD-${Date.now().toString().slice(-6)}`;
                 const activationCodesRef = doc(db, 'activationCodes', user.uid);
                 transaction.set(activationCodesRef, { codes: arrayUnion(activationCode) }, { merge: true });
 
-                if (storeConfig.referboltSettings.freeAccessWithMockTest) {
-                     transaction.set(doc(db, "referbolt", user.uid), { isSubscribed: true }, { merge: true });
+                // Grant ReferBolt access if package permits OR global legacy setting is on
+                if (mockItem.grantFreeReferbolt || storeConfig.referboltSettings.freeAccessWithMockTest) {
+                     transaction.set(doc(db, "referbolt", user.uid), { isSubscribed: true, referralCode: walletData.referralCode }, { merge: true });
                 }
             } else if (type === 'referbolt') {
                  transaction.set(doc(db, "referbolt", user.uid), { isSubscribed: true, referralCode: walletData.referralCode }, { merge: true });
@@ -335,6 +338,11 @@ function StorePageContent() {
                                 <Badge variant="secondary" className="mt-4 bg-accent/10 text-accent border-none font-black text-[11px] py-1 px-4 rounded-full">
                                     SAVE {(totalDiscount * 100).toFixed(0)}%
                                 </Badge>
+                            )}
+                            {product.grantFreeReferbolt && (
+                                <div className="mt-3 flex items-center justify-center gap-1.5 text-[10px] font-black text-primary uppercase tracking-widest bg-primary/10 py-1.5 rounded-lg border border-primary/20">
+                                    <Zap size={12} className="fill-primary" /> Free ReferBolt Included
+                                </div>
                             )}
                         </div>
                         <Button 

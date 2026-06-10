@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -139,7 +140,8 @@ export default function AdminStoreSettingsPage() {
         hsnSacCode: '999294',
         baseDiscount: 0,
         referralDiscount: 0,
-        specialDiscount: 0
+        specialDiscount: 0,
+        grantFreeReferbolt: true
     }];
     setStoreConfig(prev => prev ? ({...prev, mockTestPackages: newPackages}) : null);
   };
@@ -292,10 +294,14 @@ export default function AdminStoreSettingsPage() {
                             <Label className="text-[10px] uppercase font-black text-primary">HSN/SAC Code</Label>
                             <Input type="text" value={pkg.hsnSacCode} onChange={(e) => handleMockTestPackageChange(index, 'hsnSacCode', e.target.value)} />
                         </div>
-                        <div className="space-y-2 col-span-full lg:col-span-2 flex items-end pb-2">
+                        <div className="space-y-2 col-span-full lg:col-span-2 flex flex-col justify-end gap-4 pb-2">
                              <div className="flex items-center space-x-2">
                                 <Checkbox id={`mt-best-value-${index}`} checked={pkg.bestValue} onCheckedChange={(checked) => handleMockTestPackageChange(index, 'bestValue', !!checked)} />
                                 <Label htmlFor={`mt-best-value-${index}`} className="text-sm font-bold">Mark as 'Best Value'</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <Switch id={`mt-referbolt-${index}`} checked={pkg.grantFreeReferbolt} onCheckedChange={(checked) => handleMockTestPackageChange(index, 'grantFreeReferbolt', checked)} />
+                                <Label htmlFor={`mt-referbolt-${index}`} className="text-sm font-bold text-primary flex items-center gap-1.5"><Zap size={14}/> Grant Free ReferBolt Access</Label>
                             </div>
                         </div>
                     </div>
@@ -393,7 +399,7 @@ export default function AdminStoreSettingsPage() {
                         checked={storeConfig.referboltSettings.freeAccessWithMockTest}
                         onCheckedChange={(checked) => handleReferboltSettingsChange('freeAccessWithMockTest', checked)}
                     />
-                    <Label htmlFor="free-access">Grant free ReferBolt access with any mock test purchase</Label>
+                    <Label htmlFor="free-access">Grant free ReferBolt access with any mock test purchase (Global Legacy)</Label>
                 </div>
                  <div className="space-y-2 p-4 border rounded-lg">
                     <Label htmlFor="iba-bonus" className="flex items-center gap-2"><Percent/> IBA Bonus Commission</Label>

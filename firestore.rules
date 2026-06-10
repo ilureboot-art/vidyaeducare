@@ -3,15 +3,14 @@ rules_version = '2';
 /**
  * Vidya EduCare - Supreme Infrastructure Rules
  * Target Instance: vidyaeducaredatabase
- * Deployment Salt: V17_RELIABILITY_ENGINE
+ * Deployment Salt: V18_ABSOLUTE_AUTHORITY
  */
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    /**
-     * SUPREME BOOTSTRAP AUTHORITY
-     * Explicit hardcoded bypass for infrastructure setup and master admin access.
-     */
+    // --- SUPREME BOOTSTRAP AUTHORITY ---
+    // Explicit global bypass for infrastructure setup and master admin access.
+    // This rule is evaluated first and grants absolute power to the listed identities.
     match /{allPaths=**} {
       allow read, write: if request.auth != null && (
         request.auth.uid == '1JgG0oF1D6YREaxOCSGedIfpQZ42' ||
@@ -20,7 +19,7 @@ service cloud.firestore {
       );
     }
 
-    // --- Standard Application Rules ---
+    // --- Standard Application Logic ---
 
     function isAuthenticated() {
       return request.auth != null;
@@ -31,13 +30,13 @@ service cloud.firestore {
       let adminPath = /databases/$(database)/documents/admins/$(request.auth.uid);
       return exists(adminPath) && (
              get(adminPath).data.status == 'Active' ||
-             get(adminPath).data.role == 'Head Admin'
+             get(adminPath).data.role == 'Head Admin' ||
+             request.auth.token.email.lower() == 'admin@vidyaeducare.com'
       );
     }
 
     function isHeadAdmin() {
       if (!isAuthenticated()) return false;
-      // Fallback for bootstrap email if doc propagation is slow
       if (request.auth.token.email.lower() == 'admin@vidyaeducare.com') return true;
       
       let adminPath = /databases/$(database)/documents/admins/$(request.auth.uid);
@@ -70,7 +69,7 @@ service cloud.firestore {
     
     match /transactions/{txId} {
         allow read, list: if isAuthenticated();
-        allow create: if isAuthenticated() && request.resource.data.user == request.auth.uid;
+        allow create: if isAuthenticated();
         allow update: if isHeadAdmin();
     }
 
@@ -91,32 +90,31 @@ service cloud.firestore {
     }
 
     match /testSets/{testSetId} {
-        allow read: if true;
+        allow read, list: if true;
         allow write: if isHeadAdmin();
     }
 
     match /scheduledTests/{testId} {
-        allow read: if true;
+        allow read, list: if true;
         allow write: if isHeadAdmin();
     }
 
     match /testResults/{resultId} {
-        allow create: if isAuthenticated();
-        allow read: if isAuthenticated();
+        allow create, read, list: if isAuthenticated();
     }
 
     match /leaderboard/{resultId} {
-        allow read: if true;
+        allow read, list: if true;
         allow write: if isAuthenticated(); 
     }
 
     match /quizClashTournaments/{tournamentId} {
-        allow read: if true;
+        allow read, list: if true;
         allow write: if isAdmin();
     }
 
     match /quizClashResults/{resultId} {
-        allow read: if true;
+        allow read, list: if true;
         allow write: if isAuthenticated();
     }
     

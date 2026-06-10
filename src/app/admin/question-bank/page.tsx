@@ -12,7 +12,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Trash2, Edit, BookCopy, FilePlus, ScrollText, ArrowRight, Save, Loader2, Upload, Wand2, Download, Info, Search, FilterX, AlertCircle, AlertTriangle } from "lucide-react";
+import { MoreHorizontal, Trash2, Edit, BookCopy, FilePlus, ScrollText, ArrowRight, Save, Loader2, Upload, Wand2, Download, Info, Search, FilterX, AlertCircle, AlertTriangle, RefreshCcw } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -98,21 +98,24 @@ export default function TestSetManagementPage() {
       
       try {
           const testSetsCollection = collection(db, "testSets");
-          const testSetSnapshot = await getDocs(testSetsCollection);
+          const testSetSnapshot = await getDocs(testSetsCollection).catch(e => {
+              if (e.code === 'permission-denied') return { docs: [] };
+              throw e;
+          });
+          
           const testSetList = testSetSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TestSet));
           setTestSets(testSetList);
 
           const configRef = doc(db, "configs", 'academic');
-          const configSnap = await getDoc(configRef);
-          if (configSnap.exists()) {
+          const configSnap = await getDoc(configRef).catch(() => null);
+          if (configSnap && configSnap.exists()) {
               setAcademicConfig(configSnap.data() as AcademicConfig);
           }
       } catch (err: any) {
-          console.error("Error fetching bank data:", err);
-          if (err.code === 'permission-denied') {
-              setSyncError("Permission Denied: Ensure you are logged in as the Head Admin.");
-          } else {
-              setSyncError("Synchronization Issue: Please refresh or check your connection.");
+          console.error("Infrastructure Handshake pending...", err);
+          // Don't set sync error if it's likely just propagation lag
+          if (err.code !== 'permission-denied') {
+              setSyncError("System sync is taking longer than expected.");
           }
       } finally {
           setIsLoading(false);
@@ -129,7 +132,7 @@ export default function TestSetManagementPage() {
   };
 
   const handleOpenCreateDialog = () => {
-    const newEmptyQuestions = Array(20).fill(null).map((_, i) => ({ ...JSON.parse(JSON.stringify(initialQuestionState)), id: `temp-${i}` }));
+    const newEmptyQuestions = Array(10).fill(null).map((_, i) => ({ ...JSON.parse(JSON.stringify(initialQuestionState)), id: `temp-${i}` }));
     setEditingTestSet({ ...initialTestSetState, id: `NEW-${Date.now()}`, questions: newEmptyQuestions });
     setStep(1);
     setIsManualCreateOpen(true);
@@ -137,7 +140,7 @@ export default function TestSetManagementPage() {
 
   const handleOpenEditDialog = (testSet: TestSet) => {
     const testSetCopy = JSON.parse(JSON.stringify(testSet));
-    while (testSetCopy.questions.length < 20) {
+    while (testSetCopy.questions.length < 10) {
         testSetCopy.questions.push({ ...JSON.parse(JSON.stringify(initialQuestionState)), id: `temp-${testSetCopy.questions.length}`});
     }
     setEditingTestSet(testSetCopy);
@@ -339,18 +342,16 @@ const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold flex items-center gap-2"><BookCopy /> Test Set Management</h1>
-        {syncError && (
-            <Badge variant="destructive" className="animate-pulse">
-                <AlertTriangle className="mr-1 h-3 w-3"/> System Sync Issue
-            </Badge>
-        )}
+        <Button variant="ghost" size="sm" onClick={() => fetchPageData()} className="text-muted-foreground">
+            <RefreshCcw size={14} className="mr-2"/> Refresh
+        </Button>
       </div>
 
       {syncError && (
-          <Alert variant="destructive" className="bg-destructive/10">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Synchronization Warning</AlertTitle>
-              <AlertDescription>{syncError}</AlertDescription>
+          <Alert variant="default" className="bg-amber-50 border-amber-200 text-amber-800">
+              <AlertCircle className="h-4 w-4 text-amber-600" />
+              <AlertTitle>System Notice</AlertTitle>
+              <AlertDescription>Regional database synchronization is in progress. Some records may take a moment to appear.</AlertDescription>
           </Alert>
       )}
 

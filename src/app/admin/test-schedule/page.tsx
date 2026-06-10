@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar as CalendarIcon, FilePlus, Loader2, AlertCircle } from "lucide-react";
+import { Calendar as CalendarIcon, FilePlus, Loader2, AlertCircle, RefreshCcw } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
@@ -39,25 +39,29 @@ export default function TestSchedulePage() {
     const [allSchedules, setAllSchedules] = useState<ScheduledTestWithStatus[]>([]);
     const [testSets, setTestSets] = useState<TestSet[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isRefreshing, setIsRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     
     const [date, setDate] = useState<Date | undefined>(undefined);
     const [time, setTime] = useState('10:00'); 
     const [selectedTestSetId, setSelectedTestSetId] = useState('');
     
-    const fetchPageData = useCallback(async () => {
+    const fetchPageData = useCallback(async (manual = false) => {
         if (!db) return;
-        setIsLoading(true);
+        if (manual) setIsRefreshing(true);
+        else setIsLoading(true);
         setError(null);
         
         try {
             const testSetsCollection = collection(db, "testSets");
             const testSetSnapshot = await getDocs(testSetsCollection).catch(async (e) => {
-                const permissionError = new FirestorePermissionError({
-                    path: testSetsCollection.path,
-                    operation: 'list',
-                } satisfies SecurityRuleContext);
-                errorEmitter.emit('permission-error', permissionError);
+                if (e.code === 'permission-denied') {
+                    const permissionError = new FirestorePermissionError({
+                        path: testSetsCollection.path,
+                        operation: 'list',
+                    } satisfies SecurityRuleContext);
+                    errorEmitter.emit('permission-error', permissionError);
+                }
                 throw e;
             });
             const testSetList = testSetSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TestSet));
@@ -65,11 +69,13 @@ export default function TestSchedulePage() {
 
             const schedulesCollection = collection(db, "scheduledTests");
             const scheduleSnapshot = await getDocs(schedulesCollection).catch(async (e) => {
-                const permissionError = new FirestorePermissionError({
-                    path: schedulesCollection.path,
-                    operation: 'list',
-                } satisfies SecurityRuleContext);
-                errorEmitter.emit('permission-error', permissionError);
+                if (e.code === 'permission-denied') {
+                    const permissionError = new FirestorePermissionError({
+                        path: schedulesCollection.path,
+                        operation: 'list',
+                    } satisfies SecurityRuleContext);
+                    errorEmitter.emit('permission-error', permissionError);
+                }
                 throw e;
             });
             const scheduleList = scheduleSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ScheduledTest));
@@ -96,10 +102,11 @@ export default function TestSchedulePage() {
             setAllSchedules(updatedSchedules);
         } catch (err: any) {
             if (err.code !== 'permission-denied') {
-                setError("Failed to load test schedules. This is usually due to database synchronization latency.");
+                setError(err.message || "The database connection is taking longer than expected. Please try refreshing.");
             }
         } finally {
             setIsLoading(false);
+            setIsRefreshing(false);
         }
     }, [db]);
 
@@ -142,7 +149,7 @@ export default function TestSchedulePage() {
         const docRef = doc(db, "scheduledTests", newTestId);
         setDoc(docRef, newTest)
             .then(() => {
-                fetchPageData();
+                fetchPageData(true);
                 toast({
                     title: "Test Scheduled!",
                     description: `"${testSet.name}" has been added to the calendar for ${format(combinedDateTime, "PPP p")}.`
@@ -173,16 +180,25 @@ export default function TestSchedulePage() {
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
-                <h1 className="text-3xl font-bold flex items-center gap-2">
-                    <CalendarIcon /> Mock Test Scheduler
-                </h1>
-                {error && <Badge variant="destructive">Partial Sync Delay</Badge>}
+                <div>
+                    <h1 className="text-3xl font-bold flex items-center gap-2">
+                        <CalendarIcon /> Mock Test Scheduler
+                    </h1>
+                    <p className="text-sm text-muted-foreground">Manage and assign dates to your practice test sets.</p>
+                </div>
+                <div className="flex items-center gap-2">
+                    {error && <Badge variant="destructive" className="animate-pulse">Partial Sync Delay</Badge>}
+                    <Button variant="outline" size="sm" onClick={() => fetchPageData(true)} disabled={isRefreshing}>
+                        <RefreshCcw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                        Refresh
+                    </Button>
+                </div>
             </div>
             
             {error && (
                 <Alert variant="destructive" className="bg-destructive/10">
                     <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Synchronization Error</AlertTitle>
+                    <AlertTitle>Synchronization Delay</AlertTitle>
                     <AlertDescription>{error}</AlertDescription>
                 </Alert>
             )}

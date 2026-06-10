@@ -12,7 +12,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Trash2, Edit, BookCopy, FilePlus, ScrollText, ArrowRight, Save, Loader2, Upload, Wand2, Download, Info, Search, FilterX, AlertCircle, AlertTriangle, RefreshCcw } from "lucide-react";
+import { MoreHorizontal, Trash2, Edit, BookCopy, FilePlus, ScrollText, ArrowRight, Save, Loader2, Upload, Wand2, Download, Search, FilterX, AlertCircle, RefreshCcw } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -74,6 +74,7 @@ export default function TestSetManagementPage() {
   const [testSets, setTestSets] = useState<TestSet[]>([]);
   const [academicConfig, setAcademicConfig] = useState<AcademicConfig>(defaultAcademicConfig);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
 
@@ -91,19 +92,22 @@ export default function TestSetManagementPage() {
   const [standardFilter, setStandardFilter] = useState<string>("all");
   const [subjectFilter, setSubjectFilter] = useState<string>("all");
   
-  const fetchPageData = useCallback(async () => {
+  const fetchPageData = useCallback(async (manual = false) => {
       if (!db) return;
-      setIsLoading(true);
+      if (manual) setIsRefreshing(true);
+      else setIsLoading(true);
       setSyncError(null);
       
       try {
           const testSetsCollection = collection(db, "testSets");
           const testSetSnapshot = await getDocs(testSetsCollection).catch(async (e) => {
-              const permissionError = new FirestorePermissionError({
-                  path: testSetsCollection.path,
-                  operation: 'list',
-              } satisfies SecurityRuleContext);
-              errorEmitter.emit('permission-error', permissionError);
+              if (e.code === 'permission-denied') {
+                  const permissionError = new FirestorePermissionError({
+                      path: testSetsCollection.path,
+                      operation: 'list',
+                  } satisfies SecurityRuleContext);
+                  errorEmitter.emit('permission-error', permissionError);
+              }
               throw e;
           });
           
@@ -112,11 +116,13 @@ export default function TestSetManagementPage() {
 
           const configRef = doc(db, "configs", 'academic');
           const configSnap = await getDoc(configRef).catch(async (e) => {
-              const permissionError = new FirestorePermissionError({
-                  path: configRef.path,
-                  operation: 'get',
-              } satisfies SecurityRuleContext);
-              errorEmitter.emit('permission-error', permissionError);
+              if (e.code === 'permission-denied') {
+                  const permissionError = new FirestorePermissionError({
+                      path: configRef.path,
+                      operation: 'get',
+                  } satisfies SecurityRuleContext);
+                  errorEmitter.emit('permission-error', permissionError);
+              }
               throw e;
           });
           
@@ -125,10 +131,11 @@ export default function TestSetManagementPage() {
           }
       } catch (err: any) {
           if (err.code !== 'permission-denied') {
-              setSyncError("System sync is taking longer than expected.");
+              setSyncError(err.message || "Database connection error. Try refreshing the bank.");
           }
       } finally {
           setIsLoading(false);
+          setIsRefreshing(false);
       }
   }, [db]);
 
@@ -163,7 +170,7 @@ export default function TestSetManagementPage() {
     const docRef = doc(db, "testSets", testSetId);
     deleteDoc(docRef)
         .then(() => {
-            fetchPageData();
+            fetchPageData(true);
             toast({ title: "Test Set Deleted", description: "The test set has been removed from the bank."});
         })
         .catch(async (e) => {
@@ -244,7 +251,7 @@ export default function TestSetManagementPage() {
     
     setDoc(docRef, finalTestSetData)
         .then(() => {
-            fetchPageData();
+            fetchPageData(true);
             toast({ title: isEditing ? 'Test Set Updated!' : 'Test Set Created!', description: `"${finalTestSetData.name}" has been saved.` });
             setIsManualCreateOpen(false);
             resetManualForm();
@@ -361,11 +368,29 @@ const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold flex items-center gap-2"><BookCopy /> Test Set Management</h1>
-        <Button variant="ghost" size="sm" onClick={() => fetchPageData()} className="text-muted-foreground">
-            <RefreshCcw size={14} className="mr-2"/> Refresh
-        </Button>
+        <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold flex items-center gap-2"><BookCopy /> Question Bank</h1>
+            {syncError && (
+                <Badge variant="destructive" className="animate-pulse">
+                    Partial Sync Delay
+                </Badge>
+            )}
+        </div>
+        <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => fetchPageData(true)} disabled={isRefreshing}>
+                <RefreshCcw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                Refresh Bank
+            </Button>
+        </div>
       </div>
+
+      {syncError && (
+          <Alert variant="destructive" className="bg-destructive/10">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Synchronization Warning</AlertTitle>
+              <AlertDescription>{syncError}</AlertDescription>
+          </Alert>
+      )}
 
       <Card>
         <CardHeader>

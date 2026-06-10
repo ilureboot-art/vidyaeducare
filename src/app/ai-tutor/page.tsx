@@ -132,8 +132,8 @@ function AiTutorPageContent() {
                 <CardHeader className="bg-primary/5 border-b">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div>
-                            <CardTitle className="text-lg">Ask Your Academic Doubt</CardTitle>
-                            <CardDescription>Get instant bilingual conceptual clarity.</CardDescription>
+                            <CardTitle className="text-lg">Ask Your Question or Doubt</CardTitle>
+                            <CardDescription>Get instant bilingual conceptual clarity for any topic.</CardDescription>
                         </div>
                         {user && (
                             <div className="w-full sm:w-48 space-y-1">
@@ -160,10 +160,10 @@ function AiTutorPageContent() {
                     <CardContent className="pt-6">
                         <div className="space-y-4">
                             <div className="space-y-2">
-                                <Label htmlFor="query">What is your question?</Label>
+                                <Label htmlFor="query">What is your question or doubt?</Label>
                                 <Textarea 
                                     id="query"
-                                    placeholder={isLocked ? "Limit reached. Please sign up to ask more questions." : "e.g., Why do planets orbit the sun in ellipses?"}
+                                    placeholder={isLocked ? "Limit reached. Please sign up to ask more questions." : "e.g., Why do planets orbit the sun in ellipses? or Explain the 1857 revolt."}
                                     className="min-h-[120px] text-lg focus-visible:ring-accent"
                                     value={queryText}
                                     onChange={(e) => setQueryText(e.target.value)}
@@ -173,7 +173,7 @@ function AiTutorPageContent() {
                             </div>
                             <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 p-2 rounded-lg">
                                 <Info size={14} />
-                                <span>AI will answer for <b>{selectedStudent?.academic.board || "SSC"} {selectedStudent?.academic.standard || "10th"}</b> level.</span>
+                                <span>AI will answer for your question or doubt at <b>{selectedStudent?.academic.board || "SSC"} {selectedStudent?.academic.standard || "10th"}</b> level.</span>
                             </div>
                         </div>
                     </CardContent>

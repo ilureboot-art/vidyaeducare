@@ -36,6 +36,8 @@ import { collection, getDocs, doc, setDoc, deleteDoc, getDoc } from "firebase/fi
 import Papa from "papaparse";
 import { generateQuestions, type GenerateQuestionsInput } from "@/ai/flows/generate-questions-flow";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 const initialQuestionState: Omit<Question, 'id'> = {
   text: { en: '', mr: '' },
@@ -60,7 +62,6 @@ const initialAiInputState: GenerateQuestionsInput = {
     numQuestions: 10,
 };
 
-// Utility to remove undefined properties before sending to Firestore
 const sanitizeData = (obj: any): any => {
     return JSON.parse(JSON.stringify(obj, (key, value) => {
         return value === undefined ? null : value;
@@ -85,7 +86,6 @@ export default function TestSetManagementPage() {
   const [editingTestSet, setEditingTestSet] = useState<TestSet | null>(null);
   const [aiInput, setAiInput] = useState<GenerateQuestionsInput>(initialAiInputState);
 
-  // Filter States
   const [searchTerm, setSearchTerm] = useState("");
   const [boardFilter, setBoardFilter] = useState<string>("all");
   const [standardFilter, setStandardFilter] = useState<string>("all");
@@ -98,8 +98,12 @@ export default function TestSetManagementPage() {
       
       try {
           const testSetsCollection = collection(db, "testSets");
-          const testSetSnapshot = await getDocs(testSetsCollection).catch(e => {
-              if (e.code === 'permission-denied') return { docs: [] };
+          const testSetSnapshot = await getDocs(testSetsCollection).catch(async (e) => {
+              const permissionError = new FirestorePermissionError({
+                  path: testSetsCollection.path,
+                  operation: 'list',
+              } satisfies SecurityRuleContext);
+              errorEmitter.emit('permission-error', permissionError);
               throw e;
           });
           
@@ -107,13 +111,19 @@ export default function TestSetManagementPage() {
           setTestSets(testSetList);
 
           const configRef = doc(db, "configs", 'academic');
-          const configSnap = await getDoc(configRef).catch(() => null);
+          const configSnap = await getDoc(configRef).catch(async (e) => {
+              const permissionError = new FirestorePermissionError({
+                  path: configRef.path,
+                  operation: 'get',
+              } satisfies SecurityRuleContext);
+              errorEmitter.emit('permission-error', permissionError);
+              throw e;
+          });
+          
           if (configSnap && configSnap.exists()) {
               setAcademicConfig(configSnap.data() as AcademicConfig);
           }
       } catch (err: any) {
-          console.error("Infrastructure Handshake pending...", err);
-          // Don't set sync error if it's likely just propagation lag
           if (err.code !== 'permission-denied') {
               setSyncError("System sync is taking longer than expected.");
           }
@@ -150,14 +160,19 @@ export default function TestSetManagementPage() {
 
   const handleDelete = async (testSetId: string) => {
     if (!db) return;
-    try {
-        await deleteDoc(doc(db, "testSets", testSetId));
-        fetchPageData();
-        toast({ title: "Test Set Deleted", description: "The test set has been removed from the bank."});
-    } catch(error) {
-        console.error("Error deleting test set:", error);
-        toast({ variant: 'destructive', title: "Error", description: "Could not delete the test set."});
-    }
+    const docRef = doc(db, "testSets", testSetId);
+    deleteDoc(docRef)
+        .then(() => {
+            fetchPageData();
+            toast({ title: "Test Set Deleted", description: "The test set has been removed from the bank."});
+        })
+        .catch(async (e) => {
+            const permissionError = new FirestorePermissionError({
+                path: docRef.path,
+                operation: 'delete',
+            } satisfies SecurityRuleContext);
+            errorEmitter.emit('permission-error', permissionError);
+        });
   }
   
   const handleSetDetailChange = (field: keyof Omit<TestSet, 'id'|'questions'>, value: string) => {
@@ -219,6 +234,7 @@ export default function TestSetManagementPage() {
     
     const isEditing = !editingTestSet.id.startsWith("NEW-");
     const docId = isEditing ? editingTestSet.id : `SET-${Date.now()}`;
+    const docRef = doc(db, "testSets", docId);
 
     const finalTestSetData = sanitizeData({
         ...editingTestSet,
@@ -226,19 +242,24 @@ export default function TestSetManagementPage() {
         questions: finalQuestions,
     });
     
-    try {
-        await setDoc(doc(db, "testSets", docId), finalTestSetData);
-        await fetchPageData();
-        toast({ title: isEditing ? 'Test Set Updated!' : 'Test Set Created!', description: `"${finalTestSetData.name}" has been saved.` });
-        
-        setIsManualCreateOpen(false);
-        resetManualForm();
-    } catch(error: any) {
-        console.error("Error saving test set:", error);
-        toast({ variant: 'destructive', title: "Database Error", description: error.message || 'Could not save the test set.' });
-    } finally {
-        setIsSaving(false);
-    }
+    setDoc(docRef, finalTestSetData)
+        .then(() => {
+            fetchPageData();
+            toast({ title: isEditing ? 'Test Set Updated!' : 'Test Set Created!', description: `"${finalTestSetData.name}" has been saved.` });
+            setIsManualCreateOpen(false);
+            resetManualForm();
+        })
+        .catch(async (e) => {
+            const permissionError = new FirestorePermissionError({
+                path: docRef.path,
+                operation: isEditing ? 'update' : 'create',
+                requestResourceData: finalTestSetData,
+            } satisfies SecurityRuleContext);
+            errorEmitter.emit('permission-error', permissionError);
+        })
+        .finally(() => {
+            setIsSaving(false);
+        });
 };
 
 const handleAiInputChange = (field: keyof GenerateQuestionsInput, value: string | number) => {
@@ -268,7 +289,6 @@ const handleAiGenerate = async (e: React.FormEvent) => {
         setIsAiGenerateOpen(false);
         setIsManualCreateOpen(true);
     } catch (error) {
-        console.error("AI Generation failed:", error);
         toast({ variant: 'destructive', title: "AI Error", description: "Failed to generate questions. Please try again." });
     } finally {
         setIsGenerating(false);
@@ -346,14 +366,6 @@ const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
             <RefreshCcw size={14} className="mr-2"/> Refresh
         </Button>
       </div>
-
-      {syncError && (
-          <Alert variant="default" className="bg-amber-50 border-amber-200 text-amber-800">
-              <AlertCircle className="h-4 w-4 text-amber-600" />
-              <AlertTitle>System Notice</AlertTitle>
-              <AlertDescription>Regional database synchronization is in progress. Some records may take a moment to appear.</AlertDescription>
-          </Alert>
-      )}
 
       <Card>
         <CardHeader>
@@ -540,7 +552,6 @@ const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
               </div>
             </div>
 
-            {/* Advanced Filters */}
             <div className="pt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
               <div className="relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />

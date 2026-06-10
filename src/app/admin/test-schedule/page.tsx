@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
@@ -26,6 +25,8 @@ import { type ScheduledTest } from "@/lib/test-schedule";
 import { collection, getDocs, doc, setDoc } from "firebase/firestore";
 import { useDb } from '@/firebase';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 type TestStatus = 'Live' | 'Upcoming' | 'Completed';
 
@@ -40,7 +41,6 @@ export default function TestSchedulePage() {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     
-    // Hydration safe state
     const [date, setDate] = useState<Date | undefined>(undefined);
     const [time, setTime] = useState('10:00'); 
     const [selectedTestSetId, setSelectedTestSetId] = useState('');
@@ -52,12 +52,26 @@ export default function TestSchedulePage() {
         
         try {
             const testSetsCollection = collection(db, "testSets");
-            const testSetSnapshot = await getDocs(testSetsCollection);
+            const testSetSnapshot = await getDocs(testSetsCollection).catch(async (e) => {
+                const permissionError = new FirestorePermissionError({
+                    path: testSetsCollection.path,
+                    operation: 'list',
+                } satisfies SecurityRuleContext);
+                errorEmitter.emit('permission-error', permissionError);
+                throw e;
+            });
             const testSetList = testSetSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TestSet));
             setTestSets(testSetList);
 
             const schedulesCollection = collection(db, "scheduledTests");
-            const scheduleSnapshot = await getDocs(schedulesCollection);
+            const scheduleSnapshot = await getDocs(schedulesCollection).catch(async (e) => {
+                const permissionError = new FirestorePermissionError({
+                    path: schedulesCollection.path,
+                    operation: 'list',
+                } satisfies SecurityRuleContext);
+                errorEmitter.emit('permission-error', permissionError);
+                throw e;
+            });
             const scheduleList = scheduleSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ScheduledTest));
             
             const now = new Date();
@@ -81,8 +95,9 @@ export default function TestSchedulePage() {
 
             setAllSchedules(updatedSchedules);
         } catch (err: any) {
-            console.error("Error fetching schedule data:", err);
-            setError("Failed to load test schedules. This is usually due to database synchronization latency.");
+            if (err.code !== 'permission-denied') {
+                setError("Failed to load test schedules. This is usually due to database synchronization latency.");
+            }
         } finally {
             setIsLoading(false);
         }
@@ -124,22 +139,26 @@ export default function TestSchedulePage() {
             subject: testSet.subject,
         };
 
-        try {
-            await setDoc(doc(db, "scheduledTests", newTestId), newTest);
-            fetchPageData();
-            
-            toast({
-                title: "Test Scheduled!",
-                description: `"${testSet.name}" has been added to the calendar for ${format(combinedDateTime, "PPP p")}.`
+        const docRef = doc(db, "scheduledTests", newTestId);
+        setDoc(docRef, newTest)
+            .then(() => {
+                fetchPageData();
+                toast({
+                    title: "Test Scheduled!",
+                    description: `"${testSet.name}" has been added to the calendar for ${format(combinedDateTime, "PPP p")}.`
+                });
+                setSelectedTestSetId('');
+                setDate(new Date());
+                setTime('10:00');
+            })
+            .catch(async (e) => {
+                const permissionError = new FirestorePermissionError({
+                    path: docRef.path,
+                    operation: 'create',
+                    requestResourceData: newTest,
+                } satisfies SecurityRuleContext);
+                errorEmitter.emit('permission-error', permissionError);
             });
-            
-            setSelectedTestSetId('');
-            setDate(new Date());
-            setTime('10:00');
-        } catch (error) {
-            console.error("Error scheduling test:", error);
-            toast({ variant: 'destructive', title: "Error", description: "Could not schedule the test." });
-        }
     };
     
     if (isLoading) {

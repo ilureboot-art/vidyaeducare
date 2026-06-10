@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Landmark, Loader2, RefreshCcw } from "lucide-react";
 import type { AdminPaymentMethods } from "@/lib/user-data";
 import Image from "next/image";
-import { useDb } from "@/firebase";
+import { useDb, useAuth } from "@/firebase";
 import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
@@ -30,13 +30,16 @@ const defaultPaymentMethods: AdminPaymentMethods = {
 export default function PaymentSettingsPage() {
     const { toast } = useToast();
     const db = useDb();
+    const { user } = useAuth();
     const [methods, setMethods] = useState<AdminPaymentMethods | null>(null);
     const [qrFile, setQrFile] = useState<File | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     
     useEffect(() => {
-        if (!db) return;
+        // CRITICAL: Wait for both database and user session to prevent 
+        // permission errors during initial session resolution.
+        if (!db || !user) return;
 
         setIsLoading(true);
         const docRef = doc(db, "configs", "paymentMethods");
@@ -59,7 +62,7 @@ export default function PaymentSettingsPage() {
         });
 
         return () => unsubscribe();
-    }, [db]);
+    }, [db, user]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;

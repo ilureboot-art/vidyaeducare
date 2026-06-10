@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Table,
   TableBody,
@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Trash2, Edit, BookCopy, FilePlus, ScrollText, ArrowRight, Save, Loader2, Upload, Wand2, Download, Info, Search, FilterX, AlertCircle } from "lucide-react";
+import { MoreHorizontal, Trash2, Edit, BookCopy, FilePlus, ScrollText, ArrowRight, Save, Loader2, Upload, Wand2, Download, Info, Search, FilterX, AlertCircle, AlertTriangle } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -30,12 +30,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { type TestSet, type Question } from "@/lib/question-bank";
-import type { AcademicConfig } from "@/lib/academic-config";
+import { type AcademicConfig, defaultAcademicConfig } from "@/lib/academic-config";
 import { useDb } from "@/firebase";
 import { collection, getDocs, doc, setDoc, deleteDoc, getDoc } from "firebase/firestore";
 import Papa from "papaparse";
-import { generateQuestions, GenerateQuestionsInput } from "@/ai/flows/generate-questions-flow";
-
+import { generateQuestions, type GenerateQuestionsInput } from "@/ai/flows/generate-questions-flow";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const initialQuestionState: Omit<Question, 'id'> = {
   text: { en: '', mr: '' },
@@ -63,8 +63,10 @@ const initialAiInputState: GenerateQuestionsInput = {
 export default function TestSetManagementPage() {
   const { toast } = useToast();
   const db = useDb();
-  const [testSets, setTestSets] = useState<TestSet[] | null>(null);
-  const [academicConfig, setAcademicConfig] = useState<AcademicConfig | null>(null);
+  const [testSets, setTestSets] = useState<TestSet[]>([]);
+  const [academicConfig, setAcademicConfig] = useState<AcademicConfig>(defaultAcademicConfig);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [isManualCreateOpen, setIsManualCreateOpen] = useState(false);
   const [isAiGenerateOpen, setIsAiGenerateOpen] = useState(false);
@@ -81,31 +83,35 @@ export default function TestSetManagementPage() {
   const [standardFilter, setStandardFilter] = useState<string>("all");
   const [subjectFilter, setSubjectFilter] = useState<string>("all");
   
-  const fetchPageData = async () => {
+  const fetchPageData = useCallback(async () => {
       if (!db) return;
+      setIsLoading(true);
+      setError(null);
       
       try {
+          // Fetch test sets
           const testSetsCollection = collection(db, "testSets");
           const testSetSnapshot = await getDocs(testSetsCollection);
           const testSetList = testSetSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TestSet));
           setTestSets(testSetList);
 
+          // Fetch config
           const configRef = doc(db, "configs", 'academic');
           const configSnap = await getDoc(configRef);
           if (configSnap.exists()) {
               setAcademicConfig(configSnap.data() as AcademicConfig);
-          } else {
-              setAcademicConfig({ boards: ["SSC", "CBSE", "ICSE"], standards: ["10th"], subjects: ["Science"] });
           }
-      } catch (error) {
-          console.error("Error fetching bank data:", error);
-          setTestSets([]);
+      } catch (err: any) {
+          console.error("Error fetching bank data:", err);
+          setError("Failed to load question bank. This may be due to regional propagation delays.");
+      } finally {
+          setIsLoading(false);
       }
-  };
+  }, [db]);
 
   useEffect(() => {
-    if(db) fetchPageData();
-  }, [db]);
+    fetchPageData();
+  }, [fetchPageData]);
 
   const resetManualForm = () => {
       setStep(1);
@@ -113,7 +119,7 @@ export default function TestSetManagementPage() {
   };
 
   const handleOpenCreateDialog = () => {
-    const newEmptyQuestions = Array(50).fill(null).map((_, i) => ({ ...JSON.parse(JSON.stringify(initialQuestionState)), id: `temp-${i}` }));
+    const newEmptyQuestions = Array(20).fill(null).map((_, i) => ({ ...JSON.parse(JSON.stringify(initialQuestionState)), id: `temp-${i}` }));
     setEditingTestSet({ ...initialTestSetState, id: `NEW-${Date.now()}`, questions: newEmptyQuestions });
     setStep(1);
     setIsManualCreateOpen(true);
@@ -121,7 +127,7 @@ export default function TestSetManagementPage() {
 
   const handleOpenEditDialog = (testSet: TestSet) => {
     const testSetCopy = JSON.parse(JSON.stringify(testSet));
-    while (testSetCopy.questions.length < 50) {
+    while (testSetCopy.questions.length < 20) {
         testSetCopy.questions.push({ ...JSON.parse(JSON.stringify(initialQuestionState)), id: `temp-${testSetCopy.questions.length}`});
     }
     setEditingTestSet(testSetCopy);
@@ -130,7 +136,7 @@ export default function TestSetManagementPage() {
   };
 
   const handleDelete = async (testSetId: string) => {
-    if (!testSets || !db) return;
+    if (!db) return;
     try {
         await deleteDoc(doc(db, "testSets", testSetId));
         fetchPageData();
@@ -187,7 +193,7 @@ export default function TestSetManagementPage() {
 };
 
  const handleManualSubmit = async () => {
-    if (!editingTestSet || !testSets || !db) return;
+    if (!editingTestSet || !db) return;
 
     const finalQuestions = editingTestSet.questions
         .filter(q => q.text.en?.trim() !== '' || q.text.mr?.trim() !== '')
@@ -243,7 +249,7 @@ const handleAiGenerate = async (e: React.FormEvent) => {
             subject: aiInput.subject,
             questions: result.questions
         });
-        setStep(2); // Go directly to question editing
+        setStep(2); 
         setIsAiGenerateOpen(false);
         setIsManualCreateOpen(true);
     } catch (error) {
@@ -293,7 +299,7 @@ const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
   const filteredTestSets = useMemo(() => {
     if (!testSets) return [];
     return testSets.filter(ts => {
-      const matchesSearch = ts.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = (ts.name || "").toLowerCase().includes(searchTerm.toLowerCase());
       const matchesBoard = boardFilter === "all" || ts.board === boardFilter;
       const matchesStandard = standardFilter === "all" || ts.standard === standardFilter;
       const matchesSubject = subjectFilter === "all" || ts.subject === subjectFilter;
@@ -308,17 +314,33 @@ const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSubjectFilter("all");
   };
 
-  if (!testSets || !academicConfig) {
+  if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-96">
-        <Loader2 className="animate-spin text-primary" size={32} />
+      <div className="flex flex-col items-center justify-center h-96 space-y-4">
+        <Loader2 className="animate-spin text-primary" size={40} />
+        <p className="text-muted-foreground animate-pulse font-medium">Syncing Question Bank...</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold flex items-center gap-2"><BookCopy /> Test Set Management</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold flex items-center gap-2"><BookCopy /> Test Set Management</h1>
+        {error && (
+            <Badge variant="destructive" className="animate-pulse">
+                <AlertTriangle className="mr-1 h-3 w-3"/> Partial Sync Delay
+            </Badge>
+        )}
+      </div>
+
+      {error && (
+          <Alert variant="destructive" className="bg-destructive/10">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Synchronization Warning</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+          </Alert>
+      )}
 
       <Card>
         <CardHeader>

@@ -1,10 +1,11 @@
+
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar as CalendarIcon, FilePlus, Loader2 } from "lucide-react";
+import { Calendar as CalendarIcon, FilePlus, Loader2, AlertCircle } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
@@ -20,10 +21,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
-import type { TestSet } from "@/lib/question-bank";
-import type { ScheduledTest } from "@/lib/test-schedule";
+import { type TestSet } from "@/lib/question-bank";
+import { type ScheduledTest } from "@/lib/test-schedule";
 import { collection, getDocs, doc, setDoc } from "firebase/firestore";
 import { useDb } from '@/firebase';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 type TestStatus = 'Live' | 'Upcoming' | 'Completed';
 
@@ -33,38 +35,33 @@ export default function TestSchedulePage() {
     const { toast } = useToast();
     const db = useDb();
 
-    const [allSchedules, setAllSchedules] = useState<ScheduledTestWithStatus[] | null>(null);
-    const [testSets, setTestSets] = useState<TestSet[] | null>(null);
+    const [allSchedules, setAllSchedules] = useState<ScheduledTestWithStatus[]>([]);
+    const [testSets, setTestSets] = useState<TestSet[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     
     // Hydration safe state
     const [date, setDate] = useState<Date | undefined>(undefined);
     const [time, setTime] = useState('10:00'); 
     const [selectedTestSetId, setSelectedTestSetId] = useState('');
     
-    const fetchPageData = async () => {
+    const fetchPageData = useCallback(async () => {
         if (!db) return;
+        setIsLoading(true);
+        setError(null);
+        
+        try {
+            const testSetsCollection = collection(db, "testSets");
+            const testSetSnapshot = await getDocs(testSetsCollection);
+            const testSetList = testSetSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TestSet));
+            setTestSets(testSetList);
 
-        const testSetsCollection = collection(db, "testSets");
-        const testSetSnapshot = await getDocs(testSetsCollection);
-        const testSetList = testSetSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TestSet));
-        setTestSets(testSetList);
-
-        const schedulesCollection = collection(db, "scheduledTests");
-        const scheduleSnapshot = await getDocs(schedulesCollection);
-        const scheduleList = scheduleSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ScheduledTest));
-        refreshSchedules(scheduleList);
-    };
-
-    useEffect(() => {
-        if(db) fetchPageData();
-        // Initialize date on client only to prevent hydration error
-        setDate(new Date());
-    }, [db]);
-    
-    const refreshSchedules = (schedules: ScheduledTest[]) => {
-         if (schedules) {
+            const schedulesCollection = collection(db, "scheduledTests");
+            const scheduleSnapshot = await getDocs(schedulesCollection);
+            const scheduleList = scheduleSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ScheduledTest));
+            
             const now = new Date();
-            const updatedSchedules = [...schedules]
+            const updatedSchedules = scheduleList
                 .sort((a,b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime())
                 .map(test => {
                     const testDate = new Date(test.dateTime);
@@ -83,12 +80,21 @@ export default function TestSchedulePage() {
                 });
 
             setAllSchedules(updatedSchedules);
-         }
-    }
+        } catch (err: any) {
+            console.error("Error fetching schedule data:", err);
+            setError("Failed to load test schedules. This is usually due to database synchronization latency.");
+        } finally {
+            setIsLoading(false);
+        }
+    }, [db]);
 
-
+    useEffect(() => {
+        if(db) fetchPageData();
+        setDate(new Date());
+    }, [db, fetchPageData]);
+    
     const handleScheduleTest = async () => {
-        if (!date || !selectedTestSetId || !time || !testSets || !allSchedules || !db) {
+        if (!date || !selectedTestSetId || !time || !db) {
             toast({
                 variant: 'destructive',
                 title: "Missing Information",
@@ -136,20 +142,32 @@ export default function TestSchedulePage() {
         }
     };
     
-    if (!allSchedules || !testSets) {
+    if (isLoading) {
         return (
-          <div className="flex justify-center items-center h-96">
-            <Loader2 className="animate-spin text-primary" size={32} />
+          <div className="flex flex-col items-center justify-center h-96 space-y-4">
+            <Loader2 className="animate-spin text-primary" size={40} />
+            <p className="text-muted-foreground animate-pulse font-medium">Syncing Academic Calendar...</p>
           </div>
         );
     }
 
     return (
         <div className="space-y-6">
-            <h1 className="text-3xl font-bold flex items-center gap-2">
-                <CalendarIcon /> Mock Test Scheduler
-            </h1>
+            <div className="flex items-center justify-between">
+                <h1 className="text-3xl font-bold flex items-center gap-2">
+                    <CalendarIcon /> Mock Test Scheduler
+                </h1>
+                {error && <Badge variant="destructive">Partial Sync Delay</Badge>}
+            </div>
             
+            {error && (
+                <Alert variant="destructive" className="bg-destructive/10">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Synchronization Error</AlertTitle>
+                    <AlertDescription>{error}</AlertDescription>
+                </Alert>
+            )}
+
             <Card>
                 <CardHeader>
                     <CardTitle>Schedule a New Mock Test</CardTitle>

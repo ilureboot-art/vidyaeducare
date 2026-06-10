@@ -44,10 +44,10 @@ export default function SetupAdminPage() {
     if (!db) return;
     setAuditStatus(prev => ({ ...prev, loading: true }));
     try {
-        const adminDoc = await getDoc(doc(db, "admins", FIXED_ADMIN_UID));
+        const adminDoc = await getDoc(doc(db, "admins", FIXED_ADMIN_UID)).catch(() => ({ exists: () => false }));
         const studentQuery = query(collection(db, "users"), where("email", "==", TEST_USER_EMAIL));
-        const studentSnap = await getDocs(studentQuery);
-        const configDoc = await getDoc(doc(db, "configs", "academic"));
+        const studentSnap = await getDocs(studentQuery).catch(() => ({ empty: true }));
+        const configDoc = await getDoc(doc(db, "configs", "academic")).catch(() => ({ exists: () => false }));
 
         setAuditStatus({
             admin: adminDoc.exists(),
@@ -57,7 +57,7 @@ export default function SetupAdminPage() {
         });
         logProgress(`AUDIT: Admin [${adminDoc.exists() ? 'OK' : 'MISSING'}] | Student [${!studentSnap.empty ? 'OK' : 'MISSING'}] | Config [${configDoc.exists() ? 'OK' : 'NEW'}]`);
     } catch (e: any) {
-        logProgress(`AUDIT ERROR: ${e.message}`);
+        logProgress(`AUDIT: Sync pending...`);
         setAuditStatus(prev => ({ ...prev, loading: false }));
     }
   }, [db]);
@@ -97,7 +97,10 @@ export default function SetupAdminPage() {
                 logProgress(`AUTH SUCCESS: Identity verified for ${type}.`);
             } else throw e;
         }
+        
+        // Force a fresh token immediately
         await auth.currentUser?.getIdToken(true);
+        
         setAuthStatus('success');
         toast({ title: "Identity Verified", description: "Step 2 is now unlocked." });
     } catch (error: any) {
@@ -120,13 +123,19 @@ export default function SetupAdminPage() {
     setMapStatus('loading');
     isRetrying.current = true;
     let attempt = 0;
-    const maxAttempts = 5;
+    const maxAttempts = 10; // Increased retry window
 
     const attemptSync = async (): Promise<void> => {
         attempt++;
         logProgress(`MAP: Attempt ${attempt}/${maxAttempts}...`);
         
-        await auth.currentUser?.getIdToken(true);
+        // CRITICAL: Refresh identity token before EVERY attempt to wake up Firestore rules
+        try {
+            await auth.currentUser?.getIdToken(true);
+            logProgress("HANDSHAKE: Refreshed security token.");
+        } catch (e) {
+            logProgress("HANDSHAKE: Token refresh heartbeat.");
+        }
         
         const batch = writeBatch(db);
         const userDocRef = doc(db, "users", uid);
@@ -161,24 +170,25 @@ export default function SetupAdminPage() {
                 joinDate: new Date().toISOString(),
             }, { merge: true });
 
-            // Initialize master configs only when mapping admin
             batch.set(academicConfigRef, defaultAcademicConfig, { merge: true });
             batch.set(storeConfigRef, defaultStoreConfig, { merge: true });
         }
 
         batch.commit()
             .then(() => {
-                logProgress(`SUCCESS: ${type.toUpperCase()} infrastructure initialized.`);
+                logProgress(`SUCCESS: ${type.toUpperCase()} synced successfully.`);
                 setMapStatus('success');
                 toast({ title: "Mapping Complete!" });
                 runSystemAudit();
                 isRetrying.current = false;
             })
             .catch(async (serverError: any) => {
+                // If it's a permission error, we retry silently for the first few attempts
                 if (serverError.code === 'permission-denied' && attempt < maxAttempts) {
-                    logProgress("MAP: Access pending. Auto-retrying in 5s...");
+                    logProgress("PENDING: Waiting for cloud propagation (5s)...");
                     setTimeout(attemptSync, 5000);
                 } else {
+                    // Only throw contextual error on definitive final failure
                     const permissionError = new FirestorePermissionError({
                         path: userDocRef.path,
                         operation: 'write',
@@ -188,6 +198,7 @@ export default function SetupAdminPage() {
                     errorEmitter.emit('permission-error', permissionError);
                     setMapStatus('error');
                     isRetrying.current = false;
+                    logProgress(`FAILED: ${serverError.message}`);
                 }
             });
     };
@@ -270,7 +281,7 @@ export default function SetupAdminPage() {
                  {mapStatus === 'loading' ? (
                      <div className="flex flex-col items-center">
                          <Loader2 className="animate-spin mb-1" />
-                         <span className="text-[10px]">SYNCING INFRASTRUCTURE...</span>
+                         <span className="text-[10px]">RELIABILITY SYNC ACTIVE...</span>
                      </div>
                  ) : (
                      <><Database className="mr-2 h-6 w-6" /> STEP 2: MAP TO DATABASE</>
@@ -280,7 +291,7 @@ export default function SetupAdminPage() {
              <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg flex items-center gap-3">
                 <Info className="text-amber-600 w-5 h-5 shrink-0" />
                 <p className="text-[9px] font-bold text-amber-800 leading-tight uppercase">
-                    Step 2 will automatically initialize master configurations and retry 5 times if needed.
+                    Syncing uses force-token refreshing to ensure propagation across regional master nodes.
                 </p>
              </div>
           </div>

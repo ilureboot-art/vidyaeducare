@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
@@ -25,8 +24,6 @@ import { solveDoubt, type SolveDoubtOutput } from "@/ai/flows/solve-doubt-flow";
 import { generateStudyNotes, type GenerateNotesOutput } from "@/ai/flows/generate-notes-flow";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
-const MOCK_TEST_DURATION = 30 * 60; // 30 minutes in seconds
-
 type TestState = "loading" | "in_progress" | "completed" | "review";
 
 function MockTestContent() {
@@ -41,7 +38,8 @@ function MockTestContent() {
 
     const [activeQuestions, setActiveQuestions] = useState<Question[]>([]);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-    const [timeLeft, setTimeLeft] = useState(MOCK_TEST_DURATION);
+    const [timeLeft, setTimeLeft] = useState(1800); // Default 30 mins fallback
+    const [initialDuration, setInitialDuration] = useState(1800);
     const [answers, setAnswers] = useState<{ [key: string]: { en: string; mr: string; } }>({});
     const [score, setScore] = useState(0);
     const [isLiveTest, setIsLiveTest] = useState(false);
@@ -82,6 +80,10 @@ function MockTestContent() {
                 if (scheduledTestDoc.exists()) {
                     const scheduledTestData = scheduledTestDoc.data() as ScheduledTest;
                     setScheduledTest(scheduledTestData);
+                    
+                    const durationInSeconds = (scheduledTestData.duration || 30) * 60;
+                    setTimeLeft(durationInSeconds);
+                    setInitialDuration(durationInSeconds);
 
                     const testSetDoc = await getDoc(doc(db, 'testSets', scheduledTestData.testSetId));
                     if (testSetDoc.exists()) {
@@ -149,7 +151,7 @@ function MockTestContent() {
         const finalScore = (correctAnswers / activeQuestions.length) * 100;
         setScore(finalScore);
         
-        const timeTaken = MOCK_TEST_DURATION - timeLeft;
+        const timeTaken = initialDuration - timeLeft;
         const minutes = Math.floor(timeTaken / 60);
         const seconds = timeTaken % 60;
         const timeString = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
@@ -479,7 +481,6 @@ function MockTestContent() {
     const secondsLeft = timeLeft % 60;
     const isLowTime = timeLeft < 300; // 5 minutes warning
     const solvedCount = Object.keys(answers).length;
-    const unsolvedCount = activeQuestions.length - solvedCount;
 
 
     return (

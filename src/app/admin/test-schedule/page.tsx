@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar as CalendarIcon, FilePlus, Loader2, AlertCircle, RefreshCcw } from "lucide-react";
+import { Calendar as CalendarIcon, FilePlus, Loader2, AlertCircle, RefreshCcw, Clock } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
@@ -44,6 +44,7 @@ export default function TestSchedulePage() {
     
     const [date, setDate] = useState<Date | undefined>(undefined);
     const [time, setTime] = useState('10:00'); 
+    const [duration, setDuration] = useState('30');
     const [selectedTestSetId, setSelectedTestSetId] = useState('');
     
     const fetchPageData = useCallback(async (manual = false) => {
@@ -144,6 +145,7 @@ export default function TestSchedulePage() {
             board: testSet.board,
             standard: testSet.standard,
             subject: testSet.subject,
+            duration: parseInt(duration) || 30,
         };
 
         const docRef = doc(db, "scheduledTests", newTestId);
@@ -157,6 +159,7 @@ export default function TestSchedulePage() {
                 setSelectedTestSetId('');
                 setDate(new Date());
                 setTime('10:00');
+                setDuration('30');
             })
             .catch(async (e) => {
                 const permissionError = new FirestorePermissionError({
@@ -211,8 +214,8 @@ export default function TestSchedulePage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                       <div className="space-y-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                       <div className="space-y-2 lg:col-span-2">
                             <Label htmlFor="test-set">Test Set</Label>
                             <Select value={selectedTestSetId} onValueChange={setSelectedTestSetId}>
                                 <SelectTrigger id="test-set"><SelectValue placeholder="Select a test set..." /></SelectTrigger>
@@ -248,6 +251,17 @@ export default function TestSchedulePage() {
                                 onChange={(e) => setTime(e.target.value)}
                              />
                         </div>
+                         <div className="space-y-2">
+                             <Label htmlFor="test-duration">Duration (Minutes)</Label>
+                             <Input 
+                                id="test-duration"
+                                type="number"
+                                value={duration}
+                                onChange={(e) => setDuration(e.target.value)}
+                                min="1"
+                                max="300"
+                             />
+                        </div>
                     </div>
                      <div className="flex justify-end pt-4">
                         <Button onClick={handleScheduleTest} disabled={!selectedTestSetId || !date || !time}>
@@ -268,6 +282,7 @@ export default function TestSchedulePage() {
                                 <TableHead>Date & Time</TableHead>
                                 <TableHead>Test Name</TableHead>
                                 <TableHead>Details</TableHead>
+                                <TableHead>Duration</TableHead>
                                 <TableHead>Status</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -278,6 +293,12 @@ export default function TestSchedulePage() {
                                     <TableCell className="font-medium">{test.testSetName}</TableCell>
                                     <TableCell className="text-sm text-muted-foreground">{`${test.board} / ${test.standard} / ${test.subject}`}</TableCell>
                                     <TableCell>
+                                        <div className="flex items-center gap-1.5 text-xs">
+                                            <Clock className="w-3 h-3 text-muted-foreground"/>
+                                            {test.duration || 30} mins
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
                                         <Badge variant={test.status === 'Live' ? 'default' : test.status === 'Completed' ? 'secondary' : 'outline'}>
                                             {test.status}
                                         </Badge>
@@ -285,7 +306,7 @@ export default function TestSchedulePage() {
                                 </TableRow>
                             )) : (
                                 <TableRow>
-                                    <TableCell colSpan={4} className="text-center h-24 text-muted-foreground">No tests scheduled yet.</TableCell>
+                                    <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">No tests scheduled yet.</TableCell>
                                 </TableRow>
                             )}
                         </TableBody>

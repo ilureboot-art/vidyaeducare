@@ -1,4 +1,3 @@
-
 'use client';
 
 export type ScheduledTest = {
@@ -9,4 +8,5 @@ export type ScheduledTest = {
     board: "CBSE" | "ICSE" | "SSC";
     standard: string;
     subject: string;
+    duration: number; // Duration in minutes
 };

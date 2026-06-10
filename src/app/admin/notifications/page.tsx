@@ -10,6 +10,8 @@ import { format } from "date-fns";
 import type { AppNotification } from "@/lib/notifications";
 import { useDb } from "@/firebase";
 import { collection, query, where, orderBy, Timestamp, getDocs } from "firebase/firestore";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 const getIconForType = (type: string) => {
     switch(type) {
@@ -34,13 +36,25 @@ export default function AdminNotificationsPage() {
             const notifsRef = collection(db, "notifications");
             const q = query(notifsRef, where("userId", "==", "admin"), orderBy("timestamp", "desc"));
             
-            const querySnapshot = await getDocs(q);
-            const notifs = querySnapshot.docs.map(doc => {
-                const data = doc.data();
-                const timestamp = data.timestamp instanceof Timestamp ? data.timestamp.toDate().toISOString() : data.timestamp;
-                return { id: doc.id, ...data, timestamp } as AppNotification
-            });
-            setNotifications(notifs);
+            try {
+                const querySnapshot = await getDocs(q).catch(async (e) => {
+                    const permissionError = new FirestorePermissionError({
+                        path: notifsRef.path,
+                        operation: 'list',
+                    } satisfies SecurityRuleContext);
+                    errorEmitter.emit('permission-error', permissionError);
+                    throw e;
+                });
+                const notifs = querySnapshot.docs.map(doc => {
+                    const data = doc.data();
+                    const timestamp = data.timestamp instanceof Timestamp ? data.timestamp.toDate().toISOString() : data.timestamp;
+                    return { id: doc.id, ...data, timestamp } as AppNotification
+                });
+                setNotifications(notifs);
+            } catch (error) {
+                console.error("Notifications Sync Error:", error);
+                setNotifications([]);
+            }
         };
         if(db) fetchNotifications();
     }, [db]);

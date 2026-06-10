@@ -9,6 +9,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Archive, Search, Send, Loader2 } from "lucide-react";
 import { useDb } from "@/firebase";
 import { collection, doc, updateDoc, addDoc, serverTimestamp, query, orderBy, Timestamp, onSnapshot } from "firebase/firestore";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 type Message = {
     id: string;
@@ -53,6 +55,12 @@ export default function ChatManagementPage() {
                 } as Chat;
             });
             setChats(chatList);
+        }, async (error) => {
+            const permissionError = new FirestorePermissionError({
+                path: chatsCollection.path,
+                operation: 'list',
+            } satisfies SecurityRuleContext);
+            errorEmitter.emit('permission-error', permissionError);
         });
 
         return () => unsubscribe();
@@ -75,7 +83,15 @@ export default function ChatManagementPage() {
         if (selected) {
              if (selected.unread) {
                  const chatDocRef = doc(db, "chats", selected.id);
-                 await updateDoc(chatDocRef, { unread: false });
+                 updateDoc(chatDocRef, { unread: false })
+                    .catch(async (e) => {
+                        const permissionError = new FirestorePermissionError({
+                            path: chatDocRef.path,
+                            operation: 'update',
+                            requestResourceData: { unread: false },
+                        } satisfies SecurityRuleContext);
+                        errorEmitter.emit('permission-error', permissionError);
+                    });
              }
 
             // Set active chat immediately with empty messages
@@ -90,6 +106,12 @@ export default function ChatManagementPage() {
                     ...msgDoc.data(),
                 } as Message));
                 setActiveChat(prev => prev ? { ...prev, messages } : null);
+            }, async (error) => {
+                const permissionError = new FirestorePermissionError({
+                    path: messagesCollection.path,
+                    operation: 'list',
+                } satisfies SecurityRuleContext);
+                errorEmitter.emit('permission-error', permissionError);
             });
             setMessagesUnsubscribe(() => unsubscribe);
         }
@@ -102,12 +124,27 @@ export default function ChatManagementPage() {
         const newMessage: Omit<Message, 'id' | 'timestamp'> = { from: 'admin', text: reply };
         
         const messagesCollectionRef = collection(db, "chats", activeChat.id, "messages");
-        await addDoc(messagesCollectionRef, { ...newMessage, timestamp: serverTimestamp() });
+        addDoc(messagesCollectionRef, { ...newMessage, timestamp: serverTimestamp() })
+            .catch(async (e) => {
+                const permissionError = new FirestorePermissionError({
+                    path: messagesCollectionRef.path,
+                    operation: 'create',
+                    requestResourceData: newMessage,
+                } satisfies SecurityRuleContext);
+                errorEmitter.emit('permission-error', permissionError);
+            });
 
         const chatDocRef = doc(db, "chats", activeChat.id);
-        await updateDoc(chatDocRef, {
+        updateDoc(chatDocRef, {
             lastMessage: reply,
             lastMessageTimestamp: serverTimestamp(),
+        }).catch(async (e) => {
+            const permissionError = new FirestorePermissionError({
+                path: chatDocRef.path,
+                operation: 'update',
+                requestResourceData: { lastMessage: reply },
+            } satisfies SecurityRuleContext);
+            errorEmitter.emit('permission-error', permissionError);
         });
         
         setReply("");

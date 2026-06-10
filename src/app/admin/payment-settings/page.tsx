@@ -12,26 +12,39 @@ import type { AdminPaymentMethods } from "@/lib/user-data";
 import Image from "next/image";
 import { useDb } from "@/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 export default function PaymentSettingsPage() {
     const { toast } = useToast();
     const db = useDb();
     const [methods, setMethods] = useState<AdminPaymentMethods | null>(null);
     const [qrFile, setQrFile] = useState<File | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
     
     useEffect(() => {
         const fetchPaymentMethods = async () => {
             if (!db) return;
             const docRef = doc(db, "configs", "paymentMethods");
-            const docSnap = await getDoc(docRef);
-            if (docSnap.exists()) {
-                setMethods(docSnap.data() as AdminPaymentMethods);
-            } else {
-                // Initialize with empty state if not found
-                setMethods({
-                    accountHolderName: "", bankName: "", accountNumber: "", ifscCode: "",
-                    upiId: "", gpayNumber: "", gpayUpiId: "", phonepeNumber: "", phonepeUpiId: "", qrCodeUrl: ""
+            try {
+                const docSnap = await getDoc(docRef).catch(async (e) => {
+                    const permissionError = new FirestorePermissionError({
+                        path: docRef.path,
+                        operation: 'get',
+                    } satisfies SecurityRuleContext);
+                    errorEmitter.emit('permission-error', permissionError);
+                    throw e;
                 });
+                if (docSnap.exists()) {
+                    setMethods(docSnap.data() as AdminPaymentMethods);
+                } else {
+                    setMethods({
+                        accountHolderName: "", bankName: "", accountNumber: "", ifscCode: "",
+                        upiId: "", gpayNumber: "", gpayUpiId: "", phonepeNumber: "", phonepeUpiId: "", qrCodeUrl: ""
+                    });
+                }
+            } catch (error) {
+                console.error("Payment Settings Sync Error:", error);
             }
         };
         if (db) {
@@ -53,19 +66,27 @@ export default function PaymentSettingsPage() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!methods || !db) return;
+        if (!methods || !db || isSaving) return;
         
+        setIsSaving(true);
         const updateConfig = async (finalMethods: AdminPaymentMethods) => {
-            try {
-                await setDoc(doc(db, "configs", "paymentMethods"), finalMethods);
-                toast({
-                    title: "Settings Saved!",
-                    description: "Payment method details have been successfully updated.",
-                });
-            } catch(error) {
-                console.error("Error saving payment methods:", error);
-                toast({ variant: 'destructive', title: "Error", description: "Could not save payment settings." });
-            }
+            const docRef = doc(db, "configs", "paymentMethods");
+            setDoc(docRef, finalMethods)
+                .then(() => {
+                    toast({
+                        title: "Settings Saved!",
+                        description: "Payment method details have been successfully updated.",
+                    });
+                })
+                .catch(async (error) => {
+                    const permissionError = new FirestorePermissionError({
+                        path: docRef.path,
+                        operation: 'update',
+                        requestResourceData: finalMethods,
+                    } satisfies SecurityRuleContext);
+                    errorEmitter.emit('permission-error', permissionError);
+                })
+                .finally(() => setIsSaving(false));
         }
         
         if (qrFile) {
@@ -157,7 +178,7 @@ export default function PaymentSettingsPage() {
             </CardContent>
         </Card>
         <div className="mt-6 flex justify-end">
-            <Button type="submit">Save Changes</Button>
+            <Button type="submit" disabled={isSaving}>{isSaving && <Loader2 className="animate-spin mr-2"/>} Save Changes</Button>
         </div>
       </form>
     </div>

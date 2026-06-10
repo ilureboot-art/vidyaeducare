@@ -14,6 +14,8 @@ import type { AcademicConfig } from "@/lib/academic-config";
 import { Switch } from "@/components/ui/switch";
 import { useDb } from "@/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 export default function AdminStoreSettingsPage() {
   const { toast } = useToast();
@@ -27,18 +29,33 @@ export default function AdminStoreSettingsPage() {
     
     const fetchConfigs = async () => {
         try {
-            const storeConfigDoc = await getDoc(doc(db, "configs", "store"));
+            const storeRef = doc(db, "configs", "store");
+            const storeConfigDoc = await getDoc(storeRef).catch(async (e) => {
+                const permissionError = new FirestorePermissionError({
+                    path: storeRef.path,
+                    operation: 'get',
+                } satisfies SecurityRuleContext);
+                errorEmitter.emit('permission-error', permissionError);
+                throw e;
+            });
             if(storeConfigDoc.exists()) {
                 setStoreConfig(storeConfigDoc.data() as StoreConfig);
             }
 
-            const academicConfigDoc = await getDoc(doc(db, "configs", "academic"));
+            const academicRef = doc(db, "configs", "academic");
+            const academicConfigDoc = await getDoc(academicRef).catch(async (e) => {
+                const permissionError = new FirestorePermissionError({
+                    path: academicRef.path,
+                    operation: 'get',
+                } satisfies SecurityRuleContext);
+                errorEmitter.emit('permission-error', permissionError);
+                throw e;
+            });
             if(academicConfigDoc.exists()){
                 setAcademicConfig(academicConfigDoc.data() as AcademicConfig);
             }
         } catch (error) {
-            console.error("Error fetching configs:", error);
-            toast({ variant: 'destructive', title: 'Error', description: 'Could not load configuration data.' });
+            console.error("Store Sync Error:", error);
         }
     }
     fetchConfigs();
@@ -141,17 +158,26 @@ export default function AdminStoreSettingsPage() {
     e.preventDefault();
     if (!storeConfig || !academicConfig || !db) return;
     
-    try {
-        await setDoc(doc(db, "configs", "store"), storeConfig);
-        await setDoc(doc(db, "configs", "academic"), academicConfig);
-        toast({
-          title: "Settings Saved!",
-          description: "Your changes have been applied across the application.",
+    const storeRef = doc(db, "configs", "store");
+    setDoc(storeRef, storeConfig)
+        .then(() => {
+            const academicRef = doc(db, "configs", "academic");
+            return setDoc(academicRef, academicConfig);
+        })
+        .then(() => {
+            toast({
+              title: "Settings Saved!",
+              description: "Your changes have been applied across the application.",
+            });
+        })
+        .catch(async (error) => {
+            const permissionError = new FirestorePermissionError({
+                path: storeRef.path,
+                operation: 'update',
+                requestResourceData: { storeConfig, academicConfig },
+            } satisfies SecurityRuleContext);
+            errorEmitter.emit('permission-error', permissionError);
         });
-    } catch (error) {
-        console.error("Error saving settings:", error);
-        toast({ variant: 'destructive', title: "Save Failed", description: "Could not save settings to the database."})
-    }
   };
 
   const renderDynamicList = (

@@ -8,7 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { RefreshCw, Users, IndianRupee, Repeat, Loader2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { useDb } from "@/firebase";
-import { collection, getDocs, query, Timestamp, getCountFromServer } from "firebase/firestore";
+import { collection, getDocs, query, Timestamp } from "firebase/firestore";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 type Cycle = {
   id: string;
@@ -42,52 +44,73 @@ export default function ReferBoltManagementPage() {
   useEffect(() => {
     const fetchData = async () => {
         if (!db) return;
-        setStats(null); // Show loader
+        setStats(null);
         
-        const referboltSnapshot = await getDocs(collection(db, "referbolt"));
-        let totalCycles = 0;
-        let activeReferrers = 0;
+        try {
+            const referboltCol = collection(db, "referbolt");
+            const referboltSnapshot = await getDocs(referboltCol).catch(async (e) => {
+                const permissionError = new FirestorePermissionError({
+                    path: referboltCol.path,
+                    operation: 'list',
+                } satisfies SecurityRuleContext);
+                errorEmitter.emit('permission-error', permissionError);
+                throw e;
+            });
+            let totalCycles = 0;
+            let activeReferrers = 0;
 
-        const cycleList: Cycle[] = referboltSnapshot.docs.map(doc => {
-            const data = doc.data();
-            totalCycles += (data.cyclesCompleted || 0);
-            if (data.isSubscribed) {
-              activeReferrers++;
-            }
-            return {
-              id: doc.id,
-              referrer: data.userName || `User ${doc.id.substring(0, 5)}`,
-              referrals: data.cycleProgress || 0,
-              status: (data.cycleProgress || 0) >= 3 ? 'Completed' : 'In Progress',
-              subscriptionType: data.autoRenew ? 'Auto-Renewed' : 'Manual',
-            };
-        });
+            const cycleList: Cycle[] = referboltSnapshot.docs.map(doc => {
+                const data = doc.data();
+                totalCycles += (data.cyclesCompleted || 0);
+                if (data.isSubscribed) {
+                activeReferrers++;
+                }
+                return {
+                id: doc.id,
+                referrer: data.userName || `User ${doc.id.substring(0, 5)}`,
+                referrals: data.cycleProgress || 0,
+                status: (data.cycleProgress || 0) >= 3 ? 'Completed' : 'In Progress',
+                subscriptionType: data.autoRenew ? 'Auto-Renewed' : 'Manual',
+                };
+            });
 
-        // Fetch recent referral activities (more complex, simplified for now)
-        const transactionsQuery = query(collection(db, 'transactions'));
-        const transactionsSnapshot = await getDocs(transactionsQuery);
-        let totalCommissions = 0;
-        const referralList: Referral[] = [];
+            const txCol = collection(db, 'transactions');
+            const transactionsSnapshot = await getDocs(txCol).catch(async (e) => {
+                const permissionError = new FirestorePermissionError({
+                    path: txCol.path,
+                    operation: 'list',
+                } satisfies SecurityRuleContext);
+                errorEmitter.emit('permission-error', permissionError);
+                throw e;
+            });
+            let totalCommissions = 0;
+            const referralList: Referral[] = [];
 
-        transactionsSnapshot.forEach(doc => {
-            const tx = doc.data();
-            if (tx.type === 'Referral Bonus' || tx.type === 'Commission') {
-                totalCommissions += tx.amount;
-                const date = tx.date instanceof Timestamp ? tx.date.toDate().toISOString() : tx.date;
-                referralList.push({
-                    id: doc.id,
-                    referrer: tx.user,
-                    newUser: tx.description.split(' for ')[1] || tx.description.split(' from ')[1] || 'N/A',
-                    date: date,
-                    commission: `₹${tx.amount}`,
-                    status: tx.status
-                });
-            }
-        });
-        
-        setStats({ totalCycles, totalCommissions, activeReferrers });
-        setCycles(cycleList);
-        setReferrals(referralList);
+            transactionsSnapshot.forEach(doc => {
+                const tx = doc.data();
+                if (tx.type === 'Referral Bonus' || tx.type === 'Commission') {
+                    totalCommissions += tx.amount;
+                    const date = tx.date instanceof Timestamp ? tx.date.toDate().toISOString() : tx.date;
+                    referralList.push({
+                        id: doc.id,
+                        referrer: tx.user,
+                        newUser: tx.description.split(' for ')[1] || tx.description.split(' from ')[1] || 'N/A',
+                        date: date,
+                        commission: `₹${tx.amount}`,
+                        status: tx.status
+                    });
+                }
+            });
+            
+            setStats({ totalCycles, totalCommissions, activeReferrers });
+            setCycles(cycleList);
+            setReferrals(referralList);
+        } catch (error) {
+            console.error("ReferBolt Sync Error:", error);
+            setStats({ totalCycles: 0, totalCommissions: 0, activeReferrers: 0 });
+            setCycles([]);
+            setReferrals([]);
+        }
     };
     if (db) {
         fetchData();

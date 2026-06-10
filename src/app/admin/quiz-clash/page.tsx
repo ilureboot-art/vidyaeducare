@@ -17,6 +17,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import type { QuizClashTournament, QuizClashAutoCreateConfig } from "@/lib/quiz-clash-data";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 const initialAutoConfig: QuizClashAutoCreateConfig = {
     enabled: false,
@@ -44,22 +46,50 @@ export default function AdminQuizClashPage() {
     });
 
     const fetchTournamentsAndTestSets = async (db: any) => {
-        // Fetch tournaments
-        const tournamentsSnapshot = await getDocs(collection(db, "quizClashTournaments"));
-        const tournamentList = tournamentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as QuizClashTournament));
-        setTournaments(tournamentList);
+        try {
+            // Fetch tournaments
+            const tourneyCol = collection(db, "quizClashTournaments");
+            const tournamentsSnapshot = await getDocs(tourneyCol).catch(async (e) => {
+                const permissionError = new FirestorePermissionError({
+                    path: tourneyCol.path,
+                    operation: 'list',
+                } satisfies SecurityRuleContext);
+                errorEmitter.emit('permission-error', permissionError);
+                throw e;
+            });
+            const tournamentList = tournamentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as QuizClashTournament));
+            setTournaments(tournamentList);
 
-        // Fetch test sets for manual creation
-        const testSetsSnapshot = await getDocs(collection(db, "testSets"));
-        const testSetList = testSetsSnapshot.docs.map(doc => doc.data() as TestSet);
-        setTestSets(testSetList);
-        
-        // Fetch auto-create config
-        const configDoc = await getDoc(doc(db, "configs", "quizClash"));
-        if (configDoc.exists()) {
-            setAutoConfig(configDoc.data() as QuizClashAutoCreateConfig);
-        } else {
-            setAutoConfig(initialAutoConfig);
+            // Fetch test sets for manual creation
+            const testSetCol = collection(db, "testSets");
+            const testSetsSnapshot = await getDocs(testSetCol).catch(async (e) => {
+                const permissionError = new FirestorePermissionError({
+                    path: testSetCol.path,
+                    operation: 'list',
+                } satisfies SecurityRuleContext);
+                errorEmitter.emit('permission-error', permissionError);
+                throw e;
+            });
+            const testSetList = testSetsSnapshot.docs.map(doc => doc.data() as TestSet);
+            setTestSets(testSetList);
+            
+            // Fetch auto-create config
+            const configDocRef = doc(db, "configs", "quizClash");
+            const configDoc = await getDoc(configDocRef).catch(async (e) => {
+                const permissionError = new FirestorePermissionError({
+                    path: configDocRef.path,
+                    operation: 'get',
+                } satisfies SecurityRuleContext);
+                errorEmitter.emit('permission-error', permissionError);
+                throw e;
+            });
+            if (configDoc.exists()) {
+                setAutoConfig(configDoc.data() as QuizClashAutoCreateConfig);
+            } else {
+                setAutoConfig(initialAutoConfig);
+            }
+        } catch (error) {
+            console.error("Quiz Clash Init Error:", error);
         }
     };
 
@@ -119,40 +149,59 @@ export default function AdminQuizClashPage() {
             status: "scheduled",
         };
 
-        try {
-            await addDoc(collection(db, "quizClashTournaments"), tournamentData);
-            await fetchTournamentsAndTestSets(db);
-            toast({ title: "Tournament Created!", description: `${newTournament.title} has been scheduled.` });
-            setNewTournament({ title: "", startTime: "", type: "Pro", entryFee: 10, testSetId: "" });
-        } catch (error) {
-            console.error("Error creating tournament:", error);
-            toast({ variant: 'destructive', title: 'Error', description: 'Could not create the tournament.' });
-        }
+        const colRef = collection(db, "quizClashTournaments");
+        addDoc(colRef, tournamentData)
+            .then(async () => {
+                await fetchTournamentsAndTestSets(db);
+                toast({ title: "Tournament Created!", description: `${newTournament.title} has been scheduled.` });
+                setNewTournament({ title: "", startTime: "", type: "Pro", entryFee: 10, testSetId: "" });
+            })
+            .catch(async (error) => {
+                const permissionError = new FirestorePermissionError({
+                    path: colRef.path,
+                    operation: 'create',
+                    requestResourceData: tournamentData,
+                } satisfies SecurityRuleContext);
+                errorEmitter.emit('permission-error', permissionError);
+            });
     };
     
     const handleDeleteTournament = async (id: string) => {
         if (!db) return;
-        try {
-            await deleteDoc(doc(db, "quizClashTournaments", id));
-            await fetchTournamentsAndTestSets(db);
-            toast({ title: "Tournament Deleted" });
-        } catch (error) {
-             toast({ variant: 'destructive', title: 'Error', description: 'Could not delete the tournament.' });
-        }
+        const docRef = doc(db, "quizClashTournaments", id);
+        deleteDoc(docRef)
+            .then(async () => {
+                await fetchTournamentsAndTestSets(db);
+                toast({ title: "Tournament Deleted" });
+            })
+            .catch(async (error) => {
+                const permissionError = new FirestorePermissionError({
+                    path: docRef.path,
+                    operation: 'delete',
+                } satisfies SecurityRuleContext);
+                errorEmitter.emit('permission-error', permissionError);
+            });
     }
     
     const handleSaveAutoConfig = async () => {
         if (!autoConfig || !db) return;
-        try {
-            const configToSave = {
-                ...autoConfig,
-                entryFee: autoConfig.type === 'Practice' ? 0 : autoConfig.entryFee,
-            };
-            await setDoc(doc(db, "configs", "quizClash"), configToSave);
-            toast({ title: "Settings Saved", description: "Automatic tournament scheduler settings have been updated." });
-        } catch (error) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Could not save the settings.' });
-        }
+        const configToSave = {
+            ...autoConfig,
+            entryFee: autoConfig.type === 'Practice' ? 0 : autoConfig.entryFee,
+        };
+        const docRef = doc(db, "configs", "quizClash");
+        setDoc(docRef, configToSave)
+            .then(() => {
+                toast({ title: "Settings Saved", description: "Automatic tournament scheduler settings have been updated." });
+            })
+            .catch(async (error) => {
+                const permissionError = new FirestorePermissionError({
+                    path: docRef.path,
+                    operation: 'update',
+                    requestResourceData: configToSave,
+                } satisfies SecurityRuleContext);
+                errorEmitter.emit('permission-error', permissionError);
+            });
     };
 
 

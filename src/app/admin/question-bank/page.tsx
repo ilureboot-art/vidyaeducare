@@ -60,12 +60,20 @@ const initialAiInputState: GenerateQuestionsInput = {
     numQuestions: 10,
 };
 
+// Utility to remove undefined properties before sending to Firestore
+const sanitizeData = (obj: any): any => {
+    return JSON.parse(JSON.stringify(obj, (key, value) => {
+        return value === undefined ? null : value;
+    }));
+};
+
 export default function TestSetManagementPage() {
   const { toast } = useToast();
   const db = useDb();
   const [testSets, setTestSets] = useState<TestSet[]>([]);
   const [academicConfig, setAcademicConfig] = useState<AcademicConfig>(defaultAcademicConfig);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
 
   const [isManualCreateOpen, setIsManualCreateOpen] = useState(false);
@@ -89,13 +97,11 @@ export default function TestSetManagementPage() {
       setSyncError(null);
       
       try {
-          // 1. Fetch test sets
           const testSetsCollection = collection(db, "testSets");
           const testSetSnapshot = await getDocs(testSetsCollection);
           const testSetList = testSetSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TestSet));
           setTestSets(testSetList);
 
-          // 2. Fetch config - Don't throw if not found, just use defaults
           const configRef = doc(db, "configs", 'academic');
           const configSnap = await getDoc(configRef);
           if (configSnap.exists()) {
@@ -103,13 +109,10 @@ export default function TestSetManagementPage() {
           }
       } catch (err: any) {
           console.error("Error fetching bank data:", err);
-          // Only set error if it's a legitimate permission or connection issue
           if (err.code === 'permission-denied') {
               setSyncError("Permission Denied: Ensure you are logged in as the Head Admin.");
-          } else if (err.code === 'unavailable') {
-              setSyncError("Database Unavailable: Check your network connection.");
           } else {
-              setSyncError("A synchronization delay occurred. Please try refreshing.");
+              setSyncError("Synchronization Issue: Please refresh or check your connection.");
           }
       } finally {
           setIsLoading(false);
@@ -189,8 +192,6 @@ export default function TestSetManagementPage() {
                 const selectedOptionIndex = updatedQuestion.options.mr.findIndex((opt: string) => opt === value);
                 if (selectedOptionIndex !== -1) {
                     updatedQuestion.correctAnswer.en = updatedQuestion.options.en[selectedOptionIndex];
-                } else {
-                    updatedQuestion.correctAnswer.en = '';
                 }
             }
         }
@@ -200,36 +201,40 @@ export default function TestSetManagementPage() {
 };
 
  const handleManualSubmit = async () => {
-    if (!editingTestSet || !db) return;
+    if (!editingTestSet || !db || isSaving) return;
 
+    setIsSaving(true);
     const finalQuestions = editingTestSet.questions
         .filter(q => q.text.en?.trim() !== '' || q.text.mr?.trim() !== '')
         .map((q, i) => ({ ...q, id: q.id.startsWith('temp-') ? `Q-${editingTestSet.id.replace("NEW-", "")}-${i}`: q.id }));
 
     if (finalQuestions.length === 0) {
         toast({ variant: 'destructive', title: 'No Questions Added', description: 'Please add at least one complete question.' });
+        setIsSaving(false);
         return;
     }
     
     const isEditing = !editingTestSet.id.startsWith("NEW-");
     const docId = isEditing ? editingTestSet.id : `SET-${Date.now()}`;
 
-    const finalTestSetData: TestSet = {
+    const finalTestSetData = sanitizeData({
         ...editingTestSet,
         id: docId,
         questions: finalQuestions,
-    };
+    });
     
     try {
         await setDoc(doc(db, "testSets", docId), finalTestSetData);
-        fetchPageData();
+        await fetchPageData();
         toast({ title: isEditing ? 'Test Set Updated!' : 'Test Set Created!', description: `"${finalTestSetData.name}" has been saved.` });
         
         setIsManualCreateOpen(false);
         resetManualForm();
-    } catch(error) {
+    } catch(error: any) {
         console.error("Error saving test set:", error);
-        toast({ variant: 'destructive', title: "Error", description: 'Could not save the test set.' });
+        toast({ variant: 'destructive', title: "Database Error", description: error.message || 'Could not save the test set.' });
+    } finally {
+        setIsSaving(false);
     }
 };
 
@@ -441,8 +446,11 @@ const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
                                 </div>
                              </ScrollArea>
                             <DialogFooter className="mt-4">
-                                <Button variant="outline" onClick={() => setStep(1)}>Back</Button>
-                                <Button onClick={handleManualSubmit}><Save className="mr-2 h-4 w-4"/>Save Test Set</Button>
+                                <Button variant="outline" onClick={() => setStep(1)} disabled={isSaving}>Back</Button>
+                                <Button onClick={handleManualSubmit} disabled={isSaving}>
+                                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4"/>}
+                                    Save Test Set
+                                </Button>
                             </DialogFooter>
                             </>
                         )}

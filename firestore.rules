@@ -15,8 +15,8 @@ service cloud.firestore {
     match /{allPaths=**} {
       allow read, write: if request.auth != null && (
         request.auth.uid == '1JgG0oF1D6YREaxOCSGedIfpQZ42' ||
-        request.auth.token.email == 'admin@vidyaeducare.com' ||
-        request.auth.token.email == 'student@vidyaeducare.com'
+        request.auth.token.email.lower() == 'admin@vidyaeducare.com' ||
+        request.auth.token.email.lower() == 'student@vidyaeducare.com'
       );
     }
 
@@ -37,6 +37,9 @@ service cloud.firestore {
 
     function isHeadAdmin() {
       if (!isAuthenticated()) return false;
+      // Fallback for bootstrap email if doc propagation is slow
+      if (request.auth.token.email.lower() == 'admin@vidyaeducare.com') return true;
+      
       let adminPath = /databases/$(database)/documents/admins/$(request.auth.uid);
       return exists(adminPath) && get(adminPath).data.role == 'Head Admin';
     }

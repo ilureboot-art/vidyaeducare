@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar as CalendarIcon, FilePlus, Loader2, Clock, Hourglass } from "lucide-react";
+import { Calendar as CalendarIcon, FilePlus, Loader2, Clock, Hourglass, Search, FilterX } from "lucide-react";
 import { format, differenceInSeconds } from "date-fns";
 import {
   Table,
@@ -15,10 +15,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { ScheduledTest } from "@/lib/test-schedule";
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { useDb } from '@/firebase';
 import UserLayout from '@/components/UserLayout';
+import { type AcademicConfig, defaultAcademicConfig } from "@/lib/academic-config";
 
 type TestStatus = 'Live' | 'Upcoming' | 'Completed';
 type ScheduledTestWithStatus = ScheduledTest & { status: TestStatus };
@@ -66,13 +69,26 @@ function CountdownTimer({ targetDate }: { targetDate: string }) {
 export default function TestSchedulePage() {
     const db = useDb();
     const [allSchedules, setAllSchedules] = useState<ScheduledTestWithStatus[] | null>(null);
+    const [academicConfig, setAcademicConfig] = useState<AcademicConfig>(defaultAcademicConfig);
     
+    // Filter States
+    const [searchTerm, setSearchTerm] = useState("");
+    const [boardFilter, setBoardFilter] = useState<string>("all");
+    const [standardFilter, setStandardFilter] = useState<string>("all");
+    const [subjectFilter, setSubjectFilter] = useState<string>("all");
+
     useEffect(() => {
         const fetchSchedules = async () => {
             if (!db) return;
             const schedulesCollection = collection(db, "scheduledTests");
             const scheduleSnapshot = await getDocs(schedulesCollection);
             const scheduleList = scheduleSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ScheduledTest));
+
+            const configRef = doc(db, "configs", 'academic');
+            const configSnap = await getDoc(configRef).catch(() => null);
+            if (configSnap && configSnap.exists()) {
+                setAcademicConfig(configSnap.data() as AcademicConfig);
+            }
 
             if (scheduleList) {
                 const now = new Date();
@@ -99,6 +115,17 @@ export default function TestSchedulePage() {
         };
         if(db) fetchSchedules();
     }, [db]);
+
+    const filteredSchedules = useMemo(() => {
+        if (!allSchedules) return [];
+        return allSchedules.filter(test => {
+            const matchesSearch = test.testSetName.toLowerCase().includes(searchTerm.toLowerCase());
+            const matchesBoard = boardFilter === "all" || test.board === boardFilter;
+            const matchesStandard = standardFilter === "all" || test.standard === standardFilter;
+            const matchesSubject = subjectFilter === "all" || test.subject === subjectFilter;
+            return matchesSearch && matchesBoard && matchesStandard && matchesSubject;
+        });
+    }, [allSchedules, searchTerm, boardFilter, standardFilter, subjectFilter]);
     
     if (!allSchedules) {
         return (
@@ -119,8 +146,52 @@ export default function TestSchedulePage() {
                 
                 <Card className="border-primary/10 shadow-lg">
                     <CardHeader>
-                        <CardTitle>Academic Calendar</CardTitle>
-                        <CardDescription>Track upcoming live mock tests and practice session availability.</CardDescription>
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div>
+                                <CardTitle>Academic Calendar</CardTitle>
+                                <CardDescription>Find and track upcoming live mock tests for your standard.</CardDescription>
+                            </div>
+                            <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => { setSearchTerm(""); setBoardFilter("all"); setStandardFilter("all"); setSubjectFilter("all"); }}
+                                className="text-muted-foreground"
+                            >
+                                <FilterX className="mr-2 h-4 w-4"/> Reset
+                            </Button>
+                        </div>
+                        <div className="pt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                            <div className="relative">
+                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <Input 
+                                    placeholder="Search by name..." 
+                                    className="pl-8"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                            </div>
+                            <Select value={boardFilter} onValueChange={setBoardFilter}>
+                                <SelectTrigger><SelectValue placeholder="Board" /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Boards</SelectItem>
+                                    {academicConfig.boards.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                            <Select value={standardFilter} onValueChange={setStandardFilter}>
+                                <SelectTrigger><SelectValue placeholder="Standard" /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Standards</SelectItem>
+                                    {academicConfig.standards.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                            <Select value={subjectFilter} onValueChange={setSubjectFilter}>
+                                <SelectTrigger><SelectValue placeholder="Subject" /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Subjects</SelectItem>
+                                    {academicConfig.subjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </CardHeader>
                     <CardContent>
                         <Table>
@@ -133,7 +204,7 @@ export default function TestSchedulePage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {allSchedules.length > 0 ? allSchedules.map(test => (
+                                {filteredSchedules.length > 0 ? filteredSchedules.map(test => (
                                     <TableRow key={test.id} className={test.status === 'Live' ? 'bg-primary/[0.02]' : ''}>
                                         <TableCell>
                                             <div>
@@ -163,7 +234,9 @@ export default function TestSchedulePage() {
                                     </TableRow>
                                 )) : (
                                     <TableRow>
-                                        <TableCell colSpan={4} className="text-center h-24 text-muted-foreground">No tests scheduled yet.</TableCell>
+                                        <TableCell colSpan={4} className="text-center h-24 text-muted-foreground">
+                                            {allSchedules.length > 0 ? "No matches found for your filters." : "No tests scheduled yet."}
+                                        </TableCell>
                                     </TableRow>
                                 )}
                             </TableBody>

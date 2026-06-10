@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar as CalendarIcon, FilePlus, Loader2, AlertCircle, RefreshCcw, Clock } from "lucide-react";
+import { Calendar as CalendarIcon, FilePlus, Loader2, AlertCircle, RefreshCcw, Clock, Search, FilterX } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
@@ -22,7 +22,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { type TestSet } from "@/lib/question-bank";
 import { type ScheduledTest } from "@/lib/test-schedule";
-import { collection, getDocs, doc, setDoc } from "firebase/firestore";
+import { type AcademicConfig, defaultAcademicConfig } from "@/lib/academic-config";
+import { collection, getDocs, doc, setDoc, getDoc } from "firebase/firestore";
 import { useDb } from '@/firebase';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -38,14 +39,23 @@ export default function TestSchedulePage() {
 
     const [allSchedules, setAllSchedules] = useState<ScheduledTestWithStatus[]>([]);
     const [testSets, setTestSets] = useState<TestSet[]>([]);
+    const [academicConfig, setAcademicConfig] = useState<AcademicConfig>(defaultAcademicConfig);
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     
+    // Form States
     const [date, setDate] = useState<Date | undefined>(undefined);
     const [time, setTime] = useState('10:00'); 
     const [duration, setDuration] = useState('30');
     const [selectedTestSetId, setSelectedTestSetId] = useState('');
+
+    // Filter States
+    const [searchTerm, setSearchTerm] = useState("");
+    const [boardFilter, setBoardFilter] = useState<string>("all");
+    const [standardFilter, setStandardFilter] = useState<string>("all");
+    const [subjectFilter, setSubjectFilter] = useState<string>("all");
+    const [statusFilter, setStatusFilter] = useState<string>("all");
     
     const fetchPageData = useCallback(async (manual = false) => {
         if (!db) return;
@@ -80,6 +90,12 @@ export default function TestSchedulePage() {
                 throw e;
             });
             const scheduleList = scheduleSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ScheduledTest));
+
+            const configRef = doc(db, "configs", 'academic');
+            const configSnap = await getDoc(configRef).catch(() => null);
+            if (configSnap && configSnap.exists()) {
+                setAcademicConfig(configSnap.data() as AcademicConfig);
+            }
             
             const now = new Date();
             const updatedSchedules = scheduleList
@@ -115,6 +131,25 @@ export default function TestSchedulePage() {
         if(db) fetchPageData();
         setDate(new Date());
     }, [db, fetchPageData]);
+
+    const filteredSchedules = useMemo(() => {
+        return allSchedules.filter(test => {
+            const matchesSearch = test.testSetName.toLowerCase().includes(searchTerm.toLowerCase());
+            const matchesBoard = boardFilter === "all" || test.board === boardFilter;
+            const matchesStandard = standardFilter === "all" || test.standard === standardFilter;
+            const matchesSubject = subjectFilter === "all" || test.subject === subjectFilter;
+            const matchesStatus = statusFilter === "all" || test.status === statusFilter;
+            return matchesSearch && matchesBoard && matchesStandard && matchesSubject && matchesStatus;
+        });
+    }, [allSchedules, searchTerm, boardFilter, standardFilter, subjectFilter, statusFilter]);
+
+    const resetFilters = () => {
+        setSearchTerm("");
+        setBoardFilter("all");
+        setStandardFilter("all");
+        setSubjectFilter("all");
+        setStatusFilter("all");
+    };
     
     const handleScheduleTest = async () => {
         if (!date || !selectedTestSetId || !time || !db) {
@@ -273,7 +308,56 @@ export default function TestSchedulePage() {
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Upcoming & Past Tests</CardTitle>
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <CardTitle>Upcoming & Past Tests</CardTitle>
+                            <CardDescription>Filter and search through the academic calendar.</CardDescription>
+                        </div>
+                        <Button variant="ghost" size="sm" onClick={resetFilters} className="text-muted-foreground">
+                            <FilterX className="mr-2 h-4 w-4"/> Clear All Filters
+                        </Button>
+                    </div>
+                    <div className="pt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                        <div className="relative">
+                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input 
+                                placeholder="Search test name..." 
+                                className="pl-8"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+                        <Select value={boardFilter} onValueChange={setBoardFilter}>
+                            <SelectTrigger><SelectValue placeholder="Board" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Boards</SelectItem>
+                                {academicConfig.boards.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                        <Select value={standardFilter} onValueChange={setStandardFilter}>
+                            <SelectTrigger><SelectValue placeholder="Standard" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Standards</SelectItem>
+                                {academicConfig.standards.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                        <Select value={subjectFilter} onValueChange={setSubjectFilter}>
+                            <SelectTrigger><SelectValue placeholder="Subject" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Subjects</SelectItem>
+                                {academicConfig.subjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                        <Select value={statusFilter} onValueChange={setStatusFilter}>
+                            <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Statuses</SelectItem>
+                                <SelectItem value="Upcoming">Upcoming</SelectItem>
+                                <SelectItem value="Live">Live</SelectItem>
+                                <SelectItem value="Completed">Completed</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </CardHeader>
                 <CardContent>
                     <Table>
@@ -287,7 +371,7 @@ export default function TestSchedulePage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {allSchedules.length > 0 ? allSchedules.map(test => (
+                            {filteredSchedules.length > 0 ? filteredSchedules.map(test => (
                                 <TableRow key={test.id}>
                                     <TableCell>{format(new Date(test.dateTime), "PPP p")}</TableCell>
                                     <TableCell className="font-medium">{test.testSetName}</TableCell>
@@ -306,7 +390,9 @@ export default function TestSchedulePage() {
                                 </TableRow>
                             )) : (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">No tests scheduled yet.</TableCell>
+                                    <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
+                                        {allSchedules.length > 0 ? "No tests match your filters." : "No tests scheduled yet."}
+                                    </TableCell>
                                 </TableRow>
                             )}
                         </TableBody>

@@ -11,7 +11,7 @@ import { PlusCircle, Trash2, Zap, BookOpen, GraduationCap, Percent, Loader2, Use
 import { type StoreConfig, type MockTestPackage, type ReferboltSubscription, type ReferboltSettings, type RecommendationSettings, defaultStoreConfig } from "@/lib/store-config";
 import { type AcademicConfig, defaultAcademicConfig } from "@/lib/academic-config";
 import { Switch } from "@/components/ui/switch";
-import { useDb } from "@/firebase";
+import { useDb, useAuth } from "@/firebase";
 import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 export default function AdminStoreSettingsPage() {
   const { toast } = useToast();
   const db = useDb();
+  const { user } = useAuth();
   
   const [storeConfig, setStoreConfig] = useState<StoreConfig | null>(null);
   const [academicConfig, setAcademicConfig] = useState<AcademicConfig | null>(null);
@@ -29,7 +30,9 @@ export default function AdminStoreSettingsPage() {
   const [syncError, setSyncError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!db) return;
+    // CRITICAL: Ensure we have both a database connection AND an active user session
+    // before initializing listeners to prevent Firestore Permission Errors during startup.
+    if (!db || !user) return;
 
     setIsLoading(true);
     setSyncError(null);
@@ -74,7 +77,7 @@ export default function AdminStoreSettingsPage() {
         unsubStore();
         unsubAcademic();
     };
-  }, [db]);
+  }, [db, user]);
 
   const handleMockTestPackageChange = (index: number, field: keyof MockTestPackage, value: string | number | boolean) => {
     if (!storeConfig) return;

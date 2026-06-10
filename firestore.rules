@@ -3,7 +3,7 @@ rules_version = '2';
 /**
  * Vidya EduCare - Global Infrastructure Rules
  * Target Instance: vidyaeducaredatabase
- * Deployment Salt: V38_INSTACE_SYNC_PRIORITY
+ * Deployment Salt: V39_AUTHORIZATION_RESOLVED
  */
 service cloud.firestore {
   match /databases/{database}/documents {

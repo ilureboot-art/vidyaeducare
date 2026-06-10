@@ -8,6 +8,7 @@ A comprehensive NextJS platform for Vidya EduCare, combining regional academic p
 Before going live, you must configure the Firebase project and the named Firestore instance.
 - **Guide**: See [docs/DEPLOYMENT_GUIDE.md](./docs/DEPLOYMENT_GUIDE.md) for step-by-step instructions.
 - **Named Database**: The app targets `vidyaeducaredatabase` (Native Mode).
+- **Active URL**: `https://studio--vidyaeducare.us-central1.hosted.app`
 
 ### 2. Operational Initialization
 Once deployed:

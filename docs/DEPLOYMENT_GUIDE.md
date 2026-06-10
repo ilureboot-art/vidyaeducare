@@ -53,10 +53,11 @@ Firebase App Hosting is the recommended way to host this Next.js 14+ application
 
 4. **Deploy**:
    Push your code to the connected GitHub repository. Firebase App Hosting will automatically detect the Next.js environment and deploy.
+   **Target Deployment URL**: `https://studio--vidyaeducare.us-central1.hosted.app`
 
 ## 4. Final Infrastructure Mapping
 
-Once the app is live (e.g., `https://vidya-educare.web.app`):
+Once the app is live:
 
 1. Navigate to `/admin/setup`.
 2. **STEP 1**: Click "AUTH ADMIN" and log in with:

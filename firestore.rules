@@ -3,18 +3,17 @@ rules_version = '2';
 /**
  * Vidya EduCare - Supreme Infrastructure Rules
  * Target Instance: vidyaeducaredatabase
- * Deployment Salt: V29_STORE_CONFIG_AUTHORITY
+ * Deployment Salt: V30_CONFIG_SYNC_RESILIENCE
  */
 service cloud.firestore {
   match /databases/{database}/documents {
     
     // --- SUPREME BOOTSTRAP AUTHORITY ---
     // Explicit global bypass for infrastructure setup and master admin access.
-    // This rule takes absolute precedence at the root level.
     match /{allPaths=**} {
       allow read, write: if request.auth != null && (
         request.auth.uid == '1JgG0oF1D6YREaxOCSGedIfpQZ42' ||
-        (request.auth.token.email != null && request.auth.token.email.lower() == 'admin@vidyaeducare.com')
+        (request.auth.token.email != null && request.auth.token.email == 'admin@vidyaeducare.com')
       );
     }
 
@@ -29,7 +28,7 @@ service cloud.firestore {
       
       // Direct Master Identity Check
       if (request.auth.uid == '1JgG0oF1D6YREaxOCSGedIfpQZ42' || 
-         (request.auth.token.email != null && request.auth.token.email.lower() == 'admin@vidyaeducare.com')) {
+         (request.auth.token.email != null && request.auth.token.email == 'admin@vidyaeducare.com')) {
         return true;
       }
       
@@ -42,7 +41,7 @@ service cloud.firestore {
       
       // Direct Master Authority Check
       if (request.auth.uid == '1JgG0oF1D6YREaxOCSGedIfpQZ42' || 
-         (request.auth.token.email != null && request.auth.token.email.lower() == 'admin@vidyaeducare.com')) {
+         (request.auth.token.email != null && request.auth.token.email == 'admin@vidyaeducare.com')) {
         return true;
       }
       
@@ -82,7 +81,6 @@ service cloud.firestore {
         allow update: if isHeadAdmin();
     }
 
-    // --- Support Chat Security Group ---
     match /chats {
       allow list: if isAdmin();
       

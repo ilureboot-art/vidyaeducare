@@ -7,15 +7,16 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
-import { PlusCircle, Trash2, Zap, BookOpen, GraduationCap, Percent, Loader2, Users, IndianRupee, AlertCircle } from "lucide-react";
+import { PlusCircle, Trash2, Zap, BookOpen, GraduationCap, Percent, Loader2, Users, IndianRupee, AlertCircle, RefreshCcw } from "lucide-react";
 import { type StoreConfig, type MockTestPackage, type ReferboltSubscription, type ReferboltSettings, type RecommendationSettings, defaultStoreConfig } from "@/lib/store-config";
 import { type AcademicConfig, defaultAcademicConfig } from "@/lib/academic-config";
 import { Switch } from "@/components/ui/switch";
 import { useDb } from "@/firebase";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 
 export default function AdminStoreSettingsPage() {
   const { toast } = useToast();
@@ -26,63 +27,56 @@ export default function AdminStoreSettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
-
-  const fetchConfigs = useCallback(async () => {
-    if (!db) return;
-    setIsLoading(true);
-    setSyncError(null);
-    
-    try {
-        const storeRef = doc(db, "configs", "store");
-        const storeConfigDoc = await getDoc(storeRef).catch(async (e) => {
-            if (e.code === 'permission-denied') {
-                const permissionError = new FirestorePermissionError({
-                    path: storeRef.path,
-                    operation: 'get',
-                } satisfies SecurityRuleContext);
-                errorEmitter.emit('permission-error', permissionError);
-            }
-            throw e;
-        });
-
-        if(storeConfigDoc.exists()) {
-            setStoreConfig(storeConfigDoc.data() as StoreConfig);
-        } else {
-            setStoreConfig(defaultStoreConfig);
-        }
-
-        const academicRef = doc(db, "configs", "academic");
-        const academicConfigDoc = await getDoc(academicRef).catch(async (e) => {
-             if (e.code === 'permission-denied') {
-                const permissionError = new FirestorePermissionError({
-                    path: academicRef.path,
-                    operation: 'get',
-                } satisfies SecurityRuleContext);
-                errorEmitter.emit('permission-error', permissionError);
-            }
-            throw e;
-        });
-
-        if(academicConfigDoc.exists()){
-            setAcademicConfig(academicConfigDoc.data() as AcademicConfig);
-        } else {
-            setAcademicConfig(defaultAcademicConfig);
-        }
-    } catch (error: any) {
-        console.error("Store Sync Error:", error);
-        if (error.code !== 'permission-denied') {
-            setSyncError("Failed to synchronize configurations. Using system defaults.");
-            setStoreConfig(defaultStoreConfig);
-            setAcademicConfig(defaultAcademicConfig);
-        }
-    } finally {
-        setIsLoading(false);
-    }
-  }, [db]);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   useEffect(() => {
-    fetchConfigs();
-  }, [fetchConfigs]);
+    if (!db) return;
+
+    setIsLoading(true);
+    setSyncError(null);
+
+    // 1. Observer for Store Config
+    const storeRef = doc(db, "configs", "store");
+    const unsubStore = onSnapshot(storeRef, (doc) => {
+        if (doc.exists()) {
+            setStoreConfig(doc.data() as StoreConfig);
+        } else {
+            setStoreConfig(defaultStoreConfig);
+        }
+        setIsLoading(false);
+    }, async (error) => {
+        if (error.code === 'permission-denied') {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'configs/store', operation: 'get' }));
+        } else {
+            console.error("Store Config Sync Error:", error);
+            setSyncError("Partial Sync Failure: Store data could not be verified.");
+            setStoreConfig(defaultStoreConfig);
+        }
+        setIsLoading(false);
+    });
+
+    // 2. Observer for Academic Config
+    const academicRef = doc(db, "configs", "academic");
+    const unsubAcademic = onSnapshot(academicRef, (doc) => {
+        if (doc.exists()) {
+            setAcademicConfig(doc.data() as AcademicConfig);
+        } else {
+            setAcademicConfig(defaultAcademicConfig);
+        }
+    }, async (error) => {
+        if (error.code === 'permission-denied') {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'configs/academic', operation: 'get' }));
+        } else {
+            console.error("Academic Config Sync Error:", error);
+            setAcademicConfig(defaultAcademicConfig);
+        }
+    });
+
+    return () => {
+        unsubStore();
+        unsubAcademic();
+    };
+  }, [db]);
 
   const handleMockTestPackageChange = (index: number, field: keyof MockTestPackage, value: string | number | boolean) => {
     if (!storeConfig) return;
@@ -185,20 +179,18 @@ export default function AdminStoreSettingsPage() {
     const storeRef = doc(db, "configs", "store");
     const academicRef = doc(db, "configs", "academic");
 
-    // Perform operations individually with their own error contexts
+    // Perform individual sets for more granular error reporting
     setDoc(storeRef, storeConfig)
         .then(() => {
             return setDoc(academicRef, academicConfig);
         })
         .then(() => {
             toast({
-              title: "Settings Saved!",
-              description: "Your changes have been applied across the application.",
+              title: "Configurations Saved!",
+              description: "System rules have been updated globally.",
             });
         })
         .catch(async (error) => {
-            // Determine which ref caused the issue based on standard FirestoreError context if available
-            // but for safety in the emitter, we report the combined intent.
             const permissionError = new FirestorePermissionError({
                 path: 'configs',
                 operation: 'write',
@@ -234,24 +226,32 @@ export default function AdminStoreSettingsPage() {
       );
   };
 
-  if (isLoading) {
+  if (isLoading && !storeConfig) {
     return (
       <div className="flex flex-col items-center justify-center h-96 space-y-4">
         <Loader2 className="animate-spin text-primary" size={40} />
-        <p className="text-muted-foreground animate-pulse font-medium">Syncing Configurations...</p>
+        <p className="text-muted-foreground animate-pulse font-medium">Synchronizing Ruleset...</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Store & Academic Settings</h1>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold">Store & Academic Settings</h1>
+            {syncError && <Badge variant="destructive" className="animate-pulse">Offline / Sync Delay</Badge>}
+        </div>
+        <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+            <RefreshCcw className="h-4 w-4 mr-2"/> Reload Rules
+        </Button>
+      </div>
 
       {syncError && (
           <Alert variant="destructive" className="bg-destructive/10">
               <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Synchronization Warning</AlertTitle>
-              <AlertDescription>{syncError}</AlertDescription>
+              <AlertTitle>Network Latency Warning</AlertTitle>
+              <AlertDescription>{syncError} Some settings may be using local defaults.</AlertDescription>
           </Alert>
       )}
 

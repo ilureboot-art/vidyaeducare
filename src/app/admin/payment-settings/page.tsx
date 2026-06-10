@@ -1,17 +1,16 @@
-
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Landmark, Loader2 } from "lucide-react";
+import { Landmark, Loader2, RefreshCcw } from "lucide-react";
 import type { AdminPaymentMethods } from "@/lib/user-data";
 import Image from "next/image";
 import { useDb } from "@/firebase";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
@@ -36,37 +35,31 @@ export default function PaymentSettingsPage() {
     const [isSaving, setIsSaving] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     
-    const fetchPaymentMethods = useCallback(async () => {
+    useEffect(() => {
         if (!db) return;
+
         setIsLoading(true);
         const docRef = doc(db, "configs", "paymentMethods");
-        try {
-            const docSnap = await getDoc(docRef).catch(async (e) => {
-                if (e.code === 'permission-denied') {
-                    const permissionError = new FirestorePermissionError({
-                        path: docRef.path,
-                        operation: 'get',
-                    } satisfies SecurityRuleContext);
-                    errorEmitter.emit('permission-error', permissionError);
-                }
-                throw e;
-            });
+        
+        const unsubscribe = onSnapshot(docRef, (docSnap) => {
             if (docSnap.exists()) {
                 setMethods(docSnap.data() as AdminPaymentMethods);
             } else {
                 setMethods(defaultPaymentMethods);
             }
-        } catch (error) {
-            console.error("Payment Settings Sync Error:", error);
-            setMethods(defaultPaymentMethods);
-        } finally {
             setIsLoading(false);
-        }
-    }, [db]);
+        }, (error) => {
+            if (error.code === 'permission-denied') {
+                errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'configs/paymentMethods', operation: 'get' }));
+            } else {
+                console.error("Payment Sync Error:", error);
+                setMethods(defaultPaymentMethods);
+            }
+            setIsLoading(false);
+        });
 
-    useEffect(() => {
-        fetchPaymentMethods();
-    }, [fetchPaymentMethods]);
+        return () => unsubscribe();
+    }, [db]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -119,18 +112,21 @@ export default function PaymentSettingsPage() {
         }
     }
 
-    if (isLoading || !methods) {
+    if (isLoading && !methods) {
         return (
           <div className="flex flex-col items-center justify-center h-96 space-y-4">
             <Loader2 className="animate-spin text-primary" size={40} />
-            <p className="text-muted-foreground animate-pulse font-medium">Syncing Payment Workspace...</p>
+            <p className="text-muted-foreground animate-pulse font-medium">Synchronizing Secure Workspace...</p>
           </div>
         );
     }
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Payment Settings</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold">Payment Settings</h1>
+        <Button variant="ghost" size="sm" onClick={() => window.location.reload()}><RefreshCcw className="w-4 h-4 mr-2"/> Re-sync</Button>
+      </div>
       <form onSubmit={handleSubmit}>
         <Card>
             <CardHeader>
@@ -143,19 +139,19 @@ export default function PaymentSettingsPage() {
                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                          <div className="space-y-2">
                             <Label htmlFor="accountHolderName">Account Holder Name</Label>
-                            <Input id="accountHolderName" name="accountHolderName" value={methods.accountHolderName} onChange={handleChange} />
+                            <Input id="accountHolderName" name="accountHolderName" value={methods?.accountHolderName || ''} onChange={handleChange} />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="bankName">Bank Name</Label>
-                            <Input id="bankName" name="bankName" value={methods.bankName} onChange={handleChange} />
+                            <Input id="bankName" name="bankName" value={methods?.bankName || ''} onChange={handleChange} />
                         </div>
                          <div className="space-y-2">
                             <Label htmlFor="accountNumber">Account Number</Label>
-                            <Input id="accountNumber" name="accountNumber" value={methods.accountNumber} onChange={handleChange} />
+                            <Input id="accountNumber" name="accountNumber" value={methods?.accountNumber || ''} onChange={handleChange} />
                         </div>
                          <div className="space-y-2">
                             <Label htmlFor="ifscCode">IFSC Code</Label>
-                            <Input id="ifscCode" name="ifscCode" value={methods.ifscCode} onChange={handleChange} />
+                            <Input id="ifscCode" name="ifscCode" value={methods?.ifscCode || ''} onChange={handleChange} />
                         </div>
                      </div>
                 </div>
@@ -165,29 +161,29 @@ export default function PaymentSettingsPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="upiId">Main UPI ID</Label>
-                            <Input id="upiId" name="upiId" value={methods.upiId} onChange={handleChange} />
+                            <Input id="upiId" name="upiId" value={methods?.upiId || ''} onChange={handleChange} />
                         </div>
                          <div className="space-y-2">
                             <Label htmlFor="gpayNumber">GPay Number</Label>
-                            <Input id="gpayNumber" name="gpayNumber" value={methods.gpayNumber} onChange={handleChange} />
+                            <Input id="gpayNumber" name="gpayNumber" value={methods?.gpayNumber || ''} onChange={handleChange} />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="gpayUpiId">GPay UPI ID</Label>
-                            <Input id="gpayUpiId" name="gpayUpiId" value={methods.gpayUpiId} onChange={handleChange} />
+                            <Input id="gpayUpiId" name="gpayUpiId" value={methods?.gpayUpiId || ''} onChange={handleChange} />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="phonepeNumber">PhonePe Number</Label>
-                            <Input id="phonepeNumber" name="phonepeNumber" value={methods.phonepeNumber} onChange={handleChange} />
+                            <Input id="phonepeNumber" name="phonepeNumber" value={methods?.phonepeNumber || ''} onChange={handleChange} />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="phonepeUpiId">PhonePe UPI ID</Label>
-                            <Input id="phonepeUpiId" name="phonepeUpiId" value={methods.phonepeUpiId} onChange={handleChange} />
+                            <Input id="phonepeUpiId" name="phonepeUpiId" value={methods?.phonepeUpiId || ''} onChange={handleChange} />
                         </div>
                          <div className="space-y-2 col-span-full">
                             <Label htmlFor="qrCode">Payment QR Code</Label>
                             <Input id="qrCode" type="file" onChange={handleFileChange} accept="image/png, image/jpeg, image/webp" />
                             <p className="text-xs text-muted-foreground">Upload an image of the payment QR code. It will be displayed to users.</p>
-                            {methods.qrCodeUrl && <Image src={methods.qrCodeUrl} alt="Current QR Code" className="w-24 h-24 mt-2 rounded-md" width={96} height={96} />}
+                            {methods?.qrCodeUrl && <Image src={methods.qrCodeUrl} alt="Current QR Code" className="w-24 h-24 mt-2 rounded-md" width={96} height={96} />}
                         </div>
                     </div>
                 </div>

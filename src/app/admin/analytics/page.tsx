@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BarChart, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Line, Bar, ResponsiveContainer } from "recharts";
 import { Users, IndianRupee, Loader2, AlertCircle, RefreshCcw, BookOpen } from "lucide-react";
-import { useDb } from "@/firebase";
+import { useDb, useAuth } from "@/firebase";
 import { collection, getDocs, query, where, Timestamp, getCountFromServer } from "firebase/firestore";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,7 @@ const getLast7Days = () => {
 
 export default function AnalyticsPage() {
   const db = useDb();
+  const { user } = useAuth();
   const [activeUsers, setActiveUsers] = useState<number | null>(null);
   const [todaysRevenue, setTodaysRevenue] = useState<number | null>(null);
   const [testVolume, setTestVolume] = useState<number | null>(null);
@@ -39,7 +40,7 @@ export default function AnalyticsPage() {
   const [error, setError] = useState<string | null>(null);
   
   const fetchData = useCallback(async (isManualRefresh = false) => {
-      if (!db) return;
+      if (!db || !user) return;
       if (isManualRefresh) setRefreshing(true);
       else setLoading(true);
       
@@ -122,11 +123,11 @@ export default function AnalyticsPage() {
           setLoading(false);
           setRefreshing(false);
       }
-  }, [db]);
+  }, [db, user]);
 
   useEffect(() => {
-    if(db) fetchData();
-  }, [db, fetchData]);
+    if(db && user) fetchData();
+  }, [db, user, fetchData]);
 
   if (loading) {
     return (

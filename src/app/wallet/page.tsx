@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { PlusCircle, MinusCircle, History, ArrowUpRight, ArrowDownLeft, Loader2, AlertCircle, Scan, X, PieChart as PieChartIcon } from "lucide-react";
+import { PlusCircle, MinusCircle, History, ArrowUpRight, ArrowDownLeft, Loader2, AlertCircle, Scan, X, PieChart as PieChartIcon, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { type Transaction, type AdminPaymentMethods } from "@/lib/user-data";
@@ -67,6 +67,8 @@ const defaultPaymentMethods: AdminPaymentMethods = {
     phonepeUpiId: "N/A",
     qrCodeUrl: ""
 };
+
+const LOW_BALANCE_THRESHOLD = 200;
 
 function WalletPageContent() {
   const { toast } = useToast();
@@ -299,15 +301,27 @@ function WalletPageContent() {
 
   return (
     <div className="w-full max-w-2xl mx-auto space-y-6">
-      {pendingCount > 0 && (
-          <Alert className="bg-primary/5 border-primary/20 mb-6 shadow-sm">
-              <AlertCircle className="h-4 w-4 text-primary" />
-              <AlertTitle className="text-primary font-black uppercase tracking-tight text-xs">Transaction Pending</AlertTitle>
-              <AlertDescription className="text-xs font-medium">
-                  You have {pendingCount} pending {pendingCount === 1 ? 'request' : 'requests'}. Our administrators are processing them for approval.
-              </AlertDescription>
-          </Alert>
-      )}
+      <div className="space-y-4 mb-6">
+        {pendingCount > 0 && (
+            <Alert className="bg-primary/5 border-primary/20 shadow-sm">
+                <AlertCircle className="h-4 w-4 text-primary" />
+                <AlertTitle className="text-primary font-black uppercase tracking-tight text-xs">Transaction Pending</AlertTitle>
+                <AlertDescription className="text-xs font-medium">
+                    You have {pendingCount} pending {pendingCount === 1 ? 'request' : 'requests'}. Our administrators are processing them for approval.
+                </AlertDescription>
+            </Alert>
+        )}
+
+        {walletInfo.balance < LOW_BALANCE_THRESHOLD && (
+            <Alert className="bg-amber-50 border-amber-200 shadow-sm animate-in fade-in slide-in-from-top-2">
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                <AlertTitle className="text-amber-800 font-black uppercase tracking-tight text-xs">Low Balance Warning</AlertTitle>
+                <AlertDescription className="text-xs font-medium text-amber-700">
+                    Your balance is below ₹{LOW_BALANCE_THRESHOLD}. Please add funds to ensure you can register for live tournaments and purchase test sets.
+                </AlertDescription>
+            </Alert>
+        )}
+      </div>
 
       <Card className="shadow-lg border-primary/10">
         <CardHeader className="text-center">

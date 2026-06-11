@@ -23,6 +23,8 @@ import { doc, setDoc, collection, getDocs, deleteDoc, updateDoc, query, where, D
 import ProtectedRoute from "@/components/ProtectedRoute";
 import UserLayout from "@/components/UserLayout";
 import { cn } from "@/lib/utils";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 const BADGE_COLORS = {
     'Platinum': 'text-slate-400 fill-slate-100',
@@ -55,26 +57,47 @@ function ProfilePageContent() {
         if (user && db) {
             setIsLoading(true);
             
-            const unsubParent = onSnapshot(doc(db, "users", user.uid), (doc) => {
+            const parentDocRef = doc(db, "users", user.uid);
+            const unsubParent = onSnapshot(parentDocRef, (doc) => {
                 if (doc.exists()) setParentProfile(doc.data());
                 setIsLoading(false);
-            }, (error) => {
-                console.warn("Parent profile fetch interrupted (offline/unauthorized).");
+            }, async (error) => {
+                if (error.code === 'permission-denied') {
+                    const permissionError = new FirestorePermissionError({
+                        path: parentDocRef.path,
+                        operation: 'get',
+                    } satisfies SecurityRuleContext);
+                    errorEmitter.emit('permission-error', permissionError);
+                }
                 setIsLoading(false);
             });
 
-            const q = query(collection(db, "students"), where("parentId", "==", user.uid));
+            const studentsColRef = collection(db, "students");
+            const q = query(studentsColRef, where("parentId", "==", user.uid));
             const unsubStudents = onSnapshot(q, (snapshot) => {
                 const studentList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentProfile));
                 setStudents(studentList);
-            }, (error) => {
-                console.warn("Students list fetch interrupted.");
+            }, async (error) => {
+                if (error.code === 'permission-denied') {
+                    const permissionError = new FirestorePermissionError({
+                        path: studentsColRef.path,
+                        operation: 'list',
+                    } satisfies SecurityRuleContext);
+                    errorEmitter.emit('permission-error', permissionError);
+                }
             });
 
-            const unsubCodes = onSnapshot(doc(db, "activationCodes", user.uid), (doc) => {
+            const codesDocRef = doc(db, "activationCodes", user.uid);
+            const unsubCodes = onSnapshot(codesDocRef, (doc) => {
                 setValidCodes(doc.exists() ? doc.data().codes : []);
-            }, (error) => {
-                console.warn("Activation codes sync interrupted.");
+            }, async (error) => {
+                 if (error.code === 'permission-denied') {
+                    const permissionError = new FirestorePermissionError({
+                        path: codesDocRef.path,
+                        operation: 'get',
+                    } satisfies SecurityRuleContext);
+                    errorEmitter.emit('permission-error', permissionError);
+                }
             });
             
             return () => {
@@ -126,28 +149,43 @@ function ProfilePageContent() {
             badges: [],
         };
         
-        try {
-            await setDoc(doc(db, "students", newStudentId), newStudent);
-            const updatedCodes = validCodes.filter(c => c !== activationCode);
-            await updateDoc(doc(db, "activationCodes", user.uid), { codes: updatedCodes });
-            toast({ title: "Student Added!", description: `${newStudent.name}'s profile has been created.`});
-            setIsAddStudentOpen(false);
-            setActivationCode("");
-            setIsCodeVerified(false);
-        } catch (error) {
-            toast({ variant: 'destructive', title: "Error", description: "Could not create student profile." });
-        }
+        const studentDocRef = doc(db, "students", newStudentId);
+        setDoc(studentDocRef, newStudent)
+            .then(async () => {
+                const updatedCodes = validCodes.filter(c => c !== activationCode);
+                const codesDocRef = doc(db, "activationCodes", user.uid);
+                await updateDoc(codesDocRef, { codes: updatedCodes });
+                toast({ title: "Student Added!", description: `${newStudent.name}'s profile has been created.`});
+                setIsAddStudentOpen(false);
+                setActivationCode("");
+                setIsCodeVerified(false);
+            })
+            .catch(async (e) => {
+                const permissionError = new FirestorePermissionError({
+                    path: studentDocRef.path,
+                    operation: 'create',
+                    requestResourceData: newStudent,
+                } satisfies SecurityRuleContext);
+                errorEmitter.emit('permission-error', permissionError);
+            });
     }
     
     const handleDeleteStudent = async (studentId: string) => {
         if (!db) return;
         if (!confirm("Are you sure you want to remove this student profile?")) return;
-        try {
-            await deleteDoc(doc(db, "students", studentId));
-            toast({ title: "Student Removed", description: "The student profile has been deleted." });
-        } catch (error) {
-            toast({ variant: 'destructive', title: "Error", description: "Could not delete student profile." });
-        }
+        
+        const studentDocRef = doc(db, "students", studentId);
+        deleteDoc(studentDocRef)
+            .then(() => {
+                toast({ title: "Student Removed", description: "The student profile has been deleted." });
+            })
+            .catch(async (e) => {
+                const permissionError = new FirestorePermissionError({
+                    path: studentDocRef.path,
+                    operation: 'delete',
+                } satisfies SecurityRuleContext);
+                errorEmitter.emit('permission-error', permissionError);
+            });
     }
     
     const openTestDialog = async (student: StudentProfile) => {
@@ -156,16 +194,26 @@ function ProfilePageContent() {
         setIsTestDialogOpen(true);
         setIsLoadingTests(true);
         try {
+            const scheduledColRef = collection(db, "scheduledTests");
             const q = query(
-                collection(db, "scheduledTests"), 
+                scheduledColRef, 
                 where("board", "==", student.academic.board),
                 where("standard", "==", student.academic.standard)
             );
-            const snapshot = await getDocs(q);
+            const snapshot = await getDocs(q).catch(async (serverError) => {
+                if (serverError.code === 'permission-denied') {
+                    const permissionError = new FirestorePermissionError({
+                        path: scheduledColRef.path,
+                        operation: 'list',
+                    } satisfies SecurityRuleContext);
+                    errorEmitter.emit('permission-error', permissionError);
+                }
+                throw serverError;
+            });
             const tests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ScheduledTest));
             setAvailableTests(tests.sort((a,b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime()));
         } catch (e) {
-            toast({ variant: 'destructive', title: "Error", description: "Could not load tests." });
+            setAvailableTests([]);
         } finally {
             setIsLoadingTests(false);
         }

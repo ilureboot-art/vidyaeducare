@@ -14,6 +14,8 @@ import type { QuizClashTournament } from "@/lib/quiz-clash-data";
 import UserLayout from "@/components/UserLayout";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 type Result = {
     userId: string;
@@ -65,27 +67,44 @@ function QuizClashResultsContent() {
 
         const processResults = async () => {
             const tournamentDocRef = doc(db, "quizClashTournaments", tournamentId);
-            const tournamentSnap = await getDoc(tournamentDocRef);
+            const tournamentSnap = await getDoc(tournamentDocRef).catch(async (serverError) => {
+                if (serverError.code === 'permission-denied') {
+                    errorEmitter.emit('permission-error', new FirestorePermissionError({ path: tournamentDocRef.path, operation: 'get' }));
+                }
+                throw serverError;
+            });
             if (!tournamentSnap.exists()) { router.push('/quiz-clash'); return; }
             
             const tourneyData = tournamentSnap.data() as QuizClashTournament;
             setTournament(tourneyData);
 
             if (tourneyData.status === 'completed') {
-                const q = query(collection(db, "quizClashResults"), where("tournamentId", "==", tournamentId), orderBy("rank", "asc"));
-                const resultsSnap = await getDocs(q);
+                const resultsColRef = collection(db, "quizClashResults");
+                const q = query(resultsColRef, where("tournamentId", "==", tournamentId), orderBy("rank", "asc"));
+                const resultsSnap = await getDocs(q).catch(async (serverError) => {
+                    if (serverError.code === 'permission-denied') {
+                        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: resultsColRef.path, operation: 'list' }));
+                    }
+                    throw serverError;
+                });
                 const resultsData = resultsSnap.docs.map(d => d.data() as Result);
                 setResults(resultsData);
                 const currentUserResult = resultsData.find(r => r.userId === user?.uid);
                 setUserResult(currentUserResult || null);
             } else {
-                const q = query(collection(db, "quizClashResults"), where("tournamentId", "==", tournamentId), orderBy("score", "desc"), orderBy("timeTaken", "asc"));
-                const resultsSnap = await getDocs(q);
+                const resultsColRef = collection(db, "quizClashResults");
+                const q = query(resultsColRef, where("tournamentId", "==", tournamentId), orderBy("score", "desc"), orderBy("timeTaken", "asc"));
+                const resultsSnap = await getDocs(q).catch(async (serverError) => {
+                    if (serverError.code === 'permission-denied') {
+                        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: resultsColRef.path, operation: 'list' }));
+                    }
+                    throw serverError;
+                });
                 const fetchedResults = resultsSnap.docs.map(d => ({...d.data(), id: d.id}) as Result & { id: string });
 
                 for (let result of fetchedResults) {
-                    const userDoc = await getDoc(doc(db, "users", result.userId));
-                    result.userName = userDoc.exists() ? userDoc.data().name : "Unknown User";
+                    const userDoc = await getDoc(doc(db, "users", result.userId)).catch(() => null);
+                    result.userName = userDoc && userDoc.exists() ? userDoc.data().name : "Unknown User";
                 }
 
                 let finalResults: Result[] = [];
@@ -132,10 +151,15 @@ function QuizClashResultsContent() {
                             }
                         }
                         transaction.update(tournamentDocRef, { status: "completed" });
+                    }).catch(async (serverError) => {
+                         if (serverError.code === 'permission-denied') {
+                            errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'multi-path-transaction', operation: 'write' }));
+                        }
+                        throw serverError;
                     });
                 } else {
                     finalResults = fetchedResults.map((r, i) => ({ ...r, rank: i + 1 }));
-                    await updateDoc(tournamentDocRef, { status: "completed" });
+                    await updateDoc(tournamentDocRef, { status: "completed" }).catch(() => null);
                 }
 
                 setResults(finalResults);

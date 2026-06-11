@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Trophy, Award, Loader2, Star, Coins, AlertCircle, Info } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +18,8 @@ import { useDb } from "@/firebase";
 import { collection, getDocs, query, orderBy, limit } from "firebase/firestore";
 import UserLayout from "@/components/UserLayout";
 import { cn } from "@/lib/utils";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 type UserEntry = {
   rank: number;
@@ -81,15 +83,29 @@ export default function LeaderboardPage() {
         const leaderboardRef = collection(db, "leaderboard");
         // Fetch top 50, ordered by score descending, then time ascending.
         const q = query(leaderboardRef, orderBy("score", "desc"), orderBy("time", "asc"), limit(50));
-        const querySnapshot = await getDocs(q);
-        const leaderboard = querySnapshot.docs.map((doc, index) => {
-            const data = doc.data();
-            return {
-                rank: index + 1,
-                ...data
-            } as UserEntry;
-        });
-        setLeaderboardData(leaderboard);
+        
+        try {
+            const querySnapshot = await getDocs(q).catch(async (serverError) => {
+                const permissionError = new FirestorePermissionError({
+                    path: leaderboardRef.path,
+                    operation: 'list',
+                } satisfies SecurityRuleContext);
+                errorEmitter.emit('permission-error', permissionError);
+                throw serverError;
+            });
+
+            const leaderboard = querySnapshot.docs.map((doc, index) => {
+                const data = doc.data();
+                return {
+                    rank: index + 1,
+                    ...data
+                } as UserEntry;
+            });
+            setLeaderboardData(leaderboard);
+        } catch (error) {
+            console.error("Leaderboard fetch error");
+            setLeaderboardData([]);
+        }
     };
     if (db) {
         fetchLeaderboard();

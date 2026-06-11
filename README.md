@@ -1,20 +1,21 @@
+
 # Vidya EduCare - Academic Excellence Platform
 
 A comprehensive NextJS platform for Vidya EduCare, combining regional academic preparation with AI-powered learning tools and a structured referral ecosystem.
 
-## 🔄 Development & Synchronization Loop
-This project uses a hybrid development workflow designed for maximum agility:
+## 🛡️ Central Development Strategy (GitHub-First)
+To ensure maximum stability and synchronization, this project follows a **GitHub-Centric** lifecycle:
 
-1. **Development (Firebase Studio)**: All coding, UI design, and database logic happens in Firebase Studio.
-2. **Version Control (GitHub)**: Code is pushed from Studio to your GitHub repository.
-3. **Live Deployment (Firebase App Hosting)**: Your live project is linked to GitHub. Every push automatically triggers a production build.
-4. **AI Intelligence (Google AI Studio)**: Manage your Gemini API keys and fine-tune AI behavior in Google AI Studio. The app here consumes those services via the keys set in App Hosting secrets. **Note**: While keys and tuned models reflect live, prompt text changes should be copied from AI Studio playground into your code files here.
+1.  **Central Source of Truth (GitHub)**: Your repository is the master record. All code, prompts, and configurations live here.
+2.  **Engineering Hub (Firebase Studio)**: Use this environment for all active coding, UI building, and database testing. Changes saved here should be pushed to GitHub.
+3.  **AI Intelligence (Google AI Studio)**: Use this for prompt engineering and model tuning. Once a prompt is perfected in the AI Studio Playground, copy it into the `src/ai/flows` directory in this codebase.
+4.  **Production Engine (Firebase App Hosting)**: Automatically pulls from GitHub to deploy your live site.
 
 ## 🚀 Readiness & Deployment
 
 ### 1. Infrastructure Setup
-Before going live, you must configure the Firebase project and the named Firestore instance.
-- **Guide**: See [docs/DEPLOYMENT_GUIDE.md](./docs/DEPLOYMENT_GUIDE.md) for step-by-step instructions.
+Before going live, configure the Firebase project and the named Firestore instance.
+- **Guide**: See [docs/DEPLOYMENT_GUIDE.md](./docs/DEPLOYMENT_GUIDE.md) for detailed instructions.
 - **Named Database**: The app targets `vidyaeducaredatabase` (Native Mode).
 - **Active URL**: `https://studio--vidyaeducare.us-central1.hosted.app`
 
@@ -22,8 +23,7 @@ Before going live, you must configure the Firebase project and the named Firesto
 Once deployed:
 - Navigate to `/admin/setup`.
 - Click **"STEP 1: AUTH ADMIN"** to verify the master identity.
-- Click **"STEP 2: MAP TO DATABASE"** to initialize global configurations and security rules.
-- **IMPORTANT**: Once the Head Admin is created, change the default password in settings immediately.
+- Click **"STEP 2: MAP TO DATABASE"** to initialize global configurations.
 
 ### 🔑 Default Master Credentials
 - **Access URL**: `/admin/login`

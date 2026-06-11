@@ -1,0 +1,11 @@
+
+{
+  "hero_students": {
+    "url": "https://picsum.photos/seed/1/600/400",
+    "hint": "students learning"
+  },
+  "founder_portrait": {
+    "url": "https://picsum.photos/seed/2/400/400",
+    "hint": "portrait professional"
+  }
+}

@@ -3,145 +3,126 @@ rules_version = '2';
 /**
  * Vidya EduCare - Production Infrastructure Rules
  * Target Instance: vidyaeducaredatabase
- * Deployment Salt: V56_OWNER_ACCESS_PRIORITY_FIX
+ * Deployment Salt: V58_DIRECT_OWNER_ACCESS_REFactor
  */
 service cloud.firestore {
   match /databases/{database}/documents {
     
     // --- Helper Functions ---
 
-    function isAuthenticated() {
+    function signedIn() {
       return request.auth != null;
     }
 
-    function isMasterAdmin() {
-      return isAuthenticated() && (
+    function isMaster() {
+      return signedIn() && (
         request.auth.uid == '1JgG0oF1D6YREaxOCSGedIfpQZ42' ||
-        (request.auth.token.email != null && request.auth.token.email == 'admin@vidyaeducare.com')
+        request.auth.token.email == 'admin@vidyaeducare.com'
       );
     }
 
     function isAdmin() {
-      if (!isAuthenticated()) return false;
-      if (isMasterAdmin()) return true;
+      if (!signedIn()) return false;
+      if (isMaster()) return true;
       
       let adminPath = /databases/$(database)/documents/admins/$(request.auth.uid);
       return exists(adminPath) && (
         get(adminPath).data.status == 'Active' || 
-        get(adminPath).data.role == 'Head Admin' ||
-        get(adminPath).data.role == 'Sub-admin'
+        get(adminPath).data.role == 'Head Admin'
       );
     }
 
-    function isHeadAdmin() {
-      if (!isAuthenticated()) return false;
-      if (isMasterAdmin()) return true;
-      
-      let adminPath = /databases/$(database)/documents/admins/$(request.auth.uid);
-      return exists(adminPath) && get(adminPath).data.role == 'Head Admin';
-    }
-
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
-    }
-
-    // --- PRIORITY 1: Supreme Master Override ---
+    // --- SUPREME OVERRIDE ---
     match /{allPaths=**} {
-      allow read, write: if isMasterAdmin();
+      allow read, write: if isMaster();
     }
 
-    // --- PRIORITY 2: Global Configuration Access ---
-    match /configs/{document=**} {
-      allow read: if isAuthenticated();
-      allow write: if isAdmin();
+    // --- USER PRIVATE DATA (Direct Match UID) ---
+
+    match /users/{uid} {
+      allow read, write: if (signedIn() && request.auth.uid == uid) || isAdmin();
     }
 
-    // --- RESOURCE RULES ---
-
-    match /admins/{userId} {
-      allow get, list, read: if isAuthenticated();
-      allow write: if isHeadAdmin() || isOwner(userId);
+    match /wallets/{uid} {
+      allow read, write: if (signedIn() && request.auth.uid == uid) || isAdmin();
     }
 
-    match /users/{userId} {
-      allow get, read: if isOwner(userId) || isAdmin();
+    match /activationCodes/{uid} {
+      allow get, read, write: if (signedIn() && request.auth.uid == uid) || isAdmin();
       allow list: if isAdmin();
-      allow write: if isOwner(userId) || isAdmin();
     }
 
-    match /wallets/{userId} {
-      allow read: if isOwner(userId) || isAdmin();
-      allow write: if isOwner(userId) || isAdmin();
-    }
-
-    match /students/{studentId} {
-      allow read: if isAuthenticated();
-      allow list: if isAuthenticated();
-      allow write: if isAdmin() || (resource != null && resource.data.parentId == request.auth.uid) || (request.resource != null && request.resource.data.parentId == request.auth.uid);
-    }
-    
-    match /transactions/{txId} {
-        allow read, list: if isAuthenticated();
-        allow create: if isAuthenticated();
-        allow update: if isAdmin();
-    }
-
-    match /chats/{userId} {
-      allow list: if isAdmin();
-      allow read, write: if isOwner(userId) || isAdmin();
-      
-      match /messages/{messageId} {
-        allow read, write: if isOwner(userId) || isAdmin();
+    match /chats/{uid} {
+      allow read, write: if (signedIn() && request.auth.uid == uid) || isAdmin();
+      match /messages/{mid} {
+        allow read, write: if (signedIn() && request.auth.uid == uid) || isAdmin();
       }
     }
 
-    match /activationCodes/{userId} {
-        allow get, read: if isOwner(userId) || isAdmin();
-        allow list: if isAdmin();
-        allow write: if isOwner(userId) || isAdmin();
+    match /referbolt/{uid} {
+      allow read, write: if (signedIn() && request.auth.uid == uid) || isAdmin();
     }
 
-    match /testSets/{testSetId} {
-        allow read, list: if isAuthenticated();
-        allow write: if isAdmin();
+    // --- SHARED DATA ---
+
+    match /configs/{document=**} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
     }
 
-    match /scheduledTests/{testId} {
-        allow read, list: if isAuthenticated();
-        allow write: if isAdmin();
+    match /admins/{uid} {
+      allow read: if signedIn();
+      allow write: if isAdmin() || (signedIn() && request.auth.uid == uid);
     }
 
-    match /testResults/{resultId} {
-        allow create, read, list: if isAuthenticated();
-    }
-
-    match /leaderboard/{resultId} {
-        allow read, list: if true;
-        allow write: if isAuthenticated(); 
-    }
-
-    match /quizClashTournaments/{tournamentId} {
-        allow read, list: if true;
-        allow write: if isAdmin();
-    }
-
-    match /quizClashResults/{resultId} {
-        allow read, list: if true;
-        allow write: if isAuthenticated();
+    match /students/{id} {
+      allow read, list: if signedIn();
+      allow write: if isAdmin() || (resource != null && resource.data.parentId == request.auth.uid) || (request.resource != null && request.resource.data.parentId == request.auth.uid);
     }
     
-    match /notifications/{notifId} {
-        allow read, list: if isAuthenticated();
-        allow write: if isAdmin();
+    match /transactions/{id} {
+      allow read, list: if signedIn();
+      allow create: if signedIn();
+      allow update: if isAdmin();
     }
 
-    match /referbolt/{userId} {
-        allow read, write, list: if isOwner(userId) || isAdmin();
+    match /testSets/{id} {
+      allow read, list: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    match /scheduledTests/{id} {
+      allow read, list: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    match /testResults/{id} {
+      allow read, list, create: if signedIn();
+    }
+
+    match /leaderboard/{id} {
+      allow read, list: if true;
+      allow write: if signedIn();
+    }
+
+    match /quizClashTournaments/{id} {
+      allow read, list: if true;
+      allow write: if isAdmin();
+    }
+
+    match /quizClashResults/{id} {
+      allow read, list: if true;
+      allow write: if signedIn();
     }
     
-    match /clients/{clientId} {
-        allow read, list: if isAuthenticated();
-        allow write: if isAdmin();
+    match /notifications/{id} {
+      allow read, list: if signedIn();
+      allow write: if isAdmin();
+    }
+    
+    match /clients/{id} {
+      allow read, list: if signedIn();
+      allow write: if isAdmin();
     }
   }
 }

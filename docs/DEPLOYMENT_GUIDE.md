@@ -53,9 +53,17 @@ Firebase App Hosting is the recommended way to host this Next.js 14+ application
 
 4. **Deploy**:
    Push your code to the connected GitHub repository. Firebase App Hosting will automatically detect the Next.js environment and deploy.
-   **Target Deployment URL**: `https://studio--vidyaeducare.us-central1.hosted.app`
 
-## 4. Final Infrastructure Mapping
+## 4. 🔄 Hybrid Workflow (Development Persistence)
+
+To keep your development in **Firebase Studio** in sync with your live environment:
+
+1. **Connect GitHub**: Ensure your project is linked to a GitHub repository.
+2. **Commit Often**: When we finish a feature here, ensures it is pushed to the main branch.
+3. **Reflect Changes**: Firebase App Hosting will see the push and automatically update your live site.
+4. **Google AI Studio**: Use it exclusively for managing your Gemini API keys and fine-tuning prompt behavior. You do **not** need to move the code *into* AI Studio; your code simply *calls* AI Studio's services.
+
+## 5. Final Infrastructure Mapping
 
 Once the app is live:
 

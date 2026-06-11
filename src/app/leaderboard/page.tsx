@@ -11,7 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Trophy, Award, Loader2, Star, Coins } from "lucide-react";
+import { Trophy, Award, Loader2, Star, Coins, AlertCircle, Info } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useDb } from "@/firebase";
@@ -23,8 +23,10 @@ type UserEntry = {
   rank: number;
   name: string;
   avatar: string;
-  score: number;
-  time: string; // e.g., "15:32"
+  score: number; // Raw correct answers count
+  accuracy?: number; // Accuracy percentage (80% qualification)
+  totalQuestions?: number;
+  time: string; 
   prize?: number;
 };
 
@@ -36,7 +38,10 @@ const getRankStyles = (rank: number) => {
     return "border-transparent";
 }
 
-const getPrizeForRank = (rank: number) => {
+const getPrizeForRank = (rank: number, accuracy: number = 0) => {
+    // Qualification check: Must have 80% accuracy
+    if (accuracy < 80) return null;
+
     switch (rank) {
         case 1: return 250;
         case 2: return 200;
@@ -77,10 +82,13 @@ export default function LeaderboardPage() {
         // Fetch top 50, ordered by score descending, then time ascending.
         const q = query(leaderboardRef, orderBy("score", "desc"), orderBy("time", "asc"), limit(50));
         const querySnapshot = await getDocs(q);
-        const leaderboard = querySnapshot.docs.map((doc, index) => ({
-            rank: index + 1,
-            ...doc.data()
-        } as UserEntry));
+        const leaderboard = querySnapshot.docs.map((doc, index) => {
+            const data = doc.data();
+            return {
+                rank: index + 1,
+                ...data
+            } as UserEntry;
+        });
         setLeaderboardData(leaderboard);
     };
     if (db) {
@@ -107,8 +115,8 @@ export default function LeaderboardPage() {
               <Trophy className="w-10 h-10 text-yellow-500" />
               Live Achievement Board
             </CardTitle>
-            <CardDescription className="text-center font-bold uppercase tracking-widest text-xs mt-2">
-              National Mock Test Rankings • Performance Excellence Rewards
+            <CardDescription className="text-center font-bold uppercase tracking-widest text-xs mt-2 text-primary">
+              National Mock Test Rankings • 80%+ Accuracy Required for Rewards
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0">
@@ -124,7 +132,11 @@ export default function LeaderboardPage() {
               </TableHeader>
               <TableBody>
                 {leaderboardData.length > 0 ? leaderboardData.map((player) => {
-                  const rankPrize = getPrizeForRank(player.rank);
+                  // Fallback for legacy records that don't have accuracy stored: assume 50 questions
+                  const playerAccuracy = player.accuracy !== undefined ? player.accuracy : (player.score / (player.totalQuestions || 50)) * 100;
+                  const rankPrize = getPrizeForRank(player.rank, playerAccuracy);
+                  const meetsCriteria = playerAccuracy >= 80;
+
                   return (
                   <TableRow key={player.rank} className={cn("transition-colors group", getRankStyles(player.rank))}>
                     <TableCell className="text-center">
@@ -137,7 +149,7 @@ export default function LeaderboardPage() {
                                 "w-12 h-12 border-2 shadow-lg group-hover:scale-110 transition-transform",
                                 player.rank === 1 ? "border-yellow-400" : "border-background"
                             )}>
-                                <AvatarImage src={`https://picsum.photos/seed/${player.avatar}/60/60`} />
+                                <AvatarImage src={`https://picsum.photos/seed/${player.rank}/60/60`} />
                                 <AvatarFallback className="bg-primary/10 text-primary font-black">{player.name.charAt(0)}</AvatarFallback>
                             </Avatar>
                             {player.rank <= 3 && (
@@ -151,16 +163,18 @@ export default function LeaderboardPage() {
                           </div>
                           <div>
                               <p className="font-black text-lg uppercase tracking-tight leading-none">{player.name}</p>
-                              {player.rank <= 5 && <p className="text-[9px] font-black text-primary uppercase mt-1 tracking-widest">Elite Tier Ranker</p>}
+                              {player.rank <= 5 && <p className="text-[9px] font-black text-primary uppercase mt-1 tracking-widest">{meetsCriteria ? "Elite Tier Ranker" : "High Performer"}</p>}
                           </div>
                       </div>
                     </TableCell>
                     <TableCell className="text-center font-mono font-bold text-muted-foreground">{player.time}</TableCell>
                     <TableCell className="text-center">
                         <div className="inline-flex flex-col items-center">
-                            <span className="text-xl font-black text-primary">{player.score}</span>
+                            <span className={cn("text-xl font-black", meetsCriteria ? "text-primary" : "text-amber-600")}>
+                                {playerAccuracy.toFixed(0)}%
+                            </span>
                             <div className="w-16 h-1 bg-muted rounded-full mt-1 overflow-hidden">
-                                <div className="h-full bg-primary" style={{ width: `${Math.min((player.score / 50) * 100, 100)}%` }} />
+                                <div className={cn("h-full", meetsCriteria ? "bg-primary" : "bg-amber-500")} style={{ width: `${Math.min(playerAccuracy, 100)}%` }} />
                             </div>
                         </div>
                     </TableCell>
@@ -170,11 +184,10 @@ export default function LeaderboardPage() {
                               <Coins className="w-4 h-4" />
                               ₹{rankPrize.toLocaleString()}
                           </div>
-                      ) : player.prize ? (
-                          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-green-500/10 text-green-600 rounded-full font-black text-lg shadow-sm border border-green-500/20">
-                              <Star className="w-4 h-4 fill-green-600" />
-                              ₹{player.prize.toLocaleString()}
-                          </div>
+                      ) : (player.rank <= 5 && !meetsCriteria) ? (
+                          <Badge variant="outline" className="text-[9px] text-amber-600 border-amber-200 bg-amber-50 gap-1 font-bold">
+                              <AlertCircle size={10}/> ACCURACY &lt; 80%
+                          </Badge>
                       ) : (
                           <span className="text-muted-foreground/30 font-black">—</span>
                       )}
@@ -194,6 +207,12 @@ export default function LeaderboardPage() {
               </TableBody>
             </Table>
           </CardContent>
+          <CardFooter className="bg-muted/30 p-4 border-t justify-center gap-6">
+              <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase">
+                  <Info size={14} className="text-primary"/>
+                  Prize eligibility requires top 5 rank AND 80% accuracy
+              </div>
+          </CardFooter>
         </Card>
       </div>
     </UserLayout>

@@ -149,8 +149,8 @@ function MockTestContent() {
             }
         });
         
-        const finalScore = (correctAnswers / activeQuestions.length) * 100;
-        setScore(finalScore);
+        const finalAccuracy = (correctAnswers / activeQuestions.length) * 100;
+        setScore(finalAccuracy);
         
         const timeTaken = initialDuration - timeLeft;
         const minutes = Math.floor(timeTaken / 60);
@@ -164,7 +164,9 @@ function MockTestContent() {
                 studentName: studentProfile.name,
                 testId: scheduledTest.id,
                 testName: scheduledTest.testSetName,
-                score: finalScore,
+                score: finalAccuracy,
+                rawScore: correctAnswers,
+                totalQuestions: activeQuestions.length,
                 answers: answers,
                 timeTaken: timeString,
                 date: new Date().toISOString(),
@@ -174,7 +176,9 @@ function MockTestContent() {
                 await setDoc(doc(db, "leaderboard", resultId), {
                     name: studentProfile.name,
                     avatar: studentProfile.name.charAt(0),
-                    score: correctAnswers,
+                    score: correctAnswers, // Raw marks for ranking
+                    accuracy: finalAccuracy, // For prize qualification
+                    totalQuestions: activeQuestions.length,
                     time: timeString
                 });
             }
@@ -184,8 +188,8 @@ function MockTestContent() {
             const currentStats = studentProfile.stats || { totalEarnings: 0, testsTaken: 0, avgScore: 0, performance: [], recentActivity: [] };
             
             const newTestsTaken = (currentStats.testsTaken || 0) + 1;
-            const newAvgScore = Math.round(((currentStats.avgScore || 0) * (currentStats.testsTaken || 0) + finalScore) / newTestsTaken);
-            const newPerformance = [...(currentStats.performance || []), { name: scheduledTest.testSetName, score: Math.round(finalScore) }].slice(-10);
+            const newAvgScore = Math.round(((currentStats.avgScore || 0) * (currentStats.testsTaken || 0) + finalAccuracy) / newTestsTaken);
+            const newPerformance = [...(currentStats.performance || []), { name: scheduledTest.testSetName, score: Math.round(finalAccuracy) }].slice(-10);
             
             await updateDoc(studentRef, {
                 "stats.testsTaken": newTestsTaken,
@@ -196,7 +200,7 @@ function MockTestContent() {
             setTestState("completed");
             toast({
                 title: timeLeft <= 0 ? "Time's Up!" : "Test Submitted!",
-                description: `You scored ${correctAnswers} out of ${activeQuestions.length}.`
+                description: `You achieved ${finalAccuracy.toFixed(0)}% accuracy (${correctAnswers}/${activeQuestions.length}).`
             });
         } catch (error) {
             console.error("Failed to save test results:", error);
@@ -397,7 +401,13 @@ function MockTestContent() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <p className="text-xl">You have completed the test.</p>
-                    <p className="text-4xl font-bold">Your Score: {score.toFixed(0)}%</p>
+                    <p className="text-4xl font-bold">Accuracy: {score.toFixed(0)}%</p>
+                    {score < 80 && (
+                        <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-3 text-amber-800 text-sm font-medium">
+                            <Info size={18}/>
+                            <span>Score 80%+ to qualify for leaderboard cash prizes!</span>
+                        </div>
+                    )}
                     
                     <div className="grid gap-3 pt-6">
                         <Button onClick={handleGenerateNotes} className="w-full py-8 text-lg font-black gap-3 shadow-xl bg-accent hover:bg-accent/90">

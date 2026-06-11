@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { PlusCircle, MinusCircle, History, ArrowUpRight, ArrowDownLeft, Loader2, AlertCircle, Scan, X, PieChart as PieChartIcon, AlertTriangle, FileText, CheckCircle2, Clock, XCircle, Copy, ArrowLeft, ShieldCheck, Zap } from "lucide-react";
+import { PlusCircle, MinusCircle, History, ArrowUpRight, ArrowDownLeft, Loader2, AlertCircle, Scan, X, PieChart as PieChartIcon, AlertTriangle, FileText, CheckCircle2, Clock, XCircle, Copy, ArrowLeft, ShieldCheck, Zap, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { type Transaction, type AdminPaymentMethods } from "@/lib/user-data";
@@ -72,7 +72,7 @@ const defaultPaymentMethods: AdminPaymentMethods = {
 
 const LOW_BALANCE_THRESHOLD = 200;
 
-type WalletView = 'main' | 'add' | 'withdraw';
+type WalletView = 'main' | 'add' | 'withdraw' | 'success';
 
 function WalletPageContent() {
   const { toast } = useToast();
@@ -83,6 +83,7 @@ function WalletPageContent() {
   const [transactions, setTransactions] = useState<Transaction[] | null>(null);
   const [adminPaymentMethods, setAdminPaymentMethods] = useState<AdminPaymentMethods | null>(null);
   const [activeView, setActiveView] = useState<WalletView>('main');
+  const [successAmount, setSuccessAmount] = useState<number>(0);
 
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
 
@@ -175,6 +176,29 @@ function WalletPageContent() {
     ];
   }, [transactions]);
 
+  const playSuccessSound = () => {
+    try {
+        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
+        oscillator.frequency.exponentialRampToValueAtTime(1046.50, audioCtx.currentTime + 0.1); // C6
+
+        gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+
+        oscillator.start();
+        oscillator.stop(audioCtx.currentTime + 0.4);
+    } catch (e) {
+        console.warn("Audio feedback blocked or failed.");
+    }
+  };
+
   const handleStartScanner = async () => {
       setIsScannerOpen(true);
       setTimeout(() => {
@@ -238,9 +262,11 @@ function WalletPageContent() {
     const txsCol = collection(db, "transactions");
     addDoc(txsCol, txData)
         .then(() => {
-            toast({ title: "Request Submitted", description: "Your deposit request is pending approval." });
-            setActiveView('main');
+            setSuccessAmount(amount);
+            setActiveView('success');
+            playSuccessSound();
             form.reset();
+            setTimeout(() => setActiveView('main'), 4000);
         })
         .catch(async (serverError) => {
             const permissionError = new FirestorePermissionError({
@@ -276,9 +302,11 @@ function WalletPageContent() {
         const newTxRef = doc(collection(db, "transactions"));
         transaction.set(newTxRef, { type: 'withdrawal', description: 'Withdrawal Request', amount: -amount, date: serverTimestamp(), status: 'Pending', paymentMethod: upiId, user: user.uid });
     }).then(() => {
-        toast({ title: "Request Submitted", description: `Withdrawal for ₹${amount} sent.` });
-        setActiveView('main');
+        setSuccessAmount(amount);
+        setActiveView('success');
+        playSuccessSound();
         form.reset();
+        setTimeout(() => setActiveView('main'), 4000);
     }).catch(async (serverError) => {
         if (serverError.code === 'permission-denied') {
             const permissionError = new FirestorePermissionError({
@@ -311,7 +339,7 @@ function WalletPageContent() {
   return (
     <div className="w-full max-w-2xl mx-auto space-y-6">
       <div className="space-y-4 mb-6">
-        {pendingCount > 0 && (
+        {pendingCount > 0 && activeView === 'main' && (
             <Alert className="bg-primary/5 border-primary/20 shadow-sm">
                 <AlertCircle className="h-4 w-4 text-primary" />
                 <AlertTitle className="text-primary font-black uppercase tracking-tight text-xs">Transaction Pending</AlertTitle>
@@ -321,7 +349,7 @@ function WalletPageContent() {
             </Alert>
         )}
 
-        {walletInfo.balance < LOW_BALANCE_THRESHOLD && (
+        {walletInfo.balance < LOW_BALANCE_THRESHOLD && activeView === 'main' && (
             <Alert className="bg-amber-50 border-amber-200 shadow-sm animate-in fade-in slide-in-from-top-2">
                 <AlertTriangle className="h-4 w-4 text-amber-600" />
                 <AlertTitle className="text-amber-800 font-black uppercase tracking-tight text-xs">Low Balance Warning</AlertTitle>
@@ -541,7 +569,7 @@ function WalletPageContent() {
                 </form>
             </CardContent>
           </Card>
-      ) : (
+      ) : activeView === 'withdraw' ? (
           <Card className="shadow-2xl border-accent/20 overflow-hidden animate-in fade-in slide-in-from-right-4 duration-500">
              <CardHeader className="bg-accent/5 border-b flex flex-row items-center justify-between">
                   <div>
@@ -570,6 +598,25 @@ function WalletPageContent() {
                         </Button>
                     </div>
                 </form>
+              </CardContent>
+          </Card>
+      ) : (
+          <Card className="shadow-2xl border-green-500/20 overflow-hidden animate-in fade-in zoom-in duration-500">
+              <CardContent className="flex flex-col items-center justify-center py-16 px-8 text-center space-y-8">
+                  <div className="relative">
+                      <div className="absolute -inset-4 bg-green-500/20 rounded-full blur-2xl animate-pulse" />
+                      <CheckCircle className="w-24 h-24 text-green-500 relative z-10 animate-in zoom-in spin-in-12 duration-700" />
+                  </div>
+                  <div className="space-y-2">
+                      <h2 className="text-3xl font-black tracking-tighter uppercase italic text-primary">Request Submitted!</h2>
+                      <p className="text-muted-foreground font-medium">Your request for ₹{successAmount.toFixed(2)} has been queued for academic administration review.</p>
+                  </div>
+                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 px-6 py-1.5 font-black uppercase tracking-widest">
+                      PENDING APPROVAL
+                  </Badge>
+                  <Button variant="ghost" className="text-[10px] font-black uppercase tracking-widest opacity-50" onClick={() => setActiveView('main')}>
+                      Returning to Wallet...
+                  </Button>
               </CardContent>
           </Card>
       )}

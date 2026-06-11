@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -23,6 +22,8 @@ import { useAuth, useDb } from "@/firebase";
 import { collection, query, where, getDocs, orderBy, onSnapshot, Timestamp, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import UserLayout from "@/components/UserLayout";
+import Papa from "papaparse";
+import { useToast } from "@/hooks/use-toast";
 
 const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -46,6 +47,7 @@ const getTypeIcon = (type: string, amount: number) => {
 
 function TransactionsPageContent() {
   const { user, loading: authLoading } = useAuth();
+  const { toast } = useToast();
   const db = useDb();
   const [transactions, setTransactions] = useState<Transaction[] | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -68,6 +70,45 @@ function TransactionsPageContent() {
     }
   }, [user, db]);
 
+  const filteredTransactions = transactions?.filter(
+    (tx) => {
+      const searchTermMatch = tx.description.toLowerCase().includes(searchTerm.toLowerCase()) || String(tx.id).toLowerCase().includes(searchTerm.toLowerCase());
+      const statusMatch = statusFilter === 'all' || tx.status.toLowerCase() === statusFilter;
+      const typeMatch = typeFilter === 'all' || (typeFilter === 'deposit' && tx.amount >= 0) || (typeFilter === 'withdrawal' && tx.amount < 0);
+      return searchTermMatch && statusMatch && typeMatch;
+    }
+  ) || [];
+
+  const handleExportCSV = () => {
+    if (!filteredTransactions.length) {
+        toast({ variant: "destructive", title: "No Data", description: "There are no transactions to export." });
+        return;
+    }
+    
+    const csvData = filteredTransactions.map(tx => ({
+      'Description': tx.description,
+      'Transaction ID': tx.id,
+      'Date': format(new Date(tx.date), 'PPP p'),
+      'Status': tx.status,
+      'Amount': tx.amount,
+      'Type': tx.type,
+      'Reference ID': tx.referenceId || ''
+    }));
+
+    const csv = Papa.unparse(csvData);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `my_transactions_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({ title: "Export Complete", description: "Your transaction history has been downloaded." });
+  };
+
   if (authLoading || !transactions) {
     return (
       <div className="flex justify-center items-center h-96">
@@ -75,15 +116,6 @@ function TransactionsPageContent() {
       </div>
     );
   }
-
-  const filteredTransactions = transactions.filter(
-    (tx) => {
-      const searchTermMatch = tx.description.toLowerCase().includes(searchTerm.toLowerCase()) || String(tx.id).toLowerCase().includes(searchTerm.toLowerCase());
-      const statusMatch = statusFilter === 'all' || tx.status.toLowerCase() === statusFilter;
-      const typeMatch = typeFilter === 'all' || (typeFilter === 'deposit' && tx.amount >= 0) || (typeFilter === 'withdrawal' && tx.amount < 0);
-      return searchTermMatch && statusMatch && typeMatch;
-    }
-  );
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-6">
@@ -132,7 +164,7 @@ function TransactionsPageContent() {
                 </Select>
               </div>
            </div>
-            <Button variant="outline">
+            <Button variant="outline" onClick={handleExportCSV}>
               <Download className="mr-2 h-4 w-4" />
               Export CSV
             </Button>

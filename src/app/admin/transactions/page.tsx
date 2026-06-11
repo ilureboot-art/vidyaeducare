@@ -23,6 +23,7 @@ import { collection, getDocs, doc, updateDoc, writeBatch, getDoc, runTransaction
 import { useDb } from "@/firebase";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
+import Papa from "papaparse";
 
 const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -142,6 +143,46 @@ export default function TransactionsPage() {
     }
   };
 
+  const filteredTransactions = transactions?.filter(
+    (tx) => {
+      const searchTermMatch = tx.user?.toLowerCase().includes(searchTerm.toLowerCase()) || String(tx.id).toLowerCase().includes(searchTerm.toLowerCase());
+      const statusMatch = statusFilter === 'all' || tx.status.toLowerCase() === statusFilter;
+      const typeMatch = typeFilter === 'all' || (typeFilter === 'deposit' && tx.amount >= 0) || (typeFilter === 'withdrawal' && tx.amount < 0);
+      return searchTermMatch && statusMatch && typeMatch;
+    }
+  ) || [];
+
+  const handleExportCSV = () => {
+    if (!filteredTransactions.length) {
+        toast({ variant: "destructive", title: "No Data", description: "There are no transactions to export." });
+        return;
+    }
+    
+    const csvData = filteredTransactions.map(tx => ({
+      'User ID': tx.user || 'System',
+      'Description': tx.description,
+      'Transaction ID': tx.id,
+      'Date': format(new Date(tx.date), 'PPP p'),
+      'Status': tx.status,
+      'Amount': tx.amount,
+      'Type': tx.type,
+      'Reference ID': tx.referenceId || ''
+    }));
+
+    const csv = Papa.unparse(csvData);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `admin_transactions_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({ title: "Export Complete", description: "Transaction report has been downloaded." });
+  };
+
   if (!transactions) {
     return (
       <div className="flex justify-center items-center h-96">
@@ -149,15 +190,6 @@ export default function TransactionsPage() {
       </div>
     );
   }
-
-  const filteredTransactions = transactions.filter(
-    (tx) => {
-      const searchTermMatch = tx.user?.toLowerCase().includes(searchTerm.toLowerCase()) || String(tx.id).toLowerCase().includes(searchTerm.toLowerCase());
-      const statusMatch = statusFilter === 'all' || tx.status.toLowerCase() === statusFilter;
-      const typeMatch = typeFilter === 'all' || (typeFilter === 'deposit' && tx.amount >= 0) || (typeFilter === 'withdrawal' && tx.amount < 0);
-      return searchTermMatch && statusMatch && typeMatch;
-    }
-  );
 
   return (
     <div className="space-y-6">
@@ -207,7 +239,7 @@ export default function TransactionsPage() {
                 </Select>
               </div>
            </div>
-            <Button variant="outline">
+            <Button variant="outline" onClick={handleExportCSV}>
               <Download className="mr-2 h-4 w-4" />
               Export CSV
             </Button>

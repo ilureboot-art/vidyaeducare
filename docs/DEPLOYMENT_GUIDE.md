@@ -3,12 +3,13 @@
 
 Follow these steps to deploy and manage the Vidya EduCare platform using the **Centralized GitHub Workflow**.
 
-## 1. The "Central Hub" Workflow
-The best way to manage this project is to treat **GitHub** as your central hub.
+## 1. The "Integrated Development" Workflow
+The best way to manage this project is to treat **GitHub** as your central hub while using specialized studios for work.
 
-*   **Firebase Studio** sends code to GitHub.
-*   **Google AI Studio** provides keys and logic that are stored in the code on GitHub.
-*   **Firebase App Hosting** deploys directly from GitHub.
+*   **Firebase Studio (AI Chat)**: This is your **Prompting-Based Development Hub**. Use the chat here to build features, write UI code, and configure Firebase logic. Changes made here are saved to your repository.
+*   **GitHub**: Acts as the master storage. It holds the "Production Ready" version of your code.
+*   **Google AI Studio**: Provides keys and a playground for testing prompts. Copy successful prompts from AI Studio into `src/ai/flows/` in the code.
+*   **Firebase App Hosting**: Deploys directly from GitHub every time you save a feature.
 
 ## 2. Firebase Project Setup
 

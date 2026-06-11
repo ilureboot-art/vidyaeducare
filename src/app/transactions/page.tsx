@@ -14,11 +14,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Download, ArrowUpRight, ArrowDownLeft, Loader2, Calendar as CalendarIcon, FilterX, TrendingUp, TrendingDown } from "lucide-react";
+import { Search, Download, ArrowUpRight, ArrowDownLeft, Loader2, Calendar as CalendarIcon, FilterX, BarChart3 } from "lucide-react";
 import type { Transaction } from "@/lib/user-data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { format, startOfDay, endOfDay, subDays, isWithinInterval, eachDayOfInterval } from "date-fns";
+import { format, startOfDay, endOfDay, subDays, eachDayOfInterval } from "date-fns";
 import { useAuth, useDb } from "@/firebase";
 import { collection, query, where, orderBy, onSnapshot, Timestamp } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -28,7 +28,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 const getStatusBadgeVariant = (status: string) => {
     switch (status.toLowerCase()) {
@@ -109,18 +109,18 @@ function TransactionsPageContent() {
               return format(txDate, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd') && tx.status === 'Completed';
           });
 
-          const income = dayTransactions
+          const deposits = dayTransactions
               .filter(tx => tx.amount > 0)
               .reduce((sum, tx) => sum + tx.amount, 0);
           
-          const spending = dayTransactions
+          const withdrawals = dayTransactions
               .filter(tx => tx.amount < 0)
               .reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
 
           return {
               date: format(date, 'MMM dd'),
-              income,
-              spending
+              deposits,
+              withdrawals
           };
       });
   }, [transactions]);
@@ -187,12 +187,12 @@ function TransactionsPageContent() {
       <Card className="border-primary/10 shadow-lg overflow-hidden">
           <CardHeader className="bg-primary/5 pb-2">
               <CardTitle className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4" /> 30-Day Financial Trends
+                  <BarChart3 className="w-4 h-4" /> 30-Day Activity Volume
               </CardTitle>
           </CardHeader>
           <CardContent className="pt-6 h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData}>
+                  <BarChart data={chartData}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.1} />
                       <XAxis 
                         dataKey="date" 
@@ -208,6 +208,7 @@ function TransactionsPageContent() {
                         tickFormatter={(value) => `₹${value}`}
                       />
                       <Tooltip 
+                        cursor={{fill: 'hsl(var(--muted)/0.2)'}}
                         contentStyle={{ 
                             borderRadius: '12px', 
                             border: 'none', 
@@ -222,25 +223,19 @@ function TransactionsPageContent() {
                         iconType="circle"
                         wrapperStyle={{ fontSize: '10px', fontWeight: 'black', textTransform: 'uppercase', letterSpacing: '0.1em', paddingBottom: '20px' }}
                       />
-                      <Line 
-                        name="Income"
-                        type="monotone" 
-                        dataKey="income" 
-                        stroke="hsl(var(--primary))" 
-                        strokeWidth={3} 
-                        dot={false}
-                        activeDot={{ r: 6, strokeWidth: 0 }}
+                      <Bar 
+                        name="Deposits / Inflow"
+                        dataKey="deposits" 
+                        fill="hsl(var(--primary))" 
+                        radius={[2, 2, 0, 0]}
                       />
-                      <Line 
-                        name="Spending"
-                        type="monotone" 
-                        dataKey="spending" 
-                        stroke="hsl(var(--accent))" 
-                        strokeWidth={3} 
-                        dot={false}
-                        activeDot={{ r: 6, strokeWidth: 0 }}
+                      <Bar 
+                        name="Withdrawals / Outflow"
+                        dataKey="withdrawals" 
+                        fill="hsl(var(--accent))" 
+                        radius={[2, 2, 0, 0]}
                       />
-                  </LineChart>
+                  </BarChart>
               </ResponsiveContainer>
           </CardContent>
       </Card>

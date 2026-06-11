@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
@@ -8,6 +9,7 @@ import { getFirebaseServices } from './client-init';
 import type { Admin } from '@/lib/admin-data';
 import { usePathname, useRouter } from 'next/navigation';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
+import { TransactionStatusObserver } from '@/components/TransactionStatusObserver';
 
 interface AuthState {
   user: User | null;
@@ -186,6 +188,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       <DbContext.Provider value={services?.db}>
         <AuthServiceContext.Provider value={services?.auth}>
             <FirebaseErrorListener />
+            <TransactionStatusObserver />
             {children}
         </AuthServiceContext.Provider>
       </DbContext.Provider>

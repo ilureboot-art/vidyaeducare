@@ -1,13 +1,13 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { User, Mail, Calendar, Phone, GraduationCap, Trash2, PlusCircle, BookOpen, Loader2, BarChart2, Users, BrainCircuit, Sparkles, ScrollText, ArrowRight, Trophy, Award, IndianRupee, Star, Target } from "lucide-react";
+import { User, Mail, Calendar, Phone, GraduationCap, Trash2, PlusCircle, BookOpen, Loader2, BarChart2, Users, BrainCircuit, Sparkles, ScrollText, ArrowRight, Trophy, Award, IndianRupee, Star, Target, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -43,6 +43,7 @@ function ProfilePageContent() {
     const [students, setStudents] = useState<StudentProfile[]>([]);
     const [validCodes, setValidCodes] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [studentSearchTerm, setStudentSearchTerm] = useState("");
     
     const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
     const [activationCode, setActivationCode] = useState("");
@@ -107,6 +108,10 @@ function ProfilePageContent() {
             };
         }
     }, [user, db]);
+
+    const filteredStudents = useMemo(() => {
+        return students.filter(s => s.name.toLowerCase().includes(studentSearchTerm.toLowerCase()));
+    }, [students, studentSearchTerm]);
 
     const handleVerifyCode = () => {
         if (validCodes.includes(activationCode)) {
@@ -317,8 +322,19 @@ function ProfilePageContent() {
             </CardContent>
         </Card>
 
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-             <h1 className="text-3xl font-black tracking-tighter text-primary">STUDENT WORKSPACE</h1>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 flex-1 w-full">
+                <h1 className="text-3xl font-black tracking-tighter text-primary italic uppercase">STUDENT WORKSPACE</h1>
+                <div className="relative flex-1 max-w-sm w-full">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                        placeholder="Search students..." 
+                        className="pl-9 bg-background border-primary/20 rounded-2xl h-11 focus-visible:ring-primary shadow-sm"
+                        value={studentSearchTerm}
+                        onChange={(e) => setStudentSearchTerm(e.target.value)}
+                    />
+                </div>
+             </div>
              <Dialog open={isAddStudentOpen} onOpenChange={(isOpen) => {
                  setIsAddStudentOpen(isOpen);
                  if (!isOpen) {
@@ -327,7 +343,9 @@ function ProfilePageContent() {
                  }
              }}>
                 <DialogTrigger asChild>
-                    <Button size="lg" className="shadow-lg font-black uppercase tracking-tight"><PlusCircle className="mr-2 h-5 w-5"/> Add Student Profile</Button>
+                    <Button size="lg" className="shadow-xl font-black uppercase tracking-tight h-11 px-8 rounded-2xl">
+                        <PlusCircle className="mr-2 h-5 w-5"/> Add Student
+                    </Button>
                 </DialogTrigger>
                 <DialogContent>
                     <DialogHeader>
@@ -395,8 +413,8 @@ function ProfilePageContent() {
         </div>
 
        <div className="grid gap-8">
-        {students.length > 0 ? students.map(student => (
-            <Card key={student.id} className="shadow-2xl relative group overflow-hidden border-none ring-1 ring-primary/10">
+        {filteredStudents.length > 0 ? filteredStudents.map(student => (
+            <Card key={student.id} className="shadow-2xl relative group overflow-hidden border-none ring-1 ring-primary/10 transition-all hover:ring-primary/30">
                 <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 bg-primary/[0.03] p-8 border-b">
                     <div className="flex items-center gap-6">
                         <Avatar className="w-24 h-24 border-4 border-background shadow-xl">
@@ -527,7 +545,15 @@ function ProfilePageContent() {
                     </Button>
                 </CardFooter>
             </Card>
-        )) : (
+        )) : studentSearchTerm ? (
+            <Card className="border-dashed border-2 border-primary/20 bg-muted/5">
+                <CardContent className="text-center p-20 space-y-4">
+                    <Search className="text-muted-foreground/30 w-12 h-12 mx-auto" />
+                    <p className="text-xl font-black text-muted-foreground uppercase">No match for "{studentSearchTerm}"</p>
+                    <Button variant="outline" onClick={() => setStudentSearchTerm("")}>Clear Search</Button>
+                </CardContent>
+            </Card>
+        ) : (
             <Card className="border-dashed border-2 border-primary/20 bg-muted/5">
                 <CardContent className="text-center p-20 space-y-6">
                     <div className="bg-primary/5 w-24 h-24 rounded-3xl flex items-center justify-center mx-auto border-2 border-dashed border-primary/20">

@@ -8,6 +8,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTr
 import { Menu, Trophy, Users, Wallet, Settings, ChevronRight, X, LogOut, User, History, Zap, ShieldCheck, Share2, LogIn, UserPlus } from "lucide-react";
 import { UserNotifications } from "@/components/UserNotifications";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { GlobalSearch } from "@/components/GlobalSearch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth, useAuthService } from "@/firebase";
 import { signOut } from "firebase/auth";
@@ -116,6 +117,7 @@ export function AppHeader() {
             </div>
 
             <div className="flex items-center gap-2">
+                <GlobalSearch />
                 <ThemeToggle />
                 {user ? (
                     <UserNotifications />

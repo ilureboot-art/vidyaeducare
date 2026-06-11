@@ -24,6 +24,8 @@ import UserLayout from "@/components/UserLayout";
 import { solveDoubt, type SolveDoubtOutput } from "@/ai/flows/solve-doubt-flow";
 import { generateStudyNotes, type GenerateNotesOutput } from "@/ai/flows/generate-notes-flow";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 type TestState = "loading" | "in_progress" | "completed" | "review";
 
@@ -39,13 +41,12 @@ function MockTestContent() {
 
     const [activeQuestions, setActiveQuestions] = useState<Question[]>([]);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-    const [timeLeft, setTimeLeft] = useState(1800); // Default 30 mins fallback
+    const [timeLeft, setTimeLeft] = useState(1800); 
     const [initialDuration, setInitialDuration] = useState(1800);
     const [answers, setAnswers] = useState<{ [key: string]: { en: string; mr: string; } }>({});
     const [score, setScore] = useState(0);
     const [isLiveTest, setIsLiveTest] = useState(false);
 
-    // AI Flow States
     const [isAiSolving, setIsAiSolving] = useState<string | null>(null);
     const [aiExplanation, setAiExplanation] = useState<SolveDoubtOutput | null>(null);
     const [isAiDialogOpen, setIsAiDialogOpen] = useState(false);
@@ -70,14 +71,28 @@ function MockTestContent() {
         
         const fetchData = async () => {
             try {
-                const studentDoc = await getDoc(doc(db, 'students', studentId));
+                const studentDocRef = doc(db, 'students', studentId);
+                const studentDoc = await getDoc(studentDocRef).catch(async (e) => {
+                    if (e.code === 'permission-denied') {
+                        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: studentDocRef.path, operation: 'get' }));
+                    }
+                    throw e;
+                });
+
                 if (studentDoc.exists()) {
                     setStudentProfile(studentDoc.data() as StudentProfile);
                 } else {
                     throw new Error("Student profile not found");
                 }
 
-                const scheduledTestDoc = await getDoc(doc(db, 'scheduledTests', testId));
+                const scheduledTestDocRef = doc(db, 'scheduledTests', testId);
+                const scheduledTestDoc = await getDoc(scheduledTestDocRef).catch(async (e) => {
+                    if (e.code === 'permission-denied') {
+                        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: scheduledTestDocRef.path, operation: 'get' }));
+                    }
+                    throw e;
+                });
+
                 if (scheduledTestDoc.exists()) {
                     const scheduledTestData = scheduledTestDoc.data() as ScheduledTest;
                     setScheduledTest(scheduledTestData);
@@ -86,7 +101,14 @@ function MockTestContent() {
                     setTimeLeft(durationInSeconds);
                     setInitialDuration(durationInSeconds);
 
-                    const testSetDoc = await getDoc(doc(db, 'testSets', scheduledTestData.testSetId));
+                    const testSetDocRef = doc(db, 'testSets', scheduledTestData.testSetId);
+                    const testSetDoc = await getDoc(testSetDocRef).catch(async (e) => {
+                        if (e.code === 'permission-denied') {
+                            errorEmitter.emit('permission-error', new FirestorePermissionError({ path: testSetDocRef.path, operation: 'get' }));
+                        }
+                        throw e;
+                    });
+
                     if (testSetDoc.exists()) {
                         const testSetData = testSetDoc.data() as TestSet;
                         setActiveQuestions(testSetData.questions);
@@ -98,8 +120,11 @@ function MockTestContent() {
                     throw new Error("Scheduled test not found");
                 }
             } catch (error: any) {
-                toast({ variant: 'destructive', title: 'Failed to load test', description: error.message });
-                router.push('/profile');
+                console.warn("Test arena sync issue.");
+                if (error.code !== 'permission-denied') {
+                    toast({ variant: 'destructive', title: 'Failed to load test', description: error.message });
+                    router.push('/profile');
+                }
             }
         };
 
@@ -159,7 +184,8 @@ function MockTestContent() {
 
         try {
             const resultId = `${studentProfile.id}-${scheduledTest.id}`;
-            await setDoc(doc(db, "testResults", resultId), {
+            const resultDocRef = doc(db, "testResults", resultId);
+            const resultData = {
                 studentId: studentProfile.id,
                 studentName: studentProfile.name,
                 testId: scheduledTest.id,
@@ -170,20 +196,33 @@ function MockTestContent() {
                 answers: answers,
                 timeTaken: timeString,
                 date: new Date().toISOString(),
+            };
+
+            await setDoc(resultDocRef, resultData).catch(async (e) => {
+                if (e.code === 'permission-denied') {
+                    errorEmitter.emit('permission-error', new FirestorePermissionError({ path: resultDocRef.path, operation: 'create', requestResourceData: resultData }));
+                }
+                throw e;
             });
 
             if (isLiveTest) {
-                await setDoc(doc(db, "leaderboard", resultId), {
+                const leaderboardDocRef = doc(db, "leaderboard", resultId);
+                const leaderboardData = {
                     name: studentProfile.name,
                     avatar: studentProfile.name.charAt(0),
-                    score: correctAnswers, // Raw marks for ranking
-                    accuracy: finalAccuracy, // For prize qualification
+                    score: correctAnswers, 
+                    accuracy: finalAccuracy, 
                     totalQuestions: activeQuestions.length,
                     time: timeString
+                };
+                await setDoc(leaderboardDocRef, leaderboardData).catch(async (e) => {
+                    if (e.code === 'permission-denied') {
+                        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: leaderboardDocRef.path, operation: 'create', requestResourceData: leaderboardData }));
+                    }
+                    throw e;
                 });
             }
 
-            // --- SYNC PERFORMANCE TO STUDENT PROFILE ---
             const studentRef = doc(db, "students", studentProfile.id);
             const currentStats = studentProfile.stats || { totalEarnings: 0, testsTaken: 0, avgScore: 0, performance: [], recentActivity: [] };
             
@@ -195,6 +234,11 @@ function MockTestContent() {
                 "stats.testsTaken": newTestsTaken,
                 "stats.avgScore": newAvgScore,
                 "stats.performance": newPerformance,
+            }).catch(async (e) => {
+                if (e.code === 'permission-denied') {
+                    errorEmitter.emit('permission-error', new FirestorePermissionError({ path: studentRef.path, operation: 'update' }));
+                }
+                throw e;
             });
 
             setTestState("completed");
@@ -242,7 +286,6 @@ function MockTestContent() {
         setAiNotes(null);
         setIsNotesDialogOpen(true);
 
-        // Extract context based on performance (incorrect topics)
         const incorrectTopics = activeQuestions
             .filter(q => answers[q.id]?.en !== q.correctAnswer.en)
             .map(q => q.text.en)
@@ -504,7 +547,7 @@ function MockTestContent() {
     const progress = ((currentQuestionIndex + 1) / activeQuestions.length) * 100;
     const minutesLeft = Math.floor(timeLeft / 60);
     const secondsLeft = timeLeft % 60;
-    const isLowTime = timeLeft < 300; // 5 minutes warning
+    const isLowTime = timeLeft < 300; 
     const solvedCount = Object.keys(answers).length;
 
 

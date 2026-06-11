@@ -17,6 +17,8 @@ import { doc, getDoc, runTransaction, collection, serverTimestamp, arrayUnion, q
 import ProtectedRoute from "@/components/ProtectedRoute";
 import UserLayout from "@/components/UserLayout";
 import { Badge } from "@/components/ui/badge";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 function StorePageContent() {
   const { toast } = useToast();
@@ -39,18 +41,32 @@ function StorePageContent() {
     }
 
     try {
-        const userDoc = await getDoc(doc(db, "users", userId)).catch(() => null);
+        const userDocRef = doc(db, "users", userId);
+        const userDoc = await getDoc(userDocRef).catch(async (e) => {
+            if (e.code === 'permission-denied') {
+                errorEmitter.emit('permission-error', new FirestorePermissionError({ path: userDocRef.path, operation: 'get' }));
+            }
+            throw e;
+        });
+
         if (!userDoc || !userDoc.exists()) return;
         const joinDate = userDoc.data().joinDate ? new Date(userDoc.data().joinDate) : new Date();
 
+        const txColRef = collection(db, "transactions");
         const qT = query(
-            collection(db, "transactions"), 
+            txColRef, 
             where("user", "==", userId), 
             where("type", "==", "Purchase"), 
             orderBy("date", "desc"), 
             limit(1)
         );
-        const tSnap = await getDocs(qT).catch(() => null);
+        const tSnap = await getDocs(qT).catch(async (e) => {
+            if (e.code === 'permission-denied') {
+                errorEmitter.emit('permission-error', new FirestorePermissionError({ path: txColRef.path, operation: 'list' }));
+            }
+            throw e;
+        });
+
         let lastPurchaseDate = null;
         if (tSnap && !tSnap.empty) {
             const d = tSnap.docs[0].data().date;
@@ -67,8 +83,15 @@ function StorePageContent() {
             return;
         }
 
-        const qC = query(collection(db, "clients"), where("referrerId", "==", userId));
-        const cSnap = await getDocs(qC).catch(() => null);
+        const clientsColRef = collection(db, "clients");
+        const qC = query(clientsColRef, where("referrerId", "==", userId));
+        const cSnap = await getDocs(qC).catch(async (e) => {
+            if (e.code === 'permission-denied') {
+                errorEmitter.emit('permission-error', new FirestorePermissionError({ path: clientsColRef.path, operation: 'list' }));
+            }
+            throw e;
+        });
+
         let validCount = 0;
         if (cSnap) {
             cSnap.forEach(doc => {
@@ -83,7 +106,7 @@ function StorePageContent() {
         setRecommendationCount(validCount);
         setIsEligibleForRecDiscount(validCount >= config.recommendationSettings.requiredCount);
     } catch (e) {
-        console.error("Eligibility check error:", e);
+        console.warn("Eligibility check sync issue.");
     } finally {
         setIsCheckingEligibility(false);
     }
@@ -95,24 +118,33 @@ function StorePageContent() {
             const walletDocRef = doc(db, "wallets", user.uid);
             const storeConfigRef = doc(db, "configs", "store");
             
-            const [walletSnap, configSnap] = await Promise.all([
-                getDoc(walletDocRef),
-                getDoc(storeConfigRef)
-            ]).catch(e => {
-                console.error("Store init fetch error:", e);
-                return [null, null];
-            });
+            try {
+                const results = await Promise.allSettled([
+                    getDoc(walletDocRef),
+                    getDoc(storeConfigRef)
+                ]);
 
-            if(walletSnap && walletSnap.exists()) {
-                setWalletData(walletSnap.data() as WalletData);
-            } else {
-                setWalletData({ balance: 0, coins: 0, referralCode: `REF${user.uid.slice(0, 6).toUpperCase()}` } as WalletData);
-            }
-            
-            if(configSnap && configSnap.exists()) {
-                const config = configSnap.data() as StoreConfig;
-                setStoreConfig(config);
-                checkRecEligibility(db, user.uid, config);
+                const walletRes = results[0];
+                const configRes = results[1];
+
+                if (walletRes.status === 'fulfilled' && walletRes.value.exists()) {
+                    setWalletData(walletRes.value.data() as WalletData);
+                } else {
+                    if (walletRes.status === 'rejected' && walletRes.reason?.code === 'permission-denied') {
+                        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: walletDocRef.path, operation: 'get' }));
+                    }
+                    setWalletData({ balance: 0, coins: 0, referralCode: `REF${user.uid.slice(0, 6).toUpperCase()}` } as WalletData);
+                }
+                
+                if (configRes.status === 'fulfilled' && configRes.value.exists()) {
+                    const config = configRes.value.data() as StoreConfig;
+                    setStoreConfig(config);
+                    checkRecEligibility(db, user.uid, config);
+                } else if (configRes.status === 'rejected' && configRes.reason?.code === 'permission-denied') {
+                    errorEmitter.emit('permission-error', new FirestorePermissionError({ path: storeConfigRef.path, operation: 'get' }));
+                }
+            } catch (e) {
+                console.warn("Store initialization sync error.");
             }
         };
         fetchData();
@@ -150,11 +182,16 @@ function StorePageContent() {
     }
 
     try {
-        // PRE-RESOLUTION: Resolve referral code outside of transaction
         let ibaUid: string | null = null;
         if (priceDetails.hasReferral) {
-            const q = query(collection(db, "wallets"), where("referralCode", "==", referralCode1.trim()));
-            const snap = await getDocs(q);
+            const walletsColRef = collection(db, "wallets");
+            const q = query(walletsColRef, where("referralCode", "==", referralCode1.trim()));
+            const snap = await getDocs(q).catch(async (e) => {
+                if (e.code === 'permission-denied') {
+                    errorEmitter.emit('permission-error', new FirestorePermissionError({ path: walletsColRef.path, operation: 'list' }));
+                }
+                throw e;
+            });
             if (!snap.empty) {
                 ibaUid = snap.docs[0].id;
             }
@@ -205,13 +242,17 @@ function StorePageContent() {
                 const activationCodesRef = doc(db, 'activationCodes', user.uid);
                 transaction.set(activationCodesRef, { codes: arrayUnion(activationCode) }, { merge: true });
 
-                // Grant ReferBolt access if package permits OR global legacy setting is on
                 if (mockItem.grantFreeReferbolt || storeConfig.referboltSettings.freeAccessWithMockTest) {
                      transaction.set(doc(db, "referbolt", user.uid), { isSubscribed: true, referralCode: walletData.referralCode }, { merge: true });
                 }
             } else if (type === 'referbolt') {
                  transaction.set(doc(db, "referbolt", user.uid), { isSubscribed: true, referralCode: walletData.referralCode }, { merge: true });
             }
+        }).catch(async (e) => {
+            if (e.code === 'permission-denied') {
+                errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'store-purchase-transaction', operation: 'write' }));
+            }
+            throw e;
         });
 
         toast({ title: "Purchase Successful!", description: `${item.name} activated.` });

@@ -17,6 +17,8 @@ import UserLayout from "@/components/UserLayout";
 import Link from "next/link";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 const GUEST_TRIAL_LIMIT = 5;
 
@@ -32,7 +34,6 @@ function AiTutorPageContent() {
     const [result, setResult] = useState<SolveDoubtOutput | null>(null);
     const [isLoadingStudents, setIsLoadingStudents] = useState(false);
     
-    // Trial Tracking
     const [trialCount, setTrialCount] = useState(0);
 
     useEffect(() => {
@@ -46,12 +47,23 @@ function AiTutorPageContent() {
         if (user && db) {
             setIsLoadingStudents(true);
             const fetchStudents = async () => {
-                const q = query(collection(db, "students"), where("parentId", "==", user.uid));
-                const snap = await getDocs(q);
-                const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentProfile));
-                setStudents(list);
-                if (list.length > 0) setSelectedStudentId(list[0].id);
-                setIsLoadingStudents(false);
+                const studentsColRef = collection(db, "students");
+                const q = query(studentsColRef, where("parentId", "==", user.uid));
+                try {
+                    const snap = await getDocs(q).catch(async (e) => {
+                        if (e.code === 'permission-denied') {
+                            errorEmitter.emit('permission-error', new FirestorePermissionError({ path: studentsColRef.path, operation: 'list' }));
+                        }
+                        throw e;
+                    });
+                    const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentProfile));
+                    setStudents(list);
+                    if (list.length > 0) setSelectedStudentId(list[0].id);
+                } catch (e) {
+                    console.warn("Student fetch sync issue.");
+                } finally {
+                    setIsLoadingStudents(false);
+                }
             };
             fetchStudents();
         }
@@ -68,7 +80,6 @@ function AiTutorPageContent() {
 
         const student = students.find(s => s.id === selectedStudentId);
         
-        // Context if no student selected or not logged in
         const context = student ? {
             standard: student.academic.standard,
             board: student.academic.board,
@@ -87,7 +98,6 @@ function AiTutorPageContent() {
             });
             setResult(response);
 
-            // Increment trial if guest
             if (!user) {
                 const newCount = trialCount + 1;
                 setTrialCount(newCount);

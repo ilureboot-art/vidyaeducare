@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -19,6 +20,8 @@ import { useToast } from "@/hooks/use-toast";
 import { doc, getDoc, runTransaction, collection, query, where, getDocs, serverTimestamp } from "firebase/firestore";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { useAuthService, useDb } from "@/firebase";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 export default function SignupPage() {
   const searchParams = useSearchParams();
@@ -41,15 +44,21 @@ export default function SignupPage() {
     }
     const fetchConfig = async () => {
         if (!db) return;
+        const configDocRef = doc(db, "configs", "store");
         try {
-            const storeConfigDoc = await getDoc(doc(db, "configs", "store"));
+            const storeConfigDoc = await getDoc(configDocRef).catch(async (e) => {
+                if (e.code === 'permission-denied') {
+                    errorEmitter.emit('permission-error', new FirestorePermissionError({ path: configDocRef.path, operation: 'get' }));
+                }
+                throw e;
+            });
             if(storeConfigDoc.exists()) {
                 setReferralBonus(storeConfigDoc.data().referralBonus);
             } else {
                 setReferralBonus(0); 
             }
         } catch (e) {
-            console.error("Config fetch error:", e);
+            console.warn("Config initialization issue.");
             setReferralBonus(0);
         }
     };
@@ -75,14 +84,19 @@ export default function SignupPage() {
     const password = (form.elements.namedItem('password') as HTMLInputElement).value;
 
     try {
-      // Step 1: Pre-resolve referral code
       let welcomeBonus = 0;
       let referrerId: string | null = null;
       
       const cleanRefCode = referralCode.trim().toUpperCase();
       if (cleanRefCode && referralBonus && referralBonus > 0) {
-        const q = query(collection(db, "wallets"), where("referralCode", "==", cleanRefCode));
-        const querySnapshot = await getDocs(q);
+        const walletsColRef = collection(db, "wallets");
+        const q = query(walletsColRef, where("referralCode", "==", cleanRefCode));
+        const querySnapshot = await getDocs(q).catch(async (e) => {
+            if (e.code === 'permission-denied') {
+                errorEmitter.emit('permission-error', new FirestorePermissionError({ path: walletsColRef.path, operation: 'list' }));
+            }
+            throw e;
+        });
         
         if (!querySnapshot.empty) {
           const referrerDoc = querySnapshot.docs[0];
@@ -95,16 +109,13 @@ export default function SignupPage() {
         }
       }
 
-      // Step 2: Create the user with Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       
-      // Step 3: Execute all writes within a single transaction
       await runTransaction(db, async (transaction) => {
         const newUserRef = doc(db, "users", user.uid);
         const newWalletRef = doc(db, "wallets", user.uid);
 
-        // Create user document
         transaction.set(newUserRef, {
             id: user.uid,
             name: name,
@@ -114,14 +125,12 @@ export default function SignupPage() {
             status: "Active",
         });
 
-        // Create wallet for new user
         transaction.set(newWalletRef, {
             balance: welcomeBonus,
             coins: 50, 
             referralCode: `REF${user.uid.slice(0, 6).toUpperCase()}`,
         });
 
-        // If there's a referrer, update their wallet and log transactions
         if (referrerId && referralBonus && referralBonus > 0) {
             const referrerWalletRef = doc(db, "wallets", referrerId);
             const referrerWalletDoc = await transaction.get(referrerWalletRef);
@@ -129,7 +138,6 @@ export default function SignupPage() {
                 const referrerBalance = referrerWalletDoc.data().balance || 0;
                 transaction.update(referrerWalletRef, { balance: referrerBalance + referralBonus });
 
-                // Log referrer's bonus transaction
                 const referrerTxRef = doc(collection(db, "transactions"));
                 transaction.set(referrerTxRef, { 
                     user: referrerId, 
@@ -140,7 +148,6 @@ export default function SignupPage() {
                     type: "Referral Bonus" 
                 });
                 
-                // Log new user's welcome bonus transaction
                 if (welcomeBonus > 0) {
                     const newUserTxRef = doc(collection(db, "transactions"));
                     transaction.set(newUserTxRef, { 
@@ -154,6 +161,11 @@ export default function SignupPage() {
                 }
             }
         }
+      }).catch(async (e) => {
+        if (e.code === 'permission-denied') {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'signup-transaction', operation: 'write' }));
+        }
+        throw e;
       });
       
       toast({

@@ -10,6 +10,8 @@ import { doc, getDoc, type Firestore } from "firebase/firestore";
 import { useDb, useAuth } from "@/firebase";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import UserLayout from "@/components/UserLayout";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 function ReferAndEarnPageContent() {
     const { toast } = useToast();
@@ -22,18 +24,39 @@ function ReferAndEarnPageContent() {
     useEffect(() => {
         const fetchConfig = async () => {
             if (!db) return;
-            const storeConfigDoc = await getDoc(doc(db, "configs", "store"));
-            if(storeConfigDoc.exists()) {
-                setReferralBonus(storeConfigDoc.data().referralBonus);
+            const configRef = doc(db, "configs", "store");
+            try {
+                const storeConfigDoc = await getDoc(configRef).catch(async (e) => {
+                    if (e.code === 'permission-denied') {
+                        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: configRef.path, operation: 'get' }));
+                    }
+                    throw e;
+                });
+                if(storeConfigDoc.exists()) {
+                    setReferralBonus(storeConfigDoc.data().referralBonus);
+                }
+            } catch (e) {
+                console.warn("Bonus config sync issue.");
             }
         };
 
         const fetchUserRefCode = async () => {
             if (user && db) {
-                const walletDoc = await getDoc(doc(db, "wallets", user.uid));
-                if (walletDoc.exists()) {
-                    setReferralCode(walletDoc.data().referralCode);
-                } else {
+                const walletDocRef = doc(db, "wallets", user.uid);
+                try {
+                    const walletDoc = await getDoc(walletDocRef).catch(async (e) => {
+                        if (e.code === 'permission-denied') {
+                            errorEmitter.emit('permission-error', new FirestorePermissionError({ path: walletDocRef.path, operation: 'get' }));
+                        }
+                        throw e;
+                    });
+                    if (walletDoc.exists()) {
+                        setReferralCode(walletDoc.data().referralCode);
+                    } else {
+                        setReferralCode(`REF${user.uid.slice(0,6).toUpperCase()}`);
+                    }
+                } catch (e) {
+                    console.warn("Wallet code sync issue.");
                     setReferralCode(`REF${user.uid.slice(0,6).toUpperCase()}`);
                 }
             }

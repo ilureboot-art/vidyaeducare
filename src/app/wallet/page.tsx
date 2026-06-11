@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { 
   Card, 
@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { PlusCircle, MinusCircle, History, ArrowUpRight, ArrowDownLeft, Loader2, AlertCircle } from "lucide-react";
+import { PlusCircle, MinusCircle, History, ArrowUpRight, ArrowDownLeft, Loader2, AlertCircle, Scan, Camera, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { type Transaction, type AdminPaymentMethods } from "@/lib/user-data";
@@ -37,6 +37,7 @@ import UserLayout from "@/components/UserLayout";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Html5Qrcode } from "html5-qrcode";
 
 const getStatusBadgeVariant = (status: string) => {
     switch (status.toLowerCase()) {
@@ -77,6 +78,11 @@ function WalletPageContent() {
 
   const [addFundsOpen, setAddFundsOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
+
+  // Scanner States
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const scannerId = "qr-reader";
 
   useEffect(() => {
     if (user && db) {
@@ -140,16 +146,60 @@ function WalletPageContent() {
             unsubPaymentMethods();
             unsubWallet();
             unsubTransactions();
+            if (scannerRef.current) {
+                scannerRef.current.stop().catch(() => {});
+            }
         };
     }
   }, [user, db]);
+
+  const handleStartScanner = async () => {
+      setIsScannerOpen(true);
+      setTimeout(() => {
+          const html5QrCode = new Html5Qrcode(scannerId);
+          scannerRef.current = html5QrCode;
+          const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+          
+          html5QrCode.start(
+              { facingMode: "environment" },
+              config,
+              (decodedText) => {
+                  toast({ title: "QR Scanned!", description: "Verification successful. Please proceed with payment." });
+                  handleStopScanner();
+              },
+              (errorMessage) => {
+                  // Scanning...
+              }
+          ).catch((err) => {
+              console.error("Scanner Error:", err);
+              toast({ variant: 'destructive', title: "Scanner Error", description: "Could not access camera. Check permissions." });
+              setIsScannerOpen(false);
+          });
+      }, 500);
+  };
+
+  const handleStopScanner = () => {
+      if (scannerRef.current) {
+          scannerRef.current.stop().then(() => {
+              setIsScannerOpen(false);
+          }).catch((err) => {
+              console.error("Error stopping scanner", err);
+              setIsScannerOpen(false);
+          });
+      } else {
+          setIsScannerOpen(false);
+      }
+  };
 
   const handleAddFunds = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!user || !db) return;
     const form = event.currentTarget;
-    const amount = parseFloat((form.elements.namedItem('amount-add') as HTMLInputElement).value);
-    const txnId = (form.elements.namedItem('txnId') as HTMLInputElement).value;
+    const amountInput = form.elements.namedItem('amount-add') as HTMLInputElement;
+    const txnIdInput = form.elements.namedItem('txnId') as HTMLInputElement;
+    
+    const amount = parseFloat(amountInput.value);
+    const txnId = txnIdInput.value;
     
     if (!amount || !txnId) return;
 
@@ -184,8 +234,11 @@ function WalletPageContent() {
     event.preventDefault();
     if (!walletInfo || !user || !db) return;
     const form = event.currentTarget;
-    const amount = parseFloat((form.elements.namedItem('amount-withdraw') as HTMLInputElement).value);
-    const upiId = (form.elements.namedItem('upiId') as HTMLInputElement).value;
+    const amountInput = form.elements.namedItem('amount-withdraw') as HTMLInputElement;
+    const upiIdInput = form.elements.namedItem('upiId') as HTMLInputElement;
+
+    const amount = parseFloat(amountInput.value);
+    const upiId = upiIdInput.value;
 
     if (!amount || !upiId || amount > walletInfo.balance || amount < 200) {
         toast({ variant: 'destructive', title: "Invalid Request", description: "Min ₹200 required." });
@@ -294,10 +347,48 @@ function WalletPageContent() {
          </CardFooter>
       </Card>
 
-      <Dialog open={addFundsOpen} onOpenChange={setAddFundsOpen}>
+      <Dialog open={addFundsOpen} onOpenChange={(open) => {
+          if (!open && isScannerOpen) handleStopScanner();
+          setAddFundsOpen(open);
+      }}>
           <DialogContent className="max-w-md">
-            <DialogHeader><DialogTitle>Deposit Funds</DialogTitle></DialogHeader>
+            <DialogHeader>
+                <DialogTitle>Deposit Funds</DialogTitle>
+                <DialogDescription>Scan or use details below to pay, then submit your receipt UTR.</DialogDescription>
+            </DialogHeader>
             <div className="space-y-4 pt-2">
+                <div className="flex flex-col gap-3">
+                    <Button 
+                        variant="secondary" 
+                        className="w-full h-12 font-black gap-2 shadow-sm border-2 border-primary/10"
+                        onClick={handleStartScanner}
+                        disabled={isScannerOpen}
+                    >
+                        <Scan className="w-5 h-5" />
+                        LAUNCH QR SCANNER
+                    </Button>
+
+                    {isScannerOpen && (
+                        <div className="relative border-4 border-primary/20 rounded-3xl overflow-hidden bg-black aspect-square">
+                            <div id={scannerId} className="w-full h-full" />
+                            <div className="absolute inset-0 border-[20px] border-black/40 pointer-events-none">
+                                <div className="w-full h-full border-2 border-white/50 rounded-xl" />
+                            </div>
+                            <Button 
+                                variant="destructive" 
+                                size="icon" 
+                                className="absolute top-4 right-4 rounded-full"
+                                onClick={handleStopScanner}
+                            >
+                                <X size={20} />
+                            </Button>
+                            <div className="absolute bottom-4 left-0 right-0 text-center">
+                                <Badge className="bg-white/20 text-white border-none animate-pulse">Position QR in frame</Badge>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
                 <Tabs defaultValue="upi" className="w-full">
                     <TabsList className="grid w-full grid-cols-2">
                         <TabsTrigger value="upi">UPI / QR</TabsTrigger>
@@ -305,8 +396,11 @@ function WalletPageContent() {
                     </TabsList>
                     <TabsContent value="upi" className="pt-4 space-y-4">
                         {adminPaymentMethods.qrCodeUrl && (
-                            <div className="flex justify-center p-4 bg-muted/30 rounded-lg border">
-                                <Image src={adminPaymentMethods.qrCodeUrl} alt="QR Code" width={200} height={200} className="rounded-md" />
+                            <div className="flex flex-col items-center gap-2">
+                                <div className="p-4 bg-muted/30 rounded-lg border">
+                                    <Image src={adminPaymentMethods.qrCodeUrl} alt="QR Code" width={200} height={200} className="rounded-md" />
+                                </div>
+                                <p className="text-[10px] font-black uppercase text-muted-foreground italic">Admin Payment QR</p>
                             </div>
                         )}
                         <div className="space-y-2 text-sm">
@@ -318,16 +412,17 @@ function WalletPageContent() {
                          <div className="flex justify-between items-center p-2 rounded-md hover:bg-muted"><span>IFSC:</span><CopyButton valueToCopy={adminPaymentMethods.ifscCode} /></div>
                     </TabsContent>
                 </Tabs>
+
                 <form onSubmit={handleAddFunds} className="space-y-4 border-t pt-4">
                     <div className="space-y-2">
-                        <Label htmlFor="amount-add">Amount (INR)</Label>
-                        <Input id="amount-add" name="amount-add" type="number" required />
+                        <Label htmlFor="amount-add">Amount Paid (INR)</Label>
+                        <Input id="amount-add" name="amount-add" type="number" required placeholder="e.g., 3000" />
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="txnId">Reference ID / UTR</Label>
-                        <Input id="txnId" name="txnId" required placeholder="UTR from your app" />
+                        <Label htmlFor="txnId">Transaction ID / UTR</Label>
+                        <Input id="txnId" name="txnId" required placeholder="Enter 12-digit UTR from receipt" />
                     </div>
-                    <DialogFooter><Button type="submit" className="w-full">Submit Request</Button></DialogFooter>
+                    <DialogFooter><Button type="submit" className="w-full font-black py-6">SUBMIT DEPOSIT REQUEST</Button></DialogFooter>
                 </form>
             </div>
           </DialogContent>
@@ -335,17 +430,20 @@ function WalletPageContent() {
 
       <Dialog open={withdrawOpen} onOpenChange={setWithdrawOpen}>
           <DialogContent>
-            <DialogHeader><DialogTitle>Withdraw Funds</DialogTitle></DialogHeader>
+            <DialogHeader>
+                <DialogTitle>Withdraw Funds</DialogTitle>
+                <DialogDescription>Request a payout to your UPI ID. Minimum withdrawal is ₹200.</DialogDescription>
+            </DialogHeader>
             <form onSubmit={handleWithdraw} className="space-y-4">
                 <div className="space-y-2">
                     <Label htmlFor="amount-withdraw">Amount (INR)</Label>
-                    <Input id="amount-withdraw" name="amount-withdraw" type="number" required min="200" />
+                    <Input id="amount-withdraw" name="amount-withdraw" type="number" required min="200" placeholder="Min. 200" />
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="upiId">Receiving UPI ID</Label>
-                    <Input id="upiId" name="upiId" required />
+                    <Input id="upiId" name="upiId" required placeholder="name@bank" />
                 </div>
-                <DialogFooter><Button type="submit" className="w-full">Request Withdrawal</Button></DialogFooter>
+                <DialogFooter><Button type="submit" className="w-full font-black py-6">REQUEST PAYOUT</Button></DialogFooter>
             </form>
           </DialogContent>
       </Dialog>

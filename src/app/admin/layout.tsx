@@ -1,8 +1,10 @@
+
 "use client";
 
 import { AdminSidebar } from "@/components/AdminSidebar";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { Notifications } from "@/components/admin/Notifications";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { usePathname } from "next/navigation";
 
@@ -31,7 +33,10 @@ export default function AdminLayout({
                     <SidebarTrigger className="md:hidden" />
                     <h1 className="text-xl font-semibold">Admin Panel</h1>
                 </div>
-                <Notifications />
+                <div className="flex items-center gap-2">
+                    <ThemeToggle />
+                    <Notifications />
+                </div>
               </header>
               <main className="flex-1 p-8 bg-muted/40">
                 {children}

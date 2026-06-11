@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { PlusCircle, MinusCircle, History, ArrowUpRight, ArrowDownLeft, Loader2 } from "lucide-react";
+import { PlusCircle, MinusCircle, History, ArrowUpRight, ArrowDownLeft, Loader2, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { type Transaction, type AdminPaymentMethods } from "@/lib/user-data";
@@ -36,6 +36,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import UserLayout from "@/components/UserLayout";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const getStatusBadgeVariant = (status: string) => {
     switch (status.toLowerCase()) {
@@ -191,7 +192,6 @@ function WalletPageContent() {
         return;
     }
     
-    // Pattern 1: Chain .catch() for diagnostic emission
     runTransaction(db, async (transaction) => {
         const walletRef = doc(db, "wallets", user.uid);
         const walletDoc = await transaction.get(walletRef);
@@ -226,8 +226,20 @@ function WalletPageContent() {
     );
   }
 
+  const pendingCount = transactions.filter(t => t.status === 'Pending').length;
+
   return (
     <div className="w-full max-w-2xl mx-auto space-y-6">
+      {pendingCount > 0 && (
+          <Alert className="bg-primary/5 border-primary/20 mb-6 shadow-sm">
+              <AlertCircle className="h-4 w-4 text-primary" />
+              <AlertTitle className="text-primary font-black uppercase tracking-tight text-xs">Transaction Pending</AlertTitle>
+              <AlertDescription className="text-xs font-medium">
+                  You have {pendingCount} pending {pendingCount === 1 ? 'request' : 'requests'}. Our administrators are processing them for approval.
+              </AlertDescription>
+          </Alert>
+      )}
+
       <Card className="shadow-lg border-primary/10">
         <CardHeader className="text-center">
           <CardTitle className="text-3xl font-bold text-primary">My Wallet</CardTitle>

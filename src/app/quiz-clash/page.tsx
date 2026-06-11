@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -37,11 +38,18 @@ function QuizClashPageContent() {
         const q = query(tourneyCol, where("status", "==", "scheduled"));
         
         try {
-            const querySnapshot = await getDocs(q);
+            const querySnapshot = await getDocs(q).catch(async (serverError) => {
+                const permissionError = new FirestorePermissionError({
+                    path: tourneyCol.path,
+                    operation: 'list',
+                } satisfies SecurityRuleContext);
+                errorEmitter.emit('permission-error', permissionError);
+                throw serverError;
+            });
             const tournamentList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as QuizClashTournament));
             setTournaments(tournamentList);
         } catch (error) {
-            console.warn("Quiz Clash fetch interrupted.");
+            console.warn("Quiz Clash fetch error handled.");
             setTournaments([]);
         }
     };
@@ -50,10 +58,23 @@ function QuizClashPageContent() {
     if (user) {
         const fetchStudents = async () => {
             setIsLoadingStudents(true);
-            const q = query(collection(db, "students"), where("parentId", "==", user.uid));
-            const snap = await getDocs(q);
-            setStudents(snap.docs.map(d => ({ id: d.id, ...d.data() } as StudentProfile)));
-            setIsLoadingStudents(false);
+            const studentsCol = collection(db, "students");
+            const q = query(studentsCol, where("parentId", "==", user.uid));
+            try {
+                const snap = await getDocs(q).catch(async (serverError) => {
+                    const permissionError = new FirestorePermissionError({
+                        path: studentsCol.path,
+                        operation: 'list',
+                    } satisfies SecurityRuleContext);
+                    errorEmitter.emit('permission-error', permissionError);
+                    throw serverError;
+                });
+                setStudents(snap.docs.map(d => ({ id: d.id, ...d.data() } as StudentProfile)));
+            } catch (e) {
+                setStudents([]);
+            } finally {
+                setIsLoadingStudents(false);
+            }
         };
         fetchStudents();
     }
@@ -64,7 +85,7 @@ function QuizClashPageContent() {
 
     try {
         if (tournament.type === 'Pro') {
-            await runTransaction(db, async (transaction) => {
+            runTransaction(db, async (transaction) => {
                 const userWalletRef = doc(db, "wallets", user.uid);
                 const tournamentRef = doc(db, "quizClashTournaments", tournament.id);
 
@@ -90,20 +111,34 @@ function QuizClashPageContent() {
                     status: "Completed",
                     type: "Purchase",
                 });
+            }).then(() => {
+                toast({ title: "Registration Successful!", description: `You have been registered for ${tournament.title}.` });
+                setIsRegistering(null);
+                router.push(`/quiz-clash/play?tournamentId=${tournament.id}&studentId=${studentId}`);
+            }).catch(async (serverError) => {
+                const permissionError = new FirestorePermissionError({
+                    path: 'quiz-clash-registration-transaction',
+                    operation: 'write',
+                } satisfies SecurityRuleContext);
+                errorEmitter.emit('permission-error', permissionError);
             });
         } else {
             const tournamentRef = doc(db, "quizClashTournaments", tournament.id);
-            await updateDoc(tournamentRef, {
+            updateDoc(tournamentRef, {
                 registeredUsers: arrayUnion(user.uid)
+            }).then(() => {
+                toast({ title: "Registration Successful!", description: `You have been registered for ${tournament.title}.` });
+                setIsRegistering(null);
+                router.push(`/quiz-clash/play?tournamentId=${tournament.id}&studentId=${studentId}`);
+            }).catch(async (serverError) => {
+                const permissionError = new FirestorePermissionError({
+                    path: tournamentRef.path,
+                    operation: 'update',
+                    requestResourceData: { registeredUsers: 'arrayUnion(uid)' },
+                } satisfies SecurityRuleContext);
+                errorEmitter.emit('permission-error', permissionError);
             });
         }
-
-        toast({ title: "Registration Successful!", description: `You have been registered for ${tournament.title}.` });
-        setIsRegistering(null);
-        
-        // Push to game immediately with student context
-        router.push(`/quiz-clash/play?tournamentId=${tournament.id}&studentId=${studentId}`);
-
     } catch (error: any) {
         toast({ variant: "destructive", title: "Registration Failed", description: error.message || "Could not complete registration." });
     }

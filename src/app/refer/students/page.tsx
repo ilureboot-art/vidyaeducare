@@ -23,9 +23,11 @@ import {
 } from "@/components/ui/tooltip"
 import { format } from "date-fns";
 import { useAuth, useDb } from "@/firebase";
-import { collection, query, where, getDocs, type Firestore } from "firebase/firestore";
+import { collection, query, where, getDocs } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import UserLayout from "@/components/UserLayout";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 type ClientStatus = "Active" | "Expired";
 
@@ -48,24 +50,39 @@ function StudentAccessPageContent() {
   useEffect(() => {
     if (user && db) {
         const fetchClients = async () => {
-            const q = query(collection(db, "clients"), where("referrerId", "==", user.uid));
-            const querySnapshot = await getDocs(q);
-            const clientList = querySnapshot.docs.map(doc => {
-                const data = doc.data() as Omit<Client, 'id' | 'status' | 'expiresSoon'>;
-                const validityDate = new Date(data.validity);
-                const now = new Date();
-                const status: ClientStatus = validityDate < now ? "Expired" : "Active";
-                const daysUntilExpiry = (validityDate.getTime() - now.getTime()) / (1000 * 3600 * 24);
-                const expiresSoon = status === "Active" && daysUntilExpiry <= 7;
+            const clientsCol = collection(db, "clients");
+            const q = query(clientsCol, where("referrerId", "==", user.uid));
+            
+            try {
+                const querySnapshot = await getDocs(q).catch(async (serverError) => {
+                    const permissionError = new FirestorePermissionError({
+                        path: clientsCol.path,
+                        operation: 'list',
+                    } satisfies SecurityRuleContext);
+                    errorEmitter.emit('permission-error', permissionError);
+                    throw serverError;
+                });
+                
+                const clientList = querySnapshot.docs.map(doc => {
+                    const data = doc.data() as Omit<Client, 'id' | 'status' | 'expiresSoon'>;
+                    const validityDate = new Date(data.validity);
+                    const now = new Date();
+                    const status: ClientStatus = validityDate < now ? "Expired" : "Active";
+                    const daysUntilExpiry = (validityDate.getTime() - now.getTime()) / (1000 * 3600 * 24);
+                    const expiresSoon = status === "Active" && daysUntilExpiry <= 7;
 
-                return {
-                    id: doc.id,
-                    ...data,
-                    status,
-                    expiresSoon
-                } as Client;
-            });
-            setClients(clientList);
+                    return {
+                        id: doc.id,
+                        ...data,
+                        status,
+                        expiresSoon
+                    } as Client;
+                });
+                setClients(clientList);
+            } catch (error) {
+                console.warn("Client data fetch error handled.");
+                setClients([]);
+            }
         };
         fetchClients();
     }

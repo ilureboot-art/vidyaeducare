@@ -15,6 +15,8 @@ import { useAuth, useDb } from "@/firebase";
 import { doc, onSnapshot, DocumentData, updateDoc } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import UserLayout from "@/components/UserLayout";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 const benefits = [
     { text: "Earn a commission for every referral who subscribes." },
@@ -40,6 +42,15 @@ function ReferBoltPageContent() {
             } else {
                 setData({ isSubscribed: false });
             }
+        }, async (error) => {
+            if (error.code === 'permission-denied') {
+                const permissionError = new FirestorePermissionError({
+                    path: referboltDocRef.path,
+                    operation: 'get',
+                } satisfies SecurityRuleContext);
+                errorEmitter.emit('permission-error', permissionError);
+            }
+            setData({ isSubscribed: false });
         });
         return () => unsub();
     }
@@ -48,15 +59,22 @@ function ReferBoltPageContent() {
   const handleAutoRenewToggle = async (checked: boolean) => {
       if (!user || !db || !data || !('isSubscribed' in data) || !data.isSubscribed) return;
       const referboltDocRef = doc(db, "referbolt", user.uid);
-      try {
-          await updateDoc(referboltDocRef, { autoRenew: checked });
-          toast({
-              title: "Auto-renewal settings updated!",
-              description: `Auto-renewal is now ${checked ? 'enabled' : 'disabled'}.`
+      
+      updateDoc(referboltDocRef, { autoRenew: checked })
+          .then(() => {
+              toast({
+                  title: "Auto-renewal settings updated!",
+                  description: `Auto-renewal is now ${checked ? 'enabled' : 'disabled'}.`
+              });
+          })
+          .catch(async (serverError) => {
+              const permissionError = new FirestorePermissionError({
+                  path: referboltDocRef.path,
+                  operation: 'update',
+                  requestResourceData: { autoRenew: checked },
+              } satisfies SecurityRuleContext);
+              errorEmitter.emit('permission-error', permissionError);
           });
-      } catch (error) {
-          toast({ variant: 'destructive', title: "Error", description: "Could not update settings."});
-      }
   };
 
   const handleShare = async () => {

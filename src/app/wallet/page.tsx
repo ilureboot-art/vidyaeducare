@@ -34,6 +34,8 @@ import { useAuth, useDb } from "@/firebase";
 import { doc, collection, addDoc, query, where, orderBy, limit, onSnapshot, serverTimestamp, runTransaction, Timestamp } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import UserLayout from "@/components/UserLayout";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 const getStatusBadgeVariant = (status: string) => {
     switch (status.toLowerCase()) {
@@ -79,30 +81,42 @@ function WalletPageContent() {
     if (user && db) {
         // Fetch Admin Payment Config
         const paymentMethodsRef = doc(db, "configs", "paymentMethods");
-        const unsubPaymentMethods = onSnapshot(paymentMethodsRef, (doc) => {
-            if (doc.exists()) {
-                setAdminPaymentMethods(doc.data() as AdminPaymentMethods);
+        const unsubPaymentMethods = onSnapshot(paymentMethodsRef, (docSnap) => {
+            if (docSnap.exists()) {
+                setAdminPaymentMethods(docSnap.data() as AdminPaymentMethods);
             } else {
                 setAdminPaymentMethods(defaultPaymentMethods);
             }
-        }, (error) => {
-            console.warn("Payment methods fetch error (using defaults):", error);
+        }, async (error) => {
+            if (error.code === 'permission-denied') {
+                const permissionError = new FirestorePermissionError({
+                    path: paymentMethodsRef.path,
+                    operation: 'get',
+                } satisfies SecurityRuleContext);
+                errorEmitter.emit('permission-error', permissionError);
+            }
             setAdminPaymentMethods(defaultPaymentMethods);
         });
 
         // Fetch User Wallet
         const walletRef = doc(db, "wallets", user.uid);
-        const unsubWallet = onSnapshot(walletRef, (doc) => {
-            if (doc.exists()) setWalletInfo(doc.data() as WalletInfo);
+        const unsubWallet = onSnapshot(walletRef, (docSnap) => {
+            if (docSnap.exists()) setWalletInfo(docSnap.data() as WalletInfo);
             else setWalletInfo({ balance: 0, coins: 0, referralCode: `REF${user.uid.slice(0,6).toUpperCase()}` });
-        }, (error) => {
-            console.error("Wallet sync error:", error);
+        }, async (error) => {
+             if (error.code === 'permission-denied') {
+                const permissionError = new FirestorePermissionError({
+                    path: walletRef.path,
+                    operation: 'get',
+                } satisfies SecurityRuleContext);
+                errorEmitter.emit('permission-error', permissionError);
+            }
             setWalletInfo({ balance: 0, coins: 0, referralCode: `REF${user.uid.slice(0,6).toUpperCase()}` });
         });
 
         // Fetch Recent Transactions
-        const txsRef = collection(db, "transactions");
-        const q = query(txsRef, where("user", "==", user.uid), orderBy("date", "desc"), limit(10));
+        const txsCol = collection(db, "transactions");
+        const q = query(txsCol, where("user", "==", user.uid), orderBy("date", "desc"), limit(10));
         const unsubTransactions = onSnapshot(q, (querySnapshot) => {
             const transactionList: Transaction[] = querySnapshot.docs.map(d => {
                 const data = d.data();
@@ -110,8 +124,14 @@ function WalletPageContent() {
                 return { id: d.id, ...data, date } as Transaction;
             });
             setTransactions(transactionList);
-        }, (error) => {
-            console.error("Transactions sync error:", error);
+        }, async (error) => {
+             if (error.code === 'permission-denied') {
+                const permissionError = new FirestorePermissionError({
+                    path: txsCol.path,
+                    operation: 'list',
+                } satisfies SecurityRuleContext);
+                errorEmitter.emit('permission-error', permissionError);
+            }
             setTransactions([]);
         });
 
@@ -132,22 +152,31 @@ function WalletPageContent() {
     
     if (!amount || !txnId) return;
 
-    try {
-        await addDoc(collection(db, "transactions"), {
-            type: 'deposit',
-            description: 'Fund Deposit Request',
-            amount: amount,
-            date: serverTimestamp(),
-            status: 'Pending',
-            referenceId: txnId,
-            user: user.uid,
+    const txData = {
+        type: 'deposit',
+        description: 'Fund Deposit Request',
+        amount: amount,
+        date: serverTimestamp(),
+        status: 'Pending',
+        referenceId: txnId,
+        user: user.uid,
+    };
+
+    const txsCol = collection(db, "transactions");
+    addDoc(txsCol, txData)
+        .then(() => {
+            toast({ title: "Request Submitted", description: "Your deposit request is pending approval." });
+            setAddFundsOpen(false);
+            form.reset();
+        })
+        .catch(async (serverError) => {
+            const permissionError = new FirestorePermissionError({
+                path: txsCol.path,
+                operation: 'create',
+                requestResourceData: txData,
+            } satisfies SecurityRuleContext);
+            errorEmitter.emit('permission-error', permissionError);
         });
-        toast({ title: "Request Submitted", description: "Your deposit request is pending approval." });
-        setAddFundsOpen(false);
-        form.reset();
-    } catch(error) {
-        toast({ variant: 'destructive', title: "Error", description: "Submission failed."});
-    }
   }
   
   const handleWithdraw = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -162,22 +191,30 @@ function WalletPageContent() {
         return;
     }
     
-    try {
-        await runTransaction(db, async (transaction) => {
-            const walletRef = doc(db, "wallets", user.uid);
-            const walletDoc = await transaction.get(walletRef);
-            if (!walletDoc.exists()) throw new Error("Wallet not found.");
-            const currentBalance = walletDoc.data().balance;
-            transaction.update(walletRef, { balance: currentBalance - amount });
-            const newTxRef = doc(collection(db, "transactions"));
-            transaction.set(newTxRef, { type: 'withdrawal', description: 'Withdrawal Request', amount: -amount, date: serverTimestamp(), status: 'Pending', paymentMethod: upiId, user: user.uid });
-        });
+    // Pattern 1: Chain .catch() for diagnostic emission
+    runTransaction(db, async (transaction) => {
+        const walletRef = doc(db, "wallets", user.uid);
+        const walletDoc = await transaction.get(walletRef);
+        if (!walletDoc.exists()) throw new Error("Wallet not found.");
+        const currentBalance = walletDoc.data().balance;
+        transaction.update(walletRef, { balance: currentBalance - amount });
+        const newTxRef = doc(collection(db, "transactions"));
+        transaction.set(newTxRef, { type: 'withdrawal', description: 'Withdrawal Request', amount: -amount, date: serverTimestamp(), status: 'Pending', paymentMethod: upiId, user: user.uid });
+    }).then(() => {
         toast({ title: "Request Submitted", description: `Withdrawal for ₹${amount} sent.` });
         setWithdrawOpen(false);
         form.reset();
-    } catch(error: any) {
-        toast({ variant: 'destructive', title: "Error", description: error.message });
-    }
+    }).catch(async (serverError) => {
+        if (serverError.code === 'permission-denied') {
+            const permissionError = new FirestorePermissionError({
+                path: 'multi-path-transaction',
+                operation: 'write',
+            } satisfies SecurityRuleContext);
+            errorEmitter.emit('permission-error', permissionError);
+        } else {
+             toast({ variant: 'destructive', title: "Error", description: serverError.message });
+        }
+    });
   }
 
   if (!walletInfo || !transactions || !adminPaymentMethods) {

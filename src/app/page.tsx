@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -140,6 +141,7 @@ Start your journey to success now: ${url}`;
                 </p>
                 <div className="flex items-center gap-2">
                     <Badge className="bg-accent text-white font-black">{trialStats.tutor} FREE QUERIES LEFT</Badge>
+                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">• No Registration Required</span>
                 </div>
                 <Button asChild size="lg" className="bg-accent hover:bg-accent/90 text-white font-black py-8 px-10 text-lg rounded-2xl shadow-lg">
                     <Link href="/ai-tutor">TRY DOUBT SOLVER <Sparkles className="ml-2 h-5 w-5"/></Link>
@@ -183,6 +185,7 @@ Start your journey to success now: ${url}`;
                 </p>
                 <div className="flex items-center gap-2">
                     <Badge className="bg-primary text-white font-black">{trialStats.notes} FREE PAGES LEFT</Badge>
+                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">• No Registration Required</span>
                 </div>
                 <Button asChild size="lg" className="bg-primary hover:bg-primary/90 text-white font-black py-8 px-10 text-lg rounded-2xl shadow-lg">
                     <Link href="/ai-notes">GENERATE STUDY NOTES <Zap className="ml-2 h-5 w-5"/></Link>

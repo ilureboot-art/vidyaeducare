@@ -11,6 +11,14 @@ To ensure maximum stability and synchronization, this project follows a **GitHub
 3.  **AI Intelligence (Google AI Studio)**: Use this for prompt engineering and model tuning. Once a prompt is perfected in the AI Studio Playground, copy it into the `src/ai/flows` directory in this codebase.
 4.  **Production Engine (Firebase App Hosting)**: Automatically pulls from GitHub to deploy your live site.
 
+## 🎓 Guest & Trial Mode
+Vidya EduCare offers a **Zero-Registration Trial Experience**. Guests can immediately try:
+- **AI Doubt Solver**: 5 free bilingual queries.
+- **AI Notes Generator**: 5 free textbook summary generations.
+- **Trial Arena**: A 5-question mock test with instant global ranking.
+
+Registration is only required for full access to curriculum-specific mock tests, leaderboard cash prizes, and the referral earning systems.
+
 ## 🚀 Readiness & Deployment
 
 ### 1. Infrastructure Setup

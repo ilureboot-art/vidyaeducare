@@ -11,7 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Trophy, Award, Loader2, Star } from "lucide-react";
+import { Trophy, Award, Loader2, Star, Coins } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useDb } from "@/firebase";
@@ -34,6 +34,17 @@ const getRankStyles = (rank: number) => {
     if (rank === 3) return "border-amber-600 bg-amber-600/5";
     if (rank <= 5) return "border-primary/20 bg-primary/5";
     return "border-transparent";
+}
+
+const getPrizeForRank = (rank: number) => {
+    switch (rank) {
+        case 1: return 250;
+        case 2: return 200;
+        case 3: return 150;
+        case 4: return 100;
+        case 5: return 50;
+        default: return null;
+    }
 }
 
 const RankIdentifier = ({ rank }: { rank: number }) => {
@@ -97,7 +108,7 @@ export default function LeaderboardPage() {
               Live Achievement Board
             </CardTitle>
             <CardDescription className="text-center font-bold uppercase tracking-widest text-xs mt-2">
-              National Mock Test Rankings • Performance Excellence
+              National Mock Test Rankings • Performance Excellence Rewards
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0">
@@ -112,7 +123,9 @@ export default function LeaderboardPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {leaderboardData.length > 0 ? leaderboardData.map((player) => (
+                {leaderboardData.length > 0 ? leaderboardData.map((player) => {
+                  const rankPrize = getPrizeForRank(player.rank);
+                  return (
                   <TableRow key={player.rank} className={cn("transition-colors group", getRankStyles(player.rank))}>
                     <TableCell className="text-center">
                        <RankIdentifier rank={player.rank} />
@@ -124,7 +137,7 @@ export default function LeaderboardPage() {
                                 "w-12 h-12 border-2 shadow-lg group-hover:scale-110 transition-transform",
                                 player.rank === 1 ? "border-yellow-400" : "border-background"
                             )}>
-                                <AvatarImage src={`https://picsum.photos/seed/${player.avatar}/60/60`} data-ai-hint="profile avatar" />
+                                <AvatarImage src={`https://picsum.photos/seed/${player.avatar}/60/60`} />
                                 <AvatarFallback className="bg-primary/10 text-primary font-black">{player.name.charAt(0)}</AvatarFallback>
                             </Avatar>
                             {player.rank <= 3 && (
@@ -145,15 +158,20 @@ export default function LeaderboardPage() {
                     <TableCell className="text-center font-mono font-bold text-muted-foreground">{player.time}</TableCell>
                     <TableCell className="text-center">
                         <div className="inline-flex flex-col items-center">
-                            <span className="text-xl font-black text-primary">{player.score} <span className="text-xs text-muted-foreground">/ 50</span></span>
+                            <span className="text-xl font-black text-primary">{player.score}</span>
                             <div className="w-16 h-1 bg-muted rounded-full mt-1 overflow-hidden">
-                                <div className="h-full bg-primary" style={{ width: `${(player.score / 50) * 100}%` }} />
+                                <div className="h-full bg-primary" style={{ width: `${Math.min((player.score / 50) * 100, 100)}%` }} />
                             </div>
                         </div>
                     </TableCell>
                     <TableCell className="text-right pr-8">
-                      {player.prize ? (
-                          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-green-500/10 text-green-600 rounded-full font-black text-lg shadow-sm border border-green-500/20" data-ai-hint="cash prize">
+                      {rankPrize ? (
+                          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-green-500/10 text-green-600 rounded-full font-black text-lg shadow-sm border border-green-500/20">
+                              <Coins className="w-4 h-4" />
+                              ₹{rankPrize.toLocaleString()}
+                          </div>
+                      ) : player.prize ? (
+                          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-green-500/10 text-green-600 rounded-full font-black text-lg shadow-sm border border-green-500/20">
                               <Star className="w-4 h-4 fill-green-600" />
                               ₹{player.prize.toLocaleString()}
                           </div>
@@ -162,7 +180,7 @@ export default function LeaderboardPage() {
                       )}
                     </TableCell>
                   </TableRow>
-                )) : (
+                )}) : (
                   <TableRow>
                       <TableCell colSpan={5} className="h-48 text-center text-muted-foreground">
                         <div className="flex flex-col items-center gap-2">

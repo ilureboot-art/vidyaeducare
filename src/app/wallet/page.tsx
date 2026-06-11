@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { 
   Card, 
@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { PlusCircle, MinusCircle, History, ArrowUpRight, ArrowDownLeft, Loader2, AlertCircle, Scan, Camera, X } from "lucide-react";
+import { PlusCircle, MinusCircle, History, ArrowUpRight, ArrowDownLeft, Loader2, AlertCircle, Scan, X, PieChart as PieChartIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { type Transaction, type AdminPaymentMethods } from "@/lib/user-data";
@@ -38,6 +38,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Html5Qrcode } from "html5-qrcode";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 
 const getStatusBadgeVariant = (status: string) => {
     switch (status.toLowerCase()) {
@@ -123,7 +124,7 @@ function WalletPageContent() {
 
         // Fetch Recent Transactions
         const txsCol = collection(db, "transactions");
-        const q = query(txsCol, where("user", "==", user.uid), orderBy("date", "desc"), limit(10));
+        const q = query(txsCol, where("user", "==", user.uid), orderBy("date", "desc"), limit(50));
         const unsubTransactions = onSnapshot(q, (querySnapshot) => {
             const transactionList: Transaction[] = querySnapshot.docs.map(d => {
                 const data = d.data();
@@ -152,6 +153,21 @@ function WalletPageContent() {
         };
     }
   }, [user, db]);
+
+  const pieData = useMemo(() => {
+    if (!transactions) return [];
+    
+    const completed = transactions.filter(t => t.status === 'Completed');
+    const income = completed.filter(t => t.amount > 0).reduce((acc, t) => acc + t.amount, 0);
+    const spending = completed.filter(t => t.amount < 0).reduce((acc, t) => acc + Math.abs(t.amount), 0);
+
+    if (income === 0 && spending === 0) return [];
+
+    return [
+        { name: "Income", value: income, color: "hsl(var(--primary))" },
+        { name: "Spending", value: spending, color: "hsl(var(--accent))" }
+    ];
+  }, [transactions]);
 
   const handleStartScanner = async () => {
       setIsScannerOpen(true);
@@ -311,10 +327,51 @@ function WalletPageContent() {
                 <MinusCircle className="mr-2 h-5 w-5 text-destructive"/> Withdraw
             </Button>
           </div>
+
+          {pieData.length > 0 && (
+            <Card className="border-none bg-muted/20 shadow-inner">
+                <CardHeader className="pb-0 text-center">
+                    <CardTitle className="text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center justify-center gap-2">
+                        <PieChartIcon className="w-3 h-3" /> Spending Distribution
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="h-[200px] pt-0">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                            <Pie
+                                data={pieData}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={40}
+                                outerRadius={70}
+                                paddingAngle={5}
+                                dataKey="value"
+                                animationBegin={0}
+                                animationDuration={1000}
+                            >
+                                {pieData.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                                ))}
+                            </Pie>
+                            <Tooltip 
+                                formatter={(value: number) => [`₹${value.toFixed(2)}`, "Total"]}
+                                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '12px', fontWeight: 'bold' }}
+                            />
+                            <Legend 
+                                verticalAlign="bottom" 
+                                align="center" 
+                                iconType="circle"
+                                wrapperStyle={{ fontSize: '10px', fontWeight: 'black', textTransform: 'uppercase', letterSpacing: '0.1em', paddingTop: '10px' }}
+                            />
+                        </PieChart>
+                    </ResponsiveContainer>
+                </CardContent>
+            </Card>
+          )}
           
           <div className="space-y-4 pt-4">
             <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground text-center">Recent Activity</h3>
-            {transactions.length > 0 ? transactions.map((tx) => (
+            {transactions.slice(0, 10).map((tx) => (
                  <div key={tx.id} className="flex items-center justify-between p-4 bg-muted/30 border rounded-xl">
                     <div className="flex items-center gap-4">
                         <div className={`p-2.5 rounded-full ${tx.amount >= 0 ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
@@ -332,7 +389,8 @@ function WalletPageContent() {
                         <Badge variant={getStatusBadgeVariant(tx.status)} className="text-[9px] h-4">{tx.status}</Badge>
                     </div>
                  </div>
-            )) : (
+            ))}
+            {transactions.length === 0 && (
                 <div className="text-center py-12 border-2 border-dashed rounded-xl opacity-50">
                     <History className="w-8 h-8 mx-auto mb-2" />
                     <p className="text-sm">No transactions yet.</p>

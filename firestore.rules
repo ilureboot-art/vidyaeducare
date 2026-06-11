@@ -3,7 +3,7 @@ rules_version = '2';
 /**
  * Vidya EduCare - Production Infrastructure Rules
  * Target Instance: vidyaeducaredatabase
- * Deployment Salt: V51_ADMIN_AUTHORIZATION_FINAL_V2
+ * Deployment Salt: V52_TRIAL_ACCESS_OPTIMIZATION
  */
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -46,13 +46,12 @@ service cloud.firestore {
     }
 
     // --- PRIORITY 1: Supreme Master Override ---
-    // This must come first to ensure the master account is never blocked by subsequent restrictive rules.
     match /{allPaths=**} {
       allow read, write: if isMasterAdmin();
     }
 
     // --- PRIORITY 2: Global Configuration Access ---
-    // These must be readable by the app logic and writable by authorized administrators.
+    // Explicitly allowing public read for non-sensitive configurations
     match /configs/{document=**} {
       allow read, get, list: if true;
       allow write: if isAdmin();

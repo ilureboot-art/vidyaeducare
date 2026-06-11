@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Landmark, Loader2, RefreshCcw, X, Upload, AlertCircle } from "lucide-react";
+import { Landmark, Loader2, RefreshCcw, X, Upload, AlertCircle, Eraser } from "lucide-react";
 import type { AdminPaymentMethods } from "@/lib/user-data";
 import Image from "next/image";
 import { useDb, useAuth } from "@/firebase";
@@ -105,6 +105,12 @@ export default function PaymentSettingsPage() {
         if (fileInput) fileInput.value = '';
     };
 
+    const handleClearCache = () => {
+        localStorage.clear();
+        sessionStorage.clear();
+        window.location.reload();
+    };
+
     const onSubmit = (data: PaymentFormValues) => {
         if (!db || isSaving) return;
         
@@ -146,7 +152,14 @@ export default function PaymentSettingsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Payment Settings</h1>
-        <Button variant="ghost" size="sm" onClick={() => window.location.reload()}><RefreshCcw className="w-4 h-4 mr-2"/> Re-sync</Button>
+        <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={handleClearCache} className="text-muted-foreground">
+                <Eraser className="w-4 h-4 mr-2"/> Clear Local Cache
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => window.location.reload()}>
+                <RefreshCcw className="w-4 h-4 mr-2"/> Re-sync
+            </Button>
+        </div>
       </div>
       <form onSubmit={handleSubmit(onSubmit)}>
         <Card>

@@ -5,12 +5,12 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { BrainCircuit, Sparkles, Loader2, Send, Users, ArrowLeft, MessageSquare, Info, LogIn, Lock } from "lucide-react";
+import { BrainCircuit, Sparkles, Loader2, Send, Users, ArrowLeft, MessageSquare, Info, LogIn, Lock, ShoppingCart } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth, useDb } from "@/firebase";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, onSnapshot } from "firebase/firestore";
 import type { StudentProfile } from "@/lib/student-data";
 import { solveDoubt, type SolveDoubtOutput } from "@/ai/flows/solve-doubt-flow";
 import UserLayout from "@/components/UserLayout";
@@ -32,7 +32,8 @@ function AiTutorPageContent() {
     const [queryText, setQueryText] = useState("");
     const [isSolving, setIsSolving] = useState(false);
     const [result, setResult] = useState<SolveDoubtOutput | null>(null);
-    const [isLoadingStudents, setIsLoadingStudents] = useState(false);
+    const [isLoadingAccess, setIsLoadingAccess] = useState(true);
+    const [hasActivePackage, setHasActivePackage] = useState(false);
     
     const [trialCount, setTrialCount] = useState(0);
 
@@ -44,28 +45,49 @@ function AiTutorPageContent() {
     }, [user]);
 
     useEffect(() => {
-        if (user && db) {
-            setIsLoadingStudents(true);
-            const fetchStudents = async () => {
-                const studentsColRef = collection(db, "students");
-                const q = query(studentsColRef, where("parentId", "==", user.uid));
+        if (!db) return;
+
+        if (user) {
+            setIsLoadingAccess(true);
+            
+            // Check for access: Does the user have students or unused activation codes?
+            const checkAccess = async () => {
                 try {
-                    const snap = await getDocs(q).catch(async (e) => {
-                        if (e.code === 'permission-denied') {
-                            errorEmitter.emit('permission-error', new FirestorePermissionError({ path: studentsColRef.path, operation: 'list' }));
+                    const studentsColRef = collection(db, "students");
+                    const q = query(studentsColRef, where("parentId", "==", user.uid));
+                    const studentSnap = await getDocs(q);
+                    
+                    const codesDocRef = doc(db, "activationCodes", user.uid);
+                    const unsubCodes = onSnapshot(codesDocRef, (codeSnap) => {
+                        const hasCodes = codeSnap.exists() && codeSnap.data().codes?.length > 0;
+                        const hasStudents = !studentSnap.empty;
+                        
+                        setHasActivePackage(hasStudents || hasCodes);
+                        
+                        if (hasStudents) {
+                            const list = studentSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentProfile));
+                            setStudents(list);
+                            if (list.length > 0) setSelectedStudentId(list[0].id);
                         }
-                        throw e;
+                        setIsLoadingAccess(false);
+                    }, () => {
+                        // If codes fetch fails (e.g. permission denied or missing doc), fallback to students only
+                        setHasActivePackage(!studentSnap.empty);
+                        setIsLoadingAccess(false);
                     });
-                    const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentProfile));
-                    setStudents(list);
-                    if (list.length > 0) setSelectedStudentId(list[0].id);
+
+                    return unsubCodes;
                 } catch (e) {
-                    console.warn("Student fetch sync issue.");
-                } finally {
-                    setIsLoadingStudents(false);
+                    setIsLoadingAccess(false);
                 }
             };
-            fetchStudents();
+            
+            const cleanup = checkAccess();
+            return () => {
+                cleanup.then(unsub => unsub && unsub());
+            }
+        } else {
+            setIsLoadingAccess(false);
         }
     }, [user, db]);
 
@@ -110,6 +132,45 @@ function AiTutorPageContent() {
         }
     };
 
+    if (isLoadingAccess) {
+        return (
+            <div className="flex flex-col items-center justify-center py-24 space-y-4">
+                <Loader2 className="w-10 h-10 animate-spin text-primary" />
+                <p className="text-muted-foreground font-black uppercase tracking-widest text-xs">Verifying Academic Access...</p>
+            </div>
+        );
+    }
+
+    // Registered user with no package check
+    if (user && !hasActivePackage) {
+        return (
+            <div className="w-full max-w-2xl mx-auto py-12">
+                <Card className="text-center p-12 border-none shadow-2xl ring-1 ring-primary/10 overflow-hidden rounded-[3rem]">
+                    <div className="absolute top-0 right-0 p-8 opacity-5"><Lock size={150}/></div>
+                    <CardHeader className="space-y-6">
+                        <div className="bg-primary/10 w-24 h-24 rounded-full flex items-center justify-center mx-auto">
+                            <Lock className="w-12 h-12 text-primary" />
+                        </div>
+                        <CardTitle className="text-4xl font-black text-primary tracking-tighter uppercase italic">Subscription Required</CardTitle>
+                        <CardDescription className="text-lg font-bold max-w-sm mx-auto">
+                            The AI Doubt Solver is a premium feature available to students with an active Mock Test Package.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-8">
+                        <Button asChild size="lg" className="w-full py-10 text-2xl font-black rounded-3xl shadow-xl hover:scale-105 transition-transform group">
+                            <Link href="/store">
+                                VISIT THE STORE <ShoppingCart className="ml-3 group-hover:translate-x-1 transition-transform" />
+                            </Link>
+                        </Button>
+                    </CardContent>
+                    <CardFooter className="justify-center">
+                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Unlock unlimited AI assistance today</p>
+                    </CardFooter>
+                </Card>
+            </div>
+        );
+    }
+
     const isLocked = !user && trialCount >= GUEST_TRIAL_LIMIT;
 
     return (
@@ -145,23 +206,19 @@ function AiTutorPageContent() {
                             <CardTitle className="text-lg font-black uppercase tracking-tight">Conceptual Workspace</CardTitle>
                             <CardDescription>Bilingual pedagogical explanations for any topic.</CardDescription>
                         </div>
-                        {user && (
+                        {user && hasActivePackage && (
                             <div className="w-full sm:w-48 space-y-1">
                                 <Label className="text-[10px] uppercase font-bold text-muted-foreground">Tailor for</Label>
-                                {isLoadingStudents ? (
-                                    <div className="h-10 bg-muted animate-pulse rounded-md" />
-                                ) : (
-                                    <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
-                                        <SelectTrigger className="bg-background">
-                                            <SelectValue placeholder="Select student..." />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {students.map(s => (
-                                                <SelectItem key={s.id} value={s.id}>{s.name} ({s.academic.standard})</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                )}
+                                <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
+                                    <SelectTrigger className="bg-background">
+                                        <SelectValue placeholder="Select student..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {students.map(s => (
+                                            <SelectItem key={s.id} value={s.id}>{s.name} ({s.academic.standard})</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
                         )}
                     </div>

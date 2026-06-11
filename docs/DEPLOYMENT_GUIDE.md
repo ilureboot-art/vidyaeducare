@@ -8,7 +8,7 @@ The best way to manage this project is to treat **GitHub** as your central hub w
 
 *   **Firebase Studio (AI Chat)**: This is your **Prompting-Based Development Hub**. Use the chat here to build features, write UI code, and configure Firebase logic. Changes made here are saved to your repository.
 *   **GitHub**: Acts as the master storage. It holds the "Production Ready" version of your code.
-*   **Google AI Studio**: Provides keys and a playground for testing prompts. Copy successful prompts from AI Studio into `src/ai/flows/` in the code.
+*   **Google AI Studio**: Provides keys and a playground for testing prompts. Copy successful prompts from AI Studio into `src/ai/flows/` here in the Studio. This ensures your "Intelligence" version matches your "Code" version.
 *   **Firebase App Hosting**: Deploys directly from GitHub every time you save a feature.
 
 ## 2. Firebase Project Setup
@@ -26,8 +26,8 @@ The best way to manage this project is to treat **GitHub** as your central hub w
 4. Select **Native mode** and choose a location (e.g., `asia-south1`).
 
 ## 3. AI Synchronization (Intelligence vs. Code)
-*   **Automatic Sync**: Changes to API Keys and "Tuned Models" in Google AI Studio reflect instantly in your app once secrets are set.
-*   **Manual Sync (Prompt Engineering)**: When you refine a prompt in the Google AI Studio Playground, you **must** copy the text and paste it into the relevant file in `src/ai/flows/` here in the Studio. This ensures your "Intelligence" version matches your "Code" version.
+*   **Automatic Sync**: Changes to API Keys and "Tuned Models" in Google AI Studio reflect instantly in your app once secrets (like `GEMINI_API_KEY`) are set in Firebase App Hosting.
+*   **Manual Sync (Prompt Engineering)**: When you refine a prompt in the Google AI Studio Playground, you **must** manually copy the refined text and paste it into the relevant file in `src/ai/flows/` within Firebase Studio. Firebase Studio does not automatically pull prompt changes from the Google AI Studio UI.
 
 ## 4. Deploying via Firebase App Hosting
 

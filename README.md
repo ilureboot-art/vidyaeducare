@@ -7,8 +7,8 @@ A comprehensive NextJS platform for Vidya EduCare, combining regional academic p
 To ensure maximum stability and synchronization, this project follows a **GitHub-Centric** lifecycle:
 
 1.  **Central Source of Truth (GitHub)**: Your repository is the master record. All code, prompts, and configurations live here.
-2.  **Engineering Hub (Firebase Studio AI Chat)**: Use this environment for all **active prompting-based development**. This is where you talk to the AI to build features, UI, and database logic.
-3.  **AI Intelligence (Google AI Studio)**: Use this for prompt engineering and model tuning. The platform is now fully synchronized with the latest `gemini-flash-latest` models for optimal performance.
+2.  **Engineering Hub (Firebase Studio AI Chat)**: Use this environment for all **active prompting-based development**. This is where you talk to the AI to build features, UI, and database logic. Changes here save to GitHub.
+3.  **AI Intelligence (Google AI Studio)**: Use this for prompt engineering and model tuning. **Note**: This is a manual sync. When you refine a prompt in AI Studio, you must copy it back into the code files in Firebase Studio.
 4.  **Production Engine (Firebase App Hosting)**: Automatically pulls from GitHub to deploy your live site.
 
 ## 🎓 Guest & Trial Mode

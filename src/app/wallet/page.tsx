@@ -11,17 +11,9 @@ import {
   CardDescription,
   CardFooter,
 } from "@/components/ui/card";
-import { 
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { PlusCircle, MinusCircle, History, ArrowUpRight, ArrowDownLeft, Loader2, AlertCircle, Scan, X, PieChart as PieChartIcon, AlertTriangle, FileText, CheckCircle2, Clock, XCircle, Copy } from "lucide-react";
+import { PlusCircle, MinusCircle, History, ArrowUpRight, ArrowDownLeft, Loader2, AlertCircle, Scan, X, PieChart as PieChartIcon, AlertTriangle, FileText, CheckCircle2, Clock, XCircle, Copy, ArrowLeft, ShieldCheck, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { type Transaction, type AdminPaymentMethods } from "@/lib/user-data";
@@ -80,6 +72,8 @@ const defaultPaymentMethods: AdminPaymentMethods = {
 
 const LOW_BALANCE_THRESHOLD = 200;
 
+type WalletView = 'main' | 'add' | 'withdraw';
+
 function WalletPageContent() {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -88,9 +82,8 @@ function WalletPageContent() {
   const [walletInfo, setWalletInfo] = useState<WalletInfo | null>(null);
   const [transactions, setTransactions] = useState<Transaction[] | null>(null);
   const [adminPaymentMethods, setAdminPaymentMethods] = useState<AdminPaymentMethods | null>(null);
+  const [activeView, setActiveView] = useState<WalletView>('main');
 
-  const [addFundsOpen, setAddFundsOpen] = useState(false);
-  const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
 
   // Scanner States
@@ -142,7 +135,7 @@ function WalletPageContent() {
             const transactionList: Transaction[] = querySnapshot.docs.map(d => {
                 const data = d.data();
                 const date = data.date instanceof Timestamp ? data.date.toDate().toISOString() : data.date;
-                return { id: d.id, ...data, date } as Transaction;
+                return { id: doc.id, ...data, date } as Transaction;
             });
             setTransactions(transactionList);
         }, async (error) => {
@@ -246,7 +239,7 @@ function WalletPageContent() {
     addDoc(txsCol, txData)
         .then(() => {
             toast({ title: "Request Submitted", description: "Your deposit request is pending approval." });
-            setAddFundsOpen(false);
+            setActiveView('main');
             form.reset();
         })
         .catch(async (serverError) => {
@@ -284,7 +277,7 @@ function WalletPageContent() {
         transaction.set(newTxRef, { type: 'withdrawal', description: 'Withdrawal Request', amount: -amount, date: serverTimestamp(), status: 'Pending', paymentMethod: upiId, user: user.uid });
     }).then(() => {
         toast({ title: "Request Submitted", description: `Withdrawal for ₹${amount} sent.` });
-        setWithdrawOpen(false);
+        setActiveView('main');
         form.reset();
     }).catch(async (serverError) => {
         if (serverError.code === 'permission-denied') {
@@ -339,101 +332,247 @@ function WalletPageContent() {
         )}
       </div>
 
-      <Card className="shadow-lg border-primary/10">
-        <CardHeader className="text-center">
-          <CardTitle className="text-3xl font-bold text-primary">My Wallet</CardTitle>
-          <CardDescription>Manage your funds securely.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <Card className="text-center p-8 bg-primary/[0.03] border-dashed border-primary/20">
-            <p className="text-xs font-bold text-primary tracking-widest uppercase mb-1">AVAILABLE BALANCE</p>
-            <p className="text-5xl font-black text-primary">₹{walletInfo.balance.toFixed(2)}</p>
-          </Card>
-          <div className="grid grid-cols-2 gap-4">
-            <Button size="lg" variant="outline" className="h-16 shadow-sm" onClick={() => setAddFundsOpen(true)}>
-                <PlusCircle className="mr-2 h-5 w-5 text-primary"/> Add Funds
-            </Button>
-            <Button size="lg" variant="outline" className="h-16 shadow-sm" onClick={() => setWithdrawOpen(true)}>
-                <MinusCircle className="mr-2 h-5 w-5 text-destructive"/> Withdraw
-            </Button>
-          </div>
+      {activeView === 'main' ? (
+          <>
+          <Card className="shadow-lg border-primary/10 overflow-hidden">
+            <CardHeader className="text-center bg-primary/[0.02] border-b">
+              <CardTitle className="text-3xl font-black text-primary italic uppercase tracking-tighter">My Wallet</CardTitle>
+              <CardDescription className="font-bold">Manage your academic funds securely.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6 pt-6">
+              <div className="text-center p-8 bg-primary/[0.03] border-2 border-dashed border-primary/20 rounded-[2rem]">
+                <p className="text-[10px] font-black text-primary tracking-widest uppercase mb-1">AVAILABLE BALANCE</p>
+                <p className="text-6xl font-black text-primary tracking-tighter">₹{walletInfo.balance.toFixed(2)}</p>
+              </div>
 
-          {pieData.length > 0 && (
-            <Card className="border-none bg-muted/20 shadow-inner">
-                <CardHeader className="pb-0 text-center">
-                    <CardTitle className="text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center justify-center gap-2">
-                        <PieChartIcon className="w-3 h-3" /> Spending Distribution
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="h-[200px] pt-0">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                            <Pie
-                                data={pieData}
-                                cx="50%"
-                                cy="50%"
-                                innerRadius={40}
-                                outerRadius={70}
-                                paddingAngle={5}
-                                dataKey="value"
-                                animationBegin={0}
-                                animationDuration={1000}
+              {/* QUICK ACTIONS HUB */}
+              <div className="space-y-3">
+                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest text-center">Quick Academic Actions</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <Button variant="outline" className="h-24 flex-col gap-2 rounded-2xl border-primary/10 hover:border-primary/40 hover:bg-primary/5 transition-all shadow-sm" onClick={() => setActiveView('add')}>
+                          <PlusCircle className="w-6 h-6 text-primary" />
+                          <span className="text-[10px] font-black uppercase tracking-tight">Add Funds</span>
+                      </Button>
+                      <Button variant="outline" className="h-24 flex-col gap-2 rounded-2xl border-accent/10 hover:border-accent/40 hover:bg-accent/5 transition-all shadow-sm" onClick={() => setActiveView('withdraw')}>
+                          <MinusCircle className="w-6 h-6 text-accent" />
+                          <span className="text-[10px] font-black uppercase tracking-tight">Withdraw</span>
+                      </Button>
+                      <Button variant="outline" className="h-24 flex-col gap-2 rounded-2xl border-primary/10 hover:border-primary/40 hover:bg-primary/5 transition-all shadow-sm" asChild>
+                          <Link href="/transactions">
+                             <History className="w-6 h-6 text-muted-foreground" />
+                             <span className="text-[10px] font-black uppercase tracking-tight">History</span>
+                          </Link>
+                      </Button>
+                      <Button variant="outline" className="h-24 flex-col gap-2 rounded-2xl border-primary/10 hover:border-primary/40 hover:bg-primary/5 transition-all shadow-sm" asChild>
+                          <Link href="/iba/dashboard">
+                             <ShieldCheck className="w-6 h-6 text-primary" />
+                             <span className="text-[10px] font-black uppercase tracking-tight">IBA Hub</span>
+                          </Link>
+                      </Button>
+                  </div>
+              </div>
+
+              {pieData.length > 0 && (
+                <Card className="border-none bg-muted/20 shadow-inner rounded-3xl">
+                    <CardHeader className="pb-0 text-center">
+                        <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center justify-center gap-2">
+                            <PieChartIcon className="w-3 h-3" /> Cash Flow Analytics
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="h-[200px] pt-0">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie
+                                    data={pieData}
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={40}
+                                    outerRadius={70}
+                                    paddingAngle={5}
+                                    dataKey="value"
+                                    animationBegin={0}
+                                    animationDuration={1000}
+                                >
+                                    {pieData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                                    ))}
+                                </Pie>
+                                <Tooltip 
+                                    formatter={(value: number) => [`₹${value.toFixed(2)}`, "Total"]}
+                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '12px', fontWeight: 'bold' }}
+                                />
+                                <Legend 
+                                    verticalAlign="bottom" 
+                                    align="center" 
+                                    iconType="circle"
+                                    wrapperStyle={{ fontSize: '10px', fontWeight: 'black', textTransform: 'uppercase', letterSpacing: '0.1em', paddingTop: '10px' }}
+                                />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </CardContent>
+                </Card>
+              )}
+              
+              <div className="space-y-4 pt-4">
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground text-center">Recent Activity</h3>
+                {transactions.slice(0, 8).map((tx) => (
+                     <div key={tx.id} onClick={() => setSelectedTx(tx)} className="flex items-center justify-between p-4 bg-muted/30 border rounded-2xl cursor-pointer hover:bg-muted/50 transition-colors group">
+                        <div className="flex items-center gap-4">
+                            <div className={`p-2.5 rounded-full ${tx.amount >= 0 ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                                {tx.amount >= 0 ? <ArrowDownLeft className="w-5 h-5" /> : <ArrowUpRight className="w-5 h-5" />}
+                            </div>
+                            <div>
+                                <p className="font-bold text-sm group-hover:text-primary transition-colors">{tx.description}</p>
+                                <p className="text-[10px] text-muted-foreground">{format(new Date(tx.date), 'PP p')}</p>
+                            </div>
+                        </div>
+                        <div className="text-right">
+                            <p className={`font-black text-sm ${tx.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {tx.amount >= 0 ? '+' : '-'} ₹{Math.abs(tx.amount).toFixed(2)}
+                            </p>
+                            <Badge variant={getStatusBadgeVariant(tx.status)} className="text-[9px] h-4">{tx.status}</Badge>
+                        </div>
+                     </div>
+                ))}
+                {transactions.length === 0 && (
+                    <div className="text-center py-12 border-2 border-dashed rounded-3xl opacity-50">
+                        <History className="w-8 h-8 mx-auto mb-2" />
+                        <p className="text-sm font-bold">No transactions found</p>
+                    </div>
+                )}
+              </div>
+            </CardContent>
+             <CardFooter className="bg-muted/10 border-t">
+                <Button asChild variant="ghost" className="w-full text-xs font-black uppercase tracking-widest text-muted-foreground hover:text-primary">
+                    <Link href="/transactions"><History className="mr-2 h-4 w-4" /> View Detailed Statement</Link>
+                </Button>
+             </CardFooter>
+          </Card>
+          </>
+      ) : activeView === 'add' ? (
+          <Card className="shadow-2xl border-primary/20 overflow-hidden animate-in fade-in slide-in-from-right-4 duration-500">
+              <CardHeader className="bg-primary/5 border-b flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle className="text-2xl font-black text-primary uppercase italic tracking-tighter">Add Funds</CardTitle>
+                    <CardDescription className="font-bold">Follow steps to top-up your wallet.</CardDescription>
+                  </div>
+                  <Button variant="ghost" size="icon" onClick={() => setActiveView('main')} className="rounded-full">
+                      <X size={20}/>
+                  </Button>
+              </CardHeader>
+              <CardContent className="space-y-6 pt-6">
+                <div className="flex flex-col gap-3">
+                    <Button 
+                        variant="secondary" 
+                        className="w-full h-14 font-black gap-2 shadow-lg border-2 border-primary/20 bg-primary/10 hover:bg-primary/20 text-primary"
+                        onClick={handleStartScanner}
+                        disabled={isScannerOpen}
+                    >
+                        <Scan className="w-5 h-5" />
+                        LAUNCH QR SCANNER
+                    </Button>
+
+                    {isScannerOpen && (
+                        <div className="relative border-4 border-primary/20 rounded-[2rem] overflow-hidden bg-black aspect-square">
+                            <div id={scannerId} className="w-full h-full" />
+                            <div className="absolute inset-0 border-[20px] border-black/40 pointer-events-none">
+                                <div className="w-full h-full border-2 border-white/50 rounded-2xl" />
+                            </div>
+                            <Button 
+                                variant="destructive" 
+                                size="icon" 
+                                className="absolute top-4 right-4 rounded-full shadow-xl"
+                                onClick={handleStopScanner}
                             >
-                                {pieData.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
-                                ))}
-                            </Pie>
-                            <Tooltip 
-                                formatter={(value: number) => [`₹${value.toFixed(2)}`, "Total"]}
-                                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '12px', fontWeight: 'bold' }}
-                            />
-                            <Legend 
-                                verticalAlign="bottom" 
-                                align="center" 
-                                iconType="circle"
-                                wrapperStyle={{ fontSize: '10px', fontWeight: 'black', textTransform: 'uppercase', letterSpacing: '0.1em', paddingTop: '10px' }}
-                            />
-                        </PieChart>
-                    </ResponsiveContainer>
-                </CardContent>
-            </Card>
-          )}
-          
-          <div className="space-y-4 pt-4">
-            <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground text-center">Recent Activity</h3>
-            {transactions.slice(0, 10).map((tx) => (
-                 <div key={tx.id} onClick={() => setSelectedTx(tx)} className="flex items-center justify-between p-4 bg-muted/30 border rounded-xl cursor-pointer hover:bg-muted/50 transition-colors group">
-                    <div className="flex items-center gap-4">
-                        <div className={`p-2.5 rounded-full ${tx.amount >= 0 ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
-                            {tx.amount >= 0 ? <ArrowDownLeft className="w-5 h-5" /> : <ArrowUpRight className="w-5 h-5" />}
+                                <X size={20} />
+                            </Button>
+                            <div className="absolute bottom-4 left-0 right-0 text-center">
+                                <Badge className="bg-white/20 text-white border-none animate-pulse px-4 py-1">Position QR in frame</Badge>
+                            </div>
                         </div>
-                        <div>
-                            <p className="font-bold text-sm group-hover:text-primary transition-colors">{tx.description}</p>
-                            <p className="text-[10px] text-muted-foreground">{format(new Date(tx.date), 'PP p')}</p>
-                        </div>
-                    </div>
-                    <div className="text-right">
-                        <p className={`font-black text-sm ${tx.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {tx.amount >= 0 ? '+' : '-'} ₹{Math.abs(tx.amount).toFixed(2)}
-                        </p>
-                        <Badge variant={getStatusBadgeVariant(tx.status)} className="text-[9px] h-4">{tx.status}</Badge>
-                    </div>
-                 </div>
-            ))}
-            {transactions.length === 0 && (
-                <div className="text-center py-12 border-2 border-dashed rounded-xl opacity-50">
-                    <History className="w-8 h-8 mx-auto mb-2" />
-                    <p className="text-sm">No transactions yet.</p>
+                    )}
                 </div>
-            )}
-          </div>
-        </CardContent>
-         <CardFooter>
-            <Button asChild variant="ghost" className="w-full text-muted-foreground hover:text-primary">
-                <Link href="/transactions"><History className="mr-2 h-4 w-4" /> Full History</Link>
-            </Button>
-         </CardFooter>
-      </Card>
+
+                <Tabs defaultValue="upi" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2 h-12">
+                        <TabsTrigger value="upi" className="font-black uppercase text-[10px]">UPI / QR</TabsTrigger>
+                        <TabsTrigger value="bank" className="font-black uppercase text-[10px]">Bank Transfer</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="upi" className="pt-6 space-y-6">
+                        {adminPaymentMethods.qrCodeUrl && (
+                            <div className="flex flex-col items-center gap-2">
+                                <div className="p-4 bg-muted/30 rounded-3xl border-2 border-dashed border-primary/20 shadow-inner">
+                                    <Image src={adminPaymentMethods.qrCodeUrl} alt="QR Code" width={250} height={250} className="rounded-xl" />
+                                </div>
+                                <p className="text-[10px] font-black uppercase text-muted-foreground italic tracking-widest">Administrator Payment QR</p>
+                            </div>
+                        )}
+                        <div className="space-y-2 text-sm bg-muted/20 p-4 rounded-2xl border">
+                            <div className="flex justify-between items-center"><span className="font-bold text-muted-foreground uppercase text-[10px]">Merchant UPI ID</span><CopyButton valueToCopy={adminPaymentMethods.upiId} /></div>
+                        </div>
+                    </TabsContent>
+                    <TabsContent value="bank" className="pt-6 space-y-3">
+                         <div className="flex justify-between items-center p-4 bg-muted/20 rounded-2xl border">
+                             <span className="font-bold text-muted-foreground uppercase text-[10px]">Account Number</span>
+                             <CopyButton valueToCopy={adminPaymentMethods.accountNumber} />
+                         </div>
+                         <div className="flex justify-between items-center p-4 bg-muted/20 rounded-2xl border">
+                             <span className="font-bold text-muted-foreground uppercase text-[10px]">IFSC Code</span>
+                             <CopyButton valueToCopy={adminPaymentMethods.ifscCode} />
+                         </div>
+                    </TabsContent>
+                </Tabs>
+
+                <form onSubmit={handleAddFunds} className="space-y-4 border-t pt-8">
+                    <div className="space-y-2">
+                        <Label htmlFor="amount-add" className="font-black uppercase text-[10px] text-muted-foreground">Amount Paid (INR)</Label>
+                        <Input id="amount-add" name="amount-add" type="number" required placeholder="e.g., 3000" className="h-14 text-lg font-bold rounded-2xl" />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="txnId" className="font-black uppercase text-[10px] text-muted-foreground">Transaction ID / UTR</Label>
+                        <Input id="txnId" name="txnId" required placeholder="12-digit number from receipt" className="h-14 font-mono text-center tracking-widest text-lg rounded-2xl" />
+                    </div>
+                    <div className="pt-4 grid gap-3">
+                        <Button type="submit" className="w-full py-8 text-xl font-black shadow-2xl rounded-2xl">SUBMIT DEPOSIT REQUEST</Button>
+                        <Button type="button" variant="ghost" className="w-full font-bold uppercase text-[10px] tracking-widest" onClick={() => setActiveView('main')}>
+                           <ArrowLeft className="mr-2 h-3 w-3" /> Cancel & Return
+                        </Button>
+                    </div>
+                </form>
+            </CardContent>
+          </Card>
+      ) : (
+          <Card className="shadow-2xl border-accent/20 overflow-hidden animate-in fade-in slide-in-from-right-4 duration-500">
+             <CardHeader className="bg-accent/5 border-b flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle className="text-2xl font-black text-accent uppercase italic tracking-tighter">Request Payout</CardTitle>
+                    <CardDescription className="font-bold">Minimum withdrawal amount is ₹200.</CardDescription>
+                  </div>
+                  <Button variant="ghost" size="icon" onClick={() => setActiveView('main')} className="rounded-full">
+                      <X size={20}/>
+                  </Button>
+              </CardHeader>
+              <CardContent className="pt-8">
+                <form onSubmit={handleWithdraw} className="space-y-6">
+                    <div className="space-y-2">
+                        <Label htmlFor="amount-withdraw" className="font-black uppercase text-[10px] text-muted-foreground">Withdrawal Amount (INR)</Label>
+                        <Input id="amount-withdraw" name="amount-withdraw" type="number" required min="200" placeholder="Min. 200" className="h-14 text-2xl font-black rounded-2xl text-accent" />
+                        <p className="text-[10px] text-muted-foreground italic">Available: ₹{walletInfo.balance.toFixed(2)}</p>
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="upiId" className="font-black uppercase text-[10px] text-muted-foreground">Receiving UPI ID</Label>
+                        <Input id="upiId" name="upiId" required placeholder="yourname@bank" className="h-14 font-bold rounded-2xl" />
+                    </div>
+                    <div className="pt-4 grid gap-3">
+                        <Button type="submit" className="w-full py-8 text-xl font-black shadow-2xl rounded-2xl bg-accent hover:bg-accent/90">REQUEST PAYOUT</Button>
+                        <Button type="button" variant="ghost" className="w-full font-bold uppercase text-[10px] tracking-widest" onClick={() => setActiveView('main')}>
+                           <ArrowLeft className="mr-2 h-3 w-3" /> Cancel & Return
+                        </Button>
+                    </div>
+                </form>
+              </CardContent>
+          </Card>
+      )}
 
       {/* Transaction Detail Receipt Modal */}
       <Dialog open={!!selectedTx} onOpenChange={(open) => !open && setSelectedTx(null)}>
@@ -521,107 +660,6 @@ function WalletPageContent() {
                       </div>
                   </div>
               )}
-          </DialogContent>
-      </Dialog>
-
-      <Dialog open={addFundsOpen} onOpenChange={(open) => {
-          if (!open && isScannerOpen) handleStopScanner();
-          setAddFundsOpen(open);
-      }}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-                <DialogTitle>Deposit Funds</DialogTitle>
-                <DialogDescription>Scan or use details below to pay, then submit your receipt UTR.</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 pt-2">
-                <div className="flex flex-col gap-3">
-                    <Button 
-                        variant="secondary" 
-                        className="w-full h-12 font-black gap-2 shadow-sm border-2 border-primary/10"
-                        onClick={handleStartScanner}
-                        disabled={isScannerOpen}
-                    >
-                        <Scan className="w-5 h-5" />
-                        LAUNCH QR SCANNER
-                    </Button>
-
-                    {isScannerOpen && (
-                        <div className="relative border-4 border-primary/20 rounded-3xl overflow-hidden bg-black aspect-square">
-                            <div id={scannerId} className="w-full h-full" />
-                            <div className="absolute inset-0 border-[20px] border-black/40 pointer-events-none">
-                                <div className="w-full h-full border-2 border-white/50 rounded-xl" />
-                            </div>
-                            <Button 
-                                variant="destructive" 
-                                size="icon" 
-                                className="absolute top-4 right-4 rounded-full"
-                                onClick={handleStopScanner}
-                            >
-                                <X size={20} />
-                            </Button>
-                            <div className="absolute bottom-4 left-0 right-0 text-center">
-                                <Badge className="bg-white/20 text-white border-none animate-pulse">Position QR in frame</Badge>
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                <Tabs defaultValue="upi" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="upi">UPI / QR</TabsTrigger>
-                        <TabsTrigger value="bank">Bank</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="upi" className="pt-4 space-y-4">
-                        {adminPaymentMethods.qrCodeUrl && (
-                            <div className="flex flex-col items-center gap-2">
-                                <div className="p-4 bg-muted/30 rounded-lg border">
-                                    <Image src={adminPaymentMethods.qrCodeUrl} alt="QR Code" width={200} height={200} className="rounded-md" />
-                                </div>
-                                <p className="text-[10px] font-black uppercase text-muted-foreground italic">Admin Payment QR</p>
-                            </div>
-                        )}
-                        <div className="space-y-2 text-sm">
-                            <div className="flex justify-between items-center p-2 rounded-md hover:bg-muted"><span className="font-semibold">UPI ID:</span><CopyButton valueToCopy={adminPaymentMethods.upiId} /></div>
-                        </div>
-                    </TabsContent>
-                    <TabsContent value="bank" className="pt-4 space-y-2 text-sm">
-                         <div className="flex justify-between items-center p-2 rounded-md hover:bg-muted"><span>Account:</span><CopyButton valueToCopy={adminPaymentMethods.accountNumber} /></div>
-                         <div className="flex justify-between items-center p-2 rounded-md hover:bg-muted"><span>IFSC:</span><CopyButton valueToCopy={adminPaymentMethods.ifscCode} /></div>
-                    </TabsContent>
-                </Tabs>
-
-                <form onSubmit={handleAddFunds} className="space-y-4 border-t pt-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="amount-add">Amount Paid (INR)</Label>
-                        <Input id="amount-add" name="amount-add" type="number" required placeholder="e.g., 3000" />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="txnId">Transaction ID / UTR</Label>
-                        <Input id="txnId" name="txnId" required placeholder="Enter 12-digit UTR from receipt" />
-                    </div>
-                    <DialogFooter><Button type="submit" className="w-full font-black py-6">SUBMIT DEPOSIT REQUEST</Button></DialogFooter>
-                </form>
-            </div>
-          </DialogContent>
-      </Dialog>
-
-      <Dialog open={withdrawOpen} onOpenChange={setWithdrawOpen}>
-          <DialogContent>
-            <DialogHeader>
-                <DialogTitle>Withdraw Funds</DialogTitle>
-                <DialogDescription>Request a payout to your UPI ID. Minimum withdrawal is ₹200.</DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleWithdraw} className="space-y-4">
-                <div className="space-y-2">
-                    <Label htmlFor="amount-withdraw">Amount (INR)</Label>
-                    <Input id="amount-withdraw" name="amount-withdraw" type="number" required min="200" placeholder="Min. 200" />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="upiId">Receiving UPI ID</Label>
-                    <Input id="upiId" name="upiId" required placeholder="name@bank" />
-                </div>
-                <DialogFooter><Button type="submit" className="w-full font-black py-6">REQUEST PAYOUT</Button></DialogFooter>
-            </form>
           </DialogContent>
       </Dialog>
     </div>

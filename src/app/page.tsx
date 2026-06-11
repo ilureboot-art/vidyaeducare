@@ -170,7 +170,7 @@ Start your journey to success now: ${url}`;
                 "Our mission at Vidya EduCare has always been to make learning an accessible, engaging, and genuinely rewarding experience for every student."
               </p>
               <div className="mt-6">
-                <p className="text-xl font-bold">Mr. Sanjay Gurav</p>
+                <p className="text-xl font-bold">Adv. Sanjay Vidya Vijay Gurav</p>
                 <p className="text-muted-foreground text-xs uppercase tracking-widest">Founder & Owner, Vidya EduCare</p>
               </div>
             </div>

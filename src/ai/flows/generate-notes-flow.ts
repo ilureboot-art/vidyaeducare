@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A flow for generating personalized study notes for students.
@@ -44,11 +45,12 @@ const generateNotesPrompt = ai.definePrompt({
 
   Task: Generate structured study notes in English and Marathi.
   Include 3 sections, each with a heading, content, and key points in both languages.
+  Ensure pedagogical accuracy and simplicity for the specified grade.
 
   Response must be valid JSON matching the schema.`,
 });
 
-const generateStudyNotesFlow = ai.defineFlow(
+export const generateStudyNotesFlow = ai.defineFlow(
   {
     name: 'generateStudyNotesFlow',
     inputSchema: GenerateNotesInputSchema,
@@ -57,7 +59,7 @@ const generateStudyNotesFlow = ai.defineFlow(
   async (input) => {
     const { output } = await generateNotesPrompt(input);
     if (!output) {
-      throw new Error('Failed to generate study notes.');
+      throw new Error('Failed to generate academic study notes.');
     }
     return output;
   }

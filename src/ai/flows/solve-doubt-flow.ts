@@ -1,6 +1,11 @@
+
 'use server';
 /**
  * @fileOverview A flow for solving student doubts about academic topics or specific MCQs.
+ * 
+ * - solveDoubt - Server action to trigger the pedagogical explanation flow.
+ * - SolveDoubtInput - Input schema for doubts and question context.
+ * - SolveDoubtOutput - Structured bilingual explanation result.
  */
 
 import { ai, z } from '@/ai/genkit';
@@ -33,7 +38,7 @@ const solveDoubtPrompt = ai.definePrompt({
   name: 'solveDoubtPrompt',
   input: { schema: SolveDoubtInputSchema },
   output: { schema: SolveDoubtOutputSchema },
-  prompt: `You are an expert academic tutor specializing in the Indian school curriculum.
+  prompt: `You are an expert academic tutor specializing in the Indian school curriculum (SSC, CBSE, ICSE).
   
   Context:
   {{#if context.board}}Board: {{{context.board}}}{{/if}}
@@ -52,15 +57,15 @@ const solveDoubtPrompt = ai.definePrompt({
   {{/if}}
 
   Your Task:
-  1. Provide a clear, pedagogical explanation in both English and Marathi.
-  2. Be encouraging and use language appropriate for the student's grade level.
+  1. Provide a clear, pedagogical explanation in both Marathi and English.
+  2. Start with the Marathi explanation. Be encouraging and use language appropriate for the student's grade level.
   3. Identify the "Key Concept" addressed.
-  4. Ensure the explanation is step-by-step.
+  4. Ensure the explanation is step-by-step and conceptually sound.
 
-  Response must be valid JSON matching the schema.`,
+  Response must be valid JSON matching the output schema.`,
 });
 
-const solveDoubtFlow = ai.defineFlow(
+export const solveDoubtFlow = ai.defineFlow(
   {
     name: 'solveDoubtFlow',
     inputSchema: SolveDoubtInputSchema,
@@ -69,7 +74,7 @@ const solveDoubtFlow = ai.defineFlow(
   async (input) => {
     const { output } = await solveDoubtPrompt(input);
     if (!output) {
-      throw new Error('Failed to generate AI tutor response.');
+      throw new Error('AI failed to generate a pedagogical response.');
     }
     return output;
   }

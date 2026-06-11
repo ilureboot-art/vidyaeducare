@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -8,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Puzzle, Users, IndianRupee, Loader2, GraduationCap, ChevronRight } from "lucide-react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useAuth, useDb } from "@/firebase";
 import { collection, query, where, getDocs, doc, updateDoc, arrayUnion, runTransaction, serverTimestamp } from "firebase/firestore";
 import type { QuizClashTournament } from "@/lib/quiz-clash-data";

@@ -25,8 +25,8 @@ Follow these steps to deploy the Vidya EduCare platform to production using **Fi
 ### Google AI Studio (The AI Engine)
 The app uses Google Gemini for AI tutoring.
 1. Get an API key from the [Google AI Studio](https://aistudio.google.com/).
-2. You do **not** need to move the code into AI Studio; simply use AI Studio to manage your keys and test your prompts.
-3. Your code here in Firebase Studio handles the integration.
+2. **Reflecting Changes**: Any changes to your API key restrictions or "Tuned Models" in AI Studio reflect in your app instantly.
+3. **Prompt Refinement**: When you improve a prompt in the AI Studio playground, remember to copy it into the corresponding `src/ai/flows/` file in this project to update the production behavior.
 
 ## 3. Deploying via Firebase App Hosting
 
@@ -59,7 +59,7 @@ To keep your development in **Firebase Studio** in sync with your live environme
 1. **Continue Developing Here**: Make all your changes, UI updates, and feature additions right here in the Studio.
 2. **Push to GitHub**: Every change you save here is pushed to your GitHub.
 3. **Automatic Live Update**: Firebase App Hosting sees the push and updates your live site automatically.
-4. **Google AI Studio**: Use it exclusively for managing your Gemini API keys. Your app will automatically use the latest settings you've configured there.
+4. **Google AI Studio**: Use it exclusively for managing your Gemini API keys and training custom models. Your app here will automatically use the latest engine settings you've configured there.
 
 ---
 © 2024 Vidya EduCare Operations.

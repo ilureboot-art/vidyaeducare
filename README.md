@@ -8,7 +8,7 @@ This project uses a hybrid development workflow designed for maximum agility:
 1. **Development (Firebase Studio)**: All coding, UI design, and database logic happens in Firebase Studio.
 2. **Version Control (GitHub)**: Code is pushed from Studio to your GitHub repository.
 3. **Live Deployment (Firebase App Hosting)**: Your live project is linked to GitHub. Every push automatically triggers a production build.
-4. **AI Intelligence (Google AI Studio)**: Manage your Gemini API keys and fine-tune AI behavior in Google AI Studio. The app here consumes those services via the keys set in App Hosting secrets.
+4. **AI Intelligence (Google AI Studio)**: Manage your Gemini API keys and fine-tune AI behavior in Google AI Studio. The app here consumes those services via the keys set in App Hosting secrets. **Note**: While keys and tuned models reflect live, prompt text changes should be copied from AI Studio playground into your code files here.
 
 ## 🚀 Readiness & Deployment
 

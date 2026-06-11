@@ -27,6 +27,8 @@ const getLast7Days = () => {
     return dates;
 };
 
+const AUTO_REFRESH_INTERVAL = 300000; // 5 minutes
+
 export default function AnalyticsPage() {
   const db = useDb();
   const { user } = useAuth();
@@ -126,7 +128,16 @@ export default function AnalyticsPage() {
   }, [db, user]);
 
   useEffect(() => {
-    if(db && user) fetchData();
+    if(db && user) {
+        fetchData();
+
+        // Implement auto-refresh mechanism
+        const refreshTimer = setInterval(() => {
+            fetchData(true);
+        }, AUTO_REFRESH_INTERVAL);
+
+        return () => clearInterval(refreshTimer);
+    }
   }, [db, user, fetchData]);
 
   if (loading) {

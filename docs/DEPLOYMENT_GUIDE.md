@@ -22,13 +22,11 @@ Follow these steps to deploy the Vidya EduCare platform to production using **Fi
 
 ## 2. AI & Security Configuration
 
-### Genkit API Key
+### Google AI Studio (The AI Engine)
 The app uses Google Gemini for AI tutoring.
 1. Get an API key from the [Google AI Studio](https://aistudio.google.com/).
-2. You will need to add this to your deployment environment (see Step 3).
-
-### Security Rules
-The rules are automatically managed by the build process, but ensure the `firestore.rules` file in the root is synced. The app targets `vidyaeducaredatabase` explicitly in `src/firebase/client-init.ts`.
+2. You do **not** need to move the code into AI Studio; simply use AI Studio to manage your keys and test your prompts.
+3. Your code here in Firebase Studio handles the integration.
 
 ## 3. Deploying via Firebase App Hosting
 
@@ -46,7 +44,7 @@ Firebase App Hosting is the recommended way to host this Next.js 14+ application
    ```
 
 3. **Configure Secrets**:
-   When prompted during setup or via the console, map the `GEMINI_API_KEY` to a secret.
+   When prompted during setup or via the console, map the `GEMINI_API_KEY` from Google AI Studio to a secret in App Hosting.
    ```bash
    firebase apphosting:secrets:set GEMINI_API_KEY
    ```
@@ -54,27 +52,14 @@ Firebase App Hosting is the recommended way to host this Next.js 14+ application
 4. **Deploy**:
    Push your code to the connected GitHub repository. Firebase App Hosting will automatically detect the Next.js environment and deploy.
 
-## 4. 🔄 Hybrid Workflow (Development Persistence)
+## 4. 🔄 Synchronization Workflow
 
 To keep your development in **Firebase Studio** in sync with your live environment:
 
-1. **Connect GitHub**: Ensure your project is linked to a GitHub repository.
-2. **Commit Often**: When we finish a feature here, ensures it is pushed to the main branch.
-3. **Reflect Changes**: Firebase App Hosting will see the push and automatically update your live site.
-4. **Google AI Studio**: Use it exclusively for managing your Gemini API keys and fine-tuning prompt behavior. You do **not** need to move the code *into* AI Studio; your code simply *calls* AI Studio's services.
-
-## 5. Final Infrastructure Mapping
-
-Once the app is live:
-
-1. Navigate to `/admin/setup`.
-2. **STEP 1**: Click "AUTH ADMIN" and log in with:
-   - **Email**: `admin@vidyaeducare.com`
-   - **Password**: `password123`
-3. **STEP 2**: Click "MAP TO DATABASE". 
-   - This creates the `admins`, `users`, `wallets`, and `configs` collections.
-   - It populates default mock test packages and academic standards.
-4. **SECURE**: Immediately go to `/admin/login` and change the default password in account settings.
+1. **Continue Developing Here**: Make all your changes, UI updates, and feature additions right here in the Studio.
+2. **Push to GitHub**: Every change you save here is pushed to your GitHub.
+3. **Automatic Live Update**: Firebase App Hosting sees the push and updates your live site automatically.
+4. **Google AI Studio**: Use it exclusively for managing your Gemini API keys. Your app will automatically use the latest settings you've configured there.
 
 ---
 © 2024 Vidya EduCare Operations.

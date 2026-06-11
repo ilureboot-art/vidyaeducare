@@ -2,6 +2,14 @@
 
 A comprehensive NextJS platform for Vidya EduCare, combining regional academic preparation with AI-powered learning tools and a structured referral ecosystem.
 
+## 🔄 Development & Synchronization Loop
+This project uses a hybrid development workflow designed for maximum agility:
+
+1. **Development (Firebase Studio)**: All coding, UI design, and database logic happens in Firebase Studio.
+2. **Version Control (GitHub)**: Code is pushed from Studio to your GitHub repository.
+3. **Live Deployment (Firebase App Hosting)**: Your live project is linked to GitHub. Every push automatically triggers a production build.
+4. **AI Intelligence (Google AI Studio)**: Manage your Gemini API keys and fine-tune AI behavior in Google AI Studio. The app here consumes those services via the keys set in App Hosting secrets.
+
 ## 🚀 Readiness & Deployment
 
 ### 1. Infrastructure Setup
@@ -21,16 +29,6 @@ Once deployed:
 - **Access URL**: `/admin/login`
 - **Email**: `admin@vidyaeducare.com`
 - **Password**: `password123`
-
-## 🛠️ Security Architecture
-- **Named Database**: Exclusively targets `vidyaeducaredatabase` for native Firestore performance.
-- **Regional Rules**: Multi-layered authorization ensuring strict isolation between administrators and students.
-- **AI Tutoring**: Integrated with Gemini 2.5 Flash for bilingual (Marathi/English) conceptual explanations.
-
-## 📊 Business Intelligence
-- Real-time tracking of revenue, referral cycles, and academic engagement.
-- Automated commission calculation for Independent Business Associates (IBA).
-- ReferBolt passive income cycle management.
 
 ---
 © 2024 Vidya EduCare. All rights reserved.

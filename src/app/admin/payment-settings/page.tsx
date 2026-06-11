@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Landmark, Loader2, RefreshCcw } from "lucide-react";
+import { Landmark, Loader2, RefreshCcw, X, Upload } from "lucide-react";
 import type { AdminPaymentMethods } from "@/lib/user-data";
 import Image from "next/image";
 import { useDb, useAuth } from "@/firebase";
@@ -27,12 +27,15 @@ const defaultPaymentMethods: AdminPaymentMethods = {
     qrCodeUrl: ""
 };
 
+const MAX_FILE_SIZE = 1 * 1024 * 1024; // 1MB
+
 export default function PaymentSettingsPage() {
     const { toast } = useToast();
     const db = useDb();
     const { user, isResolved } = useAuth();
     const [methods, setMethods] = useState<AdminPaymentMethods | null>(null);
     const [qrFile, setQrFile] = useState<File | null>(null);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     
@@ -75,9 +78,46 @@ export default function PaymentSettingsPage() {
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            setQrFile(e.target.files[0]);
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Validation: Type
+        if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+            toast({
+                variant: "destructive",
+                title: "Invalid file type",
+                description: "Please upload a PNG, JPEG, or WebP image."
+            });
+            e.target.value = '';
+            return;
         }
+
+        // Validation: Size
+        if (file.size > MAX_FILE_SIZE) {
+            toast({
+                variant: "destructive",
+                title: "File too large",
+                description: "QR code image must be under 1MB."
+            });
+            e.target.value = '';
+            return;
+        }
+
+        setQrFile(file);
+        
+        // Immediate client-side preview
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setPreviewUrl(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const handleClearFile = () => {
+        setQrFile(null);
+        setPreviewUrl(null);
+        const fileInput = document.getElementById('qrCode') as HTMLInputElement;
+        if (fileInput) fileInput.value = '';
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -85,39 +125,34 @@ export default function PaymentSettingsPage() {
         if (!methods || !db || isSaving) return;
         
         setIsSaving(true);
-        const updateConfig = async (finalMethods: AdminPaymentMethods) => {
-            const docRef = doc(db, "configs", "paymentMethods");
-            setDoc(docRef, finalMethods)
-                .then(() => {
-                    toast({
-                        title: "Settings Saved!",
-                        description: "Payment method details have been successfully updated.",
-                    });
-                })
-                .catch(async (error) => {
-                    const permissionError = new FirestorePermissionError({
-                        path: docRef.path,
-                        operation: 'update',
-                        requestResourceData: finalMethods,
-                    } satisfies SecurityRuleContext);
-                    errorEmitter.emit('permission-error', permissionError);
-                })
-                .finally(() => setIsSaving(false));
-        }
         
-        if (qrFile) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const dataUrl = reader.result as string;
-                const finalMethods = { ...methods, qrCodeUrl: dataUrl };
-                setMethods(finalMethods);
-                updateConfig(finalMethods);
-            };
-            reader.readAsDataURL(qrFile);
-        } else {
-             updateConfig(methods);
-        }
-    }
+        // Prepare final data with either new preview or existing URL
+        const finalMethods: AdminPaymentMethods = {
+            ...methods,
+            qrCodeUrl: previewUrl || methods.qrCodeUrl
+        };
+
+        const docRef = doc(db, "configs", "paymentMethods");
+        setDoc(docRef, finalMethods)
+            .then(() => {
+                toast({
+                    title: "Settings Saved!",
+                    description: "Payment method details have been successfully updated.",
+                });
+                // Reset file states after successful save
+                setQrFile(null);
+                setPreviewUrl(null);
+            })
+            .catch(async (error) => {
+                const permissionError = new FirestorePermissionError({
+                    path: docRef.path,
+                    operation: 'update',
+                    requestResourceData: finalMethods,
+                } satisfies SecurityRuleContext);
+                errorEmitter.emit('permission-error', permissionError);
+            })
+            .finally(() => setIsSaving(false));
+    };
 
     if (isLoading && !methods) {
         return (
@@ -188,9 +223,54 @@ export default function PaymentSettingsPage() {
                         </div>
                          <div className="space-y-2 col-span-full">
                             <Label htmlFor="qrCode">Payment QR Code</Label>
-                            <Input id="qrCode" type="file" onChange={handleFileChange} accept="image/png, image/jpeg, image/webp" />
-                            <p className="text-xs text-muted-foreground">Upload an image of the payment QR code. It will be displayed to users.</p>
-                            {methods?.qrCodeUrl && <Image src={methods.qrCodeUrl} alt="Current QR Code" className="w-24 h-24 mt-2 rounded-md" width={96} height={96} />}
+                            <div className="flex flex-col items-start gap-4">
+                                <div className="flex items-center gap-4 w-full">
+                                    <Input 
+                                        id="qrCode" 
+                                        type="file" 
+                                        onChange={handleFileChange} 
+                                        accept="image/png, image/jpeg, image/webp" 
+                                        className="flex-1"
+                                    />
+                                    {qrFile && (
+                                        <Button type="button" variant="outline" size="icon" onClick={handleClearFile} title="Clear selection">
+                                            <X className="h-4 w-4" />
+                                        </Button>
+                                    )}
+                                </div>
+                                <p className="text-xs text-muted-foreground">Upload an image of the payment QR code (Max 1MB). It will be displayed to users.</p>
+                                
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 w-full">
+                                    {methods?.qrCodeUrl && (
+                                        <div className="space-y-2">
+                                            <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Active QR Code</p>
+                                            <div className="relative w-32 h-32 border-2 rounded-xl overflow-hidden bg-muted/20">
+                                                <Image 
+                                                    src={methods.qrCodeUrl} 
+                                                    alt="Current QR Code" 
+                                                    fill 
+                                                    className="object-contain" 
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+                                    {previewUrl && (
+                                        <div className="space-y-2 animate-in fade-in slide-in-from-left-2">
+                                            <p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-1">
+                                                <Upload size={10}/> New Preview
+                                            </p>
+                                            <div className="relative w-32 h-32 border-2 border-primary border-dashed rounded-xl overflow-hidden bg-primary/5">
+                                                <Image 
+                                                    src={previewUrl} 
+                                                    alt="New QR Preview" 
+                                                    fill 
+                                                    className="object-contain" 
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

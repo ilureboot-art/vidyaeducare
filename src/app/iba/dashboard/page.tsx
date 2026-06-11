@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -27,6 +28,8 @@ import { doc, getDoc, collection, query, where, getDocs, Timestamp, type Firesto
 import ProtectedRoute from "@/components/ProtectedRoute";
 import UserLayout from "@/components/UserLayout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 
 const dailyTarget = 5;
@@ -65,17 +68,34 @@ function IBADashboardPageContent() {
             setError(null);
             try {
                 const userWalletDocRef = doc(db, 'wallets', user.uid);
-                const userWalletSnap = await getDoc(userWalletDocRef);
+                const userWalletSnap = await getDoc(userWalletDocRef).catch(async (serverError) => {
+                    if (serverError.code === 'permission-denied') {
+                        const permissionError = new FirestorePermissionError({
+                            path: userWalletDocRef.path,
+                            operation: 'get',
+                        } satisfies SecurityRuleContext);
+                        errorEmitter.emit('permission-error', permissionError);
+                    }
+                    throw serverError;
+                });
+
                 if (userWalletSnap.exists()) {
                     setIbaReferralCode(userWalletSnap.data().referralCode);
                 } else {
                     setIbaReferralCode(`REF${user.uid.slice(0, 6).toUpperCase()}`);
                 }
 
-                const q = query(collection(db, "transactions"), where("user", "==", user.uid), where("type", "in", ["Commission", "Referral Bonus"]));
-                const querySnapshot = await getDocs(q).catch(e => {
-                    console.error("IBA Transactions query error:", e);
-                    return { docs: [] };
+                const txColRef = collection(db, "transactions");
+                const q = query(txColRef, where("user", "==", user.uid), where("type", "in", ["Commission", "Referral Bonus"]));
+                const querySnapshot = await getDocs(q).catch(async (serverError) => {
+                    if (serverError.code === 'permission-denied') {
+                        const permissionError = new FirestorePermissionError({
+                            path: txColRef.path,
+                            operation: 'list',
+                        } satisfies SecurityRuleContext);
+                        errorEmitter.emit('permission-error', permissionError);
+                    }
+                    throw serverError;
                 });
 
                 const recentReferrals = querySnapshot.docs.map(d => {
@@ -106,7 +126,9 @@ function IBADashboardPageContent() {
                 });
             } catch (err: any) {
                 console.error("Error fetching IBA data:", err);
-                setError("Could not load IBA dashboard statistics. Please check your connection.");
+                if (err.code !== 'permission-denied') {
+                    setError("Could not load IBA dashboard statistics. Please check your connection.");
+                }
             } finally {
                 setIsLoading(false);
             }
@@ -312,13 +334,13 @@ Use my exclusive IBA code to get a special discount on your subscription!
 
 
 export default function IBADashboardPage() {
-    return (
-        <ProtectedRoute>
-            <UserLayout>
-                <TooltipProvider>
-                    <IBADashboardPageContent />
-                </TooltipProvider>
-            </UserLayout>
-        </ProtectedRoute>
-    )
+  return (
+      <ProtectedRoute>
+          <UserLayout>
+              <TooltipProvider>
+                  <IBADashboardPageContent />
+              </TooltipProvider>
+          </UserLayout>
+      </ProtectedRoute>
+  )
 }

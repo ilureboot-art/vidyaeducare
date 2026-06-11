@@ -11,11 +11,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Trophy, Award, Loader2 } from "lucide-react";
+import { Trophy, Award, Loader2, Star } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { useDb } from "@/firebase";
 import { collection, getDocs, query, orderBy, limit } from "firebase/firestore";
 import UserLayout from "@/components/UserLayout";
+import { cn } from "@/lib/utils";
 
 type UserEntry = {
   rank: number;
@@ -26,11 +28,31 @@ type UserEntry = {
   prize?: number;
 };
 
-const getRankColor = (rank: number) => {
-    if (rank === 1) return "border-yellow-400";
-    if (rank === 2) return "border-gray-400";
-    if (rank === 3) return "border-amber-600";
+const getRankStyles = (rank: number) => {
+    if (rank === 1) return "border-yellow-400 bg-yellow-400/5 ring-2 ring-yellow-400/20";
+    if (rank === 2) return "border-slate-300 bg-slate-300/5";
+    if (rank === 3) return "border-amber-600 bg-amber-600/5";
+    if (rank <= 5) return "border-primary/20 bg-primary/5";
     return "border-transparent";
+}
+
+const RankIdentifier = ({ rank }: { rank: number }) => {
+    if (rank === 1) return (
+        <div className="relative inline-block">
+            <Trophy className="w-10 h-10 text-yellow-500 animate-bounce" />
+            <div className="absolute -top-1 -right-1">
+                <Star className="w-4 h-4 text-yellow-400 fill-yellow-400 animate-pulse" />
+            </div>
+        </div>
+    );
+    if (rank === 2) return <Award className="w-10 h-10 text-slate-400" />;
+    if (rank === 3) return <Award className="w-10 h-10 text-amber-600" />;
+    if (rank <= 5) return (
+        <Badge className="bg-primary text-primary-foreground font-black px-4 py-1.5 shadow-md">
+            TOP {rank}
+        </Badge>
+    );
+    return <span className="text-muted-foreground font-bold text-xl">{rank}</span>;
 }
 
 export default function LeaderboardPage() {
@@ -58,7 +80,7 @@ export default function LeaderboardPage() {
   if (!leaderboardData) {
     return (
       <UserLayout>
-        <div className="w-full max-w-3xl mx-auto flex justify-center items-center h-96">
+        <div className="w-full max-w-4xl mx-auto flex justify-center items-center h-96">
           <Loader2 className="animate-spin text-primary" size={32} />
         </div>
       </UserLayout>
@@ -67,63 +89,88 @@ export default function LeaderboardPage() {
 
   return (
     <UserLayout>
-      <div className="w-full max-w-3xl mx-auto">
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle className="text-3xl font-bold text-center text-primary flex items-center justify-center gap-2">
-              <Trophy className="w-8 h-8 text-yellow-500" />
-              Live Mock Test Leaderboard
+      <div className="w-full max-w-4xl mx-auto">
+        <Card className="shadow-2xl border-none ring-1 ring-primary/10 overflow-hidden">
+          <CardHeader className="bg-primary/5 text-center pb-8 border-b">
+            <CardTitle className="text-4xl font-black text-primary flex items-center justify-center gap-3 tracking-tighter uppercase italic">
+              <Trophy className="w-10 h-10 text-yellow-500" />
+              Live Achievement Board
             </CardTitle>
-            <CardDescription className="text-center">
-              See who's at the top of their game! Top 5 scorers win cash rewards.
+            <CardDescription className="text-center font-bold uppercase tracking-widest text-xs mt-2">
+              National Mock Test Rankings • Performance Excellence
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0">
             <Table>
-              <TableHeader>
+              <TableHeader className="bg-muted/50">
                 <TableRow>
-                  <TableHead className="w-[80px] text-center">Rank</TableHead>
-                  <TableHead>Student</TableHead>
-                  <TableHead className="text-center">Time Taken</TableHead>
-                  <TableHead className="text-center">Score</TableHead>
-                  <TableHead className="text-right">Prize</TableHead>
+                  <TableHead className="w-[120px] text-center font-black uppercase text-[10px] tracking-widest">Standing</TableHead>
+                  <TableHead className="font-black uppercase text-[10px] tracking-widest">Excellence Candidate</TableHead>
+                  <TableHead className="text-center font-black uppercase text-[10px] tracking-widest">Duration</TableHead>
+                  <TableHead className="text-center font-black uppercase text-[10px] tracking-widest">Score Accuracy</TableHead>
+                  <TableHead className="text-right font-black uppercase text-[10px] tracking-widest pr-8">Cash Rewards</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {leaderboardData.length > 0 ? leaderboardData.map((player) => (
-                  <TableRow key={player.rank} className="font-medium">
-                    <TableCell className="text-center text-lg font-bold">
-                      {player.rank <= 3 ? (
-                          <Award className={`w-8 h-8 mx-auto ${
-                              player.rank === 1 ? 'text-yellow-400' : 
-                              player.rank === 2 ? 'text-gray-400' :
-                              'text-amber-600'
-                          }`} />
-                      ) : player.rank}
+                  <TableRow key={player.rank} className={cn("transition-colors group", getRankStyles(player.rank))}>
+                    <TableCell className="text-center">
+                       <RankIdentifier rank={player.rank} />
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-3">
-                          <Avatar className={`w-10 h-10 border-2 ${getRankColor(player.rank)}`}>
-                              <AvatarImage src={`https://picsum.photos/seed/${player.avatar}/40/40`} data-ai-hint="profile avatar" />
-                              <AvatarFallback>{player.avatar}</AvatarFallback>
-                          </Avatar>
-                          <span>{player.name}</span>
+                      <div className="flex items-center gap-4">
+                          <div className="relative">
+                            <Avatar className={cn(
+                                "w-12 h-12 border-2 shadow-lg group-hover:scale-110 transition-transform",
+                                player.rank === 1 ? "border-yellow-400" : "border-background"
+                            )}>
+                                <AvatarImage src={`https://picsum.photos/seed/${player.avatar}/60/60`} data-ai-hint="profile avatar" />
+                                <AvatarFallback className="bg-primary/10 text-primary font-black">{player.name.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            {player.rank <= 3 && (
+                                <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 shadow-sm">
+                                    <Star className={cn(
+                                        "w-3 h-3 fill-current",
+                                        player.rank === 1 ? "text-yellow-400" : player.rank === 2 ? "text-slate-300" : "text-amber-600"
+                                    )} />
+                                </div>
+                            )}
+                          </div>
+                          <div>
+                              <p className="font-black text-lg uppercase tracking-tight leading-none">{player.name}</p>
+                              {player.rank <= 5 && <p className="text-[9px] font-black text-primary uppercase mt-1 tracking-widest">Elite Tier Ranker</p>}
+                          </div>
                       </div>
                     </TableCell>
-                    <TableCell className="text-center">{player.time}</TableCell>
-                    <TableCell className="text-center text-primary font-bold text-lg">{player.score} / 50</TableCell>
-                    <TableCell className="text-right font-bold text-green-600">
+                    <TableCell className="text-center font-mono font-bold text-muted-foreground">{player.time}</TableCell>
+                    <TableCell className="text-center">
+                        <div className="inline-flex flex-col items-center">
+                            <span className="text-xl font-black text-primary">{player.score} <span className="text-xs text-muted-foreground">/ 50</span></span>
+                            <div className="w-16 h-1 bg-muted rounded-full mt-1 overflow-hidden">
+                                <div className="h-full bg-primary" style={{ width: `${(player.score / 50) * 100}%` }} />
+                            </div>
+                        </div>
+                    </TableCell>
+                    <TableCell className="text-right pr-8">
                       {player.prize ? (
-                          <div className="flex items-center justify-end gap-2" data-ai-hint="cash prize">
-                              <Trophy className="w-4 h-4 text-yellow-500" />
-                              ₹{player.prize}
+                          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-green-500/10 text-green-600 rounded-full font-black text-lg shadow-sm border border-green-500/20" data-ai-hint="cash prize">
+                              <Star className="w-4 h-4 fill-green-600" />
+                              ₹{player.prize.toLocaleString()}
                           </div>
-                      ) : '-'}
+                      ) : (
+                          <span className="text-muted-foreground/30 font-black">—</span>
+                      )}
                     </TableCell>
                   </TableRow>
                 )) : (
                   <TableRow>
-                      <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">The leaderboard is empty. Be the first to take a test!</TableCell>
+                      <TableCell colSpan={5} className="h-48 text-center text-muted-foreground">
+                        <div className="flex flex-col items-center gap-2">
+                            <Trophy className="w-12 h-12 opacity-10 mb-2" />
+                            <p className="font-bold">No Records Found</p>
+                            <p className="text-xs">Be the first to complete a mock test and claim your rank!</p>
+                        </div>
+                      </TableCell>
                   </TableRow>
                 )}
               </TableBody>

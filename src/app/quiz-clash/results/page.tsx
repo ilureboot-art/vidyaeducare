@@ -5,13 +5,15 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Loader2, Trophy, Award, Users, IndianRupee } from "lucide-react";
+import { Loader2, Trophy, Award, Users, IndianRupee, Star } from "lucide-react";
 import Link from "next/link";
 import { useAuth, useDb } from "@/firebase";
 import { doc, getDoc, collection, query, where, getDocs, orderBy, updateDoc, runTransaction, serverTimestamp, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import type { QuizClashTournament } from "@/lib/quiz-clash-data";
 import UserLayout from "@/components/UserLayout";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 type Result = {
     userId: string;
@@ -23,11 +25,24 @@ type Result = {
     userName?: string;
 };
 
-const getRankColor = (rank: number) => {
-    if (rank === 1) return "border-yellow-400";
-    if (rank === 2) return "border-gray-400";
-    if (rank === 3) return "border-amber-600";
+const getRankStyles = (rank: number) => {
+    if (rank === 1) return "border-yellow-400 bg-yellow-400/5 ring-1 ring-yellow-400/20";
+    if (rank === 2) return "border-slate-300 bg-slate-300/5";
+    if (rank === 3) return "border-amber-600 bg-amber-600/5";
+    if (rank <= 5) return "border-primary/20 bg-primary/5";
     return "border-transparent";
+}
+
+const RankIdentifier = ({ rank }: { rank: number }) => {
+    if (rank === 1) return <Trophy className="w-6 h-6 text-yellow-500 animate-bounce" />;
+    if (rank === 2) return <Award className="w-6 h-6 text-slate-400" />;
+    if (rank === 3) return <Award className="w-6 h-6 text-amber-600" />;
+    if (rank <= 5) return (
+        <Badge className="bg-primary text-primary-foreground font-black text-[9px] px-2 h-5">
+            TOP {rank}
+        </Badge>
+    );
+    return <span className="text-muted-foreground font-bold w-6 text-center">{rank}</span>;
 }
 
 function QuizClashResultsContent() {
@@ -145,56 +160,78 @@ function QuizClashResultsContent() {
     return (
         <UserLayout>
             <div className="w-full max-w-2xl mx-auto space-y-6">
-                <Card className="shadow-lg text-center mt-4">
-                    <CardHeader>
-                        <Trophy className="w-16 h-16 mx-auto text-yellow-500"/>
-                        <CardTitle className="text-3xl font-bold text-primary">Final Results</CardTitle>
-                        <CardDescription>{tournament.title} ({tournament.type} Clash)</CardDescription>
+                <Card className="shadow-2xl border-none ring-1 ring-primary/10 text-center mt-4 overflow-hidden">
+                    <CardHeader className="bg-primary/5 pb-8 border-b">
+                        <Trophy className="w-16 h-16 mx-auto text-yellow-500 mb-2"/>
+                        <CardTitle className="text-3xl font-black text-primary uppercase italic tracking-tight">Final Standings</CardTitle>
+                        <CardDescription className="font-bold">{tournament.title} • {tournament.type} Clash</CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="p-8">
                         {userResult ? (
-                            <div className="p-6 bg-primary/10 rounded-lg">
-                                <p className="text-muted-foreground">Your Rank</p>
-                                <p className="text-6xl font-bold">#{userResult.rank}</p>
+                            <div className="p-8 bg-primary/5 rounded-3xl border-2 border-dashed border-primary/20">
+                                <p className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-2">Your Final Performance</p>
+                                <div className="flex items-center justify-center gap-6">
+                                    <div className="text-center">
+                                        <p className="text-6xl font-black text-primary tracking-tighter">#{userResult.rank}</p>
+                                        <p className="text-[10px] font-black uppercase text-primary">GLOBAL RANK</p>
+                                    </div>
+                                    <div className="w-px h-16 bg-primary/10" />
+                                    <div className="text-center">
+                                        <p className="text-4xl font-black tracking-tighter">{userResult.score}</p>
+                                        <p className="text-[10px] font-black uppercase text-muted-foreground">SCORE</p>
+                                    </div>
+                                </div>
                                 {userResult.prize ? (
-                                    <p className="text-2xl font-semibold text-green-600 mt-2">You Won ₹{userResult.prize.toFixed(2)}!</p>
+                                    <div className="mt-8 py-3 px-6 bg-green-500 text-white rounded-2xl font-black text-xl shadow-lg animate-pulse inline-flex items-center gap-2">
+                                        <Star className="w-5 h-5 fill-white" />
+                                        WON ₹{userResult.prize.toFixed(2)}
+                                    </div>
                                 ) : (
-                                    <p className="text-lg font-semibold text-muted-foreground mt-2">
-                                        {tournament.type === 'Pro' ? "Better luck next time!" : "Great practice!"}
+                                    <p className="text-sm font-bold text-muted-foreground mt-6 uppercase tracking-widest">
+                                        {tournament.type === 'Pro' ? "Keep practicing to win!" : "Excellent progress!"}
                                     </p>
                                 )}
                             </div>
                         ) : (
-                            <p className="text-muted-foreground">No participation record found.</p>
+                            <p className="text-muted-foreground">No participation record found for this session.</p>
                         )}
                     </CardContent>
                 </Card>
                 
-                <Card>
-                    <CardHeader><CardTitle className="flex items-center gap-2"><Users/> Leaderboard</CardTitle></CardHeader>
-                    <CardContent>
-                        <div className="space-y-2">
-                            {results.slice(0,10).map((res) => (
-                                 <div key={res.userId} className={`flex items-center justify-between p-3 rounded-lg border-2 ${getRankColor(res.rank || 0)}`}>
-                                    <div className="flex items-center gap-3">
-                                        <div className="font-bold text-lg w-8 text-center">{res.rank || '-'}</div>
+                <Card className="border-none shadow-xl ring-1 ring-primary/5">
+                    <CardHeader className="pb-4">
+                        <CardTitle className="flex items-center gap-2 text-lg font-black uppercase italic text-primary">
+                            <Users size={20}/> Challenge Leaderboard
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3 px-6">
+                        {results.slice(0,10).map((res) => (
+                                 <div key={res.userId} className={cn(
+                                     "flex items-center justify-between p-4 rounded-2xl border-2 transition-all group hover:scale-[1.01]",
+                                     getRankStyles(res.rank || 0)
+                                 )}>
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-8 flex justify-center">
+                                            <RankIdentifier rank={res.rank || 0} />
+                                        </div>
                                         <div>
-                                            <p className="font-semibold">{res.userId === user?.uid ? "You" : res.userName}</p>
-                                            <p className="text-xs text-muted-foreground">Score: {res.score} | Time: {res.timeTaken}s</p>
+                                            <p className="font-black text-sm uppercase tracking-tight">{res.userId === user?.uid ? "YOU" : res.userName}</p>
+                                            <p className="text-[10px] font-bold text-muted-foreground uppercase">Score: {res.score} • Time: {res.timeTaken}s</p>
                                         </div>
                                     </div>
                                     {res.prize && (
-                                        <div className="font-bold text-green-600 flex items-center gap-2">
-                                            <Award className="w-5 h-5 text-yellow-500" />
-                                            ₹{res.prize.toFixed(2)}
+                                        <div className="font-black text-green-600 flex items-center gap-2 bg-green-500/10 px-3 py-1 rounded-full border border-green-500/20">
+                                            <Star className="w-3 h-3 fill-green-600" />
+                                            <span className="text-sm">₹{res.prize.toFixed(0)}</span>
                                         </div>
                                     )}
                                  </div>
                             ))}
-                        </div>
                     </CardContent>
-                    <CardFooter>
-                        <Button asChild className="w-full"><Link href="/quiz-clash">Back to Arena</Link></Button>
+                    <CardFooter className="p-6 bg-muted/20">
+                        <Button asChild className="w-full font-black py-6">
+                            <Link href="/quiz-clash">RETURN TO ARENA</Link>
+                        </Button>
                     </CardFooter>
                 </Card>
             </div>

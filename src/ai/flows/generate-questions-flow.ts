@@ -9,7 +9,6 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { googleAI } from '@genkit-ai/google-genai';
 
 const GenerateQuestionsInputSchema = z.object({
     topic: z.string().describe('The topic or chapter name to generate questions about.'),
@@ -43,7 +42,7 @@ export type GenerateQuestionsOutput = z.infer<typeof GenerateQuestionsOutputSche
 
 const prompt = ai.definePrompt({
   name: 'generateQuestionsPrompt',
-  model: googleAI.model('gemini-flash-latest'),
+  model: 'googleai/gemini-1.5-flash',
   input: { schema: GenerateQuestionsInputSchema },
   output: { schema: GenerateQuestionsOutputSchema },
   prompt: `You are an expert at creating educational Multiple Choice Questions (MCQs) for the {{{board}}} board, teaching {{{standard}}} {{{subject}}}.

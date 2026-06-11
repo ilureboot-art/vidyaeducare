@@ -9,7 +9,6 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { googleAI } from '@genkit-ai/google-genai';
 
 const SolveDoubtInputSchema = z.object({
     question: z.object({
@@ -37,7 +36,7 @@ export type SolveDoubtOutput = z.infer<typeof SolveDoubtOutputSchema>;
 
 const prompt = ai.definePrompt({
   name: 'solveDoubtPrompt',
-  model: googleAI.model('gemini-flash-latest'),
+  model: 'googleai/gemini-1.5-flash',
   input: { schema: SolveDoubtInputSchema },
   output: { schema: SolveDoubtOutputSchema },
   prompt: `You are an expert academic tutor. 

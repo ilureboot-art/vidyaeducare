@@ -142,11 +142,11 @@ function AiNotesPageContent() {
     return (
         <div className="w-full max-w-4xl mx-auto space-y-6">
             <div className="flex items-center justify-between">
-                <h1 className="text-3xl font-black text-primary flex items-center gap-2">
+                <h1 className="text-3xl font-black text-primary flex items-center gap-2 italic uppercase tracking-tighter">
                     <ScrollText className="w-8 h-8 text-accent" /> AI NOTES GENERATOR
                 </h1>
-                <Button variant="ghost" asChild size="sm">
-                    <Link href={user ? "/profile" : "/"}><ArrowLeft className="mr-2 h-4 w-4" /> {user ? 'Dashboard' : 'Home'}</Link>
+                <Button variant="ghost" asChild size="sm" className="font-bold">
+                    <Link href="/"><ArrowLeft className="mr-2 h-4 w-4" /> Home</Link>
                 </Button>
             </div>
 
@@ -154,24 +154,24 @@ function AiNotesPageContent() {
                 <Alert className={isLocked ? "bg-red-50 border-red-200" : "bg-primary/5 border-primary/20"}>
                     {isLocked ? <Lock className="h-4 w-4 text-red-600" /> : <Sparkles className="h-4 w-4 text-primary" />}
                     <AlertTitle className={isLocked ? "text-red-700 font-black uppercase" : "text-primary font-black uppercase tracking-tight"}>
-                        {isLocked ? "TRIAL LIMIT REACHED" : `FREE TRIAL MODE (${GUEST_TRIAL_LIMIT - trialCount} Generations Left)`}
+                        {isLocked ? "TRIAL LIMIT REACHED" : `FREE GUEST TRIAL ACTIVE (${GUEST_TRIAL_LIMIT - trialCount} Generations Left)`}
                     </AlertTitle>
                     <AlertDescription className="text-xs">
                         {isLocked 
                             ? "You have reached the 5-page trial limit. Upgrade to generate unlimited notes." 
-                            : "Guest mode active. Notes will be generated for your academic study material."}
+                            : "No registration required. Instantly convert textbooks into bilingual structured summaries."}
                         <Link href="/signup" className="ml-2 underline font-bold">Sign up for full access.</Link>
                     </AlertDescription>
                 </Alert>
             )}
 
             {!result ? (
-                <Card className="border-primary/20 shadow-xl">
+                <Card className="border-primary/20 shadow-xl overflow-hidden">
                     <CardHeader className="bg-primary/5 border-b">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                             <div>
-                                <CardTitle className="text-lg">Generate Study Summary</CardTitle>
-                                <CardDescription>Convert textbooks or images into bilingual notes.</CardDescription>
+                                <CardTitle className="text-lg font-black uppercase tracking-tight">Summarization Workspace</CardTitle>
+                                <CardDescription>Paste text or upload a photo of your chapter.</CardDescription>
                             </div>
                             {user && (
                                 <div className="w-full sm:w-48 space-y-1">
@@ -197,11 +197,11 @@ function AiNotesPageContent() {
                     <form onSubmit={handleGenerate}>
                         <CardContent className="pt-6 space-y-6">
                             <div className="space-y-2">
-                                <Label htmlFor="material">Study Material (Text)</Label>
+                                <Label htmlFor="material" className="font-bold">Text Material</Label>
                                 <Textarea 
                                     id="material"
                                     placeholder={isLocked ? "Trial limit reached. Please join us to ask more." : "Paste text from your chapter, or describe the topic you want notes on..."}
-                                    className="min-h-[150px] text-lg focus-visible:ring-accent"
+                                    className="min-h-[150px] text-lg focus-visible:ring-accent rounded-2xl"
                                     value={materialText}
                                     onChange={(e) => setMaterialText(e.target.value)}
                                     disabled={isLocked}
@@ -209,24 +209,24 @@ function AiNotesPageContent() {
                             </div>
 
                             <div className="space-y-4">
-                                <Label>Or Upload Image (JPG/PNG)</Label>
+                                <Label className="font-bold">Or Upload Photo (JPG/PNG)</Label>
                                 <div className="flex items-center gap-4">
                                     <Button 
                                         type="button" 
                                         variant="outline" 
-                                        className="border-dashed border-2 h-32 w-full flex-col gap-2 bg-muted/20 hover:bg-muted/40 transition-all"
+                                        className="border-dashed border-4 h-32 w-full flex-col gap-2 bg-muted/20 hover:bg-muted/40 transition-all rounded-3xl"
                                         onClick={() => fileInputRef.current?.click()}
                                         disabled={isLocked}
                                     >
                                         {imagePreview ? (
                                             <div className="flex items-center gap-2">
                                                 <ImageIcon className="w-6 h-6 text-primary" />
-                                                <span className="text-xs font-bold text-primary">Image Attached</span>
+                                                <span className="text-xs font-bold text-primary">Photo Attached</span>
                                             </div>
                                         ) : (
                                             <>
                                                 <FileUp className="w-8 h-8 text-muted-foreground" />
-                                                <span className="text-xs font-bold text-muted-foreground uppercase">Upload Textbook Photo</span>
+                                                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Upload Textbook Page</span>
                                             </>
                                         )}
                                     </Button>
@@ -238,7 +238,7 @@ function AiNotesPageContent() {
                                         onChange={handleFileChange}
                                     />
                                     {imagePreview && (
-                                        <div className="relative h-32 w-32 shrink-0 border rounded-lg overflow-hidden group">
+                                        <div className="relative h-32 w-32 shrink-0 border-4 border-white shadow-xl rounded-3xl overflow-hidden group">
                                             <Image src={imagePreview} alt="Preview" fill className="object-cover" />
                                             <Button 
                                                 type="button" 
@@ -254,26 +254,27 @@ function AiNotesPageContent() {
                                 </div>
                             </div>
 
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 p-2 rounded-lg">
-                                <Info size={14} />
-                                <span>Notes will be generated for your academic study material.</span>
+                            <div className="flex items-center gap-2 text-[10px] font-black uppercase text-muted-foreground tracking-widest bg-muted/50 p-4 rounded-2xl border-dashed border-2">
+                                <Info size={16} className="text-primary"/>
+                                <span>AI will generate structured key points in both English and Marathi.</span>
                             </div>
                         </CardContent>
-                        <CardFooter className="bg-muted/30 border-t flex justify-between gap-4">
+                        <CardFooter className="bg-muted/30 border-t flex justify-between gap-4 p-6">
                             <Button 
                                 type="button" 
                                 variant="ghost" 
                                 onClick={() => { setMaterialText(""); setImagePreview(null); }}
                                 disabled={isGenerating}
+                                className="font-bold"
                             >
                                 Clear All
                             </Button>
                             <Button 
                                 type="submit" 
-                                className="px-8 font-black gap-2 bg-accent hover:bg-accent/90 shadow-lg" 
+                                className="px-10 font-black gap-2 bg-primary hover:bg-primary/90 shadow-xl text-lg h-14 rounded-2xl" 
                                 disabled={isGenerating || isLocked}
                             >
-                                {isGenerating ? <Loader2 className="animate-spin" /> : <><Sparkles size={18} /> GENERATE BILINGUAL NOTES</>}
+                                {isGenerating ? <Loader2 className="animate-spin" /> : <><Sparkles size={20} /> SYNTHESIZE NOTES</>}
                             </Button>
                         </CardFooter>
                     </form>
@@ -281,86 +282,86 @@ function AiNotesPageContent() {
             ) : (
                 <div className="space-y-6">
                     <div className="flex justify-between items-center">
-                        <Button variant="outline" onClick={() => setResult(null)}><ArrowLeft className="mr-2 h-4 w-4"/> Generate More</Button>
-                        <Button variant="ghost" onClick={() => window.print()} className="text-muted-foreground text-xs font-bold uppercase tracking-widest">Download / Print</Button>
+                        <Button variant="outline" onClick={() => setResult(null)} className="font-bold"><ArrowLeft className="mr-2 h-4 w-4"/> New Material</Button>
+                        <Button variant="ghost" onClick={() => window.print()} className="text-muted-foreground text-[10px] font-black uppercase tracking-widest">Save to PDF / Print</Button>
                     </div>
 
-                    <Card className="border-none shadow-2xl ring-1 ring-primary/20">
-                        <CardHeader className="text-center border-b pb-8">
-                            <div className="flex justify-center mb-4">
-                                <div className="p-3 bg-primary/10 rounded-2xl"><ScrollText className="w-10 h-10 text-primary" /></div>
+                    <Card className="border-none shadow-2xl ring-1 ring-primary/20 rounded-[3rem] overflow-hidden">
+                        <CardHeader className="text-center border-b pb-12 pt-12 bg-primary/[0.02]">
+                            <div className="flex justify-center mb-6">
+                                <div className="p-4 bg-primary/10 rounded-3xl"><ScrollText className="w-12 h-12 text-primary" /></div>
                             </div>
-                            <CardTitle className="text-3xl font-black text-primary uppercase tracking-tight">{result.title}</CardTitle>
-                            <CardDescription className="font-bold text-xs uppercase tracking-widest mt-2">
-                                AI CURATED NOTES
+                            <CardTitle className="text-4xl font-black text-primary uppercase tracking-tighter italic">{result.title}</CardTitle>
+                            <CardDescription className="font-black text-[10px] uppercase tracking-[0.3em] mt-3 text-muted-foreground">
+                                AI CURATED BILINGUAL SYNOPSIS
                             </CardDescription>
                         </CardHeader>
-                        <CardContent className="space-y-10 pt-10">
+                        <CardContent className="space-y-12 pt-12 px-8 md:px-16">
                             {result.sections.map((section, idx) => (
-                                <div key={idx} className="space-y-6 group">
-                                    <div className="flex flex-col gap-1 border-l-4 border-primary pl-5">
-                                        <h2 className="text-2xl font-black text-primary">{section.heading.mr}</h2>
-                                        <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-widest">{section.heading.en}</h3>
+                                <div key={idx} className="space-y-8 animate-in slide-in-from-left duration-500" style={{ animationDelay: `${idx * 150}ms` }}>
+                                    <div className="flex flex-col gap-1 border-l-8 border-primary pl-6">
+                                        <h2 className="text-3xl font-black text-primary tracking-tight">{section.heading.mr}</h2>
+                                        <h3 className="text-sm font-black text-muted-foreground uppercase tracking-[0.2em]">{section.heading.en}</h3>
                                     </div>
                                     
-                                    <div className="grid md:grid-cols-2 gap-8">
-                                        <div className="space-y-4">
-                                            <div className="p-5 bg-primary/[0.03] rounded-2xl border border-primary/10">
-                                                <p className="text-lg leading-relaxed font-medium">{section.content.mr}</p>
+                                    <div className="grid md:grid-cols-2 gap-10">
+                                        <div className="space-y-6">
+                                            <div className="p-6 bg-primary/[0.03] rounded-[2rem] border border-primary/10 relative">
+                                                <p className="text-xl leading-relaxed font-medium">{section.content.mr}</p>
                                             </div>
-                                            <ul className="space-y-3">
+                                            <ul className="space-y-4">
                                                 {section.keyPoints.map((point, pIdx) => (
-                                                    <li key={pIdx} className="flex gap-3 text-sm">
-                                                        <CheckCircle className="w-5 h-5 text-green-500 shrink-0 mt-0.5" />
-                                                        <span className="font-medium">{point.mr}</span>
+                                                    <li key={pIdx} className="flex gap-4 text-sm bg-background p-3 rounded-2xl border shadow-sm">
+                                                        <CheckCircle className="w-6 h-6 text-green-500 shrink-0 mt-0.5" />
+                                                        <span className="font-bold">{point.mr}</span>
                                                     </li>
                                                 ))}
                                             </ul>
                                         </div>
-                                        <div className="space-y-4">
-                                            <div className="p-5 bg-accent/[0.03] rounded-2xl border border-accent/10 italic">
+                                        <div className="space-y-6">
+                                            <div className="p-6 bg-accent/[0.03] rounded-[2rem] border border-accent/10 italic">
                                                 <p className="text-md leading-relaxed text-muted-foreground">{section.content.en}</p>
                                             </div>
-                                            <ul className="space-y-3">
+                                            <ul className="space-y-4">
                                                 {section.keyPoints.map((point, pIdx) => (
-                                                    <li key={pIdx} className="flex gap-3 text-xs text-muted-foreground italic">
-                                                        <span className="mt-1">•</span>
-                                                        <span>{point.en}</span>
+                                                    <li key={pIdx} className="flex gap-3 text-[11px] text-muted-foreground italic pl-2 border-l-2 border-dashed">
+                                                        <span className="font-bold">•</span>
+                                                        <span className="font-medium">{point.en}</span>
                                                     </li>
                                                 ))}
                                             </ul>
                                         </div>
                                     </div>
-                                    {idx < result.sections.length - 1 && <div className="h-px bg-muted w-1/2 mx-auto mt-10" />}
+                                    {idx < result.sections.length - 1 && <div className="h-1 bg-muted/30 w-1/4 mx-auto mt-12 rounded-full" />}
                                 </div>
                             ))}
 
-                            <Card className="bg-primary/5 border-none rounded-3xl overflow-hidden mt-12">
-                                <div className="bg-primary p-4 text-center">
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-primary-foreground opacity-80 flex items-center justify-center gap-2">
-                                        <BrainCircuit size={14}/> Summary • मुख्य सारांश
+                            <Card className="bg-primary text-white border-none rounded-[3rem] overflow-hidden mt-16 shadow-2xl">
+                                <div className="p-4 text-center border-b border-white/10">
+                                    <p className="text-[10px] font-black uppercase tracking-widest opacity-80 flex items-center justify-center gap-2">
+                                        <BrainCircuit size={16} className="fill-white"/> Concept Summary • मुख्य सारांश
                                     </p>
                                 </div>
-                                <CardContent className="p-8 space-y-6">
-                                    <p className="text-2xl font-black text-center leading-tight text-primary">{result.summary.mr}</p>
-                                    <p className="text-center text-muted-foreground font-medium italic border-t pt-4">{result.summary.en}</p>
+                                <CardContent className="p-10 space-y-6">
+                                    <p className="text-3xl font-black text-center leading-tight tracking-tighter italic">{result.summary.mr}</p>
+                                    <p className="text-center text-primary-foreground/70 font-medium italic border-t border-white/10 pt-6 px-4">{result.summary.en}</p>
                                 </CardContent>
                             </Card>
                         </CardContent>
-                        <CardFooter className="bg-muted/30 border-t justify-center py-4">
-                            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">© Vidya EduCare AI Tutoring Excellence</p>
+                        <CardFooter className="bg-muted/30 border-t justify-center py-6 mt-12">
+                            <p className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.3em]">© Vidya EduCare AI Tutoring Excellence</p>
                         </CardFooter>
                     </Card>
 
                     {!user && (
-                        <Card className="bg-accent text-white text-center shadow-xl border-none">
+                        <Card className="bg-accent text-white text-center shadow-2xl border-none rounded-[3rem] p-4">
                             <CardHeader>
-                                <CardTitle className="text-2xl font-black italic uppercase">Love these notes?</CardTitle>
-                                <CardDescription className="text-white/80">Join Vidya EduCare today to generate personalized notes for all your students across any board and standard.</CardDescription>
+                                <CardTitle className="text-3xl font-black italic uppercase tracking-tighter">Loved this summary?</CardTitle>
+                                <CardDescription className="text-white/80 font-bold text-lg">Join Vidya EduCare today to generate unlimited personalized notes for all your subjects and standards.</CardDescription>
                             </CardHeader>
-                            <CardFooter className="justify-center">
-                                <Button asChild variant="secondary" size="lg" className="font-black">
-                                    <Link href="/signup">CREATE FREE ACCOUNT <LogIn className="ml-2 h-4 w-4"/></Link>
+                            <CardFooter className="justify-center pt-4">
+                                <Button asChild variant="secondary" size="lg" className="font-black px-12 py-10 text-2xl rounded-2xl shadow-2xl hover:scale-105 transition-transform">
+                                    <Link href="/signup">CREATE FREE ACCOUNT <LogIn className="ml-2 h-6 w-6"/></Link>
                                 </Button>
                             </CardFooter>
                         </Card>
@@ -369,14 +370,20 @@ function AiNotesPageContent() {
             )}
 
             {isGenerating && (
-                <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-[60] flex flex-col items-center justify-center space-y-8 animate-in fade-in">
+                <div className="fixed inset-0 bg-background/95 backdrop-blur-xl z-[60] flex flex-col items-center justify-center space-y-10 animate-in fade-in duration-500">
                     <div className="relative">
-                        <ScrollText className="w-24 h-24 text-primary animate-pulse" />
-                        <Loader2 className="absolute inset-0 w-24 h-24 text-accent animate-spin opacity-40" />
+                        <div className="absolute -inset-10 bg-primary/20 rounded-full blur-3xl animate-pulse" />
+                        <ScrollText className="w-24 h-24 text-primary animate-bounce relative z-10" />
+                        <Loader2 className="absolute inset-0 w-24 h-24 text-accent animate-spin opacity-30 z-20" />
                     </div>
-                    <div className="text-center space-y-2">
-                        <h2 className="text-2xl font-black text-primary animate-pulse uppercase tracking-tighter italic">Analyzing Content...</h2>
-                        <p className="text-muted-foreground font-medium">Synthesizing bilingual study material for your academic material.</p>
+                    <div className="text-center space-y-3 px-8">
+                        <h2 className="text-4xl font-black text-primary animate-pulse uppercase tracking-tighter italic leading-none">Synthesizing Content...</h2>
+                        <p className="text-muted-foreground font-bold text-lg max-w-sm mx-auto">Curating structured, bilingual study material from your academic source.</p>
+                    </div>
+                    <div className="flex gap-1">
+                        {[0, 1, 2].map((i) => (
+                            <div key={i} className="w-3 h-3 bg-primary rounded-full animate-bounce" style={{ animationDelay: `${i * 150}ms` }} />
+                        ))}
                     </div>
                 </div>
             )}

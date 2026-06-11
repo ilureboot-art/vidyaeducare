@@ -1,10 +1,6 @@
 'use server';
 /**
  * @fileOverview A flow for generating personalized study notes for students.
- *
- * - generateStudyNotes - A function that creates bilingual notes based on performance, subject, or provided material.
- * - GenerateNotesInput - The input type for the generateStudyNotes function.
- * - GenerateNotesOutput - The return type for the generateStudyNotes function.
  */
 
 import { ai, z } from '@/ai/genkit';
@@ -16,7 +12,7 @@ const GenerateNotesInputSchema = z.object({
     topics: z.array(z.string()).optional().describe('Specific topics to focus on.'),
     performanceContext: z.string().optional().describe('Context from a recent test to personalize notes.'),
     materialDescription: z.string().optional().describe('Text description or raw material from the student.'),
-    photoDataUri: z.string().optional().describe("A photo of study material, as a data URI. Format: 'data:<mimetype>;base64,<encoded_data>'."),
+    photoDataUri: z.string().optional().describe("A photo of study material, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."),
 });
 export type GenerateNotesInput = z.infer<typeof GenerateNotesInputSchema>;
 
@@ -35,35 +31,21 @@ const generateNotesPrompt = ai.definePrompt({
   name: 'generateStudyNotesPrompt',
   input: { schema: GenerateNotesInputSchema },
   output: { schema: GenerateNotesOutputSchema },
-  prompt: `You are an expert academic content creator.
+  prompt: `You are an expert academic content creator for school students.
   
-  {{#if board}}Board Context: {{{board}}}{{/if}}
-  {{#if standard}}Level Context: {{{standard}}} Student{{/if}}
+  {{#if board}}Board: {{{board}}}{{/if}}
+  {{#if standard}}Grade: {{{standard}}}{{/if}}
   Subject: {{{subject}}}
 
-  Your task is to generate highly effective, exam-oriented study notes.
-  
-  {{#if materialDescription}}
-  TOPIC/MATERIAL TO SUMMARIZE: {{{materialDescription}}}
-  {{/if}}
+  Content Context:
+  {{#if materialDescription}}Source Material: {{{materialDescription}}}{{/if}}
+  {{#if photoDataUri}}Analyze the attached textbook image: {{media url=photoDataUri}}{{/if}}
+  {{#if topics}}Focus Topics: {{#each topics}}{{{this}}}, {{/each}}{{/if}}
 
-  {{#if photoDataUri}}
-  I have attached a photo of some study material. Please analyze the concepts in this image and include them in the notes: {{media url=photoDataUri}}
-  {{/if}}
+  Task: Generate structured study notes in English and Marathi.
+  Include 3 sections, each with a heading, content, and key points in both languages.
 
-  {{#if performanceContext}}
-  PERSONALIZATION CONTEXT: {{{performanceContext}}} (Focus on explaining these areas clearly).
-  {{/if}}
-  
-  REQUIREMENTS:
-  1. Provide a concise, clear title.
-  2. Create 3 detailed sections focusing on core concepts.
-  3. For EACH section, provide a heading and a clear explanation in BOTH English and Marathi.
-  4. For EACH section, provide 3 bullet points (key points) in BOTH languages.
-  5. Provide a final summary in both languages.
-  6. Ensure the tone is educational, clear, and professional.
-  
-  Tone: Clear and Academic.`,
+  Response must be valid JSON matching the schema.`,
 });
 
 const generateStudyNotesFlow = ai.defineFlow(
@@ -75,7 +57,7 @@ const generateStudyNotesFlow = ai.defineFlow(
   async (input) => {
     const { output } = await generateNotesPrompt(input);
     if (!output) {
-      throw new Error('Failed to generate study notes. The AI was unable to process the request.');
+      throw new Error('Failed to generate study notes.');
     }
     return output;
   }

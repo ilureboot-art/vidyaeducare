@@ -1,10 +1,6 @@
 'use server';
 /**
  * @fileOverview A flow for solving student doubts about academic topics or specific MCQs.
- *
- * - solveDoubt - A function that provides bilingual explanations for any educational query.
- * - SolveDoubtInput - The input type for the solveDoubt function.
- * - SolveDoubtOutput - The return type for the solveDoubt function.
  */
 
 import { ai, z } from '@/ai/genkit';
@@ -37,33 +33,31 @@ const solveDoubtPrompt = ai.definePrompt({
   name: 'solveDoubtPrompt',
   input: { schema: SolveDoubtInputSchema },
   output: { schema: SolveDoubtOutputSchema },
-  prompt: `You are an expert academic tutor specializing in the Indian curriculum.
+  prompt: `You are an expert academic tutor specializing in the Indian school curriculum.
   
-  {{#if context.board}}Target Board: {{{context.board}}}{{/if}}
-  {{#if context.standard}}Target Level: {{{context.standard}}} student{{/if}}
+  Context:
+  {{#if context.board}}Board: {{{context.board}}}{{/if}}
+  {{#if context.standard}}Grade: {{{context.standard}}}{{/if}}
+  {{#if context.subject}}Subject: {{{context.subject}}}{{/if}}
 
   {{#if question}}
-  A student has a doubt about this specific Multiple Choice Question:
+  Specific MCQ Context:
+  Question (English): {{{question.text.en}}}
+  Question (Marathi): {{{question.text.mr}}}
+  Correct Answer: {{{question.correctAnswer.en}}}
   
-  QUESTION (English): {{{question.text.en}}}
-  QUESTION (Marathi): {{{question.text.mr}}}
-  
-  CORRECT ANSWER: {{{question.correctAnswer.en}}} ({{{question.correctAnswer.mr}}})
-
-  STUDENT'S SPECIFIC QUERY: "{{{userDoubt}}}"
+  Student's Query: "{{{userDoubt}}}"
   {{else}}
-  A student is asking a general academic question or expressing a doubt:
-  "{{{userDoubt}}}"
+  Student's Query: "{{{userDoubt}}}"
   {{/if}}
 
-  Your task:
-  1. Provide a clear, step-by-step explanation or answer.
-  2. If an MCQ was provided, explain why the correct answer is correct and why the other logic might be confusing.
-  3. Ensure the explanation is encouraging and easy to understand.
-  4. You MUST provide the explanation in BOTH English and Marathi.
-  5. Identify the "Key Concept" involved (e.g., "Photosynthesis", "Newton's First Law").
+  Your Task:
+  1. Provide a clear, pedagogical explanation in both English and Marathi.
+  2. Be encouraging and use language appropriate for the student's grade level.
+  3. Identify the "Key Concept" addressed.
+  4. Ensure the explanation is step-by-step.
 
-  Tone: Friendly, academic, and supportive.`,
+  Response must be valid JSON matching the schema.`,
 });
 
 const solveDoubtFlow = ai.defineFlow(
@@ -75,7 +69,7 @@ const solveDoubtFlow = ai.defineFlow(
   async (input) => {
     const { output } = await solveDoubtPrompt(input);
     if (!output) {
-      throw new Error('The AI tutor was unable to generate an explanation at this time.');
+      throw new Error('Failed to generate AI tutor response.');
     }
     return output;
   }

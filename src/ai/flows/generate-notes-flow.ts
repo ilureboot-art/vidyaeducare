@@ -7,8 +7,7 @@
  * - GenerateNotesOutput - The return type for the generateStudyNotes function.
  */
 
-import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
+import { ai, z } from '@/ai/genkit';
 
 const GenerateNotesInputSchema = z.object({
     subject: z.string().describe('The academic subject.'),
@@ -32,9 +31,8 @@ const GenerateNotesOutputSchema = z.object({
 });
 export type GenerateNotesOutput = z.infer<typeof GenerateNotesOutputSchema>;
 
-const prompt = ai.definePrompt({
+const generateNotesPrompt = ai.definePrompt({
   name: 'generateStudyNotesPrompt',
-  model: 'googleai/gemini-1.5-flash',
   input: { schema: GenerateNotesInputSchema },
   output: { schema: GenerateNotesOutputSchema },
   prompt: `You are an expert academic content creator.
@@ -68,10 +66,21 @@ const prompt = ai.definePrompt({
   Tone: Clear and Academic.`,
 });
 
-export async function generateStudyNotes(input: GenerateNotesInput): Promise<GenerateNotesOutput> {
-  const { output } = await prompt(input);
-  if (!output) {
-    throw new Error('Failed to generate study notes. The AI was unable to process the request.');
+const generateStudyNotesFlow = ai.defineFlow(
+  {
+    name: 'generateStudyNotesFlow',
+    inputSchema: GenerateNotesInputSchema,
+    outputSchema: GenerateNotesOutputSchema,
+  },
+  async (input) => {
+    const { output } = await generateNotesPrompt(input);
+    if (!output) {
+      throw new Error('Failed to generate study notes. The AI was unable to process the request.');
+    }
+    return output;
   }
-  return output;
+);
+
+export async function generateStudyNotes(input: GenerateNotesInput): Promise<GenerateNotesOutput> {
+  return generateStudyNotesFlow(input);
 }

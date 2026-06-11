@@ -7,8 +7,7 @@
  * - SolveDoubtOutput - The return type for the solveDoubt function.
  */
 
-import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
+import { ai, z } from '@/ai/genkit';
 
 const SolveDoubtInputSchema = z.object({
     question: z.object({
@@ -34,12 +33,11 @@ const SolveDoubtOutputSchema = z.object({
 });
 export type SolveDoubtOutput = z.infer<typeof SolveDoubtOutputSchema>;
 
-const prompt = ai.definePrompt({
+const solveDoubtPrompt = ai.definePrompt({
   name: 'solveDoubtPrompt',
-  model: 'googleai/gemini-1.5-flash',
   input: { schema: SolveDoubtInputSchema },
   output: { schema: SolveDoubtOutputSchema },
-  prompt: `You are an expert academic tutor. 
+  prompt: `You are an expert academic tutor specializing in the Indian curriculum.
   
   {{#if context.board}}Target Board: {{{context.board}}}{{/if}}
   {{#if context.standard}}Target Level: {{{context.standard}}} student{{/if}}
@@ -68,10 +66,21 @@ const prompt = ai.definePrompt({
   Tone: Friendly, academic, and supportive.`,
 });
 
-export async function solveDoubt(input: SolveDoubtInput): Promise<SolveDoubtOutput> {
-  const { output } = await prompt(input);
-  if (!output) {
-    throw new Error('The AI tutor was unable to generate an explanation at this time.');
+const solveDoubtFlow = ai.defineFlow(
+  {
+    name: 'solveDoubtFlow',
+    inputSchema: SolveDoubtInputSchema,
+    outputSchema: SolveDoubtOutputSchema,
+  },
+  async (input) => {
+    const { output } = await solveDoubtPrompt(input);
+    if (!output) {
+      throw new Error('The AI tutor was unable to generate an explanation at this time.');
+    }
+    return output;
   }
-  return output;
+);
+
+export async function solveDoubt(input: SolveDoubtInput): Promise<SolveDoubtOutput> {
+  return solveDoubtFlow(input);
 }

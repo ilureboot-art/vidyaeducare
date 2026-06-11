@@ -7,8 +7,7 @@
  * - GenerateQuestionsOutput - The return type for the generateQuestions function.
  */
 
-import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
+import { ai, z } from '@/ai/genkit';
 
 const GenerateQuestionsInputSchema = z.object({
     topic: z.string().describe('The topic or chapter name to generate questions about.'),
@@ -40,9 +39,8 @@ const GenerateQuestionsOutputSchema = z.object({
 });
 export type GenerateQuestionsOutput = z.infer<typeof GenerateQuestionsOutputSchema>;
 
-const prompt = ai.definePrompt({
+const generateQuestionsPrompt = ai.definePrompt({
   name: 'generateQuestionsPrompt',
-  model: 'googleai/gemini-1.5-flash',
   input: { schema: GenerateQuestionsInputSchema },
   output: { schema: GenerateQuestionsOutputSchema },
   prompt: `You are an expert at creating educational Multiple Choice Questions (MCQs) for the {{{board}}} board, teaching {{{standard}}} {{{subject}}}.
@@ -59,21 +57,32 @@ const prompt = ai.definePrompt({
   The difficulty level must be appropriate for a {{{standard}}} student.`,
 });
 
+const generateQuestionsFlow = ai.defineFlow(
+  {
+    name: 'generateQuestionsFlow',
+    inputSchema: GenerateQuestionsInputSchema,
+    outputSchema: GenerateQuestionsOutputSchema,
+  },
+  async (input) => {
+    const { output } = await generateQuestionsPrompt(input);
+    if (!output) {
+      throw new Error('Failed to generate questions. The AI model did not return a valid response.');
+    }
+    
+    // Ensure the output matches the requested number of questions
+    let finalQuestions = output.questions.slice(0, input.numQuestions);
+    while (finalQuestions.length < input.numQuestions) {
+        finalQuestions.push({
+            id: `temp-${finalQuestions.length}`,
+            text: { en: '', mr: '' },
+            options: { en: ['', '', '', ''], mr: ['', '', '', ''] },
+            correctAnswer: { en: '', mr: '' }
+        });
+    }
+    return { questions: finalQuestions };
+  }
+);
+
 export async function generateQuestions(input: GenerateQuestionsInput): Promise<GenerateQuestionsOutput> {
-  const { output } = await prompt(input);
-  if (!output) {
-    throw new Error('Failed to generate questions. The AI model did not return a valid response.');
-  }
-  
-  // Ensure the output matches the requested number of questions
-  let finalQuestions = output.questions.slice(0, input.numQuestions);
-  while (finalQuestions.length < input.numQuestions) {
-      finalQuestions.push({
-          id: `temp-${finalQuestions.length}`,
-          text: { en: '', mr: '' },
-          options: { en: ['', '', '', ''], mr: ['', '', '', ''] },
-          correctAnswer: { en: '', mr: '' }
-      });
-  }
-  return { questions: finalQuestions };
+  return generateQuestionsFlow(input);
 }

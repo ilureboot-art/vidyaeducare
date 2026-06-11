@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview A flow for solving student doubts about academic topics or specific MCQs.
@@ -38,7 +37,7 @@ export type SolveDoubtOutput = z.infer<typeof SolveDoubtOutputSchema>;
 
 const prompt = ai.definePrompt({
   name: 'solveDoubtPrompt',
-  model: googleAI.model('gemini-2.5-flash'),
+  model: googleAI.model('gemini-flash-latest'),
   input: { schema: SolveDoubtInputSchema },
   output: { schema: SolveDoubtOutputSchema },
   prompt: `You are an expert academic tutor. 

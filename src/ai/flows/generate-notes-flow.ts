@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview A flow for generating personalized study notes for students.
@@ -36,7 +35,7 @@ export type GenerateNotesOutput = z.infer<typeof GenerateNotesOutputSchema>;
 
 const prompt = ai.definePrompt({
   name: 'generateStudyNotesPrompt',
-  model: googleAI.model('gemini-2.5-flash'),
+  model: googleAI.model('gemini-flash-latest'),
   input: { schema: GenerateNotesInputSchema },
   output: { schema: GenerateNotesOutputSchema },
   prompt: `You are an expert academic content creator.

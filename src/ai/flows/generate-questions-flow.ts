@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview A flow for generating multiple-choice questions.
@@ -44,7 +43,7 @@ export type GenerateQuestionsOutput = z.infer<typeof GenerateQuestionsOutputSche
 
 const prompt = ai.definePrompt({
   name: 'generateQuestionsPrompt',
-  model: googleAI.model('gemini-2.5-flash'),
+  model: googleAI.model('gemini-flash-latest'),
   input: { schema: GenerateQuestionsInputSchema },
   output: { schema: GenerateQuestionsOutputSchema },
   prompt: `You are an expert at creating educational Multiple Choice Questions (MCQs) for the {{{board}}} board, teaching {{{standard}}} {{{subject}}}.

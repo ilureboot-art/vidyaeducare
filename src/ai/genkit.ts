@@ -1,14 +1,13 @@
-
 import { genkit } from 'genkit';
 import { googleAI } from '@genkit-ai/google-genai';
 
 /**
  * Global Genkit instance configured for Google AI.
- * Explicitly maps GEMINI_API_KEY to ensure compatibility with App Hosting secrets.
+ * Uses the latest flash model for optimal speed and academic performance.
  */
 export const ai = genkit({
   plugins: [
-    googleAI({ apiKey: process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY }),
+    googleAI(),
   ],
-  model: googleAI.model('gemini-2.5-flash'),
+  model: googleAI.model('gemini-flash-latest'),
 });

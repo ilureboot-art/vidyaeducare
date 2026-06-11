@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { PlusCircle, MinusCircle, History, ArrowUpRight, ArrowDownLeft, Loader2, AlertCircle, Scan, X, PieChart as PieChartIcon, AlertTriangle } from "lucide-react";
+import { PlusCircle, MinusCircle, History, ArrowUpRight, ArrowDownLeft, Loader2, AlertCircle, Scan, X, PieChart as PieChartIcon, AlertTriangle, FileText, CheckCircle2, Clock, XCircle, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { type Transaction, type AdminPaymentMethods } from "@/lib/user-data";
@@ -39,6 +39,7 @@ import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/e
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Html5Qrcode } from "html5-qrcode";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
+import { cn } from "@/lib/utils";
 
 const getStatusBadgeVariant = (status: string) => {
     switch (status.toLowerCase()) {
@@ -46,6 +47,15 @@ const getStatusBadgeVariant = (status: string) => {
         case 'pending': return 'secondary';
         case 'rejected': return 'destructive';
         default: return 'outline';
+    }
+}
+
+const getStatusIcon = (status: string) => {
+    switch (status.toLowerCase()) {
+        case 'completed': return <CheckCircle2 className="w-5 h-5 text-green-500" />;
+        case 'pending': return <Clock className="w-5 h-5 text-amber-500" />;
+        case 'rejected': return <XCircle className="w-5 h-5 text-red-500" />;
+        default: return null;
     }
 }
 
@@ -81,6 +91,7 @@ function WalletPageContent() {
 
   const [addFundsOpen, setAddFundsOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
 
   // Scanner States
   const [isScannerOpen, setIsScannerOpen] = useState(false);
@@ -288,6 +299,11 @@ function WalletPageContent() {
     });
   }
 
+  const copyId = (id: string) => {
+      navigator.clipboard.writeText(id);
+      toast({ title: "Copied!", description: "Transaction ID copied to clipboard." });
+  }
+
   if (!walletInfo || !transactions || !adminPaymentMethods) {
     return (
       <div className="w-full max-w-2xl mx-auto flex flex-col items-center justify-center h-96 space-y-4">
@@ -386,13 +402,13 @@ function WalletPageContent() {
           <div className="space-y-4 pt-4">
             <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground text-center">Recent Activity</h3>
             {transactions.slice(0, 10).map((tx) => (
-                 <div key={tx.id} className="flex items-center justify-between p-4 bg-muted/30 border rounded-xl">
+                 <div key={tx.id} onClick={() => setSelectedTx(tx)} className="flex items-center justify-between p-4 bg-muted/30 border rounded-xl cursor-pointer hover:bg-muted/50 transition-colors group">
                     <div className="flex items-center gap-4">
                         <div className={`p-2.5 rounded-full ${tx.amount >= 0 ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
                             {tx.amount >= 0 ? <ArrowDownLeft className="w-5 h-5" /> : <ArrowUpRight className="w-5 h-5" />}
                         </div>
                         <div>
-                            <p className="font-bold text-sm">{tx.description}</p>
+                            <p className="font-bold text-sm group-hover:text-primary transition-colors">{tx.description}</p>
                             <p className="text-[10px] text-muted-foreground">{format(new Date(tx.date), 'PP p')}</p>
                         </div>
                     </div>
@@ -418,6 +434,95 @@ function WalletPageContent() {
             </Button>
          </CardFooter>
       </Card>
+
+      {/* Transaction Detail Receipt Modal */}
+      <Dialog open={!!selectedTx} onOpenChange={(open) => !open && setSelectedTx(null)}>
+          <DialogContent className="max-w-md p-0 overflow-hidden rounded-[2rem] border-none shadow-2xl">
+              {selectedTx && (
+                  <div className="bg-background">
+                      <div className={cn(
+                          "p-8 text-center relative",
+                          selectedTx.status === 'Completed' ? "bg-green-500/10" : 
+                          selectedTx.status === 'Rejected' ? "bg-red-500/10" : "bg-amber-500/10"
+                      )}>
+                          <div className="flex justify-center mb-4">
+                              <div className={cn(
+                                  "w-16 h-16 rounded-full flex items-center justify-center shadow-lg",
+                                  selectedTx.status === 'Completed' ? "bg-green-500 text-white" : 
+                                  selectedTx.status === 'Rejected' ? "bg-red-500 text-white" : "bg-amber-500 text-white"
+                              )}>
+                                  {selectedTx.amount >= 0 ? <ArrowDownLeft size={32}/> : <ArrowUpRight size={32}/>}
+                              </div>
+                          </div>
+                          <h2 className="text-3xl font-black tracking-tighter uppercase italic">
+                              {selectedTx.amount >= 0 ? "Credit Received" : "Debit Processed"}
+                          </h2>
+                          <div className="mt-2 flex items-center justify-center gap-2">
+                              {getStatusIcon(selectedTx.status)}
+                              <Badge variant={getStatusBadgeVariant(selectedTx.status)} className="font-black uppercase tracking-widest text-[10px]">
+                                  {selectedTx.status}
+                              </Badge>
+                          </div>
+                      </div>
+
+                      <div className="p-8 space-y-6">
+                          <div className="text-center">
+                              <p className="text-[10px] font-black uppercase text-muted-foreground tracking-[0.2em] mb-1">Transaction Amount</p>
+                              <p className={cn(
+                                  "text-5xl font-black tracking-tighter",
+                                  selectedTx.amount >= 0 ? "text-green-600" : "text-red-600"
+                              )}>
+                                  ₹{Math.abs(selectedTx.amount).toFixed(2)}
+                              </p>
+                          </div>
+
+                          <div className="space-y-4 pt-4 border-t border-dashed">
+                              <div className="flex justify-between items-start">
+                                  <p className="text-[10px] font-black uppercase text-muted-foreground">Description</p>
+                                  <p className="text-sm font-bold text-right max-w-[200px]">{selectedTx.description}</p>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                  <p className="text-[10px] font-black uppercase text-muted-foreground">Date & Time</p>
+                                  <p className="text-sm font-bold">{format(new Date(selectedTx.date), 'PPP p')}</p>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                  <p className="text-[10px] font-black uppercase text-muted-foreground">Type</p>
+                                  <Badge variant="outline" className="text-[9px] font-bold uppercase">{selectedTx.type}</Badge>
+                              </div>
+                              {selectedTx.referenceId && (
+                                  <div className="flex justify-between items-center">
+                                      <p className="text-[10px] font-black uppercase text-muted-foreground">Ref / UTR</p>
+                                      <p className="text-sm font-mono font-bold">{selectedTx.referenceId}</p>
+                                  </div>
+                              )}
+                              {selectedTx.paymentMethod && (
+                                  <div className="flex justify-between items-center">
+                                      <p className="text-[10px] font-black uppercase text-muted-foreground">Payout To</p>
+                                      <p className="text-sm font-bold">{selectedTx.paymentMethod}</p>
+                                  </div>
+                              )}
+                          </div>
+
+                          <div className="pt-6 border-t">
+                               <p className="text-[10px] font-black uppercase text-muted-foreground mb-2">Transaction ID</p>
+                               <div className="flex items-center justify-between p-3 bg-muted/50 rounded-xl border border-dashed">
+                                   <code className="text-[10px] font-mono break-all pr-4">{selectedTx.id}</code>
+                                   <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => copyId(String(selectedTx.id))}>
+                                       <Copy size={14}/>
+                                   </Button>
+                               </div>
+                          </div>
+                      </div>
+
+                      <div className="p-6 bg-muted/30 flex justify-center">
+                          <Button variant="outline" className="w-full font-black uppercase tracking-tight rounded-xl" onClick={() => setSelectedTx(null)}>
+                              Dismiss Receipt
+                          </Button>
+                      </div>
+                  </div>
+              )}
+          </DialogContent>
+      </Dialog>
 
       <Dialog open={addFundsOpen} onOpenChange={(open) => {
           if (!open && isScannerOpen) handleStopScanner();

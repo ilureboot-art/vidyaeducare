@@ -14,7 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Download, ArrowUpRight, ArrowDownLeft, Loader2, Calendar as CalendarIcon, FilterX, BarChart3 } from "lucide-react";
+import { Search, Download, ArrowUpRight, ArrowDownLeft, Loader2, Calendar as CalendarIcon, FilterX, BarChart3, FileText, CheckCircle2, Clock, XCircle, Copy, Info } from "lucide-react";
 import type { Transaction } from "@/lib/user-data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
@@ -29,6 +29,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 const getStatusBadgeVariant = (status: string) => {
     switch (status.toLowerCase()) {
@@ -40,6 +41,15 @@ const getStatusBadgeVariant = (status: string) => {
             return "destructive";
         default:
             return "outline";
+    }
+}
+
+const getStatusIcon = (status: string) => {
+    switch (status.toLowerCase()) {
+        case 'completed': return <CheckCircle2 className="w-5 h-5 text-green-500" />;
+        case 'pending': return <Clock className="w-5 h-5 text-amber-500" />;
+        case 'rejected': return <XCircle className="w-5 h-5 text-red-500" />;
+        default: return null;
     }
 }
 
@@ -60,6 +70,8 @@ function TransactionsPageContent() {
   const [typeFilter, setTypeFilter] = useState<'all' | 'deposit' | 'withdrawal'>('all');
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  
+  const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   
   useEffect(() => {
     if (user && db) {
@@ -154,6 +166,11 @@ function TransactionsPageContent() {
     
     toast({ title: "Export Complete", description: "Your transaction history has been downloaded." });
   };
+
+  const copyId = (id: string) => {
+      navigator.clipboard.writeText(id);
+      toast({ title: "Copied!", description: "Transaction ID copied to clipboard." });
+  }
 
   const resetFilters = () => {
     setSearchTerm("");
@@ -330,33 +347,43 @@ function TransactionsPageContent() {
                 <TableHead>Date</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
+                <TableHead className="text-center">Details</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredTransactions.map((tx) => (
-                <TableRow key={tx.id}>
+                <TableRow key={tx.id} className="group">
                   <TableCell>
                     <div className="flex items-center gap-2">
                         {getTypeIcon(tx.type, tx.amount)}
-                        <span>{tx.description}</span>
+                        <span className="font-medium">{tx.description}</span>
                     </div>
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground font-mono">
-                    {tx.id}
-                    {tx.referenceId && <div className="text-ellipsis overflow-hidden">Ref: {tx.referenceId}</div>}
+                    {typeof tx.id === 'string' && tx.id.length > 12 ? tx.id.substring(0, 12) + '...' : tx.id}
                   </TableCell>
-                  <TableCell>{format(new Date(tx.date), 'P')}</TableCell>
+                  <TableCell className="text-xs">{format(new Date(tx.date), 'PP')}</TableCell>
                   <TableCell>
-                    <Badge variant={getStatusBadgeVariant(tx.status)}>
+                    <Badge variant={getStatusBadgeVariant(tx.status)} className="text-[9px] h-5">
                       {tx.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right font-medium">₹{Math.abs(tx.amount).toFixed(2)}</TableCell>
+                  <TableCell className={cn(
+                      "text-right font-bold text-sm",
+                      tx.amount >= 0 ? "text-green-600" : "text-red-600"
+                  )}>
+                      ₹{Math.abs(tx.amount).toFixed(2)}
+                  </TableCell>
+                  <TableCell className="text-center">
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => setSelectedTx(tx)}>
+                          <Info size={16}/>
+                      </Button>
+                  </TableCell>
                 </TableRow>
               ))}
               {filteredTransactions.length === 0 && (
                   <TableRow>
-                      <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                      <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
                           No transactions found for the selected criteria.
                       </TableCell>
                   </TableRow>
@@ -365,6 +392,95 @@ function TransactionsPageContent() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Transaction Detail Receipt Modal */}
+      <Dialog open={!!selectedTx} onOpenChange={(open) => !open && setSelectedTx(null)}>
+          <DialogContent className="max-w-md p-0 overflow-hidden rounded-[2rem] border-none shadow-2xl">
+              {selectedTx && (
+                  <div className="bg-background">
+                      <div className={cn(
+                          "p-8 text-center relative",
+                          selectedTx.status === 'Completed' ? "bg-green-500/10" : 
+                          selectedTx.status === 'Rejected' ? "bg-red-500/10" : "bg-amber-500/10"
+                      )}>
+                          <div className="flex justify-center mb-4">
+                              <div className={cn(
+                                  "w-16 h-16 rounded-full flex items-center justify-center shadow-lg",
+                                  selectedTx.status === 'Completed' ? "bg-green-500 text-white" : 
+                                  selectedTx.status === 'Rejected' ? "bg-red-500 text-white" : "bg-amber-500 text-white"
+                              )}>
+                                  {selectedTx.amount >= 0 ? <ArrowDownLeft size={32}/> : <ArrowUpRight size={32}/>}
+                              </div>
+                          </div>
+                          <h2 className="text-3xl font-black tracking-tighter uppercase italic">
+                              {selectedTx.amount >= 0 ? "Credit Received" : "Debit Processed"}
+                          </h2>
+                          <div className="mt-2 flex items-center justify-center gap-2">
+                              {getStatusIcon(selectedTx.status)}
+                              <Badge variant={getStatusBadgeVariant(selectedTx.status)} className="font-black uppercase tracking-widest text-[10px]">
+                                  {selectedTx.status}
+                              </Badge>
+                          </div>
+                      </div>
+
+                      <div className="p-8 space-y-6">
+                          <div className="text-center">
+                              <p className="text-[10px] font-black uppercase text-muted-foreground tracking-[0.2em] mb-1">Transaction Amount</p>
+                              <p className={cn(
+                                  "text-5xl font-black tracking-tighter",
+                                  selectedTx.amount >= 0 ? "text-green-600" : "text-red-600"
+                              )}>
+                                  ₹{Math.abs(selectedTx.amount).toFixed(2)}
+                              </p>
+                          </div>
+
+                          <div className="space-y-4 pt-4 border-t border-dashed">
+                              <div className="flex justify-between items-start">
+                                  <p className="text-[10px] font-black uppercase text-muted-foreground">Description</p>
+                                  <p className="text-sm font-bold text-right max-w-[200px]">{selectedTx.description}</p>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                  <p className="text-[10px] font-black uppercase text-muted-foreground">Date & Time</p>
+                                  <p className="text-sm font-bold">{format(new Date(selectedTx.date), 'PPP p')}</p>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                  <p className="text-[10px] font-black uppercase text-muted-foreground">Type</p>
+                                  <Badge variant="outline" className="text-[9px] font-bold uppercase">{selectedTx.type}</Badge>
+                              </div>
+                              {selectedTx.referenceId && (
+                                  <div className="flex justify-between items-center">
+                                      <p className="text-[10px] font-black uppercase text-muted-foreground">Ref / UTR</p>
+                                      <p className="text-sm font-mono font-bold">{selectedTx.referenceId}</p>
+                                  </div>
+                              )}
+                              {selectedTx.paymentMethod && (
+                                  <div className="flex justify-between items-center">
+                                      <p className="text-[10px] font-black uppercase text-muted-foreground">Payout To</p>
+                                      <p className="text-sm font-bold">{selectedTx.paymentMethod}</p>
+                                  </div>
+                              )}
+                          </div>
+
+                          <div className="pt-6 border-t">
+                               <p className="text-[10px] font-black uppercase text-muted-foreground mb-2">Transaction ID</p>
+                               <div className="flex items-center justify-between p-3 bg-muted/50 rounded-xl border border-dashed">
+                                   <code className="text-[10px] font-mono break-all pr-4">{selectedTx.id}</code>
+                                   <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => copyId(String(selectedTx.id))}>
+                                       <Copy size={14}/>
+                                   </Button>
+                               </div>
+                          </div>
+                      </div>
+
+                      <div className="p-6 bg-muted/30 flex justify-center">
+                          <Button variant="outline" className="w-full font-black uppercase tracking-tight rounded-xl" onClick={() => setSelectedTx(null)}>
+                              Dismiss Receipt
+                          </Button>
+                      </div>
+                  </div>
+              )}
+          </DialogContent>
+      </Dialog>
     </div>
   );
 }

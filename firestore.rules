@@ -3,7 +3,7 @@ rules_version = '2';
 /**
  * Vidya EduCare - Production Infrastructure Rules
  * Target Instance: vidyaeducaredatabase
- * Deployment Salt: V53_AI_STABILITY_AND_CONFIG_SYNC
+ * Deployment Salt: V54_CONFIG_READ_ACCESS_FIX
  */
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -51,9 +51,9 @@ service cloud.firestore {
     }
 
     // --- PRIORITY 2: Global Configuration Access ---
-    // Explicitly allowing public read for non-sensitive configurations
+    // Allow authenticated users to read non-sensitive configurations
     match /configs/{document=**} {
-      allow read, get, list: if true;
+      allow read, get, list: if isAuthenticated();
       allow write: if isAdmin();
     }
 

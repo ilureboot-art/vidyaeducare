@@ -170,6 +170,14 @@ export default function TransactionsPage() {
       ) || [];
   }, [transactions, searchTerm, statusFilter, typeFilter, startDate, endDate]);
 
+  const filteredTotals = useMemo(() => {
+    return filteredTransactions.reduce((acc, tx) => {
+        if (tx.amount >= 0) acc.deposits += tx.amount;
+        else acc.withdrawals += Math.abs(tx.amount);
+        return acc;
+    }, { deposits: 0, withdrawals: 0 });
+  }, [filteredTransactions]);
+
   const handleExportCSV = () => {
     if (!filteredTransactions.length) {
         toast({ variant: "destructive", title: "No Data", description: "There are no transactions to export." });
@@ -220,6 +228,35 @@ export default function TransactionsPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Transactions</h1>
+
+      {/* Summary Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Card className="bg-green-500/[0.03] border-green-500/20 shadow-sm overflow-hidden">
+              <CardHeader className="py-4 px-6 flex flex-row items-center justify-between space-y-0">
+                  <div className="space-y-1">
+                      <CardTitle className="text-[10px] font-black uppercase tracking-widest text-green-600/70">Total Inflow (Filtered)</CardTitle>
+                      <p className="text-2xl font-black text-green-600">₹{formatCurrency(filteredTotals.deposits)}</p>
+                  </div>
+                  <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center text-green-600">
+                      <ArrowDownLeft size={24}/>
+                  </div>
+              </CardHeader>
+              <div className="h-1 bg-green-500/10 w-full" />
+          </Card>
+          <Card className="bg-red-500/[0.03] border-red-500/20 shadow-sm overflow-hidden">
+              <CardHeader className="py-4 px-6 flex flex-row items-center justify-between space-y-0">
+                  <div className="space-y-1">
+                      <CardTitle className="text-[10px] font-black uppercase tracking-widest text-red-600/70">Total Outflow (Filtered)</CardTitle>
+                      <p className="text-2xl font-black text-red-600">₹{formatCurrency(filteredTotals.withdrawals)}</p>
+                  </div>
+                  <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center text-red-600">
+                      <ArrowUpRight size={24}/>
+                  </div>
+              </CardHeader>
+              <div className="h-1 bg-red-500/10 w-full" />
+          </Card>
+      </div>
+
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">

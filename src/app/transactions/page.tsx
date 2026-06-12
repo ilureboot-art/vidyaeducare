@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Download, ArrowUpRight, ArrowDownLeft, Loader2, Calendar as CalendarIcon, FilterX, BarChart3, FileText, CheckCircle2, Clock, XCircle, Copy, Info } from "lucide-react";
+import { Search, Download, ArrowUpRight, ArrowDownLeft, Loader2, Calendar as CalendarIcon, FilterX, BarChart3, FileText, CheckCircle2, Clock, XCircle, Copy, Info, IndianRupee } from "lucide-react";
 import type { Transaction } from "@/lib/user-data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
@@ -110,6 +110,14 @@ function TransactionsPageContent() {
       ) || [];
   }, [transactions, searchTerm, statusFilter, typeFilter, startDate, endDate]);
 
+  const filteredTotals = useMemo(() => {
+      return filteredTransactions.reduce((acc, tx) => {
+          if (tx.amount >= 0) acc.deposits += tx.amount;
+          else acc.withdrawals += Math.abs(tx.amount);
+          return acc;
+      }, { deposits: 0, withdrawals: 0 });
+  }, [filteredTransactions]);
+
   const chartData = useMemo(() => {
       if (!transactions) return [];
       
@@ -204,6 +212,34 @@ function TransactionsPageContent() {
         <Button variant="outline" className="font-bold gap-2" onClick={handleExportCSV}>
             <Download className="w-4 h-4" /> EXPORT REPORT
         </Button>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Card className="bg-green-500/[0.03] border-green-500/20 shadow-sm overflow-hidden group hover:border-green-500/40 transition-all">
+              <CardHeader className="py-4 px-6 flex flex-row items-center justify-between space-y-0">
+                  <div className="space-y-1">
+                      <CardTitle className="text-[10px] font-black uppercase tracking-widest text-green-600/70">Total Inflow (Filtered)</CardTitle>
+                      <p className="text-2xl font-black text-green-600">₹{formatCurrency(filteredTotals.deposits)}</p>
+                  </div>
+                  <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center text-green-600 group-hover:scale-110 transition-transform">
+                      <ArrowDownLeft size={24}/>
+                  </div>
+              </CardHeader>
+              <div className="h-1 bg-green-500/10 w-full" />
+          </Card>
+          <Card className="bg-red-500/[0.03] border-red-500/20 shadow-sm overflow-hidden group hover:border-red-500/40 transition-all">
+              <CardHeader className="py-4 px-6 flex flex-row items-center justify-between space-y-0">
+                  <div className="space-y-1">
+                      <CardTitle className="text-[10px] font-black uppercase tracking-widest text-red-600/70">Total Outflow (Filtered)</CardTitle>
+                      <p className="text-2xl font-black text-red-600">₹{formatCurrency(filteredTotals.withdrawals)}</p>
+                  </div>
+                  <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center text-red-600 group-hover:scale-110 transition-transform">
+                      <ArrowUpRight size={24}/>
+                  </div>
+              </CardHeader>
+              <div className="h-1 bg-red-500/10 w-full" />
+          </Card>
       </div>
 
       {/* Chart Section */}

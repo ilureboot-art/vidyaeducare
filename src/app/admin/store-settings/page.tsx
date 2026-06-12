@@ -34,24 +34,23 @@ export default function AdminStoreSettingsPage() {
   
   const [storeConfig, setStoreConfig] = useState<StoreConfig | null>(null);
   const [academicConfig, setAcademicConfig] = useState<AcademicConfig | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingStore, setIsLoadingStore] = useState(true);
+  const [isLoadingAcademic, setIsLoadingAcademic] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+
+  const isLoading = isLoadingStore || isLoadingAcademic;
 
   useEffect(() => {
     if (!db || !user || !isResolved) return;
-
-    setIsLoading(true);
 
     const storeRef = doc(db, "configs", "store");
     const unsubStore = onSnapshot(storeRef, (docSnap) => {
         if (docSnap.exists()) {
             setStoreConfig(docSnap.data() as StoreConfig);
         } else {
-            console.warn("Store config document missing. Using defaults.");
             setStoreConfig(defaultStoreConfig);
         }
-        // Defensively resolve loading state
-        setIsLoading(false);
+        setIsLoadingStore(false);
     }, async (error) => {
         console.error("Store config sync error:", error.code);
         if (error.code === 'permission-denied') {
@@ -62,7 +61,7 @@ export default function AdminStoreSettingsPage() {
             errorEmitter.emit('permission-error', permissionError);
         }
         setStoreConfig(defaultStoreConfig);
-        setIsLoading(false);
+        setIsLoadingStore(false);
     });
 
     const academicRef = doc(db, "configs", "academic");
@@ -70,11 +69,9 @@ export default function AdminStoreSettingsPage() {
         if (docSnap.exists()) {
             setAcademicConfig(docSnap.data() as AcademicConfig);
         } else {
-            console.warn("Academic config document missing. Using defaults.");
             setAcademicConfig(defaultAcademicConfig);
         }
-        // Defensively resolve loading state (even if other listener is slower)
-        setIsLoading(false);
+        setIsLoadingAcademic(false);
     }, async (error) => {
         console.error("Academic config sync error:", error.code);
         if (error.code === 'permission-denied') {
@@ -85,7 +82,7 @@ export default function AdminStoreSettingsPage() {
             errorEmitter.emit('permission-error', permissionError);
         }
         setAcademicConfig(defaultAcademicConfig);
-        setIsLoading(false);
+        setIsLoadingAcademic(false);
     });
 
     return () => {
@@ -230,7 +227,7 @@ export default function AdminStoreSettingsPage() {
       );
   };
 
-  if (isLoading && !storeConfig) {
+  if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-96 space-y-4">
         <Loader2 className="animate-spin text-primary" size={40} />

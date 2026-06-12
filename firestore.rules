@@ -14,10 +14,6 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isOwner(uid) {
-      return signedIn() && request.auth.uid == uid;
-    }
-
     function isMaster() {
       return signedIn() && (
         request.auth.token.email == 'admin@vidyaeducare.com' ||
@@ -30,19 +26,15 @@ service cloud.firestore {
       if (isMaster()) return true;
       
       let adminPath = /databases/$(database)/documents/admins/$(request.auth.uid);
-      return exists(adminPath) && (
-        get(adminPath).data.status == 'Active' || 
-        get(adminPath).data.role == 'Head Admin'
-      );
+      return exists(adminPath);
     }
 
     // --- SHARED DATA (High Priority) ---
 
     match /configs/{document=**} {
-      // Configuration data (boards, prices, payment methods) must be readable for system functionality.
-      // allow read: if true; 
-      // Security hardening: Only signed in users can read sensitive configs like paymentMethods
-      allow read: if signedIn(); 
+      // Configuration data (boards, prices, payment methods)
+      // Allow read to all to prevent race conditions during auth sync.
+      allow read: if true; 
       allow write: if isAdmin();
     }
 
@@ -55,13 +47,17 @@ service cloud.firestore {
 
     match /users/{uid} {
       allow read: if signedIn();
-      allow create: if signedIn() && (isOwner(uid) || isMaster());
+      allow create: if signedIn(); // Required for initial registration
       allow update, delete: if isOwner(uid) || isAdmin();
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
     }
 
     match /wallets/{uid} {
       allow read: if isOwner(uid) || isAdmin();
-      allow create: if signedIn() && (isOwner(uid) || isMaster());
+      allow create: if signedIn();
       allow update: if isAdmin() || isOwner(uid);
     }
 

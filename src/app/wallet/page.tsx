@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { PlusCircle, MinusCircle, History, ArrowUpRight, ArrowDownLeft, Loader2, AlertCircle, Scan, X, PieChart as PieChartIcon, AlertTriangle, FileText, CheckCircle2, Clock, XCircle, Copy, ArrowLeft, ShieldCheck, Zap, CheckCircle, TrendingUp } from "lucide-react";
+import { PlusCircle, MinusCircle, History, ArrowUpRight, ArrowDownLeft, Loader2, AlertCircle, Scan, X, PieChart as PieChartIcon, AlertTriangle, FileText, CheckCircle2, Clock, XCircle, Copy, ArrowLeft, ShieldCheck, Zap, CheckCircle, TrendingUp, Users, Store } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { type Transaction, type AdminPaymentMethods } from "@/lib/user-data";
@@ -32,6 +32,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Html5Qrcode } from "html5-qrcode";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts";
 import { cn } from "@/lib/utils";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 const getStatusBadgeVariant = (status: string) => {
     switch (status.toLowerCase()) {
@@ -429,6 +430,31 @@ function WalletPageContent() {
                           <Link href="/iba/dashboard">
                              <ShieldCheck className="w-6 h-6 text-primary" />
                              <span className="text-[10px] font-black uppercase tracking-tight">IBA Hub</span>
+                          </Link>
+                      </Button>
+                  </div>
+              </div>
+
+              {/* ENGAGEMENT ACTIONS HUB */}
+              <div className="space-y-3">
+                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest text-center">Increase Your Earnings</p>
+                  <div className="grid grid-cols-2 gap-3">
+                      <Button variant="outline" className="h-20 flex-row gap-3 rounded-2xl border-accent/10 hover:border-accent/40 hover:bg-accent/5 transition-all shadow-sm justify-start px-6" asChild>
+                          <Link href="/refer">
+                             <Users className="w-6 h-6 text-accent" />
+                             <div className="text-left">
+                                <p className="text-[10px] font-black uppercase tracking-tight">Refer a Friend</p>
+                                <p className="text-[8px] text-muted-foreground font-bold">EARN ₹5 BONUS</p>
+                             </div>
+                          </Link>
+                      </Button>
+                      <Button variant="outline" className="h-20 flex-row gap-3 rounded-2xl border-primary/10 hover:border-primary/40 hover:bg-primary/5 transition-all shadow-sm justify-start px-6" asChild>
+                          <Link href="/store">
+                             <Store className="w-6 h-6 text-primary" />
+                             <div className="text-left">
+                                <p className="text-[10px] font-black uppercase tracking-tight">Visit Store</p>
+                                <p className="text-[8px] text-muted-foreground font-bold">BUY MOCK TESTS</p>
+                             </div>
                           </Link>
                       </Button>
                   </div>

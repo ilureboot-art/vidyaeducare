@@ -32,22 +32,23 @@ const generateNotesPrompt = ai.definePrompt({
   name: 'generateStudyNotesPrompt',
   input: { schema: GenerateNotesInputSchema },
   output: { schema: GenerateNotesOutputSchema },
-  prompt: `You are an expert academic content creator for school students.
-  
+  system: `You are an expert academic content creator for school students in India. 
+Your task is to transform complex textbook material into structured, easy-to-read study notes. 
+All headings, content, and key points MUST be provided in both English and Marathi. 
+Maintain pedagogical accuracy for the specific board and grade level provided.`,
+  prompt: `
+  Academic Context:
   {{#if board}}Board: {{{board}}}{{/if}}
   {{#if standard}}Grade: {{{standard}}}{{/if}}
   Subject: {{{subject}}}
 
-  Content Context:
-  {{#if materialDescription}}Source Material: {{{materialDescription}}}{{/if}}
-  {{#if photoDataUri}}Analyze the attached textbook image: {{media url=photoDataUri}}{{/if}}
-  {{#if topics}}Focus Topics: {{#each topics}}{{{this}}}, {{/each}}{{/if}}
+  Source Data:
+  {{#if materialDescription}}Text Content: {{{materialDescription}}}{{/if}}
+  {{#if photoDataUri}}Analyze this Textbook Image: {{media url=photoDataUri}}{{/if}}
+  {{#if topics}}Primary Topics: {{#each topics}}{{{this}}}, {{/each}}{{/if}}
+  {{#if performanceContext}}Personalization Hint: {{{performanceContext}}}{{/if}}
 
-  Task: Generate structured study notes in English and Marathi.
-  Include 3 sections, each with a heading, content, and key points in both languages.
-  Ensure pedagogical accuracy and simplicity for the specified grade.
-
-  Response must be valid JSON matching the schema.`,
+  Task: Generate 3 structured sections with headings, summaries, and key points in both languages.`,
 });
 
 export const generateStudyNotesFlow = ai.defineFlow(

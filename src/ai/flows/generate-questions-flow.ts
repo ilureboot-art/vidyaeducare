@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A flow for generating multiple-choice questions.
@@ -39,12 +40,17 @@ const generateQuestionsPrompt = ai.definePrompt({
   name: 'generateQuestionsPrompt',
   input: { schema: GenerateQuestionsInputSchema },
   output: { schema: GenerateQuestionsOutputSchema },
-  prompt: `Generate {{{numQuestions}}} MCQs for {{{board}}} Board, {{{standard}}} {{{subject}}} on the topic: {{{topic}}}.
-  Each question MUST be in both English and Marathi.
-  Provide 4 options per question.
-  Ensure accuracy for the curriculum level.
-
-  Response must be valid JSON matching the schema.`,
+  system: `You are an academic examination expert. 
+Your task is to generate high-quality Multiple Choice Questions (MCQs) for Indian school boards. 
+Every question and its options MUST be provided in both English and Marathi. 
+Ensure the difficulty level matches the specified grade and board.`,
+  prompt: `Generate {{{numQuestions}}} MCQs for {{{board}}} Board, {{{standard}}} {{{subject}}}.
+  Focus Topic: {{{topic}}}
+  
+  Requirements:
+  1. 4 options per question.
+  2. One clearly defined correct answer.
+  3. All text in English AND Marathi.`,
 });
 
 const generateQuestionsFlow = ai.defineFlow(

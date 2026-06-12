@@ -38,31 +38,32 @@ const solveDoubtPrompt = ai.definePrompt({
   name: 'solveDoubtPrompt',
   input: { schema: SolveDoubtInputSchema },
   output: { schema: SolveDoubtOutputSchema },
-  prompt: `You are an expert academic tutor specializing in the Indian school curriculum (SSC, CBSE, ICSE).
-  
+  system: `You are an expert academic tutor specializing in the Indian school curriculum (SSC, CBSE, ICSE). 
+Your goal is to provide deep conceptual clarity to students. 
+Always provide explanations in both Marathi and English. 
+The Marathi explanation should be pedagogical, encouraging, and easy to understand for the student's specified grade level.
+The English explanation should be conceptually accurate and academic.
+Identify the "Key Concept" (one or two words) that the query relates to.`,
+  prompt: `
+  {{#if context}}
   Context:
   {{#if context.board}}Board: {{{context.board}}}{{/if}}
   {{#if context.standard}}Grade: {{{context.standard}}}{{/if}}
   {{#if context.subject}}Subject: {{{context.subject}}}{{/if}}
+  {{/if}}
 
   {{#if question}}
-  Specific MCQ Context:
+  Specific MCQ Being Discussed:
   Question (English): {{{question.text.en}}}
   Question (Marathi): {{{question.text.mr}}}
   Correct Answer: {{{question.correctAnswer.en}}}
   
-  Student's Query: "{{{userDoubt}}}"
+  Student's Doubt: {{{userDoubt}}}
   {{else}}
-  Student's Query: "{{{userDoubt}}}"
+  Student's Query: {{{userDoubt}}}
   {{/if}}
 
-  Your Task:
-  1. Provide a clear, pedagogical explanation in both Marathi and English.
-  2. Start with the Marathi explanation. Be encouraging and use language appropriate for the student's grade level.
-  3. Identify the "Key Concept" addressed.
-  4. Ensure the explanation is step-by-step and conceptually sound.
-
-  Response must be valid JSON matching the output schema.`,
+  Please provide a detailed bilingual resolution matching the requested JSON schema.`,
 });
 
 export const solveDoubtFlow = ai.defineFlow(

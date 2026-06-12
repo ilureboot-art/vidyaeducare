@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
@@ -12,7 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { PlusCircle, MinusCircle, History, ArrowUpRight, ArrowDownLeft, Loader2, AlertCircle, Scan, X, PieChart as PieChartIcon, AlertTriangle, FileText, CheckCircle2, Clock, XCircle, Copy, ArrowLeft, ShieldCheck, Zap, CheckCircle, TrendingUp, Users, Store } from "lucide-react";
+import { PlusCircle, MinusCircle, History, ArrowUpRight, ArrowDownLeft, Loader2, AlertCircle, Scan, X, PieChart as PieChartIcon, AlertTriangle, FileText, CheckCircle2, Clock, XCircle, Copy, ArrowLeft, ShieldCheck, Zap, CheckCircle, TrendingUp, Users, Store, LineChart as LineChartIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { type Transaction, type AdminPaymentMethods } from "@/lib/user-data";
@@ -29,7 +30,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Html5Qrcode } from "html5-qrcode";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, LineChart, Line, XAxis, YAxis, CartesianGrid, AreaChart, Area } from "recharts";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
@@ -143,7 +144,7 @@ function WalletPageContent() {
             const transactionList: Transaction[] = querySnapshot.docs.map(d => {
                 const data = d.data();
                 const date = data.date instanceof Timestamp ? data.date.toDate().toISOString() : data.date;
-                return { id: doc.id, ...data, date } as Transaction;
+                return { id: d.id, ...data, date } as Transaction;
             });
             setTransactions(transactionList);
         }, async (error) => {
@@ -184,7 +185,7 @@ function WalletPageContent() {
   }, [transactions]);
 
   const trendData = useMemo(() => {
-    if (!transactions) return [];
+    if (!transactions || !walletInfo) return [];
     
     const now = new Date();
     const thirtyDaysAgo = subDays(now, 30);
@@ -193,6 +194,13 @@ function WalletPageContent() {
         start: thirtyDaysAgo,
         end: now
     });
+
+    // Calculate balance at the start of the window
+    const completedAfterWindowStart = transactions.filter(t => 
+        t.status === 'Completed' && new Date(t.date) >= thirtyDaysAgo
+    );
+    const totalChangeInWindow = completedAfterWindowStart.reduce((acc, t) => acc + t.amount, 0);
+    let runningBalance = walletInfo.balance - totalChangeInWindow;
 
     return dates.map(date => {
         const dateStr = format(date, 'yyyy-MM-dd');
@@ -209,74 +217,16 @@ function WalletPageContent() {
             .filter(t => t.amount < 0)
             .reduce((acc, t) => acc + Math.abs(t.amount), 0);
 
+        runningBalance += (income - spending);
+
         return {
             date: format(date, 'MMM dd'),
             income,
-            spending
+            spending,
+            balance: runningBalance
         };
     });
-  }, [transactions]);
-
-  const playSuccessSound = () => {
-    try {
-        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-        const oscillator = audioCtx.createOscillator();
-        const gainNode = audioCtx.createGain();
-
-        oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
-        oscillator.frequency.exponentialRampToValueAtTime(1046.50, audioCtx.currentTime + 0.1); // C6
-
-        gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
-
-        oscillator.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-
-        oscillator.start();
-        oscillator.stop(audioCtx.currentTime + 0.4);
-    } catch (e) {
-        console.warn("Audio feedback blocked or failed.");
-    }
-  };
-
-  const handleStartScanner = async () => {
-      setIsScannerOpen(true);
-      setTimeout(() => {
-          const html5QrCode = new Html5Qrcode(scannerId);
-          scannerRef.current = html5QrCode;
-          const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-          
-          html5QrCode.start(
-              { facingMode: "environment" },
-              config,
-              (decodedText) => {
-                  toast({ title: "QR Scanned!", description: "Verification successful. Please proceed with payment." });
-                  handleStopScanner();
-              },
-              (errorMessage) => {
-                  // Scanning...
-              }
-          ).catch((err) => {
-              console.error("Scanner Error:", err);
-              toast({ variant: 'destructive', title: "Scanner Error", description: "Could not access camera. Check permissions." });
-              setIsScannerOpen(false);
-          });
-      }, 500);
-  };
-
-  const handleStopScanner = () => {
-      if (scannerRef.current) {
-          scannerRef.current.stop().then(() => {
-              setIsScannerOpen(false);
-          }).catch((err) => {
-              console.error("Error stopping scanner", err);
-              setIsScannerOpen(false);
-          });
-      } else {
-          setIsScannerOpen(false);
-      }
-  };
+  }, [transactions, walletInfo]);
 
   const handleAddFunds = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -305,7 +255,6 @@ function WalletPageContent() {
         .then(() => {
             setSuccessAmount(amount);
             setActiveView('success');
-            playSuccessSound();
             form.reset();
             setTimeout(() => setActiveView('main'), 4000);
         })
@@ -345,7 +294,6 @@ function WalletPageContent() {
     }).then(() => {
         setSuccessAmount(amount);
         setActiveView('success');
-        playSuccessSound();
         form.reset();
         setTimeout(() => setActiveView('main'), 4000);
     }).catch(async (serverError) => {
@@ -365,6 +313,44 @@ function WalletPageContent() {
       navigator.clipboard.writeText(id);
       toast({ title: "Copied!", description: "Transaction ID copied to clipboard." });
   }
+
+  const handleStartScanner = async () => {
+      setIsScannerOpen(true);
+      setTimeout(() => {
+          const html5QrCode = new Html5Qrcode(scannerId);
+          scannerRef.current = html5QrCode;
+          const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+          
+          html5QrCode.start(
+              { facingMode: "environment" },
+              config,
+              (decodedText) => {
+                  toast({ title: "QR Scanned!", description: "Verification successful. Please proceed with payment." });
+                  handleStopScanner();
+              },
+              (errorMessage) => {
+                  // Scanning...
+              }
+          ).catch((err) => {
+              console.error("Scanner Error:", err);
+              toast({ variant: 'destructive', title: "Scanner Error", description: "Could not access camera. Check permissions." });
+              setIsScannerOpen(false);
+          });
+      }, 500);
+  };
+
+  const handleStopScanner = () => {
+      if (scannerRef.current) {
+          scannerRef.current.stop().then(() => {
+              setIsScannerOpen(false);
+          }).catch((err) => {
+              console.error("Error stopping scanner", err);
+              setIsScannerOpen(false);
+          });
+      } else {
+          setIsScannerOpen(false);
+      }
+  };
 
   if (!walletInfo || !transactions || !adminPaymentMethods) {
     return (
@@ -519,6 +505,49 @@ function WalletPageContent() {
                   )}
 
                   {trendData.length > 0 && (
+                    <>
+                    <Card className="border-none bg-muted/20 shadow-inner rounded-3xl">
+                        <CardHeader className="pb-0 text-center">
+                            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center justify-center gap-2">
+                                <LineChartIcon className="w-3 h-3" /> Balance History (Last 30 Days)
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="h-[200px] pt-4">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={trendData}>
+                                    <defs>
+                                        <linearGradient id="colorBalance" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.1}/>
+                                            <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.1} />
+                                    <XAxis 
+                                        dataKey="date" 
+                                        fontSize={8} 
+                                        tickLine={false} 
+                                        axisLine={false} 
+                                        minTickGap={30}
+                                    />
+                                    <YAxis hide />
+                                    <Tooltip 
+                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '10px', fontWeight: 'bold' }}
+                                        formatter={(value: number) => [`₹${formatCurrency(value)}`, "Balance"]}
+                                    />
+                                    <Area 
+                                        type="monotone" 
+                                        dataKey="balance" 
+                                        stroke="hsl(var(--primary))" 
+                                        fillOpacity={1} 
+                                        fill="url(#colorBalance)" 
+                                        strokeWidth={3}
+                                        animationDuration={1500}
+                                    />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        </CardContent>
+                    </Card>
+
                     <Card className="border-none bg-muted/20 shadow-inner rounded-3xl">
                         <CardHeader className="pb-0 text-center">
                             <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center justify-center gap-2">
@@ -563,6 +592,7 @@ function WalletPageContent() {
                             </ResponsiveContainer>
                         </CardContent>
                     </Card>
+                    </>
                   )}
               </div>
               

@@ -7,7 +7,7 @@ import { createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthState
 import { doc, writeBatch, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, CheckCircle, Shield, Database, Activity, Info, ExternalLink, UserCheck, Search, AlertCircle, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Loader2, CheckCircle, Shield, Database, Activity, Info, ExternalLink, UserCheck, Search, AlertCircle, RefreshCw, AlertTriangle, Zap, Rocket } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
@@ -200,7 +200,7 @@ export default function SetupAdminPage() {
           <CardTitle className="text-2xl font-black flex items-center justify-center gap-2 text-primary tracking-tighter uppercase italic">
             <Shield className="w-6 h-6" /> CORE INFRASTRUCTURE
           </CardTitle>
-          <CardDescription>Target: <span className="font-mono text-xs font-bold text-black">vidyaeducaredatabase</span></CardDescription>
+          <CardDescription>Target Instance: <span className="font-mono text-xs font-bold text-black bg-primary/10 px-2 py-0.5 rounded">vidyaeducaredatabase</span></CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           
@@ -236,35 +236,35 @@ export default function SetupAdminPage() {
           </div>
 
           <div className="bg-black/90 p-4 rounded-xl border border-white/10 space-y-1">
-              <p className="text-[9px] font-bold text-white/50 uppercase flex items-center gap-2"><Activity size={10}/> Sync Console</p>
+              <p className="text-[9px] font-bold text-white/50 uppercase flex items-center gap-2"><Activity size={10}/> Deployment Stream</p>
               <div className="space-y-1 min-h-[140px] overflow-hidden">
                   {progressLog.length > 0 ? progressLog.map((log, i) => (
                       <p key={i} className="text-[10px] font-mono text-green-400 animate-in fade-in slide-in-from-left-2">> {log}</p>
                   )) : (
-                      <p className="text-[10px] font-mono text-white/20 italic">> Idle...</p>
+                      <p className="text-[10px] font-mono text-white/20 italic">> Waiting for commands...</p>
                   )}
               </div>
           </div>
 
           <div className="space-y-4 pt-2">
              <div className="grid grid-cols-2 gap-3">
-                <Button className="font-bold text-[10px] py-6" onClick={() => handleAuthenticate('admin')} disabled={authStatus === 'loading' || mapStatus === 'loading'}>
+                <Button className="font-bold text-[10px] py-6 rounded-xl" onClick={() => handleAuthenticate('admin')} disabled={authStatus === 'loading' || mapStatus === 'loading'}>
                     {authStatus === 'loading' && currentIdentity.email === HEAD_ADMIN_EMAIL ? <Loader2 className="animate-spin" /> : "STEP 1: AUTH ADMIN"}
                 </Button>
-                <Button variant="outline" className="font-bold text-[10px] py-6" onClick={() => handleAuthenticate('student')} disabled={authStatus === 'loading' || mapStatus === 'loading'}>
+                <Button variant="outline" className="font-bold text-[10px] py-6 rounded-xl" onClick={() => handleAuthenticate('student')} disabled={authStatus === 'loading' || mapStatus === 'loading'}>
                     {authStatus === 'loading' && currentIdentity.email === TEST_USER_EMAIL ? <Loader2 className="animate-spin" /> : "STEP 1: AUTH STUDENT"}
                 </Button>
              </div>
 
              <Button 
-                className="w-full py-10 text-lg font-black bg-accent hover:bg-accent/90 shadow-lg" 
+                className="w-full py-10 text-lg font-black bg-accent hover:bg-accent/90 shadow-lg rounded-2xl" 
                 onClick={handleMapToDatabase} 
                 disabled={!currentIdentity.uid || mapStatus === 'loading'}
              >
                  {mapStatus === 'loading' ? (
                      <div className="flex flex-col items-center">
                          <Loader2 className="animate-spin mb-1" />
-                         <span className="text-[10px]">SYNCING CLOUD...</span>
+                         <span className="text-[10px]">MAP & SYNC CLOUD...</span>
                      </div>
                  ) : (
                      <><Database className="mr-2 h-6 w-6" /> STEP 2: MAP TO DATABASE</>
@@ -272,16 +272,17 @@ export default function SetupAdminPage() {
              </Button>
           </div>
 
-          {(auditStatus.admin && auditStatus.student) && (
+          {(auditStatus.admin && auditStatus.student && auditStatus.config) && (
               <div className="pt-2 animate-in zoom-in duration-500">
-                  <Button className="w-full py-8 text-xl font-black bg-green-600 hover:bg-green-700 shadow-2xl" onClick={() => router.push('/admin/login')}>
-                      PROCEED TO DASHBOARD <ExternalLink className="ml-2 h-5 w-5"/>
+                  <Button className="w-full py-8 text-xl font-black bg-green-600 hover:bg-green-700 shadow-2xl rounded-2xl" onClick={() => router.push('/admin/login')}>
+                      OPEN OPERATIONAL HUB <ExternalLink className="ml-2 h-5 w-5"/>
                   </Button>
+                  <p className="text-center mt-3 text-[10px] font-bold text-green-600 animate-pulse uppercase tracking-widest">System is Live & Operational</p>
               </div>
           )}
         </CardContent>
         <CardFooter className="bg-primary/5 py-4 border-t justify-center gap-2">
-            <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground italic text-center">Infrastructure synced with global native rules</p>
+            <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground italic text-center">Vidya EduCare Deployment Salt: V64_OPERATIONAL_READY</p>
         </CardFooter>
       </Card>
     </div>

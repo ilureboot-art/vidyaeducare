@@ -11,32 +11,28 @@ To ensure maximum stability and synchronization, this project follows a **GitHub
 3.  **AI Intelligence (Google AI Studio)**: Use this for prompt engineering and model tuning. **Note**: This is a manual sync. When you refine a prompt in AI Studio, you must copy it back into the code files in Firebase Studio.
 4.  **Production Engine (Firebase App Hosting)**: Automatically pulls from GitHub to deploy your live site.
 
-## 🎓 Guest & Trial Mode
-Vidya EduCare offers a **Zero-Registration Trial Experience**. Guests can immediately try:
-- **AI Doubt Solver**: 5 free bilingual queries (Fully Operational).
-- **AI Notes Generator**: 5 free textbook summary generations (Fully Operational).
+## 🎓 Operational Readiness Checklist (Go-Live)
+Before inviting users, you must complete the following steps in your production environment:
+
+1. **Named Database Setup**: In the Firebase Console, you **MUST** create a Firestore database named exactly `vidyaeducaredatabase` in Native Mode.
+2. **System Initialization**: 
+    - Navigate to `/admin/setup` on your production URL.
+    - Perform **STEP 1: AUTH ADMIN** to verify the master account.
+    - Perform **STEP 2: MAP TO DATABASE** to generate default prices, subjects, and boards.
+3. **AI Secrets**: Add your `GEMINI_API_KEY` to your Firebase App Hosting secrets manager.
+
+## 🔑 Master Admin Access
+- **Email**: `admin@vidyaeducare.com`
+- **Password**: `password123`
+- **Login URL**: `/admin/login`
+
+## 🚀 Guest & Trial Features
+Vidya EduCare offers a **Zero-Registration Trial Experience** to drive conversion:
+- **AI Doubt Solver**: 5 free bilingual queries (Bilingual Marathi/English).
+- **AI Notes Generator**: 5 free textbook summary generations.
 - **Trial Arena**: A 5-question mock test with instant global ranking.
 
 Registration is only required for full access to curriculum-specific mock tests, leaderboard cash prizes, and the referral earning systems.
-
-## 🚀 Readiness & Deployment
-
-### 1. Infrastructure Setup
-Before going live, configure the Firebase project and the named Firestore instance.
-- **Guide**: See [docs/DEPLOYMENT_GUIDE.md](./docs/DEPLOYMENT_GUIDE.md) for detailed instructions.
-- **Named Database**: The app targets `vidyaeducaredatabase` (Native Mode).
-- **Active URL**: `https://studio--vidyaeducare.us-central1.hosted.app`
-
-### 2. Operational Initialization
-Once deployed:
-- Navigate to `/admin/setup`.
-- Click **"STEP 1: AUTH ADMIN"** to verify the master identity.
-- Click **"STEP 2: MAP TO DATABASE"** to initialize global configurations.
-
-### 🔑 Default Master Credentials
-- **Access URL**: `/admin/login`
-- **Email**: `admin@vidyaeducare.com`
-- **Password**: `password123`
 
 ---
 © 2024 Vidya EduCare. All rights reserved.

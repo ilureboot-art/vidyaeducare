@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -126,8 +125,8 @@ export function AppHeader() {
                         <Button variant="ghost" size="sm" asChild className="hidden sm:flex font-bold">
                             <Link href="/login">Login</Link>
                         </Button>
-                        <Button size="sm" asChild className="font-black px-4 bg-primary shadow-md">
-                            <Link href="/signup">JOIN FREE</Link>
+                        <Button size="sm" asChild className="font-black px-5 bg-primary shadow-lg rounded-full h-9 uppercase tracking-tight text-[10px]">
+                            <Link href="/signup">Join Now</Link>
                         </Button>
                     </div>
                 )}

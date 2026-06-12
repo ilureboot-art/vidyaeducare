@@ -20,7 +20,7 @@ import { type Transaction } from "@/lib/user-data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { format, startOfDay, endOfDay } from "date-fns";
-import { collection, getDocs, doc, runTransaction, Timestamp, orderBy, query } from "firebase/firestore";
+import { collection, getDocs, doc, runTransaction, Timestamp, orderBy, query, serverTimestamp } from "firebase/firestore";
 import { useDb } from "@/firebase";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
@@ -128,23 +128,21 @@ export default function TransactionsPage() {
                     }
                 } else if (newStatus === 'Rejected') {
                     if (txToUpdate.type === 'withdrawal') {
-                        const newBalance = (walletData.balance || 0) - txToUpdate.amount; 
+                        const newBalance = (walletData.balance || 0) + Math.abs(txToUpdate.amount); 
                         transaction.update(userWalletRef!, { balance: newBalance });
                     }
                 }
             }
             
-            // Update Transaction Status
             transaction.update(txDocRef, { status: newStatus });
 
-            // Create Automated In-App Notification for the user
             if (txToUpdate.user) {
                 const notificationRef = doc(collection(db, "notifications"));
                 const notificationType = txToUpdate.type === 'deposit' 
                     ? (newStatus === 'Completed' ? 'deposit_received' : 'deposit_rejected')
                     : (newStatus === 'Completed' ? 'withdrawal_approved' : 'withdrawal_rejected');
                 
-                const amountStr = `₹${Math.abs(txToUpdate.amount).toFixed(2)}`;
+                const amountStr = `₹${formatCurrency(Math.abs(txToUpdate.amount))}`;
                 const msg = newStatus === 'Completed'
                     ? `Your ${txToUpdate.type} request of ${amountStr} was approved.`
                     : `Your ${txToUpdate.type} request of ${amountStr} was rejected.`;
@@ -167,13 +165,8 @@ export default function TransactionsPage() {
             throw e;
         });
 
-        toast({
-          title: "Transaction Updated",
-          description: `Transaction ${id} has been marked as ${newStatus}.`,
-        });
-        
+        toast({ title: "Transaction Updated", description: `Transaction marked as ${newStatus}.` });
         fetchTransactions();
-
     } catch(error) {
         console.error("Transaction Update Error:", error);
     }
@@ -182,7 +175,7 @@ export default function TransactionsPage() {
   const filteredTransactions = useMemo(() => {
     return transactions?.filter(
         (tx) => {
-          const searchTermMatch = tx.user?.toLowerCase().includes(searchTerm.toLowerCase()) || String(tx.id).toLowerCase().includes(searchTerm.toLowerCase());
+          const searchTermMatch = tx.user?.toLowerCase().includes(searchTerm.toLowerCase()) || String(tx.id).toLowerCase().includes(searchTerm.toLowerCase()) || tx.description.toLowerCase().includes(searchTerm.toLowerCase());
           const statusMatch = statusFilter === 'all' || tx.status.toLowerCase() === statusFilter;
           const typeMatch = typeFilter === 'all' || (typeFilter === 'deposit' && tx.amount >= 0) || (typeFilter === 'withdrawal' && tx.amount < 0);
           
@@ -196,8 +189,10 @@ export default function TransactionsPage() {
 
   const filteredTotals = useMemo(() => {
     return filteredTransactions.reduce((acc, tx) => {
-        if (tx.amount >= 0) acc.deposits += tx.amount;
-        else acc.withdrawals += Math.abs(tx.amount);
+        if (tx.status === 'Completed') {
+            if (tx.amount >= 0) acc.deposits += tx.amount;
+            else acc.withdrawals += Math.abs(tx.amount);
+        }
         return acc;
     }, { deposits: 0, withdrawals: 0 });
   }, [filteredTransactions]);
@@ -224,13 +219,13 @@ export default function TransactionsPage() {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `admin_transactions_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+    link.setAttribute('download', `admin_report_${format(new Date(), 'yyyy-MM-dd')}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     
-    toast({ title: "Export Complete", description: "Transaction report has been downloaded." });
+    toast({ title: "Export Complete", description: "Report downloaded." });
   };
 
   const resetFilters = () => {
@@ -251,14 +246,13 @@ export default function TransactionsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Transactions</h1>
+      <h1 className="text-3xl font-bold">Transactions Management</h1>
 
-      {/* Summary Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card className="bg-green-500/[0.03] border-green-500/20 shadow-sm overflow-hidden">
               <CardHeader className="py-4 px-6 flex flex-row items-center justify-between space-y-0">
                   <div className="space-y-1">
-                      <CardTitle className="text-[10px] font-black uppercase tracking-widest text-green-600/70">Total Inflow (Filtered)</CardTitle>
+                      <CardTitle className="text-[10px] font-black uppercase tracking-widest text-green-600/70">Total Inflow (Completed)</CardTitle>
                       <p className="text-2xl font-black text-green-600">₹{formatCurrency(filteredTotals.deposits)}</p>
                   </div>
                   <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center text-green-600">
@@ -270,7 +264,7 @@ export default function TransactionsPage() {
           <Card className="bg-red-500/[0.03] border-red-500/20 shadow-sm overflow-hidden">
               <CardHeader className="py-4 px-6 flex flex-row items-center justify-between space-y-0">
                   <div className="space-y-1">
-                      <CardTitle className="text-[10px] font-black uppercase tracking-widest text-red-600/70">Total Outflow (Filtered)</CardTitle>
+                      <CardTitle className="text-[10px] font-black uppercase tracking-widest text-red-600/70">Total Outflow (Completed)</CardTitle>
                       <p className="text-2xl font-black text-red-600">₹{formatCurrency(filteredTotals.withdrawals)}</p>
                   </div>
                   <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center text-red-600">
@@ -285,11 +279,11 @@ export default function TransactionsPage() {
         <CardHeader>
           <div className="flex justify-between items-center">
             <div>
-                <CardTitle>Transaction History</CardTitle>
-                <CardDescription>View and manage all financial transactions within the app.</CardDescription>
+                <CardTitle>History Logs</CardTitle>
+                <CardDescription>Comprehensive log of all financial events.</CardDescription>
             </div>
             <Button variant="ghost" size="sm" onClick={resetFilters} className="text-muted-foreground">
-                <FilterX className="mr-2 h-4 w-4" /> Reset Filters
+                <FilterX className="mr-2 h-4 w-4" /> Reset
             </Button>
           </div>
           <div className="flex flex-col space-y-4 pt-4">
@@ -297,7 +291,7 @@ export default function TransactionsPage() {
                 <div className="relative flex-1">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input 
-                        placeholder="Search by user or ID..." 
+                        placeholder="Search user, ID or description..." 
                         className="pl-8"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -305,9 +299,7 @@ export default function TransactionsPage() {
                 </div>
                 <div className="flex flex-wrap gap-2">
                     <Select value={typeFilter} onValueChange={(value) => setTypeFilter(value as any)}>
-                        <SelectTrigger className="w-[140px]">
-                            <SelectValue placeholder="Type" />
-                        </SelectTrigger>
+                        <SelectTrigger className="w-[140px]"><SelectValue placeholder="Type" /></SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">All Types</SelectItem>
                             <SelectItem value="deposit">Deposits</SelectItem>
@@ -315,9 +307,7 @@ export default function TransactionsPage() {
                         </SelectContent>
                     </Select>
                     <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as any)}>
-                        <SelectTrigger className="w-[140px]">
-                            <SelectValue placeholder="Status" />
-                        </SelectTrigger>
+                        <SelectTrigger className="w-[140px]"><SelectValue placeholder="Status" /></SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">All Statuses</SelectItem>
                             <SelectItem value="completed">Completed</SelectItem>
@@ -370,8 +360,8 @@ export default function TransactionsPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>User</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Transaction ID</TableHead>
+                <TableHead>Activity</TableHead>
+                <TableHead>ID</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
@@ -381,15 +371,15 @@ export default function TransactionsPage() {
             <TableBody>
               {filteredTransactions.map((tx) => (
                 <TableRow key={tx.id}>
-                  <TableCell className="font-medium text-xs font-mono">{tx.user || 'System'}</TableCell>
+                  <TableCell className="font-medium text-xs font-mono">{tx.user?.substring(0, 8) || 'System'}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                         {getTypeIcon(tx.type, tx.amount)}
-                        <span className="text-xs">{tx.description}</span>
+                        <span className="text-xs max-w-[150px] truncate">{tx.description}</span>
                     </div>
                   </TableCell>
                   <TableCell className="text-[10px] text-muted-foreground font-mono">
-                    {typeof tx.id === 'string' && tx.id.length > 10 ? tx.id.substring(0, 10) + '...' : tx.id}
+                    {String(tx.id).substring(0, 6)}...
                   </TableCell>
                   <TableCell className="text-xs">{format(new Date(tx.date), 'P')}</TableCell>
                   <TableCell>
@@ -408,13 +398,6 @@ export default function TransactionsPage() {
                   </TableCell>
                 </TableRow>
               ))}
-              {filteredTransactions.length === 0 && (
-                  <TableRow>
-                      <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
-                          No transactions found matching your criteria.
-                      </TableCell>
-                  </TableRow>
-              )}
             </TableBody>
           </Table>
         </CardContent>

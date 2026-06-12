@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -55,10 +56,6 @@ export default function AnalyticsPage() {
       
       setError(null);
       try {
-          if (typeof window !== 'undefined' && !window.navigator.onLine) {
-              throw new Error("You are currently offline.");
-          }
-
           const today = new Date();
           today.setHours(0, 0, 0, 0);
           const todayTimestamp = Timestamp.fromDate(today);
@@ -79,15 +76,10 @@ export default function AnalyticsPage() {
               getCountFromServer(resultsCol)
           ]);
 
-          // Contextual Error Check for Analytics with Granular Paths
           results.forEach((res, index) => {
               if (res.status === 'rejected' && (res.reason?.code === 'permission-denied' || res.reason?.message?.includes('permissions'))) {
                   const paths = ['transactions', 'users', 'testResults'];
-                  const permissionError = new FirestorePermissionError({
-                      path: paths[index],
-                      operation: 'list',
-                  } satisfies SecurityRuleContext);
-                  errorEmitter.emit('permission-error', permissionError);
+                  errorEmitter.emit('permission-error', new FirestorePermissionError({ path: paths[index], operation: 'list' }));
               }
           });
 
@@ -106,19 +98,16 @@ export default function AnalyticsPage() {
           }
           
           setTodaysRevenue(totalRevenue);
-          
           const totalUsersCount = usersRes.status === 'fulfilled' ? usersRes.value.data().count : 0;
           setActiveUsers(totalUsersCount);
-          
           const totalTests = resultsCountRes.status === 'fulfilled' ? resultsCountRes.value.data().count : 0;
           setTestVolume(totalTests);
 
           const activityDates = getLast7Days();
-          const fetchedUserActivity: ChartData[] = activityDates.map(date => ({
+          setUserActivityData(activityDates.map(date => ({
               name: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric'}),
               users: Math.floor(Math.random() * 5) + (totalUsersCount ? Math.floor(totalUsersCount / 20) : 2)
-          }));
-          setUserActivityData(fetchedUserActivity);
+          })));
 
           setRevenueData([
             { name: 'Mon', revenue: 4000 }, { name: 'Tue', revenue: 3000 }, { name: 'Wed', revenue: 5000 },
@@ -137,12 +126,7 @@ export default function AnalyticsPage() {
   useEffect(() => {
     if(db && user) {
         fetchData();
-
-        // Implement auto-refresh mechanism
-        const refreshTimer = setInterval(() => {
-            fetchData(true);
-        }, AUTO_REFRESH_INTERVAL);
-
+        const refreshTimer = setInterval(() => fetchData(true), AUTO_REFRESH_INTERVAL);
         return () => clearInterval(refreshTimer);
     }
   }, [db, user, fetchData]);

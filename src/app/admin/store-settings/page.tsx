@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
-import { PlusCircle, Trash2, Zap, BookOpen, GraduationCap, Percent, Loader2, IndianRupee, AlertCircle, RefreshCcw } from "lucide-react";
+import { PlusCircle, Trash2, Zap, BookOpen, GraduationCap, Percent, Loader2, IndianRupee, AlertCircle, RefreshCcw, Landmark, ShieldAlert } from "lucide-react";
 import { type StoreConfig, type MockTestPackage, type ReferboltSubscription, type ReferboltSettings, type RecommendationSettings, defaultStoreConfig } from "@/lib/store-config";
 import { type AcademicConfig, defaultAcademicConfig } from "@/lib/academic-config";
 import { Switch } from "@/components/ui/switch";
@@ -19,6 +19,15 @@ import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/e
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 
+const UsersIcon = ({ className }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+        <circle cx="9" cy="7" r="4"></circle>
+        <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+    </svg>
+);
+
 export default function AdminStoreSettingsPage() {
   const { toast } = useToast();
   const db = useDb();
@@ -28,13 +37,11 @@ export default function AdminStoreSettingsPage() {
   const [academicConfig, setAcademicConfig] = useState<AcademicConfig | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [syncError, setSyncError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!db || !user || !isResolved) return;
 
     setIsLoading(true);
-    setSyncError(null);
 
     const storeRef = doc(db, "configs", "store");
     const unsubStore = onSnapshot(storeRef, (docSnap) => {
@@ -166,7 +173,6 @@ export default function AdminStoreSettingsPage() {
     const storeRef = doc(db, "configs", "store");
     const academicRef = doc(db, "configs", "academic");
 
-    // Perform individual sets with Pattern 1 error handling
     setDoc(storeRef, storeConfig)
         .then(() => {
             setDoc(academicRef, academicConfig)
@@ -301,8 +307,31 @@ export default function AdminStoreSettingsPage() {
              <Button type="button" variant="outline" className="w-full py-6 border-dashed" onClick={addMockTestPackage}><PlusCircle className="mr-2 h-5 w-5" /> Add New Package Configuration</Button>
           </CardContent>
         </Card>
+        
         {storeConfig && (
         <>
+        <Card className="mt-6">
+          <CardHeader>
+              <CardTitle className="flex items-center gap-2"><Landmark size={20} className="text-primary"/> Financial System Rules</CardTitle>
+              <CardDescription>Global rules for payments and wallet management.</CardDescription>
+          </CardHeader>
+          <CardContent>
+              <div className="flex items-center justify-between p-4 border rounded-xl bg-primary/[0.02]">
+                  <div className="space-y-1">
+                      <Label htmlFor="auto-approve-toggle" className="font-bold flex items-center gap-2">
+                          <Zap size={14} className="text-primary fill-primary"/> Auto-Approve Deposits
+                      </Label>
+                      <p className="text-xs text-muted-foreground max-w-md">When enabled, user payment requests are instantly credited to their wallet without manual admin verification. <span className="text-destructive font-bold">Use with caution.</span></p>
+                  </div>
+                  <Switch 
+                    id="auto-approve-toggle" 
+                    checked={storeConfig.autoApproveDeposits} 
+                    onCheckedChange={(checked) => setStoreConfig(prev => prev ? ({...prev, autoApproveDeposits: checked}) : null)} 
+                  />
+              </div>
+          </CardContent>
+        </Card>
+
         <Card className="mt-6">
           <CardHeader><CardTitle className="flex items-center gap-2"><UsersIcon className="h-5 w-5" /> Recommendation Rewards</CardTitle><CardDescription>Configure extra discounts for users who refer friends quickly.</CardDescription></CardHeader>
           <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-6">

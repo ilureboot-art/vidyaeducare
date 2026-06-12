@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
@@ -32,6 +33,7 @@ import { Html5Qrcode } from "html5-qrcode";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, LineChart, Line, XAxis, YAxis, CartesianGrid, AreaChart, Area } from "recharts";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { type StoreConfig } from "@/lib/store-config";
 
 const getStatusBadgeVariant = (status: string) => {
     switch (status.toLowerCase()) {
@@ -89,6 +91,7 @@ function WalletPageContent() {
   const [walletInfo, setWalletInfo] = useState<WalletInfo | null>(null);
   const [transactions, setTransactions] = useState<Transaction[] | null>(null);
   const [adminPaymentMethods, setAdminPaymentMethods] = useState<AdminPaymentMethods | null>(null);
+  const [storeConfig, setStoreConfig] = useState<StoreConfig | null>(null);
   const [activeView, setActiveView] = useState<WalletView>('main');
   const [successAmount, setSuccessAmount] = useState<number>(0);
 
@@ -96,6 +99,7 @@ function WalletPageContent() {
   
   // Add Funds Form State
   const [receiptImage, setReceiptImage] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Scanner States
@@ -140,6 +144,12 @@ function WalletPageContent() {
             setWalletInfo({ balance: 0, coins: 0, referralCode: `REF${user.uid.slice(0,6).toUpperCase()}` });
         });
 
+        // Fetch Store Config for Auto-Approval flag
+        const storeRef = doc(db, "configs", "store");
+        const unsubStore = onSnapshot(storeRef, (docSnap) => {
+            if (docSnap.exists()) setStoreConfig(docSnap.data() as StoreConfig);
+        });
+
         // Fetch Recent Transactions
         const txsCol = collection(db, "transactions");
         const q = query(txsCol, where("user", "==", user.uid), orderBy("date", "desc"), limit(50));
@@ -147,7 +157,7 @@ function WalletPageContent() {
             const transactionList: Transaction[] = querySnapshot.docs.map(d => {
                 const data = d.data();
                 const date = data.date instanceof Timestamp ? data.date.toDate().toISOString() : data.date;
-                return { id: doc.id, ...data, date } as Transaction;
+                return { id: d.id, ...data, date } as Transaction;
             });
             setTransactions(transactionList);
         }, async (error) => {
@@ -164,6 +174,7 @@ function WalletPageContent() {
         return () => {
             unsubPaymentMethods();
             unsubWallet();
+            unsubStore();
             unsubTransactions();
             if (scannerRef.current) {
                 scannerRef.current.stop().catch(() => {});
@@ -198,7 +209,6 @@ function WalletPageContent() {
         end: now
     });
 
-    // Calculate balance at the start of the window
     const completedAfterWindowStart = transactions.filter(t => 
         t.status === 'Completed' && new Date(t.date) >= thirtyDaysAgo
     );
@@ -248,7 +258,8 @@ function WalletPageContent() {
 
   const handleAddFunds = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!user || !db) return;
+    if (!user || !db || isSubmitting) return;
+    
     const form = event.currentTarget;
     const amountInput = form.elements.namedItem('amount-add') as HTMLInputElement;
     const txnIdInput = form.elements.namedItem('txnId') as HTMLInputElement;
@@ -258,39 +269,75 @@ function WalletPageContent() {
     
     if (!amount || !txnId) return;
 
+    setIsSubmitting(true);
+
+    const isAutoApprove = storeConfig?.autoApproveDeposits || false;
+
     const txData = {
         type: 'deposit',
         description: 'Fund Deposit Request',
         amount: amount,
         date: serverTimestamp(),
-        status: 'Pending',
+        status: isAutoApprove ? 'Completed' : 'Pending',
         referenceId: txnId,
         user: user.uid,
         receiptUrl: receiptImage || null,
     };
 
-    const txsCol = collection(db, "transactions");
-    addDoc(txsCol, txData)
-        .then(() => {
-            setSuccessAmount(amount);
-            setActiveView('success');
-            setReceiptImage(null);
-            form.reset();
-            setTimeout(() => setActiveView('main'), 4000);
-        })
-        .catch(async (serverError) => {
-            const permissionError = new FirestorePermissionError({
-                path: txsCol.path,
-                operation: 'create',
-                requestResourceData: txData,
-            } satisfies SecurityRuleContext);
-            errorEmitter.emit('permission-error', permissionError);
-        });
+    try {
+        if (isAutoApprove) {
+            // Secure atomic transaction for auto-approval
+            await runTransaction(db, async (transaction) => {
+                const walletRef = doc(db, "wallets", user.uid);
+                const walletDoc = await transaction.get(walletRef);
+                const currentBalance = walletDoc.exists() ? walletDoc.data().balance : 0;
+                
+                // Update balance instantly
+                transaction.update(walletRef, { balance: currentBalance + amount });
+                
+                // Create completed transaction record
+                const newTxRef = doc(collection(db, "transactions"));
+                transaction.set(newTxRef, txData);
+
+                // Create success notification
+                const notificationRef = doc(collection(db, "notifications"));
+                transaction.set(notificationRef, {
+                    userId: user.uid,
+                    type: 'deposit_received',
+                    message: `₹${amount.toFixed(2)} has been instantly credited to your wallet via auto-approval.`,
+                    status: 'unread',
+                    timestamp: serverTimestamp(),
+                });
+            });
+        } else {
+            // Normal path: create pending request
+            const txsCol = collection(db, "transactions");
+            await addDoc(txsCol, txData);
+        }
+
+        setSuccessAmount(amount);
+        setActiveView('success');
+        setReceiptImage(null);
+        form.reset();
+        setTimeout(() => {
+            setActiveView('main');
+            setIsSubmitting(false);
+        }, 4000);
+
+    } catch (serverError: any) {
+        setIsSubmitting(false);
+        const permissionError = new FirestorePermissionError({
+            path: 'wallet-deposit-path',
+            operation: 'write',
+            requestResourceData: txData,
+        } satisfies SecurityRuleContext);
+        errorEmitter.emit('permission-error', permissionError);
+    }
   }
   
   const handleWithdraw = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!walletInfo || !user || !db) return;
+    if (!walletInfo || !user || !db || isSubmitting) return;
     const form = event.currentTarget;
     const amountInput = form.elements.namedItem('amount-withdraw') as HTMLInputElement;
     const upiIdInput = form.elements.namedItem('upiId') as HTMLInputElement;
@@ -302,6 +349,8 @@ function WalletPageContent() {
         toast({ variant: 'destructive', title: "Invalid Request", description: "Min ₹200 required." });
         return;
     }
+
+    setIsSubmitting(true);
     
     runTransaction(db, async (transaction) => {
         const walletRef = doc(db, "wallets", user.uid);
@@ -315,8 +364,12 @@ function WalletPageContent() {
         setSuccessAmount(amount);
         setActiveView('success');
         form.reset();
-        setTimeout(() => setActiveView('main'), 4000);
+        setTimeout(() => {
+            setActiveView('main');
+            setIsSubmitting(false);
+        }, 4000);
     }).catch(async (serverError) => {
+        setIsSubmitting(false);
         if (serverError.code === 'permission-denied') {
             const permissionError = new FirestorePermissionError({
                 path: 'multi-path-transaction',
@@ -429,7 +482,6 @@ function WalletPageContent() {
                 </div>
               </div>
 
-              {/* QUICK ACTIONS HUB */}
               <div className="space-y-3">
                   <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest text-center">Quick Academic Actions</p>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -456,7 +508,6 @@ function WalletPageContent() {
                   </div>
               </div>
 
-              {/* ENGAGEMENT ACTIONS HUB */}
               <div className="space-y-3">
                   <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest text-center">Increase Your Earnings</p>
                   <div className="grid grid-cols-2 gap-3">
@@ -481,7 +532,6 @@ function WalletPageContent() {
                   </div>
               </div>
 
-              {/* ANALYTICS SECTION */}
               <div className="grid grid-cols-1 gap-4">
                   {pieData.length > 0 && (
                     <Card className="border-none bg-muted/20 shadow-inner rounded-3xl">
@@ -664,6 +714,15 @@ function WalletPageContent() {
                   </Button>
               </CardHeader>
               <CardContent className="space-y-6 pt-6">
+                
+                {storeConfig?.autoApproveDeposits && (
+                    <Alert className="bg-primary/5 border-primary/20">
+                        <Zap className="h-4 w-4 text-primary fill-primary" />
+                        <AlertTitle className="text-primary font-black uppercase text-[10px]">Instant Crediting Active</AlertTitle>
+                        <AlertDescription className="text-[10px]">Your balance will be updated immediately upon submission of the Transaction ID.</AlertDescription>
+                    </Alert>
+                )}
+
                 <div className="flex flex-col gap-3">
                     <Button 
                         variant="secondary" 
@@ -749,11 +808,11 @@ function WalletPageContent() {
                 <form onSubmit={handleAddFunds} className="space-y-4 border-t pt-8">
                     <div className="space-y-2">
                         <Label htmlFor="amount-add" className="font-black uppercase text-[10px] text-muted-foreground">Amount Paid (INR)</Label>
-                        <Input id="amount-add" name="amount-add" type="number" required placeholder="e.g., 3000" className="h-14 text-lg font-bold rounded-2xl" />
+                        <Input id="amount-add" name="amount-add" type="number" required placeholder="e.g., 3000" className="h-14 text-lg font-bold rounded-2xl" disabled={isSubmitting}/>
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="txnId" className="font-black uppercase text-[10px] text-muted-foreground">Transaction ID / UTR</Label>
-                        <Input id="txnId" name="txnId" required placeholder="12-digit number from receipt" className="h-14 font-mono text-center tracking-widest text-lg rounded-2xl" />
+                        <Input id="txnId" name="txnId" required placeholder="12-digit number from receipt" className="h-14 font-mono text-center tracking-widest text-lg rounded-2xl" disabled={isSubmitting}/>
                     </div>
                     
                     <div className="space-y-4">
@@ -771,6 +830,7 @@ function WalletPageContent() {
                                     type="button" 
                                     variant="outline" 
                                     className="h-20 flex-col gap-2 rounded-2xl border-dashed border-2 hover:bg-primary/5"
+                                    disabled={isSubmitting}
                                     onClick={() => {
                                         if (fileInputRef.current) {
                                             fileInputRef.current.removeAttribute('capture');
@@ -785,6 +845,7 @@ function WalletPageContent() {
                                     type="button" 
                                     variant="outline" 
                                     className="h-20 flex-col gap-2 rounded-2xl border-dashed border-2 hover:bg-accent/5"
+                                    disabled={isSubmitting}
                                     onClick={() => {
                                         if (fileInputRef.current) {
                                             fileInputRef.current.setAttribute('capture', 'environment');
@@ -806,6 +867,7 @@ function WalletPageContent() {
                                         size="icon" 
                                         className="absolute top-2 right-2 rounded-full h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
                                         onClick={() => setReceiptImage(null)}
+                                        disabled={isSubmitting}
                                     >
                                         <X size={16} />
                                     </Button>
@@ -815,13 +877,15 @@ function WalletPageContent() {
                     </div>
 
                     <div className="pt-4 grid gap-3">
-                        <Button type="submit" className="w-full py-8 text-xl font-black shadow-2xl rounded-2xl">SUBMIT DEPOSIT REQUEST</Button>
-                        <Button type="button" variant="ghost" className="w-full font-bold uppercase text-[10px] tracking-widest" onClick={() => { setActiveView('main'); setReceiptImage(null); }}>
+                        <Button type="submit" className="w-full py-8 text-xl font-black shadow-2xl rounded-2xl" disabled={isSubmitting}>
+                            {isSubmitting ? <Loader2 className="animate-spin" /> : 'SUBMIT DEPOSIT REQUEST'}
+                        </Button>
+                        <Button type="button" variant="ghost" className="w-full font-bold uppercase text-[10px] tracking-widest" onClick={() => { setActiveView('main'); setReceiptImage(null); }} disabled={isSubmitting}>
                            <ArrowLeft className="mr-2 h-3 w-3" /> Cancel & Return
                         </Button>
                     </div>
                 </form>
-            </CardContent>
+              </CardContent>
           </Card>
       ) : activeView === 'withdraw' ? (
           <Card className="shadow-2xl border-accent/20 overflow-hidden animate-in fade-in slide-in-from-right-4 duration-500">
@@ -838,16 +902,18 @@ function WalletPageContent() {
                 <form onSubmit={handleWithdraw} className="space-y-6">
                     <div className="space-y-2">
                         <Label htmlFor="amount-withdraw" className="font-black uppercase text-[10px] text-muted-foreground">Withdrawal Amount (INR)</Label>
-                        <Input id="amount-withdraw" name="amount-withdraw" type="number" required min="200" placeholder="Min. 200" className="h-14 text-2xl font-black rounded-2xl text-accent" />
+                        <Input id="amount-withdraw" name="amount-withdraw" type="number" required min="200" placeholder="Min. 200" className="h-14 text-2xl font-black rounded-2xl text-accent" disabled={isSubmitting}/>
                         <p className="text-[10px] text-muted-foreground italic">Available: ₹{formatCurrency(walletInfo.balance)}</p>
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="upiId" className="font-black uppercase text-[10px] text-muted-foreground">Receiving UPI ID</Label>
-                        <Input id="upiId" name="upiId" required placeholder="yourname@bank" className="h-14 font-bold rounded-2xl" />
+                        <Input id="upiId" name="upiId" required placeholder="yourname@bank" className="h-14 font-bold rounded-2xl" disabled={isSubmitting}/>
                     </div>
                     <div className="pt-4 grid gap-3">
-                        <Button type="submit" className="w-full py-8 text-xl font-black shadow-2xl rounded-2xl bg-accent hover:bg-accent/90">REQUEST PAYOUT</Button>
-                        <Button type="button" variant="ghost" className="w-full font-bold uppercase text-[10px] tracking-widest" onClick={() => setActiveView('main')}>
+                        <Button type="submit" className="w-full py-8 text-xl font-black shadow-2xl rounded-2xl bg-accent hover:bg-accent/90" disabled={isSubmitting}>
+                            {isSubmitting ? <Loader2 className="animate-spin"/> : 'REQUEST PAYOUT'}
+                        </Button>
+                        <Button type="button" variant="ghost" className="w-full font-bold uppercase text-[10px] tracking-widest" onClick={() => { setActiveView('main'); }} disabled={isSubmitting}>
                            <ArrowLeft className="mr-2 h-3 w-3" /> Cancel & Return
                         </Button>
                     </div>
@@ -862,13 +928,13 @@ function WalletPageContent() {
                       <CheckCircle className="w-24 h-24 text-green-500 relative z-10 animate-in zoom-in spin-in-12 duration-700" />
                   </div>
                   <div className="space-y-2">
-                      <h2 className="text-3xl font-black tracking-tighter uppercase italic text-primary">Request Submitted!</h2>
-                      <p className="text-muted-foreground font-medium">Your request for ₹{formatCurrency(successAmount)} has been queued for academic administration review.</p>
+                      <h2 className="text-3xl font-black tracking-tighter uppercase italic text-primary">Success!</h2>
+                      <p className="text-muted-foreground font-medium">Your request for ₹{formatCurrency(successAmount)} has been {storeConfig?.autoApproveDeposits && activeView === 'add' ? 'instantly approved' : 'queued for review'}.</p>
                   </div>
                   <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 px-6 py-1.5 font-black uppercase tracking-widest">
-                      PENDING APPROVAL
+                      {storeConfig?.autoApproveDeposits && activeView === 'add' ? 'COMPLETED' : 'PENDING APPROVAL'}
                   </Badge>
-                  <Button variant="ghost" className="text-[10px] font-black uppercase tracking-widest opacity-50" onClick={() => setActiveView('main')}>
+                  <Button variant="ghost" className="text-[10px] font-black uppercase tracking-widest opacity-50" onClick={() => { setActiveView('main'); setIsSubmitting(false); }}>
                       Returning to Wallet...
                   </Button>
               </CardContent>

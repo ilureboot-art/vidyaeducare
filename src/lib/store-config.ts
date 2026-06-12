@@ -58,6 +58,7 @@ export type StoreConfig = {
     gameSettings: GameSettings;
     referboltSettings: ReferboltSettings;
     recommendationSettings: RecommendationSettings;
+    autoApproveDeposits: boolean; // New setting for auto-approval
 };
 
 export const defaultStoreConfig: StoreConfig = {
@@ -117,5 +118,7 @@ export const defaultStoreConfig: StoreConfig = {
         additionalDiscount: 5,
         windowDays: 30,
         requiredCount: 2
-    }
+    },
+
+    autoApproveDeposits: false // Defaults to manual verification for security
 };

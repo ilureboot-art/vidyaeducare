@@ -656,9 +656,29 @@ function WalletPageContent() {
                         )}
                         <div className="space-y-2 text-sm bg-muted/20 p-4 rounded-2xl border">
                             <div className="flex justify-between items-center"><span className="font-bold text-muted-foreground uppercase text-[10px]">Merchant UPI ID</span><CopyButton valueToCopy={adminPaymentMethods.upiId} /></div>
+                            {adminPaymentMethods.gpayUpiId && (
+                                <div className="flex justify-between items-center pt-2 border-t border-dashed border-primary/10">
+                                    <span className="font-bold text-muted-foreground uppercase text-[10px]">GPay UPI ID</span>
+                                    <CopyButton valueToCopy={adminPaymentMethods.gpayUpiId} />
+                                </div>
+                            )}
+                            {adminPaymentMethods.phonepeUpiId && (
+                                <div className="flex justify-between items-center pt-2 border-t border-dashed border-primary/10">
+                                    <span className="font-bold text-muted-foreground uppercase text-[10px]">PhonePe UPI ID</span>
+                                    <CopyButton valueToCopy={adminPaymentMethods.phonepeUpiId} />
+                                </div>
+                            )}
                         </div>
                     </TabsContent>
                     <TabsContent value="bank" className="pt-6 space-y-3">
+                         <div className="flex justify-between items-center p-4 bg-muted/20 rounded-2xl border">
+                             <span className="font-bold text-muted-foreground uppercase text-[10px]">Account Holder</span>
+                             <CopyButton valueToCopy={adminPaymentMethods.accountHolderName} />
+                         </div>
+                         <div className="flex justify-between items-center p-4 bg-muted/20 rounded-2xl border">
+                             <span className="font-bold text-muted-foreground uppercase text-[10px]">Bank Name</span>
+                             <CopyButton valueToCopy={adminPaymentMethods.bankName} />
+                         </div>
                          <div className="flex justify-between items-center p-4 bg-muted/20 rounded-2xl border">
                              <span className="font-bold text-muted-foreground uppercase text-[10px]">Account Number</span>
                              <CopyButton valueToCopy={adminPaymentMethods.accountNumber} />

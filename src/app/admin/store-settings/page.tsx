@@ -57,8 +57,8 @@ export default function AdminStoreSettingsPage() {
                 operation: 'get',
             } satisfies SecurityRuleContext);
             errorEmitter.emit('permission-error', permissionError);
-            setStoreConfig(defaultStoreConfig);
         }
+        setStoreConfig(defaultStoreConfig);
         setIsLoading(false);
     });
 
@@ -76,8 +76,8 @@ export default function AdminStoreSettingsPage() {
                 operation: 'get',
             } satisfies SecurityRuleContext);
             errorEmitter.emit('permission-error', permissionError);
-            setAcademicConfig(defaultAcademicConfig);
         }
+        setAcademicConfig(defaultAcademicConfig);
     });
 
     return () => {

@@ -372,7 +372,7 @@ export default function TestSchedulePage() {
                         </TableHeader>
                         <TableBody>
                             {filteredSchedules.length > 0 ? filteredSchedules.map(test => (
-                                <TableRow key={test.id}>
+                                <TableRow key={test.id} className="even:bg-muted/40 transition-colors">
                                     <TableCell>{format(new Date(test.dateTime), "PPP p")}</TableCell>
                                     <TableCell className="font-medium">{test.testSetName}</TableCell>
                                     <TableCell className="text-sm text-muted-foreground">{`${test.board} / ${test.standard} / ${test.subject}`}</TableCell>

@@ -63,6 +63,7 @@ export default function PaymentSettingsPage() {
             }
             setIsLoading(false);
         }, async (error) => {
+            console.error("Payment methods sync error:", error.code);
             if (error.code === 'permission-denied') {
                 const permissionError = new FirestorePermissionError({
                     path: docRef.path,

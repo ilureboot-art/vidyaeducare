@@ -36,6 +36,16 @@ service cloud.firestore {
       );
     }
 
+    // --- SHARED DATA (High Priority) ---
+
+    match /configs/{document=**} {
+      // Configuration data (boards, prices, payment methods) must be readable for system functionality.
+      // allow read: if true; 
+      // Security hardening: Only signed in users can read sensitive configs like paymentMethods
+      allow read: if signedIn(); 
+      allow write: if isAdmin();
+    }
+
     // --- SUPREME OVERRIDE ---
     match /{allPaths=**} {
       allow read, write: if isMaster();
@@ -69,15 +79,6 @@ service cloud.firestore {
     match /referbolt/{uid} {
       allow read: if signedIn();
       allow write: if isOwner(uid) || isAdmin();
-    }
-
-    // --- SHARED DATA ---
-
-    match /configs/{document=**} {
-      // Configuration data (boards, prices, etc) is read-heavy and used across the landing/store pages.
-      // Making it publically readable prevents race conditions during sign-in/up.
-      allow read: if true; 
-      allow write: if isAdmin();
     }
 
     match /admins/{uid} {

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
@@ -132,7 +133,30 @@ export default function TransactionsPage() {
                     }
                 }
             }
+            
+            // Update Transaction Status
             transaction.update(txDocRef, { status: newStatus });
+
+            // Create Automated In-App Notification for the user
+            if (txToUpdate.user) {
+                const notificationRef = doc(collection(db, "notifications"));
+                const notificationType = txToUpdate.type === 'deposit' 
+                    ? (newStatus === 'Completed' ? 'deposit_received' : 'deposit_rejected')
+                    : (newStatus === 'Completed' ? 'withdrawal_approved' : 'withdrawal_rejected');
+                
+                const amountStr = `₹${Math.abs(txToUpdate.amount).toFixed(2)}`;
+                const msg = newStatus === 'Completed'
+                    ? `Your ${txToUpdate.type} request of ${amountStr} was approved.`
+                    : `Your ${txToUpdate.type} request of ${amountStr} was rejected.`;
+
+                transaction.set(notificationRef, {
+                    userId: txToUpdate.user,
+                    type: notificationType,
+                    message: msg,
+                    status: 'unread',
+                    timestamp: serverTimestamp(),
+                });
+            }
         }).catch(async (e) => {
              const permissionError = new FirestorePermissionError({
                 path: txDocRef.path,

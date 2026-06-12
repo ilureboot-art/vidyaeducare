@@ -46,13 +46,13 @@ export function TransactionStatusObserver() {
                         if (status === 'Completed') {
                             toast({
                                 title: "Transaction Approved!",
-                                description: `Your request "${data.description}" of ₹${Math.abs(data.amount)} has been successfully processed.`,
+                                description: `Your request "${data.description}" of ₹${Math.abs(data.amount).toFixed(2)} has been successfully processed.`,
                             });
                         } else if (status === 'Rejected') {
                             toast({
                                 variant: "destructive",
                                 title: "Transaction Rejected",
-                                description: `Your request "${data.description}" for ₹${Math.abs(data.amount)} was not approved by the administrator.`,
+                                description: `Your request "${data.description}" for ₹${Math.abs(data.amount).toFixed(2)} was not approved by the administrator.`,
                             });
                         }
                     }

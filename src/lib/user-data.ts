@@ -1,4 +1,3 @@
-
 'use client';
 
 export type Transaction = {
@@ -11,6 +10,7 @@ export type Transaction = {
   paymentMethod?: string;
   referenceId?: string;
   user?: string;
+  receiptUrl?: string; // Data URI or URL for payment receipt image
 };
 
 export type AdminPaymentMethods = {

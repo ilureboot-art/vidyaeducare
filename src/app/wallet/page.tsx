@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
@@ -13,7 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { PlusCircle, MinusCircle, History, ArrowUpRight, ArrowDownLeft, Loader2, AlertCircle, Scan, X, PieChart as PieChartIcon, AlertTriangle, FileText, CheckCircle2, Clock, XCircle, Copy, ArrowLeft, ShieldCheck, Zap, CheckCircle, TrendingUp, Users, Store, LineChart as LineChartIcon } from "lucide-react";
+import { PlusCircle, MinusCircle, History, ArrowUpRight, ArrowDownLeft, Loader2, AlertCircle, Scan, X, PieChart as PieChartIcon, AlertTriangle, FileText, CheckCircle2, Clock, XCircle, Copy, ArrowLeft, ShieldCheck, Zap, CheckCircle, TrendingUp, Users, Store, LineChart as LineChartIcon, Camera, Image as ImageIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { type Transaction, type AdminPaymentMethods } from "@/lib/user-data";
@@ -94,6 +93,10 @@ function WalletPageContent() {
   const [successAmount, setSuccessAmount] = useState<number>(0);
 
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
+  
+  // Add Funds Form State
+  const [receiptImage, setReceiptImage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Scanner States
   const [isScannerOpen, setIsScannerOpen] = useState(false);
@@ -144,7 +147,7 @@ function WalletPageContent() {
             const transactionList: Transaction[] = querySnapshot.docs.map(d => {
                 const data = d.data();
                 const date = data.date instanceof Timestamp ? data.date.toDate().toISOString() : data.date;
-                return { id: d.id, ...data, date } as Transaction;
+                return { id: doc.id, ...data, date } as Transaction;
             });
             setTransactions(transactionList);
         }, async (error) => {
@@ -228,6 +231,21 @@ function WalletPageContent() {
     });
   }, [transactions, walletInfo]);
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        toast({ variant: 'destructive', title: 'Invalid File', description: 'Please upload an image of your payment receipt.' });
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setReceiptImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleAddFunds = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!user || !db) return;
@@ -248,6 +266,7 @@ function WalletPageContent() {
         status: 'Pending',
         referenceId: txnId,
         user: user.uid,
+        receiptUrl: receiptImage || null,
     };
 
     const txsCol = collection(db, "transactions");
@@ -255,6 +274,7 @@ function WalletPageContent() {
         .then(() => {
             setSuccessAmount(amount);
             setActiveView('success');
+            setReceiptImage(null);
             form.reset();
             setTimeout(() => setActiveView('main'), 4000);
         })
@@ -735,9 +755,68 @@ function WalletPageContent() {
                         <Label htmlFor="txnId" className="font-black uppercase text-[10px] text-muted-foreground">Transaction ID / UTR</Label>
                         <Input id="txnId" name="txnId" required placeholder="12-digit number from receipt" className="h-14 font-mono text-center tracking-widest text-lg rounded-2xl" />
                     </div>
+                    
+                    <div className="space-y-4">
+                        <Label className="font-black uppercase text-[10px] text-muted-foreground">Payment Receipt Image</Label>
+                        <div className="flex flex-col gap-3">
+                            <input 
+                                type="file" 
+                                ref={fileInputRef} 
+                                className="hidden" 
+                                accept="image/*" 
+                                onChange={handleFileChange}
+                            />
+                            <div className="grid grid-cols-2 gap-3">
+                                <Button 
+                                    type="button" 
+                                    variant="outline" 
+                                    className="h-20 flex-col gap-2 rounded-2xl border-dashed border-2 hover:bg-primary/5"
+                                    onClick={() => {
+                                        if (fileInputRef.current) {
+                                            fileInputRef.current.removeAttribute('capture');
+                                            fileInputRef.current.click();
+                                        }
+                                    }}
+                                >
+                                    <ImageIcon className="w-5 h-5 text-primary" />
+                                    <span className="text-[9px] font-black uppercase">Upload Gallery</span>
+                                </Button>
+                                <Button 
+                                    type="button" 
+                                    variant="outline" 
+                                    className="h-20 flex-col gap-2 rounded-2xl border-dashed border-2 hover:bg-accent/5"
+                                    onClick={() => {
+                                        if (fileInputRef.current) {
+                                            fileInputRef.current.setAttribute('capture', 'environment');
+                                            fileInputRef.current.click();
+                                        }
+                                    }}
+                                >
+                                    <Camera className="w-5 h-5 text-accent" />
+                                    <span className="text-[9px] font-black uppercase">Take Photo</span>
+                                </Button>
+                            </div>
+                            
+                            {receiptImage && (
+                                <div className="relative aspect-video w-full rounded-2xl overflow-hidden border-2 border-primary/20 shadow-lg group">
+                                    <Image src={receiptImage} alt="Receipt Preview" fill className="object-contain bg-muted/20" />
+                                    <Button 
+                                        type="button" 
+                                        variant="destructive" 
+                                        size="icon" 
+                                        className="absolute top-2 right-2 rounded-full h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        onClick={() => setReceiptImage(null)}
+                                    >
+                                        <X size={16} />
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
                     <div className="pt-4 grid gap-3">
                         <Button type="submit" className="w-full py-8 text-xl font-black shadow-2xl rounded-2xl">SUBMIT DEPOSIT REQUEST</Button>
-                        <Button type="button" variant="ghost" className="w-full font-bold uppercase text-[10px] tracking-widest" onClick={() => setActiveView('main')}>
+                        <Button type="button" variant="ghost" className="w-full font-bold uppercase text-[10px] tracking-widest" onClick={() => { setActiveView('main'); setReceiptImage(null); }}>
                            <ArrowLeft className="mr-2 h-3 w-3" /> Cancel & Return
                         </Button>
                     </div>
@@ -869,6 +948,15 @@ function WalletPageContent() {
                                   </div>
                               )}
                           </div>
+                          
+                          {selectedTx.receiptUrl && (
+                              <div className="pt-6 border-t">
+                                  <p className="text-[10px] font-black uppercase text-muted-foreground mb-2">Payment Receipt</p>
+                                  <div className="relative aspect-video w-full rounded-xl overflow-hidden border bg-muted/20">
+                                      <Image src={selectedTx.receiptUrl} alt="Receipt" fill className="object-contain" />
+                                  </div>
+                              </div>
+                          )}
 
                           <div className="pt-6 border-t">
                                <p className="text-[10px] font-black uppercase text-muted-foreground mb-2">Transaction ID</p>

@@ -61,6 +61,7 @@ export default function ChatManagementPage() {
                 operation: 'list',
             } satisfies SecurityRuleContext);
             errorEmitter.emit('permission-error', permissionError);
+            setChats([]); // stop spinner on error
         });
 
         return () => unsubscribe();
@@ -150,7 +151,7 @@ export default function ChatManagementPage() {
         setReply("");
     };
     
-  if (!chats) {
+  if (chats === null) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />

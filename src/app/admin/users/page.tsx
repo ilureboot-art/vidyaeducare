@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
@@ -80,6 +81,7 @@ export default function UserManagementPage() {
         setUsers(userList);
     } catch (error) {
         console.error("Fetch Users Error:", error);
+        setUsers([]); // Ensure the spinner stops on error
     } finally {
         setIsRefreshing(false);
     }
@@ -162,7 +164,7 @@ export default function UserManagementPage() {
     });
   }, [users, searchTerm, statusFilter]);
 
-  if (!users) {
+  if (users === null) {
     return (
       <div className="flex flex-col items-center justify-center h-96 space-y-4">
         <Loader2 className="animate-spin text-primary" size={40} />

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -114,6 +115,10 @@ export default function ReferBoltManagementPage() {
         setReferrals(referralList);
     } catch (error) {
         console.error("ReferBolt Sync Error:", error);
+        // Ensure state is resolved even on error to stop spinner
+        if (!stats) setStats({ totalCycles: 0, totalCommissions: 0, activeReferrers: 0 });
+        if (!cycles) setCycles([]);
+        if (!referrals) setReferrals([]);
     } finally {
         setIsRefreshing(false);
     }
@@ -147,7 +152,7 @@ export default function ReferBoltManagementPage() {
     setSubTypeFilter("all");
   };
 
-  if (!stats || !cycles || !referrals) {
+  if (stats === null || cycles === null || referrals === null) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin text-primary" size={32} />
@@ -260,7 +265,7 @@ export default function ReferBoltManagementPage() {
             </TableHeader>
             <TableBody>
               {filteredCycles.length > 0 ? filteredCycles.map((cycle) => (
-                <TableRow key={cycle.id}>
+                <TableRow key={cycle.id} className="even:bg-muted/40 transition-colors">
                   <TableCell className="font-medium">{cycle.referrer}</TableCell>
                   <TableCell>
                     <Progress value={(cycle.referrals / 3) * 100} className="h-2 w-full" />
@@ -309,7 +314,7 @@ export default function ReferBoltManagementPage() {
             </TableHeader>
             <TableBody>
                 {filteredReferrals.length > 0 ? filteredReferrals.slice(0, 10).map((ref) => (
-                     <TableRow key={ref.id}>
+                     <TableRow key={ref.id} className="even:bg-muted/40 transition-colors">
                         <TableCell className="font-medium">{ref.referrer}</TableCell>
                         <TableCell>{ref.newUser}</TableCell>
                         <TableCell>{new Date(ref.date).toLocaleDateString()}</TableCell>

@@ -41,7 +41,7 @@ export default function AdminStoreSettingsPage() {
 
   useEffect(() => {
     if (!db || !user || !isResolved) {
-        if (isResolved && (!db || !user)) {
+        if (isResolved) {
             setIsLoadingStore(false);
             setIsLoadingAcademic(false);
         }

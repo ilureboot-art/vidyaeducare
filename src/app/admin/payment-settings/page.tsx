@@ -51,8 +51,8 @@ export default function PaymentSettingsPage() {
     
     useEffect(() => {
         if (!db || !user || !isResolved) {
-            // Stop spinning if auth state is resolved but user/db is missing (unlikely in admin protected route)
-            if (isResolved && (!db || !user)) setIsLoading(false);
+            // Ensure we stop spinning if auth resolution is complete but services are missing
+            if (isResolved) setIsLoading(false);
             return;
         }
 

@@ -1,38 +1,31 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { BarChart, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Line, Bar, ResponsiveContainer } from "recharts";
-import { Users, IndianRupee, Loader2, AlertCircle, RefreshCcw, BookOpen } from "lucide-react";
+import { BarChart, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Line, Bar, ResponsiveContainer, AreaChart, Area, Legend } from "recharts";
+import { Users, IndianRupee, Loader2, AlertCircle, RefreshCcw, BookOpen, TrendingUp, Calendar } from "lucide-react";
 import { useDb, useAuth } from "@/firebase";
-import { collection, getDocs, query, where, Timestamp, getCountFromServer } from "firebase/firestore";
+import { collection, getDocs, query, where, Timestamp, getCountFromServer, orderBy } from "firebase/firestore";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
+import { format, subDays, eachDayOfInterval, startOfDay } from "date-fns";
 
-interface ChartData {
-    name: string;
-    users?: number;
+interface ChartPoint {
+    date: string;
+    count?: number;
     revenue?: number;
 }
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
+        style: 'currency',
+        currency: 'INR',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
     }).format(amount);
-};
-
-const getLast7Days = () => {
-    const dates = [];
-    for (let i = 6; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        dates.push(d);
-    }
-    return dates;
 };
 
 const AUTO_REFRESH_INTERVAL = 300000; // 5 minutes
@@ -40,11 +33,16 @@ const AUTO_REFRESH_INTERVAL = 300000; // 5 minutes
 export default function AnalyticsPage() {
   const db = useDb();
   const { user } = useAuth();
+  
+  // Overall Stats
   const [activeUsers, setActiveUsers] = useState<number | null>(null);
   const [todaysRevenue, setTodaysRevenue] = useState<number | null>(null);
   const [testVolume, setTestVolume] = useState<number | null>(null);
-  const [userActivityData, setUserActivityData] = useState<ChartData[] | null>(null);
-  const [revenueData, setRevenueData] = useState<ChartData[] | null>(null);
+  
+  // Raw Data for processing
+  const [recentUsers, setRecentUsers] = useState<any[]>([]);
+  const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
+  
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,63 +54,62 @@ export default function AnalyticsPage() {
       
       setError(null);
       try {
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
+          const thirtyDaysAgo = subDays(new Date(), 30);
+          const thirtyDaysTimestamp = Timestamp.fromDate(thirtyDaysAgo);
+          const today = startOfDay(new Date());
           const todayTimestamp = Timestamp.fromDate(today);
 
           const transactionsCol = collection(db, 'transactions');
           const usersCol = collection(db, 'users');
           const resultsCol = collection(db, 'testResults');
 
-          const revenueQuery = query(
+          // Queries for charts (Last 30 days)
+          const recentUsersQuery = query(usersCol, where('joinDate', '>=', thirtyDaysAgo.toISOString()));
+          const recentTxQuery = query(transactionsCol, where('date', '>=', thirtyDaysTimestamp), where('status', '==', 'Completed'));
+          
+          // Query for today's specific revenue
+          const todayRevenueQuery = query(
             transactionsCol, 
             where('date', '>=', todayTimestamp), 
             where('status', '==', 'Completed')
           );
 
           const results = await Promise.allSettled([
-              getDocs(revenueQuery),
+              getDocs(todayRevenueQuery),
               getCountFromServer(usersCol),
-              getCountFromServer(resultsCol)
+              getCountFromServer(resultsCol),
+              getDocs(recentUsersQuery),
+              getDocs(recentTxQuery)
           ]);
 
+          // Handle Permission Errors
           results.forEach((res, index) => {
               if (res.status === 'rejected' && (res.reason?.code === 'permission-denied' || res.reason?.message?.includes('permissions'))) {
-                  const paths = ['transactions', 'users', 'testResults'];
+                  const paths = ['transactions', 'users', 'testResults', 'users', 'transactions'];
                   errorEmitter.emit('permission-error', new FirestorePermissionError({ path: paths[index], operation: 'list' }));
               }
           });
 
-          const revenueRes = results[0];
-          const usersRes = results[1];
-          const resultsCountRes = results[2];
-
-          let totalRevenue = 0;
-          if (revenueRes.status === 'fulfilled') {
-              revenueRes.value.forEach(doc => {
+          // Process Total Stats
+          if (results[0].status === 'fulfilled') {
+              let todayRev = 0;
+              results[0].value.forEach(doc => {
                   const data = doc.data();
-                  if (data.type === 'deposit' || data.amount > 0) {
-                      totalRevenue += Math.abs(data.amount);
-                  }
+                  if (data.amount > 0) todayRev += data.amount;
               });
+              setTodaysRevenue(todayRev);
           }
-          
-          setTodaysRevenue(totalRevenue);
-          const totalUsersCount = usersRes.status === 'fulfilled' ? usersRes.value.data().count : 0;
-          setActiveUsers(totalUsersCount);
-          const totalTests = resultsCountRes.status === 'fulfilled' ? resultsCountRes.value.data().count : 0;
-          setTestVolume(totalTests);
 
-          const activityDates = getLast7Days();
-          setUserActivityData(activityDates.map(date => ({
-              name: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric'}),
-              users: Math.floor(Math.random() * 5) + (totalUsersCount ? Math.floor(totalUsersCount / 20) : 2)
-          })));
+          if (results[1].status === 'fulfilled') setActiveUsers(results[1].value.data().count);
+          if (results[2].status === 'fulfilled') setTestVolume(results[2].value.data().count);
 
-          setRevenueData([
-            { name: 'Mon', revenue: 4000 }, { name: 'Tue', revenue: 3000 }, { name: 'Wed', revenue: 5000 },
-            { name: 'Thu', revenue: 4500 }, { name: 'Fri', revenue: 6000 }, { name: 'Sat', revenue: 5500 }, { name: 'Sun', revenue: 7000 },
-          ]);
+          // Store Raw Data for useMemo charts
+          if (results[3].status === 'fulfilled') {
+              setRecentUsers(results[3].value.docs.map(d => d.data()));
+          }
+          if (results[4].status === 'fulfilled') {
+              setRecentTransactions(results[4].value.docs.map(d => d.data()));
+          }
 
       } catch (err: any) {
           console.error("Dashboard Sync Error:", err);
@@ -131,11 +128,41 @@ export default function AnalyticsPage() {
     }
   }, [db, user, fetchData]);
 
+  // Data bucket processing
+  const timeSeriesData = useMemo(() => {
+      const dates = eachDayOfInterval({
+          start: subDays(new Date(), 29),
+          end: new Date()
+      });
+
+      return dates.map(date => {
+          const dateStrStr = date.toISOString().split('T')[0];
+          const dateLabel = format(date, 'MMM dd');
+
+          // Signups count
+          const signups = recentUsers.filter(u => (u.joinDate || '').startsWith(dateStrStr)).length;
+
+          // Revenue count
+          const dayRevenue = recentTransactions
+            .filter(tx => {
+                const txDate = tx.date instanceof Timestamp ? tx.date.toDate() : new Date(tx.date);
+                return format(txDate, 'yyyy-MM-dd') === dateStrStr && tx.amount > 0;
+            })
+            .reduce((sum, tx) => sum + tx.amount, 0);
+
+          return {
+              name: dateLabel,
+              signups,
+              revenue: dayRevenue
+          };
+      });
+  }, [recentUsers, recentTransactions]);
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] space-y-4">
         <Loader2 className="animate-spin text-primary" size={40} />
-        <p className="text-muted-foreground animate-pulse font-medium">Populating Dashboard...</p>
+        <p className="text-muted-foreground animate-pulse font-medium">Populating 30-Day Intelligence Hub...</p>
       </div>
     );
   }
@@ -144,12 +171,12 @@ export default function AnalyticsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-            <h1 className="text-3xl font-bold tracking-tight text-primary">Admin Overview</h1>
-            <p className="text-muted-foreground text-sm">Real-time business intelligence.</p>
+            <h1 className="text-3xl font-bold tracking-tight text-primary uppercase italic">Admin Analytics</h1>
+            <p className="text-muted-foreground text-sm font-medium">Live growth and financial performance tracking.</p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => fetchData(true)} disabled={refreshing}>
+        <Button variant="outline" size="sm" className="font-bold rounded-xl" onClick={() => fetchData(true)} disabled={refreshing}>
           <RefreshCcw className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-          Refresh Stats
+          RE-SYNC DATA
         </Button>
       </div>
 
@@ -161,71 +188,148 @@ export default function AnalyticsPage() {
           </Alert>
       )}
 
+      {/* High-Level KPIs */}
       <div className="grid gap-6 md:grid-cols-3">
-        <Card className="hover:shadow-md transition-shadow border-primary/10">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+        <Card className="hover:shadow-md transition-shadow border-primary/10 rounded-2xl overflow-hidden">
+          <CardHeader className="pb-2 bg-primary/5">
+            <CardTitle className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
               <Users className="h-4 w-4 text-primary"/> Total Registrations
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{activeUsers !== null ? activeUsers.toLocaleString() : '...'}</p>
+          <CardContent className="pt-4">
+            <p className="text-4xl font-black tracking-tighter">{activeUsers !== null ? activeUsers.toLocaleString() : '...'}</p>
+            <p className="text-[10px] font-bold text-green-600 mt-1 uppercase tracking-tight">System-wide Total</p>
           </CardContent>
         </Card>
-        <Card className="hover:shadow-md transition-shadow border-primary/10">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+        <Card className="hover:shadow-md transition-shadow border-primary/10 rounded-2xl overflow-hidden">
+          <CardHeader className="pb-2 bg-primary/5">
+            <CardTitle className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
               <BookOpen className="h-4 w-4 text-primary"/> Academic Activity
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{testVolume !== null ? testVolume.toLocaleString() : '...'}</p>
+          <CardContent className="pt-4">
+            <p className="text-4xl font-black tracking-tighter">{testVolume !== null ? testVolume.toLocaleString() : '...'}</p>
+            <p className="text-[10px] font-bold text-primary mt-1 uppercase tracking-tight">Tests Completed</p>
           </CardContent>
         </Card>
-        <Card className="hover:shadow-md transition-shadow border-primary/20 bg-primary/[0.02]">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+        <Card className="hover:shadow-md transition-shadow border-primary/20 bg-primary/[0.02] rounded-2xl overflow-hidden">
+          <CardHeader className="pb-2 bg-primary/10">
+            <CardTitle className="text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-2">
               <IndianRupee className="h-4 w-4 text-primary"/> Revenue Today
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold text-primary">₹{todaysRevenue !== null ? formatCurrency(todaysRevenue) : '...'}</p>
+          <CardContent className="pt-4">
+            <p className="text-4xl font-black text-primary tracking-tighter">{todaysRevenue !== null ? formatCurrency(todaysRevenue) : '...'}</p>
+            <p className="text-[10px] font-black text-primary/50 mt-1 uppercase tracking-tight italic">Live Inflow</p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader><CardTitle>Growth Trend</CardTitle></CardHeader>
-          <CardContent>
-            <div className="h-[300px] w-full">
+      {/* 30-Day Detailed Charts */}
+      <div className="grid gap-6 lg:grid-cols-1">
+        <Card className="border-primary/10 rounded-[2rem] shadow-xl overflow-hidden">
+          <CardHeader className="bg-primary/5 pb-4 border-b flex flex-row items-center justify-between">
+            <div>
+                <CardTitle className="text-lg font-black uppercase italic text-primary">Student Growth Trend</CardTitle>
+                <CardDescription className="text-xs font-bold uppercase tracking-widest">New User Signups (Last 30 Days)</CardDescription>
+            </div>
+            <div className="p-3 bg-primary/10 rounded-2xl">
+                <TrendingUp className="text-primary" />
+            </div>
+          </CardHeader>
+          <CardContent className="pt-8">
+            <div className="h-[350px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={userActivityData || []}>
+                <AreaChart data={timeSeriesData}>
+                    <defs>
+                        <linearGradient id="colorSignups" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                        </linearGradient>
+                    </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.1} />
-                    <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
-                    <YAxis fontSize={12} tickLine={false} axisLine={false} />
-                    <Tooltip />
-                    <Line type="monotone" dataKey="users" stroke="hsl(var(--primary))" strokeWidth={3} dot={{ r: 4 }} />
-                </LineChart>
+                    <XAxis 
+                        dataKey="name" 
+                        fontSize={10} 
+                        tickLine={false} 
+                        axisLine={false} 
+                        minTickGap={30}
+                        tick={{ fontWeight: 'bold' }}
+                    />
+                    <YAxis fontSize={10} tickLine={false} axisLine={false} tick={{ fontWeight: 'bold' }} />
+                    <Tooltip 
+                        contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', fontWeight: 'bold' }}
+                    />
+                    <Area 
+                        type="monotone" 
+                        dataKey="signups" 
+                        name="New Signups"
+                        stroke="hsl(var(--primary))" 
+                        strokeWidth={4} 
+                        fillOpacity={1} 
+                        fill="url(#colorSignups)" 
+                        animationDuration={1500}
+                    />
+                </AreaChart>
                 </ResponsiveContainer>
             </div>
           </CardContent>
+          <CardFooter className="bg-muted/30 border-t justify-center py-4">
+              <p className="text-[10px] font-black uppercase text-muted-foreground tracking-[0.2em] flex items-center gap-2">
+                <Calendar size={12}/> Comprehensive 30-Day Intake Log
+              </p>
+          </CardFooter>
         </Card>
-        <Card>
-          <CardHeader><CardTitle>Revenue Forecast</CardTitle></CardHeader>
-          <CardContent>
-            <div className="h-[300px] w-full">
+
+        <Card className="border-accent/10 rounded-[2rem] shadow-xl overflow-hidden">
+          <CardHeader className="bg-accent/5 pb-4 border-b flex flex-row items-center justify-between">
+            <div>
+                <CardTitle className="text-lg font-black uppercase italic text-accent">Revenue performance</CardTitle>
+                <CardDescription className="text-xs font-bold uppercase tracking-widest">Daily Cash Inflow (Last 30 Days)</CardDescription>
+            </div>
+            <div className="p-3 bg-accent/10 rounded-2xl">
+                <IndianRupee className="text-accent" />
+            </div>
+          </CardHeader>
+          <CardContent className="pt-8">
+            <div className="h-[350px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={revenueData || []}>
+                    <BarChart data={timeSeriesData}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.1} />
-                        <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
-                        <YAxis fontSize={12} tickLine={false} axisLine={false} />
-                        <Tooltip />
-                        <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                        <XAxis 
+                            dataKey="name" 
+                            fontSize={10} 
+                            tickLine={false} 
+                            axisLine={false} 
+                            minTickGap={30}
+                            tick={{ fontWeight: 'bold' }}
+                        />
+                        <YAxis 
+                            fontSize={10} 
+                            tickLine={false} 
+                            axisLine={false} 
+                            tick={{ fontWeight: 'bold' }}
+                            tickFormatter={(val) => `₹${val}`}
+                        />
+                        <Tooltip 
+                            formatter={(val: number) => [formatCurrency(val), "Revenue"]}
+                            contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', fontWeight: 'bold' }}
+                        />
+                        <Bar 
+                            dataKey="revenue" 
+                            fill="hsl(var(--accent))" 
+                            radius={[6, 6, 0, 0]} 
+                            animationDuration={1500}
+                        />
                     </BarChart>
                 </ResponsiveContainer>
             </div>
           </CardContent>
+           <CardFooter className="bg-muted/30 border-t justify-center py-4">
+              <p className="text-[10px] font-black uppercase text-muted-foreground tracking-[0.2em] flex items-center gap-2">
+                <IndianRupee size={12}/> Verified Financial Growth Trajectory
+              </p>
+          </CardFooter>
         </Card>
       </div>
     </div>

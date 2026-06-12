@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Table,
   TableBody,
@@ -12,7 +12,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { UserCog, UserPlus, Trash2, Loader2 } from "lucide-react";
+import { UserCog, UserPlus, Trash2, Loader2, RefreshCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -32,7 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import type { Admin, AdminRole } from "@/lib/admin-data";
-import { collection, onSnapshot, doc, setDoc, deleteDoc, updateDoc } from "firebase/firestore";
+import { collection, onSnapshot, doc, setDoc, deleteDoc, updateDoc, query } from "firebase/firestore";
 import { initializeApp, deleteApp } from "firebase/app";
 import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 import { useAuth, useDb } from "@/firebase";
@@ -43,6 +43,7 @@ export default function AdminManagementPage() {
   const db = useDb();
   const { user, loading: authLoading, isHeadAdmin, isResolved } = useAuth();
   const [allAdmins, setAllAdmins] = useState<Admin[] | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newAdminRole, setNewAdminRole] = useState<AdminRole | ''>('');
@@ -53,22 +54,20 @@ export default function AdminManagementPage() {
 
   const { toast } = useToast();
   
-  useEffect(() => {
-    if (!isResolved || !db || !user) {
-        // Only clear the loading state once auth is resolved and head admin check is possible
+  const fetchAdmins = useCallback(() => {
+    if (!isResolved || !db || !user || !isHeadAdmin) {
         if (isResolved && !isHeadAdmin) setAllAdmins([]);
-        return;
+        return () => {};
     }
-    
-    if (!isHeadAdmin) {
-        setAllAdmins([]);
-        return;
-    };
 
+    setIsRefreshing(true);
     const adminsCollection = collection(db, "admins");
-    const unsubscribe = onSnapshot(adminsCollection, (snapshot) => {
+    const q = query(adminsCollection);
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
         const adminList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Admin));
         setAllAdmins(adminList);
+        setIsRefreshing(false);
     }, async (error) => {
         const permissionError = new FirestorePermissionError({
             path: adminsCollection.path,
@@ -76,10 +75,16 @@ export default function AdminManagementPage() {
         } satisfies SecurityRuleContext);
         errorEmitter.emit('permission-error', permissionError);
         setAllAdmins([]);
+        setIsRefreshing(false);
     });
 
-    return () => unsubscribe();
+    return unsubscribe;
   }, [db, user, isHeadAdmin, isResolved]);
+
+  useEffect(() => {
+    const unsub = fetchAdmins();
+    return () => unsub();
+  }, [fetchAdmins]);
 
   const handleRequest = async (requestId: string, newStatus: "Active" | "Rejected") => {
     if (!allAdmins || !db) return;
@@ -216,7 +221,13 @@ export default function AdminManagementPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold flex items-center gap-2"><UserCog /> Admin Management</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold flex items-center gap-2"><UserCog /> Admin Management</h1>
+        <Button variant="outline" size="sm" onClick={() => fetchAdmins()} disabled={isRefreshing}>
+            <RefreshCcw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            Refresh Records
+        </Button>
+      </div>
 
        <Card>
         <CardHeader>

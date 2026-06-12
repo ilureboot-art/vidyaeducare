@@ -403,9 +403,18 @@ function WalletPageContent() {
               <CardDescription className="font-bold">Manage your academic funds securely.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6 pt-6">
-              <div className="text-center p-8 bg-primary/[0.03] border-2 border-dashed border-primary/20 rounded-[2rem]">
-                <p className="text-[10px] font-black text-primary tracking-widest uppercase mb-1">AVAILABLE BALANCE</p>
-                <p className="text-6xl font-black text-primary tracking-tighter">₹{walletInfo.balance.toFixed(2)}</p>
+              <div className="text-center p-8 bg-primary/[0.03] border-2 border-dashed border-primary/20 rounded-[2rem] space-y-4">
+                <div>
+                    <p className="text-[10px] font-black text-primary tracking-widest uppercase mb-1">AVAILABLE BALANCE</p>
+                    <p className="text-6xl font-black text-primary tracking-tighter">₹{walletInfo.balance.toFixed(2)}</p>
+                </div>
+                
+                <div className="pt-4 border-t border-primary/10">
+                    <p className="text-[10px] font-black text-muted-foreground tracking-widest uppercase mb-2">Your Referral Code</p>
+                    <div className="flex items-center justify-center bg-background rounded-xl p-2 border border-dashed border-primary/20 w-fit mx-auto">
+                        <CopyButton valueToCopy={walletInfo.referralCode} />
+                    </div>
+                </div>
               </div>
 
               {/* QUICK ACTIONS HUB */}
@@ -632,7 +641,7 @@ function WalletPageContent() {
                 </div>
 
                 <Tabs defaultValue="upi" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2 h-12">
+                    <TabsList className="grid grid-cols-2 h-12">
                         <TabsTrigger value="upi" className="font-black uppercase text-[10px]">UPI / QR</TabsTrigger>
                         <TabsTrigger value="bank" className="font-black uppercase text-[10px]">Bank Transfer</TabsTrigger>
                     </TabsList>
@@ -790,6 +799,12 @@ function WalletPageContent() {
                                       <p className="text-[10px] font-black uppercase text-muted-foreground">Ref / UTR</p>
                                       <p className="text-sm font-mono font-bold">{selectedTx.referenceId}</p>
                                   </div>
+                              )}
+                              {selectedTx.referenceId && (
+                                <div className="flex justify-between items-center">
+                                    <p className="text-[10px] font-black uppercase text-muted-foreground">Copy UTR</p>
+                                    <CopyButton valueToCopy={selectedTx.referenceId} />
+                                </div>
                               )}
                               {selectedTx.paymentMethod && (
                                   <div className="flex justify-between items-center">

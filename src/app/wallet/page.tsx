@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
@@ -51,6 +50,13 @@ const getStatusIcon = (status: string) => {
         default: return null;
     }
 }
+
+const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-IN', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    }).format(amount);
+};
 
 type WalletInfo = {
   balance: number;
@@ -406,7 +412,7 @@ function WalletPageContent() {
               <div className="text-center p-8 bg-primary/[0.03] border-2 border-dashed border-primary/20 rounded-[2rem] space-y-4">
                 <div>
                     <p className="text-[10px] font-black text-primary tracking-widest uppercase mb-1">AVAILABLE BALANCE</p>
-                    <p className="text-6xl font-black text-primary tracking-tighter">₹{walletInfo.balance.toFixed(2)}</p>
+                    <p className="text-6xl font-black text-primary tracking-tighter">₹{formatCurrency(walletInfo.balance)}</p>
                 </div>
                 
                 <div className="pt-4 border-t border-primary/10">
@@ -497,7 +503,7 @@ function WalletPageContent() {
                                         ))}
                                     </Pie>
                                     <Tooltip 
-                                        formatter={(value: number) => [`₹${value.toFixed(2)}`, "Total"]}
+                                        formatter={(value: number) => [`₹${formatCurrency(value)}`, "Total"]}
                                         contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '12px', fontWeight: 'bold' }}
                                     />
                                     <Legend 
@@ -533,7 +539,7 @@ function WalletPageContent() {
                                     <YAxis hide />
                                     <Tooltip 
                                         contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '10px', fontWeight: 'bold' }}
-                                        formatter={(value: number) => [`₹${value.toFixed(2)}`, "Amount"]}
+                                        formatter={(value: number) => [`₹${formatCurrency(value)}`, "Amount"]}
                                     />
                                     <Line 
                                         type="monotone" 
@@ -575,7 +581,7 @@ function WalletPageContent() {
                         </div>
                         <div className="text-right">
                             <p className={`font-black text-sm ${tx.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                {tx.amount >= 0 ? '+' : '-'} ₹{Math.abs(tx.amount).toFixed(2)}
+                                {tx.amount >= 0 ? '+' : '-'} ₹{formatCurrency(Math.abs(tx.amount))}
                             </p>
                             <Badge variant={getStatusBadgeVariant(tx.status)} className="text-[9px] h-4">{tx.status}</Badge>
                         </div>
@@ -724,7 +730,7 @@ function WalletPageContent() {
                     <div className="space-y-2">
                         <Label htmlFor="amount-withdraw" className="font-black uppercase text-[10px] text-muted-foreground">Withdrawal Amount (INR)</Label>
                         <Input id="amount-withdraw" name="amount-withdraw" type="number" required min="200" placeholder="Min. 200" className="h-14 text-2xl font-black rounded-2xl text-accent" />
-                        <p className="text-[10px] text-muted-foreground italic">Available: ₹{walletInfo.balance.toFixed(2)}</p>
+                        <p className="text-[10px] text-muted-foreground italic">Available: ₹{formatCurrency(walletInfo.balance)}</p>
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="upiId" className="font-black uppercase text-[10px] text-muted-foreground">Receiving UPI ID</Label>
@@ -748,7 +754,7 @@ function WalletPageContent() {
                   </div>
                   <div className="space-y-2">
                       <h2 className="text-3xl font-black tracking-tighter uppercase italic text-primary">Request Submitted!</h2>
-                      <p className="text-muted-foreground font-medium">Your request for ₹{successAmount.toFixed(2)} has been queued for academic administration review.</p>
+                      <p className="text-muted-foreground font-medium">Your request for ₹{formatCurrency(successAmount)} has been queued for academic administration review.</p>
                   </div>
                   <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 px-6 py-1.5 font-black uppercase tracking-widest">
                       PENDING APPROVAL
@@ -797,7 +803,7 @@ function WalletPageContent() {
                                   "text-5xl font-black tracking-tighter",
                                   selectedTx.amount >= 0 ? "text-green-600" : "text-red-600"
                               )}>
-                                  ₹{Math.abs(selectedTx.amount).toFixed(2)}
+                                  ₹{formatCurrency(Math.abs(selectedTx.amount))}
                               </p>
                           </div>
 

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -42,6 +41,13 @@ const bonusTiers = [
     { target: 90, bonus: 4 },
     { target: 100, bonus: 5 },
 ];
+
+const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-IN', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    }).format(amount);
+};
 
 interface ReferralData {
     totalCommission: number;
@@ -213,7 +219,7 @@ Use my exclusive IBA code to get a special discount on your subscription!
             <div className="grid grid-cols-2 gap-4 text-center">
                 <Card className="bg-primary/[0.02]">
                     <CardHeader className="py-4">
-                        <CardTitle className="text-xl md:text-2xl flex items-center justify-center gap-2 text-primary"><IndianRupee size={20}/>{referralData?.totalCommission.toFixed(2)}</CardTitle>
+                        <CardTitle className="text-xl md:text-2xl flex items-center justify-center gap-2 text-primary"><IndianRupee size={20}/>{formatCurrency(referralData?.totalCommission || 0)}</CardTitle>
                         <CardDescription className="text-[10px] font-bold uppercase">Total Commission</CardDescription>
                     </CardHeader>
                 </Card>
@@ -312,7 +318,7 @@ Use my exclusive IBA code to get a special discount on your subscription!
                                 <TableRow key={ref.id}>
                                     <TableCell className="font-medium text-sm">{ref.name}</TableCell>
                                     <TableCell className="text-xs">{new Date(ref.date).toLocaleDateString()}</TableCell>
-                                    <TableCell className="text-right text-green-600 font-bold text-sm">+ ₹{ref.commission.toFixed(2)}</TableCell>
+                                    <TableCell className="text-right text-green-600 font-bold text-sm">+ ₹{formatCurrency(ref.commission)}</TableCell>
                                 </TableRow>
                             )) : (
                                 <TableRow>

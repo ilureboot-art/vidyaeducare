@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -52,6 +51,13 @@ const getStatusIcon = (status: string) => {
         default: return null;
     }
 }
+
+const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-IN', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    }).format(amount);
+};
 
 const getTypeIcon = (type: string, amount: number) => {
     if (type.toLowerCase().includes("withdrawal") || type.toLowerCase().includes("purchase") || amount < 0) {
@@ -372,7 +378,7 @@ function TransactionsPageContent() {
                       "text-right font-bold text-sm",
                       tx.amount >= 0 ? "text-green-600" : "text-red-600"
                   )}>
-                      ₹{Math.abs(tx.amount).toFixed(2)}
+                      ₹{formatCurrency(Math.abs(tx.amount))}
                   </TableCell>
                   <TableCell className="text-center">
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => setSelectedTx(tx)}>
@@ -430,7 +436,7 @@ function TransactionsPageContent() {
                                   "text-5xl font-black tracking-tighter",
                                   selectedTx.amount >= 0 ? "text-green-600" : "text-red-600"
                               )}>
-                                  ₹{Math.abs(selectedTx.amount).toFixed(2)}
+                                  ₹{formatCurrency(Math.abs(selectedTx.amount))}
                               </p>
                           </div>
 

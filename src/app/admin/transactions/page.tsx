@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
@@ -28,6 +27,13 @@ import Papa from "papaparse";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
+
+const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-IN', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    }).format(amount);
+};
 
 const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -330,7 +336,7 @@ export default function TransactionsPage() {
                       {tx.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right font-medium text-xs">₹{Math.abs(tx.amount).toFixed(2)}</TableCell>
+                  <TableCell className="text-right font-medium text-xs">₹{formatCurrency(Math.abs(tx.amount))}</TableCell>
                   <TableCell className="text-center">
                     {tx.status === "Pending" && (
                         <div className="flex gap-1 justify-center">

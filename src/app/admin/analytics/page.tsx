@@ -17,6 +17,13 @@ interface ChartData {
     revenue?: number;
 }
 
+const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-IN', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    }).format(amount);
+};
+
 const getLast7Days = () => {
     const dates = [];
     for (let i = 6; i >= 0; i--) {
@@ -198,7 +205,7 @@ export default function AnalyticsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-primary">₹{todaysRevenue !== null ? todaysRevenue.toLocaleString() : '...'}</p>
+            <p className="text-3xl font-bold text-primary">₹{todaysRevenue !== null ? formatCurrency(todaysRevenue) : '...'}</p>
           </CardContent>
         </Card>
       </div>

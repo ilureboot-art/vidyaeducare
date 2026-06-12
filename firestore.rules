@@ -73,7 +73,8 @@ service cloud.firestore {
     // --- SHARED DATA ---
 
     match /configs/{document=**} {
-      allow read: if signedIn() && (isAdmin() || isMaster());
+      // Configuration data needs to be readable by all signed-in users (e.g., to see prices/boards)
+      allow read: if signedIn();
       allow write: if isAdmin();
     }
 

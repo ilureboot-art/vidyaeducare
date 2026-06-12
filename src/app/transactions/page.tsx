@@ -409,7 +409,7 @@ function TransactionsPageContent() {
                                   selectedTx.status === 'Completed' ? "bg-green-500 text-white" : 
                                   selectedTx.status === 'Rejected' ? "bg-red-500 text-white" : "bg-amber-500 text-white"
                               )}>
-                                  {selectedTx.amount >= 0 ? <ArrowDownLeft size(32}/> : <ArrowUpRight size={32}/>}
+                                  {selectedTx.amount >= 0 ? <ArrowDownLeft size={32}/> : <ArrowUpRight size={32}/>}
                               </div>
                           </div>
                           <h2 className="text-3xl font-black tracking-tighter uppercase italic">

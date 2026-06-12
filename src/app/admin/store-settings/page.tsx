@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
-import { PlusCircle, Trash2, Zap, BookOpen, GraduationCap, Percent, Loader2, IndianRupee, AlertCircle, RefreshCcw, Landmark, ShieldAlert } from "lucide-react";
+import { PlusCircle, Trash2, Zap, BookOpen, GraduationCap, Percent, Loader2, IndianRupee, RefreshCcw, Landmark } from "lucide-react";
 import { type StoreConfig, type MockTestPackage, type ReferboltSubscription, type ReferboltSettings, type RecommendationSettings, defaultStoreConfig } from "@/lib/store-config";
 import { type AcademicConfig, defaultAcademicConfig } from "@/lib/academic-config";
 import { Switch } from "@/components/ui/switch";
@@ -15,7 +15,6 @@ import { useDb, useAuth } from "@/firebase";
 import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 
 const UsersIcon = ({ className }: { className?: string }) => (
@@ -41,7 +40,13 @@ export default function AdminStoreSettingsPage() {
   const isLoading = isLoadingStore || isLoadingAcademic;
 
   useEffect(() => {
-    if (!db || !user || !isResolved) return;
+    if (!db || !user || !isResolved) {
+        if (isResolved && (!db || !user)) {
+            setIsLoadingStore(false);
+            setIsLoadingAcademic(false);
+        }
+        return;
+    }
 
     const storeRef = doc(db, "configs", "store");
     const unsubStore = onSnapshot(storeRef, (docSnap) => {
@@ -60,7 +65,6 @@ export default function AdminStoreSettingsPage() {
             } satisfies SecurityRuleContext);
             errorEmitter.emit('permission-error', permissionError);
         }
-        setStoreConfig(defaultStoreConfig);
         setIsLoadingStore(false);
     });
 
@@ -81,7 +85,6 @@ export default function AdminStoreSettingsPage() {
             } satisfies SecurityRuleContext);
             errorEmitter.emit('permission-error', permissionError);
         }
-        setAcademicConfig(defaultAcademicConfig);
         setIsLoadingAcademic(false);
     });
 

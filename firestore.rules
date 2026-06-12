@@ -3,7 +3,7 @@ rules_version = '2';
 /**
  * Vidya EduCare - Production Infrastructure Rules
  * Target Instance: vidyaeducaredatabase
- * Deployment Salt: V65_RELIABLE_ADMIN_BOOTSTRAP
+ * Deployment Salt: V66_CONFIG_RESILIENCE_BOOTSTRAP
  */
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -32,8 +32,8 @@ service cloud.firestore {
     // --- SHARED DATA (High Priority) ---
 
     match /configs/{document=**} {
-      // Configuration data (boards, prices, payment methods)
-      // Allow read to all to prevent race conditions during auth sync.
+      // Global configurations must be readable by all to prevent store/setup hangs.
+      // Write access restricted to verified administrators.
       allow read: if true; 
       allow write: if isAdmin();
     }
@@ -47,7 +47,7 @@ service cloud.firestore {
 
     match /users/{uid} {
       allow read: if signedIn();
-      allow create: if signedIn(); // Required for initial registration
+      allow create: if signedIn(); 
       allow update, delete: if isOwner(uid) || isAdmin();
     }
 

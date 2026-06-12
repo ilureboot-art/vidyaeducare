@@ -253,7 +253,7 @@ export default function AdminManagementPage() {
             </TableHeader>
             <TableBody>
               {pendingRequests.length > 0 ? pendingRequests.map((req) => (
-                <TableRow key={req.id}>
+                <TableRow key={req.id} className="even:bg-muted/40 transition-colors">
                   <TableCell className="font-medium">{req.name}</TableCell>
                   <TableCell>{req.phone}</TableCell>
                   <TableCell className="text-center">
@@ -312,7 +312,7 @@ export default function AdminManagementPage() {
             </TableHeader>
             <TableBody>
               {filteredAdmins.map((admin) => (
-                <TableRow key={admin.id}>
+                <TableRow key={admin.id} className="even:bg-muted/40 transition-colors">
                   <TableCell className="font-medium">{admin.name}</TableCell>
                    <TableCell className="text-xs font-mono">{admin.email}</TableCell>
                    <TableCell><Badge variant={admin.role === "Head Admin" ? "default" : "secondary"}>{admin.role}</Badge></TableCell>

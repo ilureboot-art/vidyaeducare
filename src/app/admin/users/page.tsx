@@ -218,7 +218,7 @@ export default function UserManagementPage() {
             </TableHeader>
             <TableBody>
               {filteredUsers.length > 0 ? filteredUsers.map((user) => (
-                <TableRow key={user.id} className="group">
+                <TableRow key={user.id} className="group even:bg-muted/40 transition-colors">
                   <TableCell>
                     <div className="flex items-center gap-3">
                         <Avatar className="h-9 w-9">

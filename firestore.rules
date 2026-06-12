@@ -19,8 +19,6 @@ service cloud.firestore {
     }
 
     function isMaster() {
-      // Prioritize email-based identification for the master account to avoid project-specific UID issues
-      // Master is used for bootstrapping the infrastructure.
       return signedIn() && (
         request.auth.token.email == 'admin@vidyaeducare.com'
       );
@@ -38,7 +36,6 @@ service cloud.firestore {
     }
 
     // --- SUPREME OVERRIDE ---
-    // Masters have full access to everything for infrastructure management.
     match /{allPaths=**} {
       allow read, write: if isMaster();
     }
@@ -47,7 +44,6 @@ service cloud.firestore {
 
     match /users/{uid} {
       allow read: if signedIn();
-      // Allow master or owner to create the profile. isAdmin() might fail during bootstrap.
       allow create: if signedIn() && (isOwner(uid) || isMaster());
       allow update, delete: if isOwner(uid) || isAdmin();
     }
@@ -77,13 +73,12 @@ service cloud.firestore {
     // --- SHARED DATA ---
 
     match /configs/{document=**} {
-      allow read: if signedIn();
+      allow read: if signedIn() && (isAdmin() || isMaster());
       allow write: if isAdmin();
     }
 
     match /admins/{uid} {
       allow read: if signedIn();
-      // Allow initial creation by master or owner during bootstrap
       allow write: if isAdmin() || isOwner(uid) || isMaster();
     }
 

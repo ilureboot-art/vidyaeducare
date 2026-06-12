@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
@@ -370,7 +369,7 @@ export default function TransactionsPage() {
             </TableHeader>
             <TableBody>
               {filteredTransactions.map((tx) => (
-                <TableRow key={tx.id}>
+                <TableRow key={tx.id} className="even:bg-muted/40 transition-colors">
                   <TableCell className="font-medium text-xs font-mono">{tx.user?.substring(0, 8) || 'System'}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">

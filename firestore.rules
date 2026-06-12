@@ -3,7 +3,7 @@ rules_version = '2';
 /**
  * Vidya EduCare - Production Infrastructure Rules
  * Target Instance: vidyaeducaredatabase
- * Deployment Salt: V70_CONFIG_ACCESSIBILITY_HARDENING
+ * Deployment Salt: V72_CONFIG_ACCESSIBILITY_HARDENING
  */
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -30,10 +30,8 @@ service cloud.firestore {
     }
 
     // --- SHARED DATA (High Priority) ---
-
+    // Explicitly allow read access to configurations for all users to prevent store hangs.
     match /configs/{document=**} {
-      // Global configurations must be readable by all to prevent store/setup hangs.
-      // Write access restricted to verified administrators.
       allow read: if true; 
       allow write: if isAdmin();
     }

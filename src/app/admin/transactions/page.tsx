@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
@@ -116,7 +115,6 @@ export default function TransactionsPage() {
         console.error("Fetch Transactions Error:", e);
         setTransactions([]); // Resolve to empty state to stop spinner
     } finally {
-        setIsRefreshing(manual ? false : false);
         if (manual) setIsRefreshing(false);
     }
   }, [db]);
@@ -453,4 +451,3 @@ export default function TransactionsPage() {
     </div>
   );
 }
-

@@ -47,10 +47,13 @@ export default function AdminStoreSettingsPage() {
         if (docSnap.exists()) {
             setStoreConfig(docSnap.data() as StoreConfig);
         } else {
+            console.warn("Store config document missing. Using defaults.");
             setStoreConfig(defaultStoreConfig);
         }
+        // Defensively resolve loading state
         setIsLoading(false);
     }, async (error) => {
+        console.error("Store config sync error:", error.code);
         if (error.code === 'permission-denied') {
             const permissionError = new FirestorePermissionError({
                 path: storeRef.path,
@@ -67,9 +70,13 @@ export default function AdminStoreSettingsPage() {
         if (docSnap.exists()) {
             setAcademicConfig(docSnap.data() as AcademicConfig);
         } else {
+            console.warn("Academic config document missing. Using defaults.");
             setAcademicConfig(defaultAcademicConfig);
         }
+        // Defensively resolve loading state (even if other listener is slower)
+        setIsLoading(false);
     }, async (error) => {
+        console.error("Academic config sync error:", error.code);
         if (error.code === 'permission-denied') {
             const permissionError = new FirestorePermissionError({
                 path: academicRef.path,
@@ -78,6 +85,7 @@ export default function AdminStoreSettingsPage() {
             errorEmitter.emit('permission-error', permissionError);
         }
         setAcademicConfig(defaultAcademicConfig);
+        setIsLoading(false);
     });
 
     return () => {
@@ -359,7 +367,7 @@ export default function AdminStoreSettingsPage() {
             </div>
           </CardContent>
         </Card>
-         <Card className="mt-6">
+        <Card className="mt-6">
           <CardHeader><CardTitle>Referral System</CardTitle><CardDescription>Configure the bonus for simple referrals.</CardDescription></CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
@@ -13,7 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Download, ArrowUpRight, ArrowDownLeft, Loader2, Calendar as CalendarIcon, FilterX } from "lucide-react";
+import { Search, Download, ArrowUpRight, ArrowDownLeft, Loader2, Calendar as CalendarIcon, FilterX, RefreshCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { type Transaction } from "@/lib/user-data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -30,18 +31,20 @@ import { cn } from "@/lib/utils";
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
+        style: 'currency',
+        currency: 'INR',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
     }).format(amount);
 };
 
 const getStatusBadgeVariant = (status: string) => {
-    switch (status) {
-        case "Completed":
+    switch ((status || "").toLowerCase()) {
+        case "completed":
             return "default";
-        case "Pending":
+        case "pending":
             return "secondary";
-        case "Rejected":
+        case "rejected":
             return "destructive";
         default:
             return "outline";
@@ -49,7 +52,11 @@ const getStatusBadgeVariant = (status: string) => {
 }
 
 const getTypeIcon = (type: string, amount: number) => {
-    if (type.toLowerCase().includes("withdrawal") || type.toLowerCase().includes("purchase") || amount < 0) {
+    const isOutflow = (type || "").toLowerCase().includes("withdrawal") || 
+                     (type || "").toLowerCase().includes("purchase") || 
+                     amount < 0;
+    
+    if (isOutflow) {
         return <ArrowUpRight className="w-4 h-4 text-red-500" />;
     }
     return <ArrowDownLeft className="w-4 h-4 text-green-500" />;
@@ -60,15 +67,18 @@ export default function TransactionsPage() {
   const db = useDb();
 
   const [transactions, setTransactions] = useState<Transaction[] | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'rejected'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'deposit' | 'withdrawal'>('all');
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   
-  const fetchTransactions = useCallback(async () => {
+  const fetchTransactions = useCallback(async (manual = false) => {
     if (!db) return;
-    setTransactions(null);
+    if (manual) setIsRefreshing(true);
+    else setTransactions(null);
+
     const txsCollectionRef = collection(db, "transactions");
     const q = query(txsCollectionRef, orderBy("date", "desc"));
     
@@ -81,14 +91,33 @@ export default function TransactionsPage() {
               errorEmitter.emit('permission-error', permissionError);
               throw e;
         });
+        
         const txs = querySnapshot.docs.map(doc => {
             const data = doc.data();
-            const date = data.date instanceof Timestamp ? data.date.toDate().toISOString() : data.date;
-            return { id: doc.id, ...data, date } as Transaction;
+            // Handle both Firestore Timestamps and ISO strings gracefully
+            let dateStr;
+            try {
+                if (data.date instanceof Timestamp) {
+                    dateStr = data.date.toDate().toISOString();
+                } else if (data.date && typeof data.date === 'object' && 'seconds' in data.date) {
+                    // Fallback for plain objects that look like Timestamps
+                    dateStr = new Date(data.date.seconds * 1000).toISOString();
+                } else {
+                    dateStr = data.date || new Date().toISOString();
+                }
+            } catch (e) {
+                dateStr = new Date().toISOString();
+            }
+
+            return { id: doc.id, ...data, date: dateStr } as Transaction;
         });
         setTransactions(txs);
     } catch (e) {
         console.error("Fetch Transactions Error:", e);
+        setTransactions([]); // Resolve to empty state to stop spinner
+    } finally {
+        setIsRefreshing(manual ? false : false);
+        if (manual) setIsRefreshing(false);
     }
   }, [db]);
   
@@ -141,7 +170,7 @@ export default function TransactionsPage() {
                     ? (newStatus === 'Completed' ? 'deposit_received' : 'deposit_rejected')
                     : (newStatus === 'Completed' ? 'withdrawal_approved' : 'withdrawal_rejected');
                 
-                const amountStr = `₹${formatCurrency(Math.abs(txToUpdate.amount))}`;
+                const amountStr = `₹${Math.abs(txToUpdate.amount).toFixed(2)}`;
                 const msg = newStatus === 'Completed'
                     ? `Your ${txToUpdate.type} request of ${amountStr} was approved.`
                     : `Your ${txToUpdate.type} request of ${amountStr} was rejected.`;
@@ -165,17 +194,25 @@ export default function TransactionsPage() {
         });
 
         toast({ title: "Transaction Updated", description: `Transaction marked as ${newStatus}.` });
-        fetchTransactions();
+        fetchTransactions(true);
     } catch(error) {
         console.error("Transaction Update Error:", error);
     }
   };
 
   const filteredTransactions = useMemo(() => {
-    return transactions?.filter(
+    if (!transactions) return [];
+    return transactions.filter(
         (tx) => {
-          const searchTermMatch = tx.user?.toLowerCase().includes(searchTerm.toLowerCase()) || String(tx.id).toLowerCase().includes(searchTerm.toLowerCase()) || tx.description.toLowerCase().includes(searchTerm.toLowerCase());
-          const statusMatch = statusFilter === 'all' || tx.status.toLowerCase() === statusFilter;
+          const description = tx.description || "";
+          const userId = tx.user || "";
+          const id = String(tx.id || "");
+          
+          const searchTermMatch = userId.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                                 id.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                                 description.toLowerCase().includes(searchTerm.toLowerCase());
+          
+          const statusMatch = statusFilter === 'all' || (tx.status || "").toLowerCase() === statusFilter;
           const typeMatch = typeFilter === 'all' || (typeFilter === 'deposit' && tx.amount >= 0) || (typeFilter === 'withdrawal' && tx.amount < 0);
           
           const txDate = new Date(tx.date);
@@ -183,7 +220,7 @@ export default function TransactionsPage() {
           
           return searchTermMatch && statusMatch && typeMatch && dateMatch;
         }
-      ) || [];
+      );
   }, [transactions, searchTerm, statusFilter, typeFilter, startDate, endDate]);
 
   const filteredTotals = useMemo(() => {
@@ -235,24 +272,31 @@ export default function TransactionsPage() {
     setEndDate(undefined);
   };
 
-  if (!transactions) {
+  if (transactions === null) {
     return (
-      <div className="flex justify-center items-center h-96">
-        <Loader2 className="animate-spin text-primary" size={32} />
+      <div className="flex flex-col items-center justify-center h-96 space-y-4">
+        <Loader2 className="animate-spin text-primary" size={40} />
+        <p className="text-muted-foreground animate-pulse font-medium">Syncing Global Ledger...</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Transactions Management</h1>
+      <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold flex items-center gap-2">Transactions Management</h1>
+          <Button variant="outline" size="sm" onClick={() => fetchTransactions(true)} disabled={isRefreshing}>
+              <RefreshCcw className={cn("h-4 w-4 mr-2", isRefreshing && "animate-spin")} />
+              Refresh Data
+          </Button>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card className="bg-green-500/[0.03] border-green-500/20 shadow-sm overflow-hidden">
               <CardHeader className="py-4 px-6 flex flex-row items-center justify-between space-y-0">
                   <div className="space-y-1">
                       <CardTitle className="text-[10px] font-black uppercase tracking-widest text-green-600/70">Total Inflow (Completed)</CardTitle>
-                      <p className="text-2xl font-black text-green-600">₹{formatCurrency(filteredTotals.deposits)}</p>
+                      <p className="text-2xl font-black text-green-600">{formatCurrency(filteredTotals.deposits)}</p>
                   </div>
                   <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center text-green-600">
                       <ArrowDownLeft size={24}/>
@@ -264,7 +308,7 @@ export default function TransactionsPage() {
               <CardHeader className="py-4 px-6 flex flex-row items-center justify-between space-y-0">
                   <div className="space-y-1">
                       <CardTitle className="text-[10px] font-black uppercase tracking-widest text-red-600/70">Total Outflow (Completed)</CardTitle>
-                      <p className="text-2xl font-black text-red-600">₹{formatCurrency(filteredTotals.withdrawals)}</p>
+                      <p className="text-2xl font-black text-red-600">{formatCurrency(filteredTotals.withdrawals)}</p>
                   </div>
                   <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center text-red-600">
                       <ArrowUpRight size={24}/>
@@ -382,11 +426,11 @@ export default function TransactionsPage() {
                   </TableCell>
                   <TableCell className="text-xs">{format(new Date(tx.date), 'P')}</TableCell>
                   <TableCell>
-                    <Badge variant={getStatusBadgeVariant(tx.status)} className="text-[10px] py-0 h-5">
+                    <Badge variant={getStatusBadgeVariant(tx.status)} className="text-[9px] py-0 h-5">
                       {tx.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right font-medium text-xs">₹{formatCurrency(Math.abs(tx.amount))}</TableCell>
+                  <TableCell className="text-right font-medium text-xs">₹{Math.abs(tx.amount).toFixed(2)}</TableCell>
                   <TableCell className="text-center">
                     {tx.status === "Pending" && (
                         <div className="flex gap-1 justify-center">
@@ -397,6 +441,11 @@ export default function TransactionsPage() {
                   </TableCell>
                 </TableRow>
               ))}
+              {filteredTransactions.length === 0 && (
+                <TableRow>
+                    <TableCell colSpan={7} className="text-center text-muted-foreground h-24">No transactions match your current filters.</TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>
@@ -404,3 +453,4 @@ export default function TransactionsPage() {
     </div>
   );
 }
+

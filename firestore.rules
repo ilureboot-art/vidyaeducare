@@ -3,7 +3,7 @@ rules_version = '2';
 /**
  * Vidya EduCare - Production Infrastructure Rules
  * Target Instance: vidyaeducaredatabase
- * Deployment Salt: V63_RESOLVED_PERMISSIONS
+ * Deployment Salt: V65_RELIABLE_ADMIN_BOOTSTRAP
  */
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -19,8 +19,8 @@ service cloud.firestore {
     }
 
     function isMaster() {
+      // Prioritize email-based identification for the master account to avoid project-specific UID issues
       return signedIn() && (
-        request.auth.uid == '1JgG0oF1D6YREaxOCSGedIfpQZ42' ||
         request.auth.token.email == 'admin@vidyaeducare.com'
       );
     }
@@ -37,6 +37,7 @@ service cloud.firestore {
     }
 
     // --- SUPREME OVERRIDE ---
+    // Masters have full access to everything for infrastructure management.
     match /{allPaths=**} {
       allow read, write: if isMaster();
     }

@@ -18,7 +18,6 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 const HEAD_ADMIN_EMAIL = 'admin@vidyaeducare.com';
 const HEAD_ADMIN_PASSWORD = 'password123';
 const HEAD_ADMIN_NAME = 'Main Admin';
-const FIXED_ADMIN_UID = '1JgG0oF1D6YREaxOCSGedIfpQZ42';
 
 const TEST_USER_EMAIL = 'student@vidyaeducare.com';
 const TEST_USER_PASSWORD = 'password123';
@@ -41,10 +40,10 @@ export default function SetupAdminPage() {
   };
 
   const runSystemAudit = useCallback(async () => {
-    if (!db) return;
+    if (!db || !auth?.currentUser) return;
     setAuditStatus(prev => ({ ...prev, loading: true }));
     try {
-        const adminDoc = await getDoc(doc(db, "admins", FIXED_ADMIN_UID)).catch(() => ({ exists: () => false }));
+        const adminDoc = await getDoc(doc(db, "admins", auth.currentUser.uid)).catch(() => ({ exists: () => false }));
         const studentQuery = query(collection(db, "users"), where("email", "==", TEST_USER_EMAIL));
         const studentSnap = await getDocs(studentQuery).catch(() => ({ empty: true }));
         const configDoc = await getDoc(doc(db, "configs", "academic")).catch(() => ({ exists: () => false }));
@@ -57,10 +56,10 @@ export default function SetupAdminPage() {
         });
         logProgress(`AUDIT: Admin [${adminDoc.exists() ? 'OK' : 'MISSING'}] | Student [${!studentSnap.empty ? 'OK' : 'MISSING'}] | Config [${configDoc.exists() ? 'OK' : 'MISSING'}]`);
     } catch (e: any) {
-        logProgress(`AUDIT: Handshaking with database...`);
+        logProgress(`AUDIT: Database synchronization pending...`);
         setAuditStatus(prev => ({ ...prev, loading: false }));
     }
-  }, [db]);
+  }, [db, auth]);
 
   useEffect(() => {
     if (!auth) return;
@@ -69,11 +68,11 @@ export default function SetupAdminPage() {
       if (user) {
           setAuthStatus('success');
           logProgress(`AUTH ACTIVE: ${user.email}`);
+          if (db) runSystemAudit();
       } else {
           setAuthStatus('idle');
       }
     });
-    if (db) runSystemAudit();
     return () => unsub();
   }, [auth, db, runSystemAudit]);
 
@@ -116,13 +115,14 @@ export default function SetupAdminPage() {
 
     setMapStatus('loading');
     let attempt = 0;
-    const maxAttempts = 5;
+    const maxAttempts = 3;
 
     const attemptSync = async (): Promise<void> => {
         attempt++;
         logProgress(`MAP: Syncing Infrastructure (Attempt ${attempt}/${maxAttempts})...`);
         
         try {
+            // Force token refresh to ensure custom claims (email) are present in the rule evaluation
             await auth.currentUser?.getIdToken(true);
         } catch (e) {}
         
@@ -174,9 +174,10 @@ export default function SetupAdminPage() {
                 toast({ title: "Setup Complete" });
             })
             .catch(async (serverError: any) => {
+                console.error("Setup mapping error:", serverError);
                 if (serverError.code === 'permission-denied' && attempt < maxAttempts) {
-                    logProgress("PENDING: Waiting for propagation (5s)...");
-                    setTimeout(attemptSync, 5000);
+                    logProgress("PENDING: Waiting for propagation (3s)...");
+                    setTimeout(attemptSync, 3000);
                 } else {
                     const permissionError = new FirestorePermissionError({
                         path: userDocRef.path,
@@ -185,7 +186,7 @@ export default function SetupAdminPage() {
                     } satisfies SecurityRuleContext);
                     errorEmitter.emit('permission-error', permissionError);
                     setMapStatus('error');
-                    logProgress(`FAILED: Authorization denied.`);
+                    logProgress(`FAILED: Authorization denied. Ensure clock is correct.`);
                 }
             });
     };
@@ -282,7 +283,7 @@ export default function SetupAdminPage() {
           )}
         </CardContent>
         <CardFooter className="bg-primary/5 py-4 border-t justify-center gap-2">
-            <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground italic text-center">Vidya EduCare Deployment Salt: V64_OPERATIONAL_READY</p>
+            <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground italic text-center">Vidya EduCare Deployment Salt: V65_OPERATIONAL_READY</p>
         </CardFooter>
       </Card>
     </div>

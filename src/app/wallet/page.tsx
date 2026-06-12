@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { PlusCircle, MinusCircle, History, ArrowUpRight, ArrowDownLeft, Loader2, AlertCircle, Scan, X, PieChart as PieChartIcon, AlertTriangle, FileText, CheckCircle2, Clock, XCircle, Copy, ArrowLeft, ShieldCheck, Zap, CheckCircle } from "lucide-react";
+import { PlusCircle, MinusCircle, History, ArrowUpRight, ArrowDownLeft, Loader2, AlertCircle, Scan, X, PieChart as PieChartIcon, AlertTriangle, FileText, CheckCircle2, Clock, XCircle, Copy, ArrowLeft, ShieldCheck, Zap, CheckCircle, TrendingUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { type Transaction, type AdminPaymentMethods } from "@/lib/user-data";
@@ -21,7 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Image from "next/image";
 import { CopyButton } from "@/components/CopyButton";
-import { format } from "date-fns";
+import { format, subDays, eachDayOfInterval } from "date-fns";
 import { useAuth, useDb } from "@/firebase";
 import { doc, collection, addDoc, query, where, orderBy, limit, onSnapshot, serverTimestamp, runTransaction, Timestamp } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -30,7 +30,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Html5Qrcode } from "html5-qrcode";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts";
 import { cn } from "@/lib/utils";
 
 const getStatusBadgeVariant = (status: string) => {
@@ -174,6 +174,40 @@ function WalletPageContent() {
         { name: "Income", value: income, color: "hsl(var(--primary))" },
         { name: "Spending", value: spending, color: "hsl(var(--accent))" }
     ];
+  }, [transactions]);
+
+  const trendData = useMemo(() => {
+    if (!transactions) return [];
+    
+    const now = new Date();
+    const thirtyDaysAgo = subDays(now, 30);
+    
+    const dates = eachDayOfInterval({
+        start: thirtyDaysAgo,
+        end: now
+    });
+
+    return dates.map(date => {
+        const dateStr = format(date, 'yyyy-MM-dd');
+        const dayTransactions = transactions.filter(tx => {
+            const txDate = new Date(tx.date);
+            return format(txDate, 'yyyy-MM-dd') === dateStr && tx.status === 'Completed';
+        });
+
+        const income = dayTransactions
+            .filter(t => t.amount > 0)
+            .reduce((acc, t) => acc + t.amount, 0);
+        
+        const spending = dayTransactions
+            .filter(t => t.amount < 0)
+            .reduce((acc, t) => acc + Math.abs(t.amount), 0);
+
+        return {
+            date: format(date, 'MMM dd'),
+            income,
+            spending
+        };
+    });
   }, [transactions]);
 
   const playSuccessSound = () => {
@@ -400,46 +434,96 @@ function WalletPageContent() {
                   </div>
               </div>
 
-              {pieData.length > 0 && (
-                <Card className="border-none bg-muted/20 shadow-inner rounded-3xl">
-                    <CardHeader className="pb-0 text-center">
-                        <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center justify-center gap-2">
-                            <PieChartIcon className="w-3 h-3" /> Cash Flow Analytics
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="h-[200px] pt-0">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <Pie
-                                    data={pieData}
-                                    cx="50%"
-                                    cy="50%"
-                                    innerRadius={40}
-                                    outerRadius={70}
-                                    paddingAngle={5}
-                                    dataKey="value"
-                                    animationBegin={0}
-                                    animationDuration={1000}
-                                >
-                                    {pieData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
-                                    ))}
-                                </Pie>
-                                <Tooltip 
-                                    formatter={(value: number) => [`₹${value.toFixed(2)}`, "Total"]}
-                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '12px', fontWeight: 'bold' }}
-                                />
-                                <Legend 
-                                    verticalAlign="bottom" 
-                                    align="center" 
-                                    iconType="circle"
-                                    wrapperStyle={{ fontSize: '10px', fontWeight: 'black', textTransform: 'uppercase', letterSpacing: '0.1em', paddingTop: '10px' }}
-                                />
-                            </PieChart>
-                        </ResponsiveContainer>
-                    </CardContent>
-                </Card>
-              )}
+              {/* ANALYTICS SECTION */}
+              <div className="grid grid-cols-1 gap-4">
+                  {pieData.length > 0 && (
+                    <Card className="border-none bg-muted/20 shadow-inner rounded-3xl">
+                        <CardHeader className="pb-0 text-center">
+                            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center justify-center gap-2">
+                                <PieChartIcon className="w-3 h-3" /> Cash Flow Categories
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="h-[200px] pt-0">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie
+                                        data={pieData}
+                                        cx="50%"
+                                        cy="50%"
+                                        innerRadius={40}
+                                        outerRadius={70}
+                                        paddingAngle={5}
+                                        dataKey="value"
+                                        animationBegin={0}
+                                        animationDuration={1000}
+                                    >
+                                        {pieData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip 
+                                        formatter={(value: number) => [`₹${value.toFixed(2)}`, "Total"]}
+                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '12px', fontWeight: 'bold' }}
+                                    />
+                                    <Legend 
+                                        verticalAlign="bottom" 
+                                        align="center" 
+                                        iconType="circle"
+                                        wrapperStyle={{ fontSize: '10px', fontWeight: 'black', textTransform: 'uppercase', letterSpacing: '0.1em', paddingTop: '10px' }}
+                                    />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </CardContent>
+                    </Card>
+                  )}
+
+                  {trendData.length > 0 && (
+                    <Card className="border-none bg-muted/20 shadow-inner rounded-3xl">
+                        <CardHeader className="pb-0 text-center">
+                            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center justify-center gap-2">
+                                <TrendingUp className="w-3 h-3" /> Activity Trends (Last 30 Days)
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="h-[200px] pt-4">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <LineChart data={trendData}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.1} />
+                                    <XAxis 
+                                        dataKey="date" 
+                                        fontSize={8} 
+                                        tickLine={false} 
+                                        axisLine={false} 
+                                        minTickGap={30}
+                                    />
+                                    <YAxis hide />
+                                    <Tooltip 
+                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '10px', fontWeight: 'bold' }}
+                                        formatter={(value: number) => [`₹${value.toFixed(2)}`, "Amount"]}
+                                    />
+                                    <Line 
+                                        type="monotone" 
+                                        dataKey="income" 
+                                        name="Income"
+                                        stroke="hsl(var(--primary))" 
+                                        strokeWidth={3} 
+                                        dot={false} 
+                                        animationDuration={1500}
+                                    />
+                                    <Line 
+                                        type="monotone" 
+                                        dataKey="spending" 
+                                        name="Spending"
+                                        stroke="hsl(var(--accent))" 
+                                        strokeWidth={3} 
+                                        dot={false} 
+                                        animationDuration={1500}
+                                    />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        </CardContent>
+                    </Card>
+                  )}
+              </div>
               
               <div className="space-y-4 pt-4">
                 <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground text-center">Recent Activity</h3>

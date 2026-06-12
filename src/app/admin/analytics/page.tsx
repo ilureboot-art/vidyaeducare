@@ -1,8 +1,7 @@
-
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { BarChart, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Line, Bar, ResponsiveContainer, AreaChart, Area, Legend } from "recharts";
 import { Users, IndianRupee, Loader2, AlertCircle, RefreshCcw, BookOpen, TrendingUp, Calendar } from "lucide-react";
 import { useDb, useAuth } from "@/firebase";

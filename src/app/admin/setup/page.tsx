@@ -123,6 +123,7 @@ export default function SetupAdminPage() {
         
         try {
             // Force token refresh to ensure custom claims (email) are present in the rule evaluation
+            // CRITICAL: Force refresh ensures the email is visible to Firestore rules
             await auth.currentUser?.getIdToken(true);
         } catch (e) {}
         
@@ -191,7 +192,8 @@ export default function SetupAdminPage() {
             });
     };
 
-    attemptSync();
+    // Add a slight delay to ensure token claims are ready
+    setTimeout(attemptSync, 1000);
   };
 
   return (

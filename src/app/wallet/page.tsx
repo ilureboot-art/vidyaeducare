@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
@@ -148,6 +147,14 @@ function WalletPageContent() {
         const storeRef = doc(db, "configs", "store");
         const unsubStore = onSnapshot(storeRef, (docSnap) => {
             if (docSnap.exists()) setStoreConfig(docSnap.data() as StoreConfig);
+        }, async (error) => {
+            if (error.code === 'permission-denied') {
+                const permissionError = new FirestorePermissionError({
+                    path: storeRef.path,
+                    operation: 'get',
+                } satisfies SecurityRuleContext);
+                errorEmitter.emit('permission-error', permissionError);
+            }
         });
 
         // Fetch Recent Transactions
@@ -308,11 +315,31 @@ function WalletPageContent() {
                     status: 'unread',
                     timestamp: serverTimestamp(),
                 });
+            }).catch(async (serverError) => {
+                if (serverError.code === 'permission-denied') {
+                    const permissionError = new FirestorePermissionError({
+                        path: 'wallet-auto-approve-path',
+                        operation: 'write',
+                        requestResourceData: txData,
+                    } satisfies SecurityRuleContext);
+                    errorEmitter.emit('permission-error', permissionError);
+                }
+                throw serverError;
             });
         } else {
             // Normal path: create pending request
             const txsCol = collection(db, "transactions");
-            await addDoc(txsCol, txData);
+            await addDoc(txsCol, txData).catch(async (serverError) => {
+                if (serverError.code === 'permission-denied') {
+                    const permissionError = new FirestorePermissionError({
+                        path: txsCol.path,
+                        operation: 'create',
+                        requestResourceData: txData,
+                    } satisfies SecurityRuleContext);
+                    errorEmitter.emit('permission-error', permissionError);
+                }
+                throw serverError;
+            });
         }
 
         setSuccessAmount(amount);
@@ -326,12 +353,7 @@ function WalletPageContent() {
 
     } catch (serverError: any) {
         setIsSubmitting(false);
-        const permissionError = new FirestorePermissionError({
-            path: 'wallet-deposit-path',
-            operation: 'write',
-            requestResourceData: txData,
-        } satisfies SecurityRuleContext);
-        errorEmitter.emit('permission-error', permissionError);
+        console.error("Add funds failed:", serverError);
     }
   }
   
@@ -586,7 +608,7 @@ function WalletPageContent() {
                             <ResponsiveContainer width="100%" height="100%">
                                 <AreaChart data={trendData}>
                                     <defs>
-                                        <linearGradient id="colorBalance" x1="0" y1="0" x2="0" y2="1">
+                                        <linearGradient id="colorBalance" x1="0" x2="0" x2="0" y2="1">
                                             <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.1}/>
                                             <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
                                         </linearGradient>

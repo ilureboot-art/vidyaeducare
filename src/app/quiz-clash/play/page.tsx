@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
@@ -59,7 +58,12 @@ function QuizClashGameContent() {
         const fetchGameData = async () => {
             try {
                 const tournamentDocRef = doc(db, "quizClashTournaments", tournamentId);
-                const tournamentSnap = await getDoc(tournamentDocRef);
+                const tournamentSnap = await getDoc(tournamentDocRef).catch(async (e) => {
+                    if (e.code === 'permission-denied') {
+                        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: tournamentDocRef.path, operation: 'get' }));
+                    }
+                    throw e;
+                });
 
                 if (!tournamentSnap.exists()) {
                     toast({ variant: 'destructive', title: "Tournament not found." });
@@ -70,7 +74,12 @@ function QuizClashGameContent() {
                 setTournament(tourneyData);
 
                 const testSetDocRef = doc(db, "testSets", tourneyData.testSetId);
-                const testSetSnap = await getDoc(testSetDocRef);
+                const testSetSnap = await getDoc(testSetDocRef).catch(async (e) => {
+                    if (e.code === 'permission-denied') {
+                        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: testSetDocRef.path, operation: 'get' }));
+                    }
+                    throw e;
+                });
 
                 if (!testSetSnap.exists()) {
                     toast({ variant: 'destructive', title: "Question set not found." });
@@ -150,7 +159,12 @@ function QuizClashGameContent() {
                 timestamp: serverTimestamp(),
             };
 
-            await addDoc(resultsColRef, resultData);
+            await addDoc(resultsColRef, resultData).catch(async (e) => {
+                if (e.code === 'permission-denied') {
+                    errorEmitter.emit('permission-error', new FirestorePermissionError({ path: resultsColRef.path, operation: 'create', requestResourceData: resultData }));
+                }
+                throw e;
+            });
             
             toast({ title: "Quiz Finished!", description: `${reason} Syncing results with profile...`, duration: 5000 });
 

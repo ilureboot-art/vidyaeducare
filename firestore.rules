@@ -3,7 +3,7 @@ rules_version = '2';
 /**
  * Vidya EduCare - Production Infrastructure Rules
  * Target Instance: vidyaeducaredatabase
- * Deployment Salt: V62_STABILIZED_OWNER_PRIORITY
+ * Deployment Salt: V63_RESOLVED_PERMISSIONS
  */
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -41,15 +41,18 @@ service cloud.firestore {
       allow read, write: if isMaster();
     }
 
-    // --- USER PRIVATE DATA (Direct Match UID) ---
-    // Prioritizing isOwner(uid) to ensure immediate short-circuit for students.
+    // --- USER PRIVATE DATA ---
 
     match /users/{uid} {
-      allow read, write: if isOwner(uid) || isAdmin();
+      allow read: if signedIn();
+      allow create: if signedIn() && isOwner(uid);
+      allow update, delete: if isOwner(uid) || isAdmin();
     }
 
     match /wallets/{uid} {
-      allow read, write: if isOwner(uid) || isAdmin();
+      allow read: if isOwner(uid) || isAdmin();
+      allow create: if signedIn() && isOwner(uid);
+      allow update: if isAdmin() || isOwner(uid);
     }
 
     match /activationCodes/{uid} {
@@ -64,7 +67,8 @@ service cloud.firestore {
     }
 
     match /referbolt/{uid} {
-      allow read, write: if isOwner(uid) || isAdmin();
+      allow read: if signedIn();
+      allow write: if isOwner(uid) || isAdmin();
     }
 
     // --- SHARED DATA ---
@@ -101,7 +105,8 @@ service cloud.firestore {
     }
 
     match /testResults/{id} {
-      allow read, list, create: if signedIn();
+      allow read, list: if signedIn();
+      allow create: if signedIn();
     }
 
     match /leaderboard/{id} {

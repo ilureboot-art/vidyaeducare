@@ -12,13 +12,11 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { UserCog, UserPlus, MoreHorizontal, Trash2, MessageSquare, Edit, Loader2, Search, FilterX } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { UserCog, UserPlus, Trash2, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -33,7 +31,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { format } from 'date-fns';
 import type { Admin, AdminRole } from "@/lib/admin-data";
 import { collection, onSnapshot, doc, setDoc, deleteDoc, updateDoc } from "firebase/firestore";
 import { initializeApp, deleteApp } from "firebase/app";
@@ -42,21 +39,12 @@ import { useAuth, useDb } from "@/firebase";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
-const WhatsAppIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-green-500">
-        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
-    </svg>
-)
-
 export default function AdminManagementPage() {
   const db = useDb();
-  const { user, loading: authLoading, isHeadAdmin } = useAuth();
+  const { user, loading: authLoading, isHeadAdmin, isResolved } = useAuth();
   const [allAdmins, setAllAdmins] = useState<Admin[] | null>(null);
   
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isResetPassOpen, setIsResetPassOpen] = useState(false);
-  const [selectedAdmin, setSelectedAdmin] = useState<Admin | null>(null);
   const [newAdminRole, setNewAdminRole] = useState<AdminRole | ''>('');
   const [isCreating, setIsCreating] = useState(false);
   
@@ -66,7 +54,11 @@ export default function AdminManagementPage() {
   const { toast } = useToast();
   
   useEffect(() => {
-    if (authLoading || !db || !user) return;
+    if (!isResolved || !db || !user) {
+        // Only clear the loading state once auth is resolved and head admin check is possible
+        if (isResolved && !isHeadAdmin) setAllAdmins([]);
+        return;
+    }
     
     if (!isHeadAdmin) {
         setAllAdmins([]);
@@ -87,20 +79,8 @@ export default function AdminManagementPage() {
     });
 
     return () => unsubscribe();
-  }, [db, user, isHeadAdmin, authLoading]);
+  }, [db, user, isHeadAdmin, isResolved]);
 
-
-  const openWhatsApp = (phone: string, message?: string) => {
-    const cleanedPhone = phone.replace(/\D/g, '');
-    if (cleanedPhone) {
-        let url = `https://wa.me/${cleanedPhone}`;
-        if (message) {
-            url += `?text=${encodeURIComponent(message)}`;
-        }
-        window.open(url, '_blank');
-    }
-  }
-  
   const handleRequest = async (requestId: string, newStatus: "Active" | "Rejected") => {
     if (!allAdmins || !db) return;
     const requestToProcess = allAdmins.find(req => req.id === requestId);
@@ -215,10 +195,11 @@ export default function AdminManagementPage() {
     });
   }, [allAdmins, searchTerm, roleFilter]);
 
-  if (authLoading || allAdmins === null) {
+  if (!isResolved || allAdmins === null) {
     return (
-      <div className="flex justify-center items-center h-96">
+      <div className="flex flex-col items-center justify-center h-96 space-y-4">
         <Loader2 className="animate-spin text-primary" size={32} />
+        <p className="text-muted-foreground animate-pulse text-sm font-medium">Syncing Authority Records...</p>
       </div>
     );
   }
@@ -226,7 +207,7 @@ export default function AdminManagementPage() {
   if (!isHeadAdmin) {
       return (
           <div className="flex justify-center items-center h-96">
-              <Card><CardHeader><CardTitle>Access Denied</CardTitle></CardHeader></Card>
+              <Card className="max-w-md w-full"><CardHeader><CardTitle>Access Denied</CardTitle><CardDescription>Only Head Administrators can manage the administrative workforce.</CardDescription></CardHeader></Card>
           </div>
       )
   }

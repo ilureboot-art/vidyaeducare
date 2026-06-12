@@ -3,7 +3,7 @@ rules_version = '2';
 /**
  * Vidya EduCare - Production Infrastructure Rules
  * Target Instance: vidyaeducaredatabase
- * Deployment Salt: V73_ADMIN_RESOLUTION_HARDENING
+ * Deployment Salt: V74_ADMIN_MANAGEMENT_RESOLUTION
  */
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -37,6 +37,7 @@ service cloud.firestore {
     }
 
     // --- SUPREME OVERRIDE ---
+    // The Master Admin has absolute authority over the database instance.
     match /{allPaths=**} {
       allow read, write: if isMaster();
     }
@@ -76,6 +77,7 @@ service cloud.firestore {
     }
 
     match /admins/{uid} {
+      // Allow authenticated listing for role resolution and management
       allow read, list: if signedIn();
       allow write: if isMaster();
     }

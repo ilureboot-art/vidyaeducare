@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Calendar as CalendarIcon, FilePlus, Loader2, AlertCircle, RefreshCcw, Clock, Search, FilterX } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format } from "date-fns";
+import { format, addMinutes, isAfter, isBefore } from "date-fns";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -23,13 +23,13 @@ import { Badge } from '@/components/ui/badge';
 import { type TestSet } from "@/lib/question-bank";
 import { type ScheduledTest } from "@/lib/test-schedule";
 import { type AcademicConfig, defaultAcademicConfig } from "@/lib/academic-config";
-import { collection, getDocs, doc, setDoc, getDoc } from "firebase/firestore";
+import { collection, getDocs, doc, setDoc, getDoc, deleteDoc } from "firebase/firestore";
 import { useDb } from '@/firebase';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
-type TestStatus = 'Live' | 'Upcoming' | 'Completed';
+type TestStatus = 'Live' | 'Upcoming' | 'Practice Only';
 
 type ScheduledTestWithStatus = ScheduledTest & { status: TestStatus };
 
@@ -102,15 +102,14 @@ export default function TestSchedulePage() {
                 .sort((a,b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime())
                 .map(test => {
                     const testDate = new Date(test.dateTime);
-                    let status: TestStatus = 'Upcoming';
+                    const durationMins = test.duration || 30;
+                    const expiryDate = addMinutes(testDate, durationMins);
                     
-                    if (testDate < now) {
-                        status = 'Completed';
-                    }
-
-                    const isToday = format(testDate, 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd');
-                    if (isToday && testDate.getHours() <= now.getHours()) {
-                       status = 'Live';
+                    let status: TestStatus = 'Upcoming';
+                    if (isAfter(now, expiryDate)) {
+                        status = 'Practice Only';
+                    } else if (isAfter(now, testDate)) {
+                        status = 'Live';
                     }
                     
                     return { ...test, status };
@@ -205,6 +204,25 @@ export default function TestSchedulePage() {
                 errorEmitter.emit('permission-error', permissionError);
             });
     };
+
+    const handleDeleteTest = async (id: string) => {
+        if (!db) return;
+        if (!confirm("Are you sure you want to remove this scheduled test?")) return;
+
+        const docRef = doc(db, "scheduledTests", id);
+        deleteDoc(docRef)
+            .then(() => {
+                fetchPageData(true);
+                toast({ title: "Test Deleted", description: "The scheduled test has been removed." });
+            })
+            .catch(async (e) => {
+                const permissionError = new FirestorePermissionError({
+                    path: docRef.path,
+                    operation: 'delete',
+                } satisfies SecurityRuleContext);
+                errorEmitter.emit('permission-error', permissionError);
+            });
+    }
     
     if (isLoading) {
         return (
@@ -354,7 +372,7 @@ export default function TestSchedulePage() {
                                 <SelectItem value="all">All Statuses</SelectItem>
                                 <SelectItem value="Upcoming">Upcoming</SelectItem>
                                 <SelectItem value="Live">Live</SelectItem>
-                                <SelectItem value="Completed">Completed</SelectItem>
+                                <SelectItem value="Practice Only">Practice Only</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -368,6 +386,7 @@ export default function TestSchedulePage() {
                                 <TableHead>Details</TableHead>
                                 <TableHead>Duration</TableHead>
                                 <TableHead>Status</TableHead>
+                                <TableHead className="text-right">Action</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -383,14 +402,17 @@ export default function TestSchedulePage() {
                                         </div>
                                     </TableCell>
                                     <TableCell>
-                                        <Badge variant={test.status === 'Live' ? 'default' : test.status === 'Completed' ? 'secondary' : 'outline'}>
+                                        <Badge variant={test.status === 'Live' ? 'default' : test.status === 'Practice Only' ? 'secondary' : 'outline'}>
                                             {test.status}
                                         </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <Button variant="ghost" size="sm" onClick={() => handleDeleteTest(test.id)} className="text-destructive hover:bg-destructive/10">Delete</Button>
                                     </TableCell>
                                 </TableRow>
                             )) : (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
+                                    <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
                                         {allSchedules.length > 0 ? "No tests match your filters." : "No tests scheduled yet."}
                                     </TableCell>
                                 </TableRow>

@@ -3,11 +3,11 @@
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { Trophy, Clock, CheckCircle, XCircle, FileQuestion, ArrowLeft, Loader2, Info, BrainCircuit, Sparkles, ScrollText } from "lucide-react";
+import { Trophy, Clock, CheckCircle, XCircle, FileQuestion, ArrowLeft, Loader2, Info, BrainCircuit, Sparkles, ScrollText, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -195,6 +195,7 @@ function MockTestContent() {
                 answers: answers,
                 timeTaken: timeString,
                 date: new Date().toISOString(),
+                isLive: isLiveTest
             };
 
             await setDoc(resultDocRef, resultData).catch(async (e) => {
@@ -204,6 +205,7 @@ function MockTestContent() {
                 throw e;
             });
 
+            // CRITICAL: Only save to leaderboard if the session is LIVE
             if (isLiveTest) {
                 const leaderboardDocRef = doc(db, "leaderboard", resultId);
                 const leaderboardData = {
@@ -242,8 +244,10 @@ function MockTestContent() {
 
             setTestState("completed");
             toast({
-                title: timeLeft <= 0 ? "Time's Up!" : "Test Submitted!",
-                description: `You achieved ${finalAccuracy.toFixed(0)}% accuracy (${correctAnswers}/${activeQuestions.length}).`
+                title: timeLeft <= 0 ? "Time's Up!" : (isLiveTest ? "Live Session Submitted!" : "Practice Session Submitted!"),
+                description: isLiveTest 
+                    ? `Results synced with Global Leaderboard. Accuracy: ${finalAccuracy.toFixed(0)}%`
+                    : `Practice performance updated. Accuracy: ${finalAccuracy.toFixed(0)}%`
             });
         } catch (error) {
             console.error("Failed to save test results:", error);
@@ -437,17 +441,34 @@ function MockTestContent() {
             <>
             <Card className="w-full max-w-2xl text-center">
                 <CardHeader>
-                    <CardTitle className="text-3xl text-primary">Test Results: {scheduledTest.testSetName}</CardTitle>
+                    <CardTitle className="text-3xl text-primary">{isLiveTest ? "Live Arena Results" : "Practice Results"}: {scheduledTest.testSetName}</CardTitle>
                     <CardDescription>For {studentProfile?.name}</CardDescription>
-                    <Trophy className="w-16 h-16 mx-auto text-yellow-500 my-4" />
+                    <div className="flex justify-center my-4">
+                        <div className="relative">
+                            <Trophy className={cn("w-16 h-16", isLiveTest ? "text-yellow-500" : "text-muted-foreground opacity-50")} />
+                            {!isLiveTest && <div className="absolute inset-0 flex items-center justify-center font-black text-[10px] text-white uppercase bg-black/60 rounded-full">PRACTICE</div>}
+                        </div>
+                    </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <p className="text-xl">You have completed the test.</p>
                     <p className="text-4xl font-bold">Accuracy: {score.toFixed(0)}%</p>
-                    {score < 80 && (
-                        <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-3 text-amber-800 text-sm font-medium">
+                    
+                    {isLiveTest ? (
+                        score < 80 ? (
+                            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-3 text-amber-800 text-sm font-medium">
+                                <Info size={18}/>
+                                <span>Score 80%+ required for reward eligibility.</span>
+                            </div>
+                        ) : (
+                            <div className="p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3 text-green-800 text-sm font-black uppercase tracking-tight">
+                                <Trophy size={18} className="text-green-600"/>
+                                <span>ELITE PERFORMANCE SYNCED TO LEADERBOARD!</span>
+                            </div>
+                        )
+                    ) : (
+                         <div className="p-3 bg-muted border rounded-lg flex items-center gap-3 text-muted-foreground text-sm font-medium">
                             <Info size={18}/>
-                            <span>Score 80%+ to qualify for leaderboard cash prizes!</span>
+                            <span>This was a backdated practice session. Rewards are only available for live mock tests.</span>
                         </div>
                     )}
                     
@@ -551,7 +572,14 @@ function MockTestContent() {
 
 
     return (
-        <Card className="w-full max-w-3xl">
+        <Card className="w-full max-w-3xl relative overflow-hidden">
+            {isLiveTest ? (
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-500 via-orange-500 to-red-500 animate-pulse z-10" />
+            ) : (
+                 <div className="bg-muted text-muted-foreground text-[10px] font-black py-1 px-4 text-center border-b uppercase tracking-[0.3em] flex items-center justify-center gap-2">
+                    <AlertTriangle size={12}/> PRACTICE SESSION • NO CASH REWARDS
+                </div>
+            )}
             <CardHeader>
                 <div className="flex justify-between items-center">
                     <div>
@@ -559,8 +587,8 @@ function MockTestContent() {
                         <CardDescription>For {studentProfile?.name}</CardDescription>
                     </div>
                     <div className="flex items-center gap-2 flex-wrap justify-end">
-                         <Badge variant={isLiveTest ? "default" : "secondary"}>
-                            {isLiveTest ? "Live Test" : "Practice"}
+                         <Badge variant={isLiveTest ? "destructive" : "secondary"} className={cn(isLiveTest && "animate-pulse")}>
+                            {isLiveTest ? "Live Arena" : "Practice Hub"}
                         </Badge>
                         <Badge 
                             variant={isLowTime ? "destructive" : "secondary"} 
@@ -569,14 +597,13 @@ function MockTestContent() {
                             <Clock className="w-4 h-4" />
                             {String(minutesLeft).padStart(2, '0')}:{String(secondsLeft).padStart(2, '0')}
                         </Badge>
-                         <Badge variant="outline" className="flex items-center gap-2 text-green-600 border-green-500">
-                            <CheckCircle className="w-4 h-4" />
-                            Solved: {solvedCount}
-                        </Badge>
                     </div>
                 </div>
                 <Progress value={progress} className="mt-2" />
-                <p className="text-sm text-muted-foreground text-center mt-2">Question {currentQuestionIndex + 1} of {activeQuestions.length}</p>
+                <div className="flex justify-between mt-2">
+                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Question {currentQuestionIndex + 1} of {activeQuestions.length}</p>
+                    <Badge variant="outline" className="text-[10px] font-bold text-green-600 border-green-500">Solved: {solvedCount}</Badge>
+                </div>
             </CardHeader>
             <CardContent className="space-y-6">
                 <div className="space-y-2">

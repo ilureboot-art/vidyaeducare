@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Calendar as CalendarIcon, FilePlus, Loader2, Clock, Hourglass, Search, FilterX } from "lucide-react";
-import { format, differenceInSeconds } from "date-fns";
+import { format, differenceInSeconds, addMinutes, isAfter, isBefore } from "date-fns";
 import {
   Table,
   TableBody,
@@ -22,8 +22,9 @@ import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { useDb } from '@/firebase';
 import UserLayout from '@/components/UserLayout';
 import { type AcademicConfig, defaultAcademicConfig } from "@/lib/academic-config";
+import { cn } from "@/lib/utils";
 
-type TestStatus = 'Live' | 'Upcoming' | 'Completed';
+type TestStatus = 'Live' | 'Upcoming' | 'Practice Only';
 type ScheduledTestWithStatus = ScheduledTest & { status: TestStatus };
 
 function CountdownTimer({ targetDate }: { targetDate: string }) {
@@ -59,8 +60,8 @@ function CountdownTimer({ targetDate }: { targetDate: string }) {
     }, [targetDate]);
 
     return (
-        <Badge variant="outline" className="font-mono bg-accent/5 text-accent border-accent/20 animate-pulse">
-            <Hourglass className="w-3 h-3 mr-1.5" />
+        <Badge variant="outline" className="font-mono bg-accent/5 text-accent border-accent/20 animate-pulse h-5 text-[9px]">
+            <Hourglass className="w-2.5 h-2.5 mr-1.5" />
             {timeLeft}
         </Badge>
     );
@@ -96,15 +97,14 @@ export default function TestSchedulePage() {
                     .sort((a,b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime())
                     .map(test => {
                         const testDate = new Date(test.dateTime);
-                        let status: TestStatus = 'Upcoming';
+                        const duration = test.duration || 30;
+                        const expiryDate = addMinutes(testDate, duration);
                         
-                        if (testDate < now) {
-                            status = 'Completed';
-                        }
-    
-                        const isToday = format(testDate, 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd');
-                        if (isToday && testDate.getHours() <= now.getHours()) {
-                           status = 'Live';
+                        let status: TestStatus = 'Upcoming';
+                        if (isAfter(now, expiryDate)) {
+                            status = 'Practice Only';
+                        } else if (isAfter(now, testDate)) {
+                            status = 'Live';
                         }
                         
                         return { ...test, status };
@@ -200,7 +200,7 @@ export default function TestSchedulePage() {
                                     <TableHead>Test Name</TableHead>
                                     <TableHead>Start Time</TableHead>
                                     <TableHead>Duration</TableHead>
-                                    <TableHead>Status / Countdown</TableHead>
+                                    <TableHead>Status / Eligibility</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -223,8 +223,8 @@ export default function TestSchedulePage() {
                                         </TableCell>
                                         <TableCell>
                                             <div className="flex flex-col gap-2">
-                                                <Badge variant={test.status === 'Live' ? 'default' : test.status === 'Completed' ? 'secondary' : 'outline'} className="w-fit h-5 text-[9px] uppercase tracking-tighter">
-                                                    {test.status}
+                                                <Badge variant={test.status === 'Live' ? 'default' : test.status === 'Practice Only' ? 'secondary' : 'outline'} className={cn("w-fit h-5 text-[9px] uppercase tracking-tighter", test.status === 'Live' && "bg-red-500 hover:bg-red-500 animate-pulse")}>
+                                                    {test.status === 'Live' ? "Live Rewards Ready" : test.status}
                                                 </Badge>
                                                 {test.status === 'Upcoming' && (
                                                     <CountdownTimer targetDate={test.dateTime} />
@@ -246,10 +246,10 @@ export default function TestSchedulePage() {
 
                 <Card className="bg-muted/30 border-dashed border-2">
                     <CardContent className="p-6 flex items-center gap-4">
-                        <div className="p-3 bg-primary/10 rounded-full text-primary"><Clock className="w-6 h-6"/></div>
+                        <div className="p-3 bg-primary/10 rounded-full text-primary"><Trophy className="w-6 h-6"/></div>
                         <div>
-                            <h3 className="font-bold">Automated Timekeeping</h3>
-                            <p className="text-sm text-muted-foreground">Tests will automatically lock and submit once the allotted duration expires. Ensure you have a stable internet connection during live sessions.</p>
+                            <h3 className="font-bold">Prize Eligibility Rules</h3>
+                            <p className="text-sm text-muted-foreground">Cash prizes and leaderboard rankings are only available during the <b>Live</b> window of a mock test. Backdated tests can be taken anytime for practice, but will not qualify for rewards.</p>
                         </div>
                     </CardContent>
                 </Card>

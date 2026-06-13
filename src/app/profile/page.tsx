@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { User, Mail, Calendar, Phone, GraduationCap, Trash2, PlusCircle, BookOpen, Loader2, BarChart2, Users, BrainCircuit, Sparkles, ScrollText, ArrowRight, Trophy, Award, IndianRupee, Star, Target, Search, AlertCircle } from "lucide-react";
+import { User, Mail, Calendar, Phone, GraduationCap, Trash2, PlusCircle, BookOpen, Loader2, BarChart2, Users, BrainCircuit, Sparkles, ScrollText, ArrowRight, Trophy, Award, IndianRupee, Star, Target, Search, AlertCircle, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { ResponsiveContainer, BarChart, XAxis, YAxis, Tooltip, Bar, CartesianGrid, Cell } from "recharts";
-import { format } from "date-fns";
+import { format, addMinutes, isAfter, isBefore } from "date-fns";
 import type { StudentProfile } from "@/lib/student-data";
 import type { ScheduledTest } from "@/lib/test-schedule";
 import { useAuth, useDb } from "@/firebase";
@@ -214,7 +214,12 @@ function ProfilePageContent() {
         if (!selectedStudentForTest) return;
         const now = new Date();
         const testDate = new Date(test.dateTime);
-        const isLive = testDate <= now;
+        const duration = test.duration || 30;
+        const expiryDate = addMinutes(testDate, duration);
+        
+        // Reward eligibility logic: Only tests happening right now qualify for rewards
+        const isLive = isAfter(now, testDate) && isBefore(now, expiryDate);
+        
         router.push(`/mock-test?studentId=${selectedStudentForTest.id}&testId=${test.id}&isLive=${isLive}`);
     }
 
@@ -573,18 +578,37 @@ function ProfilePageContent() {
                         availableTests.map(test => {
                             const now = new Date();
                             const testDate = new Date(test.dateTime);
-                            const isCompleted = testDate < now;
+                            const duration = test.duration || 30;
+                            const expiryDate = addMinutes(testDate, duration);
+                            
+                            const isUpcoming = isBefore(now, testDate);
+                            const isLive = isAfter(now, testDate) && isBefore(now, expiryDate);
+                            const isBackdated = isAfter(now, expiryDate);
+
                             return (
-                                <div key={test.id} className="flex items-center justify-between p-4 rounded-2xl border bg-card hover:border-primary/50 transition-all hover:shadow-md group">
+                                <div key={test.id} className={cn(
+                                    "flex items-center justify-between p-4 rounded-2xl border bg-card transition-all group",
+                                    isLive ? "border-primary/50 shadow-md ring-1 ring-primary/20" : "hover:border-primary/30"
+                                )}>
                                     <div className="space-y-1">
-                                        <p className="font-black text-sm leading-none text-primary group-hover:text-primary transition-colors">{test.testSetName}</p>
-                                        <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">{format(testDate, "PPP p")}</p>
+                                        <p className="font-black text-sm leading-none text-primary">{test.testSetName}</p>
+                                        <div className="flex items-center gap-2">
+                                            <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">{format(testDate, "PPP p")}</p>
+                                            {isLive && <Badge className="h-4 px-1 text-[8px] animate-pulse bg-red-500 hover:bg-red-500 border-none">LIVE REWARDS</Badge>}
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <Badge variant={isCompleted ? "secondary" : "default"} className="text-[9px] font-black uppercase tracking-tighter px-2">
-                                            {isCompleted ? "Practice" : "Live"}
+                                    <div className="flex flex-col items-end gap-2">
+                                        <Badge variant={isLive ? "default" : isUpcoming ? "outline" : "secondary"} className="text-[9px] font-black uppercase tracking-tighter px-2 h-5">
+                                            {isLive ? "Live Arena" : isUpcoming ? "Upcoming" : "Practice Only"}
                                         </Badge>
-                                        <Button size="sm" className="font-bold px-4" onClick={() => handleStartTest(test)}>START</Button>
+                                        <Button 
+                                            size="sm" 
+                                            className={cn("font-bold px-4 h-8", isUpcoming && "opacity-50")} 
+                                            disabled={isUpcoming}
+                                            onClick={() => handleStartTest(test)}
+                                        >
+                                            {isUpcoming ? <Clock size={14}/> : "START"}
+                                        </Button>
                                     </div>
                                 </div>
                             )

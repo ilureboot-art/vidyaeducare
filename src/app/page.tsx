@@ -49,9 +49,17 @@ export default function HomePage() {
 
   const handleShare = async () => {
     const url = window.location.origin;
-    const message = `🎓 Check out Vidya EduCare! It's an amazing platform for MockArena sessions and earning rewards. 
-    
-Start your journey to success now: ${url}`;
+    const message = `🚀 Ace your academic goals with Vidya EduCare! 📚
+
+I'm using this elite platform to prepare for success. Check it out:
+
+🏆 MockArena: Win cash prizes in live curriculum-aligned tests.
+🤖 GuruAI: Get instant bilingual explanations for any doubt.
+📝 QuickNotes: Transform chapters into structured study notes.
+
+Start your journey to excellence here: ${url}
+
+#VidyaEduCare #MockArena #GuruAI #QuickNotes #AcademicExcellence`;
     
     try {
         if (navigator.share) {
@@ -61,7 +69,7 @@ Start your journey to success now: ${url}`;
         }
     } catch(e) {
         navigator.clipboard.writeText(message);
-        toast({ title: "Link Copied!", description: "Promotional message copied to clipboard." });
+        toast({ title: "Link Copied!", description: "High-impact share message copied to clipboard." });
     }
   };
 

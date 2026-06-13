@@ -1,10 +1,9 @@
-
 "use client";
 
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Share2, IndianRupee, Gift, Loader2 } from "lucide-react";
+import { Share2, IndianRupee, Gift, Loader2, Sparkles, CheckCircle2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { doc, getDoc, type Firestore } from "firebase/firestore";
 import { useDb, useAuth } from "@/firebase";
@@ -75,13 +74,19 @@ function ReferAndEarnPageContent() {
         const url = `${window.location.origin}/signup?ref=${referralCode}`;
         const bonusAmount = referralBonus;
         
-        const message = `🎉 Join me on Vidya EduCare! Sign up with my code and we both get a ₹${bonusAmount} welcome bonus!
+        const message = `🎁 Let's win together on Vidya EduCare! 🎁
 
-It's a great platform for mock tests and fun skill games where you can win cash prizes.
+I'm using this elite platform for my exam preparation, and it's amazing. Sign up using my referral link and we BOTH get an instant ₹${bonusAmount} wallet bonus!
 
-My Referral Code: ${referralCode}
+🚀 Elite Features:
+- 🏆 MockArena: High-impact curriculum practice.
+- 🤖 GuruAI: 24/7 Bilingual concept tutor.
+- 📝 QuickNotes: Instant textbook summaries.
 
-Click here to join: ${url}`;
+🔑 My Referral Code: ${referralCode}
+🔗 Join Here: ${url}
+
+Start your journey to academic success today! 🎓`;
     
         const encodedMessage = encodeURIComponent(message);
         const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
@@ -90,7 +95,7 @@ Click here to join: ${url}`;
             navigator.clipboard.writeText(message);
             toast({
                 title: "Link Copied!",
-                description: "Promotional message copied to clipboard.",
+                description: "Dynamic referral message copied to clipboard.",
             });
         };
 
@@ -113,50 +118,62 @@ Click here to join: ${url}`;
     }
 
     return (
-        <div className="w-full max-w-2xl mx-auto">
-            <Card className="shadow-lg">
-                <CardHeader className="text-center">
-                    <CardTitle className="text-3xl font-bold text-primary flex items-center justify-center gap-2">
-                        <Share2 /> Refer & Earn
+        <div className="w-full max-w-2xl mx-auto space-y-6">
+            <Card className="shadow-2xl border-none ring-1 ring-primary/10 overflow-hidden">
+                <CardHeader className="text-center bg-primary/[0.02] border-b pb-12 pt-12">
+                    <div className="flex justify-center mb-6">
+                        <div className="p-4 bg-primary/10 rounded-full animate-bounce">
+                           <Share2 className="w-10 h-10 text-primary" />
+                        </div>
+                    </div>
+                    <CardTitle className="text-4xl font-black text-primary tracking-tighter uppercase italic">
+                        REFER & EARN
                     </CardTitle>
-                    <CardDescription>
-                        Invite your friends and earn rewards together!
+                    <CardDescription className="text-lg font-bold text-muted-foreground mt-2">
+                        Share academic success and get rewarded!
                     </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6 text-center">
-                    <div className="p-6 bg-muted rounded-lg">
-                        <h3 className="text-xl font-bold">Share your referral code</h3>
-                        <p className="text-muted-foreground mt-2">
-                            When a friend signs up using your code, you both get a special bonus credited to your wallets.
-                        </p>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center justify-center gap-2 text-primary"><IndianRupee /> You Get</CardTitle>
+                <CardContent className="space-y-8 pt-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <Card className="border-primary/20 bg-primary/[0.02] relative overflow-hidden">
+                            <CardHeader className="pb-2">
+                                <CardTitle className="flex items-center gap-2 text-primary font-black text-sm uppercase tracking-widest"><IndianRupee size={16}/> You Get</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <p className="text-3xl font-bold">₹{referralBonus}</p>
-                                <p className="text-xs text-muted-foreground">For each successful referral.</p>
+                                <p className="text-5xl font-black text-primary tracking-tighter">₹{referralBonus}</p>
+                                <p className="text-[10px] font-black uppercase text-muted-foreground mt-2 tracking-widest">Successful Referral Credit</p>
                             </CardContent>
                         </Card>
-                        <Card>
-                             <CardHeader>
-                                <CardTitle className="flex items-center justify-center gap-2 text-primary"><Gift/> They Get</CardTitle>
+                        <Card className="border-accent/20 bg-accent/[0.02] relative overflow-hidden">
+                             <CardHeader className="pb-2">
+                                <CardTitle className="flex items-center gap-2 text-accent font-black text-sm uppercase tracking-widest"><Gift size={16}/> They Get</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <p className="text-3xl font-bold">₹{referralBonus}</p>
-                                <p className="text-xs text-muted-foreground">As an instant welcome bonus.</p>
+                                <p className="text-5xl font-black text-accent tracking-tighter">₹{referralBonus}</p>
+                                <p className="text-[10px] font-black uppercase text-muted-foreground mt-2 tracking-widest">Instant Welcome Bonus</p>
                             </CardContent>
                         </Card>
                     </div>
 
-                    <Button size="lg" className="w-full" onClick={handleShare}>
-                        <Share2 className="mr-2" />
-                        Share With Friends
+                    <div className="p-8 bg-muted/30 rounded-[2rem] border-2 border-dashed text-center space-y-4">
+                        <h3 className="text-xl font-black text-primary uppercase italic">Your Referrer ID</h3>
+                        <p className="text-4xl font-mono tracking-[0.3em] font-black">{referralCode}</p>
+                        <div className="flex items-center justify-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest pt-2">
+                            <CheckCircle2 size={14} className="text-green-500" />
+                            Active & Ready for Sharing
+                        </div>
+                    </div>
+
+                    <Button size="lg" className="w-full py-10 text-2xl font-black rounded-3xl shadow-xl hover:scale-[1.02] transition-transform group bg-primary hover:bg-primary/90" onClick={handleShare}>
+                        <Share2 className="mr-3 h-6 w-6 group-hover:rotate-12 transition-transform" />
+                        SHARE SUCCESS NOW
                     </Button>
                 </CardContent>
+                <CardFooter className="bg-primary/5 text-center justify-center p-4">
+                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.3em] flex items-center gap-2">
+                        <Sparkles size={14} className="text-accent fill-accent" /> Build a learning community together
+                    </p>
+                </CardFooter>
             </Card>
         </div>
     );

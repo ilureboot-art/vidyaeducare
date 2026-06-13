@@ -155,21 +155,21 @@ function IBADashboardPageContent() {
   const handleShare = async () => {
     if (!ibaReferralCode) return;
     const shareUrl = `${window.location.origin}/signup?ref=${ibaReferralCode}`;
-    const message = `🚀 Ace your exams with Vidya EduCare! 🚀
+    const message = `🎓 Transform your education with Vidya EduCare! 🎓
 
-I'm an Independent Business Associate with them, and I highly recommend their platform for serious students.
+I'm an Independent Business Associate with Vidya EduCare, and I'm sharing my exclusive referral code to help you get a special discount on premium MockArena packages.
 
-✨ **Why Vidya EduCare?**
-- 📚 Extensive library of realistic mock tests.
-- 🏆 Compete on live leaderboards and win cash prizes.
-- 🎮 Fun skill games to sharpen your mind.
+✨ Why Vidya EduCare?
+- 🏆 MockArena: Win cash prizes in live curriculum tests.
+- 🤖 GuruAI: Your personal 24/7 bilingual tutor.
+- 📝 QuickNotes: Transform textbooks into structured summaries.
 
-Use my exclusive IBA code to get a special discount on your subscription!
+🔑 Use my IBA Code for a special discount: ${ibaReferralCode}
+🔗 Sign Up Here: ${shareUrl}
 
-🔑 **My IBA Code**: ${ibaReferralCode}
-🔗 **Sign Up Here**: ${shareUrl}
+Join the national community of high-achievers today! 🚀
 
-#VidyaEduCare #MockTest #ExamPrep #StudySmart #IBA #Referral #Discount`;
+#VidyaEduCare #IBA #MockArena #GuruAI #EducationSuccess #ReferralDiscount`;
     
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');

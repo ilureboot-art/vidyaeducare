@@ -87,7 +87,7 @@ Start your journey to excellence and earnings here: ${url}
         {/* Hero Section */}
         <section className="grid md:grid-cols-2 gap-12 items-center text-center md:text-left pt-8 md:pt-16">
           <div className="space-y-6">
-              <Badge className="bg-primary/10 text-primary hover:bg-primary/20 border-none px-4 py-1 font-bold">2024 ENROLLMENT OPEN • AI-POWERED LEARNING</Badge>
+              <Badge className="bg-primary/10 text-primary hover:bg-primary/20 border-none px-4 py-1 font-bold">ENROLLMENT OPEN • AI-POWERED LEARNING</Badge>
               <h1 className="text-5xl lg:text-7xl font-black text-primary tracking-tighter leading-tight italic uppercase">
                 Vidya <span className="text-accent">EduCare</span>
               </h1>
@@ -298,7 +298,7 @@ Start your journey to excellence and earnings here: ${url}
               </h2>
               <div className="pt-6 border-t-4 border-primary/5">
                 <p className="text-3xl font-black text-primary tracking-tight uppercase">Adv. Sanjay Vidya Vijay Gurav</p>
-                <p className="text-muted-foreground text-sm font-black uppercase tracking-[0.3em] mt-1">Owner, Vidya EduCare</p>
+                <p className="text-muted-foreground text-sm font-black uppercase tracking-[0.3em] mt-1">Founder & Owner, Vidya EduCare</p>
               </div>
             </div>
           </div>

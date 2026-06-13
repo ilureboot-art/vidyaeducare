@@ -1,11 +1,6 @@
 
 'use client';
 
-/**
- * @fileOverview Global academic configuration defaults.
- * These values are used to populate the initial system state.
- */
-
 export type AcademicConfig = {
     boards: string[];
     standards: string[];

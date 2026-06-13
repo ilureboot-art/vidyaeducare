@@ -1,24 +1,6 @@
 
 'use client';
 
-export type TicketPackage = {
-  tickets: number;
-  price: number;
-  bestValue: boolean;
-  games: number;
-  gstRate: number;
-  hsnSacCode: string;
-};
-
-export type ReferboltSubscription = {
-  name: string;
-  price: number;
-  description: string;
-  ticketBonus: number;
-  gstRate: number;
-  hsnSacCode: string;
-};
-
 export type MockTestPackage = {
     name: string;
     price: number;
@@ -26,17 +8,19 @@ export type MockTestPackage = {
     bestValue: boolean;
     gstRate: number;
     hsnSacCode: string;
-    baseDiscount: number;      // Fixed discount for all users
-    referralDiscount: number;  // Discount given if an IBA code is used
-    specialDiscount: number;   // Extra discount admin can add/remove (e.g. holiday sale)
-    grantFreeReferbolt: boolean; // Whether this package grants free ReferBolt access
+    baseDiscount: number;
+    referralDiscount: number;
+    specialDiscount: number;
+    grantFreeReferbolt: boolean;
 };
 
-export type GameSettings = {
-    maxAttempts: number;
-    welcomeBonus: number;
-    welcomeCoins: number;
-    rewards: number[];
+export type ReferboltSubscription = {
+    name: string;
+    price: number;
+    description: string;
+    ticketBonus: number;
+    gstRate: number;
+    hsnSacCode: string;
 };
 
 export type ReferboltSettings = {
@@ -50,8 +34,15 @@ export type RecommendationSettings = {
     requiredCount: number;
 };
 
+export type GameSettings = {
+    maxAttempts: number;
+    welcomeBonus: number;
+    welcomeCoins: number;
+    rewards: number[];
+};
+
 export type StoreConfig = {
-    packages: TicketPackage[];
+    packages: any[];
     mockTestPackages: MockTestPackage[];
     referboltSubscription: ReferboltSubscription;
     referralBonus: number;
@@ -59,7 +50,7 @@ export type StoreConfig = {
     referboltSettings: ReferboltSettings;
     recommendationSettings: RecommendationSettings;
     autoApproveDeposits: boolean;
-    ibaCommissionRate: number; // Adjustable commission percentage
+    ibaCommissionRate: number;
 };
 
 export const defaultStoreConfig: StoreConfig = {
@@ -95,7 +86,7 @@ export const defaultStoreConfig: StoreConfig = {
     referboltSubscription: {
         name: "ReferBolt",
         price: 100,
-        description: "Activate to earn commissions from an extended referral network.",
+        description: "Activate multi-level referral network access.",
         ticketBonus: 0,
         gstRate: 18,
         hsnSacCode: '998314',
@@ -122,5 +113,5 @@ export const defaultStoreConfig: StoreConfig = {
     },
 
     autoApproveDeposits: false,
-    ibaCommissionRate: 10 // Default to 10% per sale
+    ibaCommissionRate: 10
 };

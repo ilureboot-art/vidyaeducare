@@ -23,7 +23,7 @@ const AuthContext = createContext<AuthState | undefined>(undefined);
 const DbContext = createContext<Firestore | undefined>(undefined);
 const AuthServiceContext = createContext<Auth | undefined>(undefined);
 
-const ROLE_CACHE_KEY = 'vidya_auth_role_v21_fast';
+const ROLE_CACHE_KEY = 'vidya_auth_role_v22_instant';
 const MASTER_ADMIN_EMAIL = 'admin@vidyaeducare.com';
 
 const getCachedRoles = () => {
@@ -97,7 +97,6 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      // Safety timeout: If role resolution takes > 2 seconds, assume standard user to prevent hang
       const rolePromise = (async () => {
           const adminDocRef = doc(db, "admins", user.uid);
           const adminDocSnap = await getDoc(adminDocRef);
@@ -105,12 +104,11 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       })();
 
       const timeoutPromise = new Promise<{ isAdmin: boolean; isHeadAdmin: boolean }>((resolve) => 
-          setTimeout(() => resolve({ isAdmin: false, isHeadAdmin: false }), 2000)
+          setTimeout(() => resolve({ isAdmin: false, isHeadAdmin: false }), 1500)
       );
 
       return await Promise.race([rolePromise, timeoutPromise]);
     } catch (e) {
-      console.warn("Role resolution default applied.");
       return { isAdmin: false, isHeadAdmin: false };
     }
   }, [processSnap]);
@@ -189,8 +187,6 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   const isPublicRoute = ['/', '/how-to-play', '/admin/setup', '/check-head-admin', '/forgot-password', '/ai-tutor', '/ai-notes', '/trial-mock-test'].includes(cleanPath);
   const isAuthRoute = ['/login', '/signup', '/admin/login'].includes(cleanPath);
 
-  // OPTIMIZATION: Do not show the loading screen for public or auth pages.
-  // This ensures that the landing page and signup/login forms load instantly.
   const shouldShowLoading = !isPublicRoute && !isAuthRoute && (authState.loading || (!authState.isResolved && authState.user));
 
   if (shouldShowLoading) {
@@ -201,8 +197,8 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
             <Loader2 className="absolute inset-0 w-16 h-16 text-primary/30 animate-spin" />
         </div>
         <div className="space-y-2">
-            <p className="text-xl font-black text-primary tracking-tighter uppercase italic">Vidya EduCare</p>
-            <p className="text-muted-foreground text-sm font-medium tracking-wide">Syncing Role Access...</p>
+            <p className="text-xl font-black text-primary tracking-tighter uppercase italic leading-none">Vidya EduCare</p>
+            <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest">Resuming Secure Session...</p>
         </div>
       </div>
     );

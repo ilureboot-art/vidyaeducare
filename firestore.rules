@@ -2,8 +2,7 @@
 rules_version = '2';
 
 /**
- * Vidya EduCare - High Performance Production Rules
- * Priority: Absolute Master Admin Supreme Bypass
+ * Vidya EduCare - Elite Production Security Rules
  */
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -13,7 +12,6 @@ service cloud.firestore {
     }
 
     function isMaster() {
-      // Faster, simplified Master Admin check for high-performance resolution
       return signedIn() && 
         (request.auth.token.email.lower() == 'admin@vidyaeducare.com' || request.auth.token.email.lower() == 'headadmin@vidyaeducare.com');
     }
@@ -28,7 +26,7 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == uid;
     }
 
-    // --- SUPREME OVERRIDE (PRIORITY 1) ---
+    // --- MASTER OVERRIDE ---
     match /{allPaths=**} {
       allow read, write: if isMaster();
     }
@@ -39,15 +37,15 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // --- USER PRIVATE DATA ---
+    // --- USER PROFILE & ACCESS ---
     match /users/{uid} {
       allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
-      allow create: if true; // Allow new users to create profiles during signup
+      allow create: if true; // Allow signup profile creation
       allow update, delete: if signedIn() && (request.auth.uid == uid || isAdmin());
     }
 
     match /wallets/{uid} {
-      // CRITICAL: Allow public read/list for referral code verification during guest signup
+      // Allow public verification of referral codes for promotional signups
       allow read, list: if true;
       allow create: if signedIn() && request.auth.uid == uid;
       allow update: if isAdmin() || isOwner(uid);
@@ -77,34 +75,31 @@ service cloud.firestore {
 
     match /students/{id} {
       allow read, list: if signedIn();
-      allow write: if isAdmin() || (resource != null && (resource.data.parentId == request.auth.uid)) || (request.resource != null && (request.resource.data.parentId == request.auth.uid));
+      allow write: if isAdmin() || (resource != null && resource.data.parentId == request.auth.uid) || (request.resource != null && request.resource.data.parentId == request.auth.uid);
     }
     
     match /transactions/{id} {
       allow read, list: if signedIn() && (isAdmin() || (resource != null && resource.data.user == request.auth.uid));
-      allow create: if true; // Allow signup bonus transactions
+      allow create: if true; // Allow bonuses
       allow update: if isAdmin();
     }
 
     match /testSets/{id} {
-      allow read: if true; // Allow students to read questions
-      allow list: if true;
+      allow read, list: if true;
       allow write: if isAdmin();
     }
 
     match /scheduledTests/{id} {
-      allow read, list: if true; // Allow public schedule viewing
+      allow read, list: if true;
       allow write: if isAdmin();
     }
 
     match /testResults/{id} {
-      allow read, list: if signedIn();
-      allow create: if signedIn();
+      allow read, list, create: if signedIn();
     }
 
     match /leaderboard/{id} {
-      allow read, list: if true;
-      allow write: if true;
+      allow read, list, write: if true;
     }
 
     match /quizClashTournaments/{id} {
@@ -113,18 +108,17 @@ service cloud.firestore {
     }
 
     match /quizClashResults/{id} {
-      allow read, list: if true;
-      allow write: if true;
+      allow read, list, write: if true;
     }
     
     match /notifications/{id} {
       allow read, list: if signedIn() && (isAdmin() || (resource != null && (resource.data.userId == request.auth.uid || resource.data.userId == 'admin')));
-      allow write: if true; // Allow signup notifications
+      allow write: if true;
     }
     
     match /clients/{id} {
       allow read, list: if signedIn();
-      allow write: if isAdmin() || true;
+      allow write: if true;
     }
   }
 }

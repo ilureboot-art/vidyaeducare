@@ -22,6 +22,10 @@ const userFaqs = [
         answer: "MockArena rewards are designed to recognize academic excellence. To qualify for cash prizes, a student must participate in a live session and achieve at least 80% accuracy. The top 5 scorers who meet this accuracy criteria win cash prizes (e.g., ₹250 for Rank #1) credited instantly to the parent's wallet once results are finalized."
     },
     {
+        question: "What is Quiz Clash and how do the rewards work?",
+        answer: "Quiz Clash features high-stakes live tournaments with shared prize pools. Users register a student for a specific clash (Practice or Pro). In Pro Clashes, the entry fees form a prize pool, which is distributed among the top performers based on score and speed. Unlike MockArena, prizes are based on relative ranking within the tournament participants."
+    },
+    {
         question: "How do I work as an Independent Business Associate (IBA)?",
         answer: "Working as an IBA is a zero-investment opportunity. You receive a unique Referral Code in your IBA Dashboard. Share this code with students and parents via WhatsApp or social media. When they use your code to subscribe to MockArena packages, you earn instant commissions credited to your wallet."
     },

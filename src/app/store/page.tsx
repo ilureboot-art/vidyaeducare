@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -288,7 +287,7 @@ function StorePageContent() {
         <CardContent>
           <Tabs defaultValue="tests" className="w-full">
             <TabsList className="grid w-full grid-cols-2 h-12">
-              <TabsTrigger value="tests" className="font-bold uppercase text-[10px]">Mock Test Packs</TabsTrigger>
+              <TabsTrigger value="tests" className="font-bold uppercase text-[10px]">MockArena Packs</TabsTrigger>
               <TabsTrigger value="referbolt" className="font-bold uppercase text-[10px]">ReferBolt Access</TabsTrigger>
             </TabsList>
             <TabsContent value="tests" className="space-y-6 pt-6">

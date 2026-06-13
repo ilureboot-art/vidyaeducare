@@ -14,13 +14,13 @@ import { cn } from "@/lib/utils";
 const features = [
   {
     icon: BookOpen,
-    title: "Mock Tests",
-    description: "Prepare for exams with our extensive library of mock tests for various subjects and standards."
+    title: "MockArena",
+    description: "Prepare for exams with our extensive library of MockArena practice sets for various subjects and standards."
   },
   {
     icon: Trophy,
     title: "Win Prizes",
-    description: "Compete on live leaderboards in mock tests and win real cash rewards for top scores."
+    description: "Compete on live leaderboards in MockArena sessions and win real cash rewards for top scores."
   },
   {
     icon: Users,
@@ -49,7 +49,7 @@ export default function HomePage() {
 
   const handleShare = async () => {
     const url = window.location.origin;
-    const message = `🎓 Check out Vidya EduCare! It's an amazing platform for mock tests and earning rewards. 
+    const message = `🎓 Check out Vidya EduCare! It's an amazing platform for MockArena sessions and earning rewards. 
     
 Start your journey to success now: ${url}`;
     
@@ -149,21 +149,21 @@ Start your journey to success now: ${url}`;
 
         {/* --- SEPARATE TRIAL MODULES --- */}
         
-        {/* Trial Module 1: AI Tutor */}
+        {/* Trial Module 1: GuruAI */}
         <section className="grid md:grid-cols-2 gap-12 items-center bg-accent/5 p-8 md:p-16 rounded-[4rem] border border-accent/10 relative overflow-hidden">
             <div className="absolute top-0 right-0 p-8 opacity-5 rotate-12"><BrainCircuit size={250}/></div>
             <div className="space-y-6 relative z-10">
                 <Badge variant="secondary" className="bg-accent/10 text-accent border-none uppercase font-black tracking-widest px-4 py-1">Free Trial Tool #1</Badge>
-                <h2 className="text-4xl md:text-5xl font-black text-primary tracking-tighter italic uppercase">AI DOUBT <span className="text-accent">SOLVER</span></h2>
+                <h2 className="text-4xl md:text-5xl font-black text-primary tracking-tighter italic uppercase">VIDYA <span className="text-accent">GURUAI</span></h2>
                 <p className="text-lg text-muted-foreground font-medium">
-                    Stuck on a complex concept? Ask our AI tutor anything and get a clear, step-by-step pedagogical explanation in both Marathi and English instantly.
+                    Stuck on a complex concept? Ask our GuruAI tutor anything and get a clear, step-by-step pedagogical explanation in both Marathi and English instantly.
                 </p>
                 <div className="flex items-center gap-3 pt-2">
                     <div className="px-4 py-2 bg-accent text-white font-black rounded-xl shadow-lg animate-pulse">{trialStats.tutor} QUERIES LEFT</div>
                     <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">• Zero Registration</span>
                 </div>
                 <Button asChild size="lg" className="bg-accent hover:bg-accent/90 text-white font-black py-10 px-12 text-xl rounded-[2rem] shadow-xl mt-4">
-                    <Link href="/ai-tutor">TRY DOUBT SOLVER <Sparkles className="ml-2 h-6 w-6"/></Link>
+                    <Link href="/ai-tutor">TRY GURUAI NOW <Sparkles className="ml-2 h-6 w-6"/></Link>
                 </Button>
             </div>
             <div className="bg-white rounded-[3rem] shadow-2xl p-8 border-2 border-accent/20 relative group hover:-translate-y-2 transition-transform">
@@ -172,13 +172,13 @@ Start your journey to success now: ${url}`;
                     <p className="text-lg font-bold italic">"Explain the concept of Gravitation in simple Marathi."</p>
                 </div>
                 <div className="p-6 bg-accent/5 rounded-2xl border-l-8 border-accent">
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase mb-2 tracking-widest">AI Bilingual Output:</p>
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase mb-2 tracking-widest">GuruAI Bilingual Output:</p>
                     <p className="text-md font-medium leading-relaxed">गुरुत्वाकर्षण ही एक अशी शक्ती आहे जी विश्वातील कोणत्याही दोन वस्तूंना एकमेकांकडे आकर्षित करते... Gravitation is a force that attracts any two objects with mass.</p>
                 </div>
             </div>
         </section>
 
-        {/* Trial Module 2: AI Notes */}
+        {/* Trial Module 2: QuickNotes */}
         <section className="grid md:grid-cols-2 gap-12 items-center bg-primary/5 p-8 md:p-16 rounded-[4rem] border border-primary/10 relative overflow-hidden">
             <div className="absolute bottom-0 left-0 p-8 opacity-5 -rotate-12"><ScrollText size={250}/></div>
             <div className="order-2 md:order-1 bg-white rounded-[3rem] shadow-2xl p-10 border-2 border-primary/20 relative hover:-translate-y-2 transition-transform">
@@ -198,26 +198,26 @@ Start your journey to success now: ${url}`;
             </div>
             <div className="order-1 md:order-2 space-y-6 relative z-10">
                 <Badge variant="secondary" className="bg-primary/10 text-primary border-none uppercase font-black tracking-widest px-4 py-1">Free Trial Tool #2</Badge>
-                <h2 className="text-4xl md:text-5xl font-black text-primary tracking-tighter italic uppercase">AI NOTES <span className="text-accent">GENERATOR</span></h2>
+                <h2 className="text-4xl md:text-5xl font-black text-primary tracking-tighter italic uppercase">VIDYA <span className="text-accent">QUICKNOTES</span></h2>
                 <p className="text-lg text-muted-foreground font-medium">
-                    Upload a photo of your textbook or paste a chapter. Our AI will synthesize the complex material into structured, easy-to-read bilingual study notes.
+                    Upload a photo of your textbook or paste a chapter. QuickNotes will synthesize the complex material into structured, easy-to-read bilingual study notes.
                 </p>
                 <div className="flex items-center gap-3 pt-2">
                     <div className="px-4 py-2 bg-primary text-white font-black rounded-xl shadow-lg">{trialStats.notes} FREE PAGES LEFT</div>
                     <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">• Instant Summary</span>
                 </div>
                 <Button asChild size="lg" className="bg-primary hover:bg-primary/90 text-white font-black py-10 px-12 text-xl rounded-[2rem] shadow-xl mt-4">
-                    <Link href="/ai-notes">GENERATE NOTES <Zap className="ml-2 h-6 w-6"/></Link>
+                    <Link href="/ai-notes">USE QUICKNOTES <Zap className="ml-2 h-6 w-6"/></Link>
                 </Button>
             </div>
         </section>
 
-        {/* Trial Module 3: Mock Test */}
+        {/* Trial Module 3: MockArena */}
         <section className="relative py-16 px-8 md:px-16 rounded-[4rem] bg-gradient-to-br from-primary to-indigo-900 shadow-2xl overflow-hidden text-center border-b-8 border-accent">
             <div className="absolute top-0 right-0 p-12 opacity-10 rotate-45"><Trophy size={300} className="text-white"/></div>
             <div className="relative z-10 max-w-3xl mx-auto space-y-10">
                 <Badge variant="outline" className="bg-white/10 text-white border-white/20 px-8 py-2 text-sm font-black tracking-[0.3em] uppercase rounded-full">TRIAL ARENA ACTIVE</Badge>
-                <h2 className="text-6xl md:text-8xl font-black text-white tracking-tighter uppercase italic leading-none">Trial <span className="text-yellow-400">Arena</span></h2>
+                <h2 className="text-6xl md:text-8xl font-black text-white tracking-tighter uppercase italic leading-none">Mock<span className="text-yellow-400">Arena</span></h2>
                 <p className="text-primary-foreground/90 text-xl font-medium leading-relaxed">
                     Experience the thrill of a real time-bound exam environment. Take a 5-question quick test and see your instant global ranking.
                 </p>

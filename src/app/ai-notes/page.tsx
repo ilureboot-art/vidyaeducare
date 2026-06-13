@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -115,7 +114,7 @@ function AiNotesPageContent() {
         }
 
         if (!user && trialCount >= GUEST_TRIAL_LIMIT) {
-            toast({ variant: 'destructive', title: "Trial Limit Reached", description: "Please sign up to continue generating notes." });
+            toast({ variant: 'destructive', title: "Trial Limit Reached", description: "Please sign up to continue generating QuickNotes." });
             return;
         }
 
@@ -148,10 +147,10 @@ function AiNotesPageContent() {
                 localStorage.setItem('trial_ai_notes_count', newCount.toString());
             }
 
-            toast({ title: "Notes Generated!", description: "Bilingual study summary is ready." });
+            toast({ title: "QuickNotes Ready!", description: "Your bilingual study summary is ready." });
         } catch (error) {
             console.error(error);
-            toast({ variant: 'destructive', title: "AI Error", description: "The AI was unable to process this material right now." });
+            toast({ variant: 'destructive', title: "QuickNotes Error", description: "The AI was unable to process this material right now." });
         } finally {
             setIsGenerating(false);
         }
@@ -178,7 +177,7 @@ function AiNotesPageContent() {
                         </div>
                         <CardTitle className="text-4xl font-black text-primary tracking-tighter uppercase italic">Subscription Required</CardTitle>
                         <CardDescription className="text-lg font-bold max-w-sm mx-auto">
-                            The AI Notes Generator is a premium tool available to users with an active Mock Test Package.
+                            Vidya QuickNotes is a premium tool available to users with an active MockArena Package.
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-8">
@@ -189,7 +188,7 @@ function AiNotesPageContent() {
                         </Button>
                     </CardContent>
                     <CardFooter className="justify-center">
-                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Transform your study habits with AI</p>
+                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Transform your study habits with QuickNotes</p>
                     </CardFooter>
                 </Card>
             </div>
@@ -202,7 +201,7 @@ function AiNotesPageContent() {
         <div className="w-full max-w-4xl mx-auto space-y-6">
             <div className="flex items-center justify-between">
                 <h1 className="text-3xl font-black text-primary flex items-center gap-2 italic uppercase tracking-tighter">
-                    <ScrollText className="w-8 h-8 text-accent" /> AI NOTES GENERATOR
+                    <ScrollText className="w-8 h-8 text-accent" /> VIDYA QUICKNOTES
                 </h1>
                 <Button variant="ghost" asChild size="sm" className="font-bold">
                     <Link href="/"><ArrowLeft className="mr-2 h-4 w-4" /> Home</Link>
@@ -212,12 +211,12 @@ function AiNotesPageContent() {
             {!user && (
                 <Alert className={isLocked ? "bg-red-50 border-red-200" : "bg-primary/5 border-primary/20"}>
                     {isLocked ? <Lock className="h-4 w-4 text-red-600" /> : <Sparkles className="h-4 w-4 text-primary" />}
-                    <AlertTitle className={isLocked ? "text-red-700 font-black uppercase" : "text-primary font-black uppercase tracking-tight"}>
-                        {isLocked ? "TRIAL LIMIT REACHED" : `FREE GUEST TRIAL ACTIVE (${GUEST_TRIAL_LIMIT - trialCount} Generations Left)`}
+                    <AlertTitle className={isLocked ? "text-red-700 font-black" : "text-primary font-black uppercase tracking-tight"}>
+                        {isLocked ? "TRIAL LIMIT REACHED" : `FREE QUICKNOTES TRIAL ACTIVE (${GUEST_TRIAL_LIMIT - trialCount} Generations Left)`}
                     </AlertTitle>
                     <AlertDescription className="text-xs">
                         {isLocked 
-                            ? "You have reached the 5-page trial limit. Upgrade to generate unlimited notes." 
+                            ? "You have reached the 5-page trial limit. Upgrade to use QuickNotes without limits." 
                             : "No registration required. Instantly convert textbooks into bilingual structured summaries."}
                         <Link href="/signup" className="ml-2 underline font-bold">Sign up for full access.</Link>
                     </AlertDescription>
@@ -229,7 +228,7 @@ function AiNotesPageContent() {
                     <CardHeader className="bg-primary/5 border-b">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                             <div>
-                                <CardTitle className="text-lg font-black uppercase tracking-tight">Summarization Workspace</CardTitle>
+                                <CardTitle className="text-lg font-black uppercase tracking-tight">QuickNotes Workspace</CardTitle>
                                 <CardDescription>Paste text or upload a photo of your chapter.</CardDescription>
                             </div>
                             {user && hasActivePackage && (
@@ -255,7 +254,7 @@ function AiNotesPageContent() {
                                 <Label htmlFor="material" className="font-bold">Text Material</Label>
                                 <Textarea 
                                     id="material"
-                                    placeholder={isLocked ? "Trial limit reached. Please join us to ask more." : "Paste text from your chapter, or describe the topic you want notes on..."}
+                                    placeholder={isLocked ? "Trial limit reached. Please join us to use QuickNotes." : "Paste text from your chapter, or describe the topic you want notes on..."}
                                     className="min-h-[150px] text-lg focus-visible:ring-accent rounded-2xl"
                                     value={materialText}
                                     onChange={(e) => setMaterialText(e.target.value)}
@@ -311,7 +310,7 @@ function AiNotesPageContent() {
 
                             <div className="flex items-center gap-2 text-[10px] font-black uppercase text-muted-foreground tracking-widest bg-muted/50 p-4 rounded-2xl border-dashed border-2">
                                 <Info size={16} className="text-primary"/>
-                                <span>AI will generate structured key points in both English and Marathi.</span>
+                                <span>QuickNotes will generate structured key points in both English and Marathi.</span>
                             </div>
                         </CardContent>
                         <CardFooter className="bg-muted/30 border-t flex justify-between gap-4 p-6">
@@ -329,7 +328,7 @@ function AiNotesPageContent() {
                                 className="px-10 font-black gap-2 bg-primary hover:bg-primary/90 shadow-xl text-lg h-14 rounded-2xl" 
                                 disabled={isGenerating || isLocked}
                             >
-                                {isGenerating ? <Loader2 className="animate-spin" /> : <><Sparkles size={20} /> SYNTHESIZE NOTES</>}
+                                {isGenerating ? <Loader2 className="animate-spin" /> : <><Sparkles size={20} /> SYNTHESIZE QUICKNOTES</>}
                             </Button>
                         </CardFooter>
                     </form>
@@ -348,7 +347,7 @@ function AiNotesPageContent() {
                             </div>
                             <CardTitle className="text-4xl font-black text-primary uppercase tracking-tighter italic">{result.title}</CardTitle>
                             <CardDescription className="font-black text-[10px] uppercase tracking-[0.3em] mt-3 text-muted-foreground">
-                                AI CURATED BILINGUAL SYNOPSIS
+                                QUICKNOTES BILINGUAL SYNOPSIS
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-12 pt-12 px-8 md:px-16">
@@ -404,15 +403,15 @@ function AiNotesPageContent() {
                             </Card>
                         </CardContent>
                         <CardFooter className="bg-muted/30 border-t justify-center py-6 mt-12">
-                            <p className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.3em]">© Vidya EduCare AI Tutoring Excellence</p>
+                            <p className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.3em]">© Vidya EduCare QuickNotes Excellence</p>
                         </CardFooter>
                     </Card>
 
                     {!user && (
                         <Card className="bg-accent text-white text-center shadow-2xl border-none rounded-[3rem] p-4">
                             <CardHeader>
-                                <CardTitle className="text-3xl font-black italic uppercase tracking-tighter">Loved this summary?</CardTitle>
-                                <CardDescription className="text-white/80 font-bold text-lg">Join Vidya EduCare today to generate unlimited personalized notes for all your subjects and standards.</CardDescription>
+                                <CardTitle className="text-3xl font-black italic uppercase tracking-tighter">Loved QuickNotes?</CardTitle>
+                                <CardDescription className="text-white/80 font-bold text-lg">Join Vidya EduCare today to generate unlimited personalized QuickNotes for all your subjects and standards.</CardDescription>
                             </CardHeader>
                             <CardFooter className="justify-center pt-4">
                                 <Button asChild variant="secondary" size="lg" className="font-black px-12 py-10 text-2xl rounded-2xl shadow-2xl hover:scale-105 transition-transform">
@@ -432,7 +431,7 @@ function AiNotesPageContent() {
                         <Loader2 className="absolute inset-0 w-24 h-24 text-accent animate-spin opacity-30 z-20" />
                     </div>
                     <div className="text-center space-y-3 px-8">
-                        <h2 className="text-4xl font-black text-primary animate-pulse uppercase tracking-tighter italic leading-none">Synthesizing Content...</h2>
+                        <h2 className="text-4xl font-black text-primary animate-pulse uppercase tracking-tighter italic leading-none">Synthesizing QuickNotes...</h2>
                         <p className="text-muted-foreground font-bold text-lg max-w-sm mx-auto">Curating structured, bilingual study material from your academic source.</p>
                     </div>
                     <div className="flex gap-1">

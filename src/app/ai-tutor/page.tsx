@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -96,7 +95,7 @@ function AiTutorPageContent() {
         if (!queryText.trim()) return;
 
         if (!user && trialCount >= GUEST_TRIAL_LIMIT) {
-            toast({ variant: 'destructive', title: "Trial Limit Reached", description: "Please sign up to continue asking doubts." });
+            toast({ variant: 'destructive', title: "Trial Limit Reached", description: "Please sign up to continue using GuruAI." });
             return;
         }
 
@@ -126,7 +125,7 @@ function AiTutorPageContent() {
                 localStorage.setItem('trial_ai_tutor_count', newCount.toString());
             }
         } catch (error) {
-            toast({ variant: 'destructive', title: "AI Error", description: "The AI Tutor could not process your question right now." });
+            toast({ variant: 'destructive', title: "GuruAI Error", description: "GuruAI could not process your question right now." });
         } finally {
             setIsSolving(false);
         }
@@ -153,7 +152,7 @@ function AiTutorPageContent() {
                         </div>
                         <CardTitle className="text-4xl font-black text-primary tracking-tighter uppercase italic">Subscription Required</CardTitle>
                         <CardDescription className="text-lg font-bold max-w-sm mx-auto">
-                            The AI Doubt Solver is a premium feature available to students with an active Mock Test Package.
+                            Vidya GuruAI is a premium feature available to students with an active MockArena Package.
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-8">
@@ -164,7 +163,7 @@ function AiTutorPageContent() {
                         </Button>
                     </CardContent>
                     <CardFooter className="justify-center">
-                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Unlock unlimited AI assistance today</p>
+                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Unlock unlimited GuruAI assistance today</p>
                     </CardFooter>
                 </Card>
             </div>
@@ -177,7 +176,7 @@ function AiTutorPageContent() {
         <div className="w-full max-w-3xl mx-auto space-y-6">
             <div className="flex items-center justify-between">
                 <h1 className="text-3xl font-black text-primary flex items-center gap-2 italic tracking-tighter uppercase">
-                    <BrainCircuit className="w-8 h-8 text-accent" /> AI DOUBT SOLVER
+                    <BrainCircuit className="w-8 h-8 text-accent" /> VIDYA GURUAI
                 </h1>
                 <Button variant="ghost" asChild size="sm" className="font-bold">
                     <Link href="/"><ArrowLeft className="mr-2 h-4 w-4" /> Home</Link>
@@ -188,11 +187,11 @@ function AiTutorPageContent() {
                 <Alert className={isLocked ? "bg-red-50 border-red-200" : "bg-accent/5 border-accent/20"}>
                     {isLocked ? <Lock className="h-4 w-4 text-red-600" /> : <Sparkles className="h-4 w-4 text-accent" />}
                     <AlertTitle className={isLocked ? "text-red-700 font-black" : "text-accent font-black"}>
-                        {isLocked ? "TRIAL LIMIT REACHED" : `FREE GUEST TRIAL ACTIVE (${GUEST_TRIAL_LIMIT - trialCount} Queries Left)`}
+                        {isLocked ? "TRIAL LIMIT REACHED" : `FREE GURUAI TRIAL ACTIVE (${GUEST_TRIAL_LIMIT - trialCount} Queries Left)`}
                     </AlertTitle>
                     <AlertDescription className="text-xs">
                         {isLocked 
-                            ? "You have used your 5 free trial queries. Please join Vidya EduCare for unlimited access." 
+                            ? "You have used your 5 free trial queries. Please join Vidya EduCare for unlimited GuruAI access." 
                             : "No registration required. Get instant conceptual clarity for your academic doubts."}
                         <Link href="/signup" className="ml-2 underline font-bold">Sign up now.</Link>
                     </AlertDescription>
@@ -203,7 +202,7 @@ function AiTutorPageContent() {
                 <CardHeader className="bg-primary/5 border-b">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div>
-                            <CardTitle className="text-lg font-black uppercase tracking-tight">Conceptual Workspace</CardTitle>
+                            <CardTitle className="text-lg font-black uppercase tracking-tight">GuruAI Workspace</CardTitle>
                             <CardDescription>Bilingual pedagogical explanations for any topic.</CardDescription>
                         </div>
                         {user && hasActivePackage && (
@@ -230,7 +229,7 @@ function AiTutorPageContent() {
                                 <Label htmlFor="query" className="font-bold">What is your academic doubt?</Label>
                                 <Textarea 
                                     id="query"
-                                    placeholder={isLocked ? "Limit reached. Please join us to ask more questions." : "e.g., Why do planets orbit the sun in ellipses? or Explain the 1857 revolt."}
+                                    placeholder={isLocked ? "Limit reached. Please join us to ask GuruAI more questions." : "e.g., Why do planets orbit the sun in ellipses? or Explain the 1857 revolt."}
                                     className="min-h-[150px] text-lg focus-visible:ring-accent rounded-2xl"
                                     value={queryText}
                                     onChange={(e) => setQueryText(e.target.value)}
@@ -240,7 +239,7 @@ function AiTutorPageContent() {
                             </div>
                             <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 p-3 rounded-xl border-dashed border-2">
                                 <Info size={14} className="text-primary"/>
-                                <span>AI Tutor results are pedagogical and provided in both Marathi and English.</span>
+                                <span>GuruAI results are pedagogical and provided in both Marathi and English.</span>
                             </div>
                         </div>
                     </CardContent>
@@ -259,7 +258,7 @@ function AiTutorPageContent() {
                             className="px-10 font-black gap-2 bg-accent hover:bg-accent/90 shadow-lg text-lg h-14 rounded-2xl" 
                             disabled={isSolving || !queryText.trim() || isLocked}
                         >
-                            {isSolving ? <Loader2 className="animate-spin" /> : <><Send size={20} /> ASK AI TUTOR</>}
+                            {isSolving ? <Loader2 className="animate-spin" /> : <><Send size={20} /> ASK GURUAI</>}
                         </Button>
                     </CardFooter>
                 </form>
@@ -271,7 +270,7 @@ function AiTutorPageContent() {
                         <BrainCircuit className="w-16 h-16 text-primary animate-pulse" />
                         <Loader2 className="absolute inset-0 w-16 h-16 text-accent animate-spin opacity-40" />
                     </div>
-                    <p className="text-primary font-black animate-pulse text-center uppercase tracking-widest text-xs italic">AI is crafting a bilingual explanation...</p>
+                    <p className="text-primary font-black animate-pulse text-center uppercase tracking-widest text-xs italic">GuruAI is crafting a bilingual explanation...</p>
                 </div>
             )}
 
@@ -301,7 +300,7 @@ function AiTutorPageContent() {
                         </CardContent>
                         <CardFooter className="bg-primary/5 text-center justify-center p-4">
                             <p className="text-[9px] text-muted-foreground uppercase font-black tracking-widest flex items-center gap-1">
-                                <BrainCircuit size={12} className="text-primary" /> Pedagogical AI Guidance provided for your specific doubt.
+                                <BrainCircuit size={12} className="text-primary" /> Pedagogical GuruAI Guidance provided for your specific doubt.
                             </p>
                         </CardFooter>
                     </Card>

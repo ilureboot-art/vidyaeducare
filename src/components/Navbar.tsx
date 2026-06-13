@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -9,8 +8,8 @@ import { useAuth } from "@/firebase";
 
 const navItems = [
   { href: "/profile", label: "Students", icon: Users },
-  { href: "/ai-tutor", label: "AI Tutor", icon: BrainCircuit },
-  { href: "/ai-notes", label: "AI Notes", icon: ScrollText },
+  { href: "/ai-tutor", label: "GuruAI", icon: BrainCircuit },
+  { href: "/ai-notes", label: "QuickNotes", icon: ScrollText },
   { href: "/quiz-clash", label: "Quiz Clash", icon: Puzzle },
   { href: "/store", label: "Store", icon: Store },
   { href: "/wallet", label: "Wallet", icon: Wallet },

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -299,7 +298,7 @@ function ProfilePageContent() {
                     <div className="flex items-center gap-4">
                         <div className="p-2 bg-accent/10 rounded-lg"><BrainCircuit className="w-6 h-6 text-accent" /></div>
                         <div>
-                            <p className="font-bold text-sm">AI Doubt Solver</p>
+                            <p className="font-bold text-sm">Vidya GuruAI</p>
                             <p className="text-[10px] text-muted-foreground font-medium">Instant bilingual explanations.</p>
                         </div>
                     </div>
@@ -311,7 +310,7 @@ function ProfilePageContent() {
                     <div className="flex items-center gap-4">
                         <div className="p-2 bg-primary/10 rounded-lg"><ScrollText className="w-6 h-6 text-primary" /></div>
                         <div>
-                            <p className="font-bold text-sm">AI Notes Generator</p>
+                            <p className="font-bold text-sm">Vidya QuickNotes</p>
                             <p className="text-[10px] text-muted-foreground font-medium">Auto-summaries from textbooks.</p>
                         </div>
                     </div>
@@ -479,8 +478,8 @@ function ProfilePageContent() {
                             ) : (
                                 <div className="flex flex-col items-center justify-center h-full text-xs text-muted-foreground bg-muted/20 rounded-2xl border-2 border-dashed border-primary/10 p-6 text-center">
                                     <Target className="w-8 h-8 mb-2 opacity-20" />
-                                    <p className="font-bold">No Tests Taken Yet</p>
-                                    <p className="mt-1 opacity-70">Complete your first mock test to see your progress chart.</p>
+                                    <p className="font-bold">No Records Yet</p>
+                                    <p className="mt-1 opacity-70">Complete your first MockArena test to see your progress chart.</p>
                                 </div>
                             )}
                         </div>
@@ -527,7 +526,7 @@ function ProfilePageContent() {
                                 <span className="text-sm font-black text-primary">{student.stats?.avgScore || 0}%</span>
                             </div>
                             <div className="flex justify-between items-center p-3 bg-muted/20 rounded-xl border border-primary/5">
-                                <span className="text-xs font-bold text-muted-foreground">Tests Completed</span>
+                                <span className="text-xs font-bold text-muted-foreground">MockArena Sessions</span>
                                 <span className="text-sm font-black text-primary">{student.stats?.testsTaken || 0}</span>
                             </div>
                              <div className="flex justify-between items-center p-3 bg-primary/10 rounded-xl border border-primary/10">
@@ -541,7 +540,7 @@ function ProfilePageContent() {
                 <CardFooter className="p-8 bg-primary/[0.03] border-t gap-4">
                     <Button className="flex-1 py-8 text-xl font-black shadow-2xl hover:scale-[1.02] transition-transform" onClick={() => openTestDialog(student)}>
                         <BookOpen className="mr-3 h-6 w-6"/>
-                        OPEN ACADEMIC WORKSPACE
+                        OPEN MOCKARENA HUB
                     </Button>
                 </CardFooter>
             </Card>
@@ -575,10 +574,10 @@ function ProfilePageContent() {
             <DialogContent className="max-w-md">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
-                        <BookOpen className="text-primary" /> Test Hub: {selectedStudentForTest?.name}
+                        <BookOpen className="text-primary" /> MockArena Hub: {selectedStudentForTest?.name}
                     </DialogTitle>
                     <DialogDescription>
-                        Live curriculum-aligned mock tests and practice sessions.
+                        Live curriculum-aligned MockArena sessions and practice.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-3 pt-4 max-h-[60vh] overflow-y-auto pr-2">
@@ -610,7 +609,7 @@ function ProfilePageContent() {
                     ) : (
                         <div className="text-center py-12 space-y-4">
                             <div className="p-4 bg-muted/50 rounded-2xl inline-block"><BookOpen className="w-10 h-10 text-muted-foreground opacity-20" /></div>
-                            <p className="text-sm text-muted-foreground font-black uppercase tracking-widest">No tests scheduled for this level.</p>
+                            <p className="text-sm text-muted-foreground font-black uppercase tracking-widest">No MockArena sessions scheduled.</p>
                         </div>
                     )}
                 </div>

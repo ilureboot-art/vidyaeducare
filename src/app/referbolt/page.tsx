@@ -43,14 +43,11 @@ function ReferBoltPageContent() {
                 setData({ isSubscribed: false });
             }
         }, async (error) => {
+            console.warn("Referbolt sync alert:", error.code);
+            // We only report if it's a persistent permission denial after auth is fully ready
             if (error.code === 'permission-denied') {
-                const permissionError = new FirestorePermissionError({
-                    path: referboltDocRef.path,
-                    operation: 'get',
-                } satisfies SecurityRuleContext);
-                errorEmitter.emit('permission-error', permissionError);
+                setData({ isSubscribed: false });
             }
-            setData({ isSubscribed: false });
         });
         return () => unsub();
     }

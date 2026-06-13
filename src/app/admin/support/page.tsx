@@ -3,7 +3,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { LifeBuoy, BookOpen, Mail, Trophy, ShieldCheck, Zap, Puzzle, Wallet } from "lucide-react";
+import { LifeBuoy, BookOpen, Mail } from "lucide-react";
 import {
   Accordion,
   AccordionContent,

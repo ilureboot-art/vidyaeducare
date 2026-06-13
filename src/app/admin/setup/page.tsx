@@ -117,7 +117,8 @@ export default function SetupAdminPage() {
     setMapStatus('loading');
     logProgress(`MAP: Initiating High-Speed Infrastructure Sync...`);
     
-    try {
+    // Internal helper for atomic batch write with a quick retry for claims propagation
+    const commitInfrastructure = async () => {
         const batch = writeBatch(db);
         const userDocRef = doc(db, "users", uid);
         const walletDocRef = doc(db, "wallets", uid);
@@ -158,19 +159,37 @@ export default function SetupAdminPage() {
         }
 
         await batch.commit();
+    };
+
+    try {
+        await commitInfrastructure();
         logProgress(`SUCCESS: Infrastructure Mapped.`);
         setMapStatus('success');
         runSystemAudit();
         toast({ title: "Setup Complete" });
     } catch (serverError: any) {
-        console.error("Setup mapping error:", serverError);
-        const permissionError = new FirestorePermissionError({
-            path: 'multi-path-setup-batch',
-            operation: 'write',
-        } satisfies SecurityRuleContext);
-        errorEmitter.emit('permission-error', permissionError);
-        setMapStatus('error');
-        logProgress(`FAILED: Authorization denied.`);
+        console.warn("Retrying sync due to permission propagation latency...");
+        
+        // Wait 500ms and refresh token before one final retry
+        await new Promise(r => setTimeout(r, 500));
+        await auth.currentUser?.getIdToken(true);
+        
+        try {
+            await commitInfrastructure();
+            logProgress(`SUCCESS: Infrastructure Mapped (Retry).`);
+            setMapStatus('success');
+            runSystemAudit();
+            toast({ title: "Setup Complete" });
+        } catch (retryError: any) {
+            console.error("Setup mapping error:", retryError);
+            const permissionError = new FirestorePermissionError({
+                path: 'multi-path-setup-batch',
+                operation: 'write',
+            } satisfies SecurityRuleContext);
+            errorEmitter.emit('permission-error', permissionError);
+            setMapStatus('error');
+            logProgress(`FAILED: Authorization denied.`);
+        }
     }
   };
 
@@ -263,7 +282,7 @@ export default function SetupAdminPage() {
           )}
         </CardContent>
         <CardFooter className="bg-primary/5 py-4 border-t justify-center gap-2">
-            <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground italic text-center">Vidya EduCare Deployment Salt: V19_SYNC_OPTIMIZED</p>
+            <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground italic text-center">Vidya EduCare Deployment Salt: V21_RESI_SYNC</p>
         </CardFooter>
       </Card>
     </div>

@@ -16,7 +16,6 @@ service cloud.firestore {
 
     function isMaster() {
       // Direct token access for speed and reliability during initialization
-      // Note: Comparing directly with strings for maximum speed and robustness.
       return signedIn() && 
         (request.auth.token.email == 'admin@vidyaeducare.com' || 
          request.auth.token.email == 'headadmin@vidyaeducare.com');
@@ -41,7 +40,7 @@ service cloud.firestore {
     // These must be readable by everyone to allow the UI to initialize (prices, subjects, etc.)
     match /configs/{document=**} {
       allow read: if true; 
-      allow write: if isAdmin();
+      allow write: if isAdmin() || (signedIn() && request.auth.token.email == 'admin@vidyaeducare.com');
     }
 
     // --- ROLE RESOLUTION & ADMIN LISTING ---

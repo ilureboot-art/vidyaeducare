@@ -58,7 +58,8 @@ export type StoreConfig = {
     gameSettings: GameSettings;
     referboltSettings: ReferboltSettings;
     recommendationSettings: RecommendationSettings;
-    autoApproveDeposits: boolean; // New setting for auto-approval
+    autoApproveDeposits: boolean;
+    ibaCommissionRate: number; // Adjustable commission percentage
 };
 
 export const defaultStoreConfig: StoreConfig = {
@@ -120,5 +121,6 @@ export const defaultStoreConfig: StoreConfig = {
         requiredCount: 2
     },
 
-    autoApproveDeposits: false // Defaults to manual verification for security
+    autoApproveDeposits: false,
+    ibaCommissionRate: 10 // Default to 10% per sale
 };

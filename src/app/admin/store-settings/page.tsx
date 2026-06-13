@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -7,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
-import { PlusCircle, Trash2, Zap, BookOpen, GraduationCap, Percent, Loader2, IndianRupee, RefreshCcw, Landmark } from "lucide-react";
+import { PlusCircle, Trash2, Zap, BookOpen, GraduationCap, Percent, Loader2, IndianRupee, RefreshCcw, Landmark, ShieldCheck } from "lucide-react";
 import { type StoreConfig, type MockTestPackage, type ReferboltSubscription, type ReferboltSettings, type RecommendationSettings, defaultStoreConfig } from "@/lib/store-config";
 import { type AcademicConfig, defaultAcademicConfig } from "@/lib/academic-config";
 import { Switch } from "@/components/ui/switch";
@@ -319,6 +320,29 @@ export default function AdminStoreSettingsPage() {
         
         {storeConfig && (
         <>
+        <Card className="mt-6">
+          <CardHeader>
+              <CardTitle className="flex items-center gap-2"><ShieldCheck size={20} className="text-primary"/> Associate Commissions</CardTitle>
+              <CardDescription>Adjust the earnings for Independent Business Associates (IBAs).</CardDescription>
+          </CardHeader>
+          <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 p-4 border rounded-xl bg-primary/[0.02]">
+                  <div className="space-y-2">
+                      <Label htmlFor="iba-comm-rate" className="font-bold flex items-center gap-2">
+                          <Percent size={14} className="text-primary"/> Standard IBA Commission (%)
+                      </Label>
+                      <Input 
+                        id="iba-comm-rate" 
+                        type="number" 
+                        value={storeConfig.ibaCommissionRate} 
+                        onChange={(e) => setStoreConfig(prev => prev ? ({...prev, ibaCommissionRate: Number(e.target.value)}) : null)} 
+                      />
+                      <p className="text-[10px] text-muted-foreground italic">Applied to the base price of every MockArena sale.</p>
+                  </div>
+              </div>
+          </CardContent>
+        </Card>
+
         <Card className="mt-6">
           <CardHeader>
               <CardTitle className="flex items-center gap-2"><Landmark size={20} className="text-primary"/> Financial System Rules</CardTitle>

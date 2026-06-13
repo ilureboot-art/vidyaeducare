@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -217,7 +218,8 @@ function StorePageContent() {
             });
 
             if (ibaUid) {
-                const baseCommissionRate = 0.1765;
+                // Use the adjustable rate from storeConfig
+                const baseCommissionRate = (storeConfig.ibaCommissionRate || 10) / 100;
                 const commissionAmount = priceDetails.basePrice * baseCommissionRate;
 
                 const ibaWalletRef = doc(db, "wallets", ibaUid);

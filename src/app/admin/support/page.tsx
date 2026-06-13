@@ -75,7 +75,7 @@ export default function SupportPage() {
       </div>
       <Card>
         <CardHeader>
-            <CardTitle>Administrative FAQs</CardTitle>
+            <CardTitle>Frequently Asked Questions</CardTitle>
         </CardHeader>
         <CardContent>
              {adminFaqs.length > 0 ? (

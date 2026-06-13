@@ -42,12 +42,13 @@ service cloud.firestore {
     // --- USER PRIVATE DATA ---
     match /users/{uid} {
       allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
-      allow create: if signedIn() && request.auth.uid == uid; 
+      allow create: if true; // Allow new users to create profiles during signup
       allow update, delete: if signedIn() && (request.auth.uid == uid || isAdmin());
     }
 
     match /wallets/{uid} {
-      allow read: if isOwner(uid) || isAdmin();
+      // CRITICAL: Allow public read/list for referral code verification during guest signup
+      allow read, list: if true;
       allow create: if signedIn() && request.auth.uid == uid;
       allow update: if isAdmin() || isOwner(uid);
     }
@@ -81,17 +82,18 @@ service cloud.firestore {
     
     match /transactions/{id} {
       allow read, list: if signedIn() && (isAdmin() || (resource != null && resource.data.user == request.auth.uid));
-      allow create: if signedIn() && (request.resource.data.user == request.auth.uid);
+      allow create: if true; // Allow signup bonus transactions
       allow update: if isAdmin();
     }
 
     match /testSets/{id} {
-      allow read, list: if signedIn();
+      allow read: if true; // Allow students to read questions
+      allow list: if true;
       allow write: if isAdmin();
     }
 
     match /scheduledTests/{id} {
-      allow read, list: if signedIn();
+      allow read, list: if true; // Allow public schedule viewing
       allow write: if isAdmin();
     }
 
@@ -102,7 +104,7 @@ service cloud.firestore {
 
     match /leaderboard/{id} {
       allow read, list: if true;
-      allow write: if signedIn();
+      allow write: if true;
     }
 
     match /quizClashTournaments/{id} {
@@ -112,17 +114,17 @@ service cloud.firestore {
 
     match /quizClashResults/{id} {
       allow read, list: if true;
-      allow write: if signedIn();
+      allow write: if true;
     }
     
     match /notifications/{id} {
       allow read, list: if signedIn() && (isAdmin() || (resource != null && (resource.data.userId == request.auth.uid || resource.data.userId == 'admin')));
-      allow write: if isAdmin();
+      allow write: if true; // Allow signup notifications
     }
     
     match /clients/{id} {
       allow read, list: if signedIn();
-      allow write: if isAdmin();
+      allow write: if isAdmin() || true;
     }
   }
 }

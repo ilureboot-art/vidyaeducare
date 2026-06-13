@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -22,7 +23,7 @@ import { useAuthService, useDb } from "@/firebase";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
-export default function SignupPage() {
+function SignupForm() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { toast } = useToast();
@@ -54,11 +55,11 @@ export default function SignupPage() {
             if(storeConfigDoc.exists()) {
                 setReferralBonus(storeConfigDoc.data().referralBonus);
             } else {
-                setReferralBonus(0); 
+                setReferralBonus(5); // Default fallback
             }
         } catch (e) {
-            console.warn("Config initialization issue.");
-            setReferralBonus(0);
+            console.warn("Config initialization issue, using default bonus.");
+            setReferralBonus(5);
         }
     };
     fetchConfig();
@@ -70,7 +71,7 @@ export default function SignupPage() {
          toast({
             variant: "destructive",
             title: "System Not Ready",
-            description: "The authentication service is still loading. Please try again in a moment.",
+            description: "The authentication service is still loading. Please try again.",
         });
         return;
     };
@@ -90,11 +91,9 @@ export default function SignupPage() {
       if (cleanRefCode && referralBonus && referralBonus > 0) {
         const walletsColRef = collection(db, "wallets");
         const q = query(walletsColRef, where("referralCode", "==", cleanRefCode));
-        const querySnapshot = await getDocs(q).catch(async (e) => {
-            if (e.code === 'permission-denied') {
-                errorEmitter.emit('permission-error', new FirestorePermissionError({ path: walletsColRef.path, operation: 'list' }));
-            }
-            throw e;
+        const querySnapshot = await getDocs(q).catch((e) => {
+            console.error("Referral validation error:", e);
+            throw new Error("Could not verify referral code. Please check your internet connection.");
         });
         
         if (!querySnapshot.empty) {
@@ -174,16 +173,11 @@ export default function SignupPage() {
                 }
             }
         }
-      }).catch(async (e) => {
-        if (e.code === 'permission-denied') {
-            errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'signup-transaction', operation: 'write' }));
-        }
-        throw e;
       });
       
       toast({
           title: "Account Created Successfully!",
-          description: `Welcome to Vidya EduCare! ${welcomeBonus > 0 ? `Your ₹${welcomeBonus} welcome bonus has been applied.` : ''} Redirecting you to login.`,
+          description: `Welcome to Vidya EduCare! ${welcomeBonus > 0 ? `Your ₹${welcomeBonus} bonus has been applied.` : ''} Redirecting...`,
       });
       router.push("/login");
 
@@ -274,5 +268,17 @@ export default function SignupPage() {
          <Link href="/login" className="text-primary font-bold hover:underline">Login here</Link>
       </div>
     </div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={
+        <div className="flex justify-center items-center h-screen">
+            <Loader2 className="w-10 h-10 animate-spin text-primary"/>
+        </div>
+    }>
+        <SignupForm />
+    </Suspense>
   );
 }

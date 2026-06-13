@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -81,7 +80,7 @@ export default function AdminNotificationsPage() {
                     {notifications.length > 0 ? (
                         <div className="space-y-4">
                             {notifications.map(notif => (
-                                <div key={notif.id} className="flex items-center gap-4 p-4 border rounded-lg">
+                                <div key={notif.id} className="flex items-center gap-4 p-4 border rounded-lg even:bg-muted/40 transition-colors">
                                     <Avatar className="h-10 w-10 bg-muted flex items-center justify-center">
                                        <AvatarFallback className="bg-transparent">
                                          {getIconForType(notif.type)}

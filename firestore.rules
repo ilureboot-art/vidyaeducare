@@ -15,12 +15,10 @@ service cloud.firestore {
     }
 
     function isMaster() {
-      // Case-insensitive direct token access for speed and reliability during initialization
-      // Uses direct comparison for maximum reliability during cold-starts
+      // Direct, resilient comparison for speed during initialization
       return signedIn() && (
         request.auth.token.email == 'admin@vidyaeducare.com' || 
-        request.auth.token.email == 'headadmin@vidyaeducare.com' ||
-        request.auth.token.email.matches('(?i)admin@vidyaeducare.com')
+        request.auth.token.email == 'headadmin@vidyaeducare.com'
       );
     }
 

@@ -1,4 +1,3 @@
-
 # 🚀 Vidya EduCare - Deployment & Go-Live Guide
 
 Follow these steps to deploy and manage the Vidya EduCare platform using the **Centralized GitHub Workflow**.
@@ -46,4 +45,4 @@ The best way to manage this project is to treat **GitHub** as your central hub w
    Push your changes to GitHub. App Hosting will detect the push and update your live site.
 
 ---
-© 2024 Vidya EduCare Operations.
+© Vidya EduCare Operations.

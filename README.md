@@ -1,4 +1,3 @@
-
 # Vidya EduCare - Academic Excellence Platform
 
 A comprehensive NextJS platform for Vidya EduCare, combining regional academic preparation with AI-powered learning tools and a structured referral ecosystem.
@@ -35,4 +34,4 @@ Vidya EduCare offers a **Zero-Registration Trial Experience** to drive conversio
 Registration is only required for full access to curriculum-specific mock tests, leaderboard cash prizes, and the referral earning systems.
 
 ---
-© 2024 Vidya EduCare. All rights reserved.
+© Vidya EduCare. All rights reserved.

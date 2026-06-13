@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -48,11 +49,9 @@ export default function AdminStoreSettingsPage() {
         setIsLoadingStore(false);
     }, async (error) => {
         if (error.code === 'permission-denied') {
-            errorEmitter.emit('permission-error', new FirestorePermissionError({
-                path: storeRef.path,
-                operation: 'get',
-            }));
+            console.warn("Store config access restricted, using defaults.");
         }
+        setStoreConfig(defaultStoreConfig);
         setIsLoadingStore(false);
     });
 
@@ -66,11 +65,9 @@ export default function AdminStoreSettingsPage() {
         setIsLoadingAcademic(false);
     }, async (error) => {
         if (error.code === 'permission-denied') {
-            errorEmitter.emit('permission-error', new FirestorePermissionError({
-                path: academicRef.path,
-                operation: 'get',
-            }));
+             console.warn("Academic config access restricted, using defaults.");
         }
+        setAcademicConfig(defaultAcademicConfig);
         setIsLoadingAcademic(false);
     });
 

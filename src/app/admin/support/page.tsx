@@ -18,7 +18,7 @@ const adminFaqs = [
     },
     {
         question: "How are MockArena prizes calculated?",
-        answer: "Prizes are automatically calculated based on accuracy and completion time. Participants must achieve a minimum 80% accuracy to be eligible for the top 5 rank prizes."
+        answer: "Prizes are automatically calculated based on accuracy and completion time. Participants must achieve a minimum 80% accuracy in a LIVE session to be eligible for the top 5 rank prizes."
     },
     {
         question: "How do I manage the IBA commission rate?",
@@ -71,7 +71,7 @@ export default function SupportPage() {
                 View Documentation
             </Button>
           </CardContent>
-        </Card>
+        </div>
       </div>
       <Card>
         <CardHeader>

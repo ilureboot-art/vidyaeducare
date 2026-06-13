@@ -19,7 +19,7 @@ const userFaqs = [
     },
     {
         question: "What are the Benefits for Students and Associates?",
-        answer: "Students win cash rewards for excellence (MockArena & Quiz Clash), parents get a productive learning environment, and associates (IBAs) start a zero-investment professional business."
+        answer: "Students win cash rewards for excellence (MockArena & Vidya Quiz Clash), parents get a productive learning environment, and associates (IBAs) start a zero-investment professional business."
     },
     {
         question: "How do I add or withdraw money from my wallet?",

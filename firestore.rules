@@ -16,6 +16,7 @@ service cloud.firestore {
 
     function isMaster() {
       // Direct, resilient comparison for speed during initialization
+      // This bypasses the need for an existing 'admins' document for the head account
       return signedIn() && (
         request.auth.token.email == 'admin@vidyaeducare.com' || 
         request.auth.token.email == 'headadmin@vidyaeducare.com'

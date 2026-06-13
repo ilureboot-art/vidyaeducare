@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
@@ -276,7 +277,7 @@ function MockTestContent() {
             });
             setAiExplanation(explanation);
         } catch (error) {
-            toast({ variant: 'destructive', title: "AI Offline", description: "The AI Doubt Solver is currently busy. Please try again later." });
+            toast({ variant: 'destructive', title: "AI Offline", description: "The Vidya AI Doubt Solver is currently busy. Please try again later." });
             setIsAiDialogOpen(false);
         } finally {
             setIsAiSolving(null);
@@ -316,8 +317,8 @@ function MockTestContent() {
         return (
              <Card className="w-full max-w-3xl text-center p-8 flex flex-col items-center justify-center gap-4">
                 <Loader2 className="w-10 h-10 animate-spin text-primary"/>
-                <CardTitle>Loading Test...</CardTitle>
-                <CardDescription>Preparing your questions. Please wait.</CardDescription>
+                <CardTitle>Loading Test Arena...</CardTitle>
+                <CardDescription>Preparing your curriculum-aligned questions.</CardDescription>
             </Card>
         )
     }
@@ -380,7 +381,7 @@ function MockTestContent() {
                                             onClick={() => handleAskAi(q)}
                                         >
                                             <BrainCircuit className="w-4 h-4" />
-                                            ASK VIDYA AI DOUBT SOLVER
+                                            VIDYA AI DOUBT SOLVER
                                         </Button>
                                     </div>
                                 </div>

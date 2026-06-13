@@ -26,16 +26,11 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == uid;
     }
 
-    // --- GLOBAL CONFIGURATIONS (High Priority) ---
-    // Explicitly public for system-wide consistency (Pricing, Banks, Academic Rules)
+    // --- GLOBAL CONFIGURATIONS (Highest Priority) ---
+    // Public for system consistency (Pricing, Bank Details, Academic Rules)
     match /configs/{document=**} {
       allow read: if true; 
       allow write: if isAdmin();
-    }
-
-    // --- MASTER OVERRIDE ---
-    match /{allPaths=**} {
-      allow read, write: if isMaster();
     }
 
     // --- USER PROFILE & ACCESS ---
@@ -46,7 +41,8 @@ service cloud.firestore {
     }
 
     match /wallets/{uid} {
-      allow read, list: if true; // Public for referral verification
+      allow read: if isOwner(uid) || isAdmin();
+      allow list: if true; // Allowed for referral verification queries
       allow create: if isOwner(uid);
       allow update: if isAdmin() || isOwner(uid);
     }
@@ -99,7 +95,8 @@ service cloud.firestore {
     }
 
     match /leaderboard/{id} {
-      allow read, list, write: if true;
+      allow read, list: if true;
+      allow write: if true; // Allowed for result submission
     }
 
     match /quizClashTournaments/{id} {
@@ -108,7 +105,8 @@ service cloud.firestore {
     }
 
     match /quizClashResults/{id} {
-      allow read, list, write: if true;
+      allow read, list: if true;
+      allow write: if true;
     }
     
     match /notifications/{id} {
@@ -119,6 +117,11 @@ service cloud.firestore {
     match /clients/{id} {
       allow read, list: if signedIn();
       allow write: if true;
+    }
+
+    // --- MASTER OVERRIDE ---
+    match /{allPaths=**} {
+      allow read, write: if isMaster();
     }
   }
 }

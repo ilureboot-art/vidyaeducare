@@ -41,7 +41,9 @@ export function Navbar() {
                         )}
                     >
                         <Icon className={cn("h-5 w-5 mb-1 transition-transform", isActive && "scale-110")} />
-                        <span className="text-center text-[9px] leading-tight font-black uppercase tracking-tighter">{item.label}</span>
+                        <span className="text-center text-[9px] leading-tight font-black uppercase tracking-tighter">
+                            {item.label === 'AI Solver' ? 'AI Solver' : item.label}
+                        </span>
                     </Link>
                 )
             })}

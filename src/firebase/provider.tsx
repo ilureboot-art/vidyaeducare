@@ -23,7 +23,7 @@ const AuthContext = createContext<AuthState | undefined>(undefined);
 const DbContext = createContext<Firestore | undefined>(undefined);
 const AuthServiceContext = createContext<Auth | undefined>(undefined);
 
-const ROLE_CACHE_KEY = 'vidya_auth_role_v20_ultra';
+const ROLE_CACHE_KEY = 'vidya_auth_role_v21_fast';
 const MASTER_ADMIN_EMAIL = 'admin@vidyaeducare.com';
 
 const getCachedRoles = () => {
@@ -97,9 +97,18 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      const adminDocRef = doc(db, "admins", user.uid);
-      const adminDocSnap = await getDoc(adminDocRef);
-      return processSnap(adminDocSnap, user);
+      // Safety timeout: If role resolution takes > 2 seconds, assume standard user to prevent hang
+      const rolePromise = (async () => {
+          const adminDocRef = doc(db, "admins", user.uid);
+          const adminDocSnap = await getDoc(adminDocRef);
+          return processSnap(adminDocSnap, user);
+      })();
+
+      const timeoutPromise = new Promise<{ isAdmin: boolean; isHeadAdmin: boolean }>((resolve) => 
+          setTimeout(() => resolve({ isAdmin: false, isHeadAdmin: false }), 2000)
+      );
+
+      return await Promise.race([rolePromise, timeoutPromise]);
     } catch (e) {
       console.warn("Role resolution default applied.");
       return { isAdmin: false, isHeadAdmin: false };
@@ -176,7 +185,15 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     }
   }, [authState, pathname, router, services]);
 
-  if (authState.loading || (!authState.isResolved && authState.user)) {
+  const cleanPath = pathname === '/' ? '/' : pathname.replace(/\/$/, '');
+  const isPublicRoute = ['/', '/how-to-play', '/admin/setup', '/check-head-admin', '/forgot-password', '/ai-tutor', '/ai-notes', '/trial-mock-test'].includes(cleanPath);
+  const isAuthRoute = ['/login', '/signup', '/admin/login'].includes(cleanPath);
+
+  // OPTIMIZATION: Do not show the loading screen for public or auth pages.
+  // This ensures that the landing page and signup/login forms load instantly.
+  const shouldShowLoading = !isPublicRoute && !isAuthRoute && (authState.loading || (!authState.isResolved && authState.user));
+
+  if (shouldShowLoading) {
      return (
       <div className="flex flex-col items-center justify-center h-screen space-y-6 bg-background text-center p-4">
         <div className="relative">

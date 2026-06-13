@@ -19,7 +19,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { format } from 'date-fns';
 import { useDb } from "@/firebase";
-import { collection, doc, updateDoc, getDocs, getDoc, query, where, orderBy, limit } from "firebase/firestore";
+import { collection, doc, updateDoc, getDocs, getDoc, query, where, orderBy, limit, onSnapshot } from "firebase/firestore";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import type { StudentProfile } from "@/lib/student-data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -56,40 +56,35 @@ export default function UserManagementPage() {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
   
-  const fetchUsers = useCallback(async (showLoader = true) => {
+  useEffect(() => {
     if (!db) return;
-    if (showLoader) setUsers(null);
-    else setIsRefreshing(true);
 
-    try {
-        const usersCollection = collection(db, "users");
-        const q = query(usersCollection, orderBy("joinDate", "desc"), limit(100));
-        const userSnapshot = await getDocs(q).catch(async (e) => {
-             const permissionError = new FirestorePermissionError({
-                  path: usersCollection.path,
-                  operation: 'list',
-              } satisfies SecurityRuleContext);
-              errorEmitter.emit('permission-error', permissionError);
-              throw e;
-        });
-        
-        const userList = userSnapshot.docs.map(doc => ({
+    const usersCollection = collection(db, "users");
+    const q = query(usersCollection, orderBy("joinDate", "desc"), limit(200));
+    
+    setIsRefreshing(true);
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        const userList = snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
         } as UserSummary));
-        
         setUsers(userList);
-    } catch (error) {
-        console.error("Fetch Users Error:", error);
-        setUsers([]); 
-    } finally {
         setIsRefreshing(false);
-    }
-  }, [db]);
+    }, async (error) => {
+        console.error("User sync error:", error.code);
+        if (error.code === 'permission-denied') {
+            const permissionError = new FirestorePermissionError({
+                path: usersCollection.path,
+                operation: 'list',
+            } satisfies SecurityRuleContext);
+            errorEmitter.emit('permission-error', permissionError);
+        }
+        setUsers([]);
+        setIsRefreshing(false);
+    });
 
-  useEffect(() => {
-    if(db) fetchUsers();
-  }, [db, fetchUsers]);
+    return () => unsubscribe();
+  }, [db]);
 
   const viewUserDetails = async (parent: UserSummary) => {
       if (!db) return;
@@ -141,7 +136,6 @@ export default function UserManagementPage() {
 
     updateDoc(userDocRef, updateData)
         .then(() => {
-            setUsers(prev => prev ? prev.map(u => u.id === userId ? { ...u, status: newStatus } : u) : null);
             toast({ title: `User ${newStatus}`, description: `Account updated to ${newStatus}.` });
         })
         .catch(async (e) => {
@@ -177,7 +171,7 @@ export default function UserManagementPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">User Management</h1>
-        <Button variant="outline" size="sm" onClick={() => fetchUsers(false)} disabled={isRefreshing}>
+        <Button variant="outline" size="sm" onClick={() => window.location.reload()} disabled={isRefreshing}>
             <RefreshCcw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
             Refresh List
         </Button>
@@ -186,7 +180,7 @@ export default function UserManagementPage() {
       <Card>
         <CardHeader>
           <CardTitle>All Registered Users (Parents)</CardTitle>
-          <CardDescription>Manage parent accounts and access linked student records.</CardDescription>
+          <CardDescription>Manage parent accounts and access linked student records. Showing latest 200 registrations.</CardDescription>
           <div className="pt-4 flex flex-wrap gap-4">
             <div className="relative w-full max-w-sm">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -234,7 +228,14 @@ export default function UserManagementPage() {
                     </div>
                   </TableCell>
                   <TableCell><Badge variant={getStatusBadgeVariant(user.status)}>{user.status}</Badge></TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{user.joinDate ? format(new Date(user.joinDate), 'PP') : 'N/A'}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {user.joinDate ? (
+                        <div className="flex flex-col">
+                            <span>{format(new Date(user.joinDate), 'PP')}</span>
+                            <span className="text-[10px] opacity-60">{format(new Date(user.joinDate), 'p')}</span>
+                        </div>
+                    ) : 'N/A'}
+                  </TableCell>
                   <TableCell className="text-center">
                     <div className="flex justify-center">
                         <DropdownMenu>

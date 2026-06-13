@@ -65,7 +65,6 @@ export default function AdminStoreSettingsPage() {
             } satisfies SecurityRuleContext);
             errorEmitter.emit('permission-error', permissionError);
         }
-        // Always stop loading even on error
         setStoreConfig(prev => prev || defaultStoreConfig);
         setIsLoadingStore(false);
     });
@@ -87,7 +86,6 @@ export default function AdminStoreSettingsPage() {
             } satisfies SecurityRuleContext);
             errorEmitter.emit('permission-error', permissionError);
         }
-        // Always stop loading even on error
         setAcademicConfig(prev => prev || defaultAcademicConfig);
         setIsLoadingAcademic(false);
     });
@@ -220,14 +218,14 @@ export default function AdminStoreSettingsPage() {
           <div className="space-y-4">
               <Label className="text-lg font-semibold">{title}</Label>
               {list.map((item, index) => (
-                  <div key={index} className="flex items-center gap-2">
+                  <div key={index} className="flex items-center gap-2 p-2 rounded-lg even:bg-muted/40 transition-colors">
                       <Input value={item} onChange={(e) => handleDynamicListChange(setAcademicConfig, listName, index, e.target.value)} />
                       <button type="button" className="p-2 text-muted-foreground hover:text-destructive" onClick={() => removeFromList(setAcademicConfig, listName, index)}>
                           <Trash2 className="h-4 w-4" />
                       </button>
                   </div>
               ))}
-              <Button type="button" variant="outline" className="w-full" onClick={() => addToList(setAcademicConfig, listName)}>
+              <Button type="button" variant="outline" className="w-full mt-2" onClick={() => addToList(setAcademicConfig, listName)}>
                   <PlusCircle className="mr-2 h-4 w-4" /> Add {title.slice(0, -1)}
               </Button>
           </div>
@@ -260,7 +258,7 @@ export default function AdminStoreSettingsPage() {
           </CardHeader>
           <CardContent className="space-y-8">
             {storeConfig?.mockTestPackages.map((pkg, index) => (
-                <div key={index} className="p-6 border rounded-xl space-y-6 relative bg-muted/20">
+                <div key={index} className={`p-6 border rounded-xl space-y-6 relative transition-colors ${index % 2 === 0 ? 'bg-muted/10' : 'bg-muted/30'}`}>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                          <div className="space-y-2 col-span-full lg:col-span-2">
                             <Label className="text-xs uppercase font-black text-muted-foreground">Package Name</Label>

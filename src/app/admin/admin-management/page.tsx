@@ -56,7 +56,10 @@ export default function AdminManagementPage() {
   
   const fetchAdmins = useCallback(() => {
     if (!isResolved || !db || !user || !isHeadAdmin) {
-        if (isResolved && !isHeadAdmin) setAllAdmins([]);
+        if (isResolved && !isHeadAdmin) {
+          setAllAdmins([]);
+          setIsRefreshing(false);
+        }
         return () => {};
     }
 
@@ -69,11 +72,14 @@ export default function AdminManagementPage() {
         setAllAdmins(adminList);
         setIsRefreshing(false);
     }, async (error) => {
-        const permissionError = new FirestorePermissionError({
-            path: adminsCollection.path,
-            operation: 'list',
-        } satisfies SecurityRuleContext);
-        errorEmitter.emit('permission-error', permissionError);
+        console.error("Admin sync error:", error.code);
+        if (error.code === 'permission-denied') {
+            const permissionError = new FirestorePermissionError({
+                path: adminsCollection.path,
+                operation: 'list',
+            } satisfies SecurityRuleContext);
+            errorEmitter.emit('permission-error', permissionError);
+        }
         setAllAdmins([]);
         setIsRefreshing(false);
     });

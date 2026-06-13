@@ -26,8 +26,8 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == uid;
     }
 
-    // --- GLOBAL CONFIGURATIONS (Priority 1) ---
-    // Explicitly public for system-wide consistency
+    // --- GLOBAL CONFIGURATIONS (High Priority) ---
+    // Explicitly public for system-wide consistency (Pricing, Banks, Academic Rules)
     match /configs/{document=**} {
       allow read: if true; 
       allow write: if isAdmin();

@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
@@ -23,7 +22,7 @@ const AuthContext = createContext<AuthState | undefined>(undefined);
 const DbContext = createContext<Firestore | undefined>(undefined);
 const AuthServiceContext = createContext<Auth | undefined>(undefined);
 
-const ROLE_CACHE_KEY = 'vidya_auth_role_v17_diagnostics';
+const ROLE_CACHE_KEY = 'vidya_auth_role_v18_hardened';
 const MASTER_ADMIN_EMAIL = 'admin@vidyaeducare.com';
 
 const getCachedRoles = () => {
@@ -88,14 +87,21 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
         return { isAdmin: cached.isAdmin, isHeadAdmin: cached.isHeadAdmin };
     }
 
+    // SPEED UP: Master admin skip Firestore doc fetch
+    if (user.email?.toLowerCase() === MASTER_ADMIN_EMAIL) {
+        const roles = { isAdmin: true, isHeadAdmin: true };
+        if (typeof window !== 'undefined') {
+            sessionStorage.setItem(ROLE_CACHE_KEY, JSON.stringify({ ...roles, uid: user.uid }));
+        }
+        return roles;
+    }
+
     try {
       const adminDocRef = doc(db, "admins", user.uid);
       const adminDocSnap = await getDoc(adminDocRef);
       return processSnap(adminDocSnap, user);
     } catch (e) {
-      return user.email?.toLowerCase() === MASTER_ADMIN_EMAIL 
-        ? { isAdmin: true, isHeadAdmin: true } 
-        : { isAdmin: false, isHeadAdmin: false };
+      return { isAdmin: false, isHeadAdmin: false };
     }
   }, [processSnap]);
 

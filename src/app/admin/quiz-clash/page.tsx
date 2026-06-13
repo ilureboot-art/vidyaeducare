@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
@@ -335,7 +334,7 @@ export default function AdminQuizClashPage() {
                         </TableHeader>
                         <TableBody>
                             {tournaments.length > 0 ? tournaments.map(t => (
-                                <TableRow key={t.id}>
+                                <TableRow key={t.id} className="even:bg-muted/40 transition-colors">
                                     <TableCell>{t.title}</TableCell>
                                      <TableCell><Badge variant={t.type === 'Pro' ? 'default' : 'secondary'}>{t.type}</Badge></TableCell>
                                     <TableCell>{format(new Date(t.startTime), 'P p')}</TableCell>

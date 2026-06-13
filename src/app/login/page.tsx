@@ -14,7 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Gamepad2, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Gamepad2, Eye, EyeOff, Loader2, ShieldAlert } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthService, useAuth } from "@/firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
@@ -154,7 +154,7 @@ export default function LoginPage() {
               </Link>
             </div>
           </CardContent>
-          <CardFooter>
+          <CardFooter className="flex flex-col gap-4">
             <Button className="w-full font-black py-6 text-lg shadow-lg" type="submit" disabled={isLoading || authLoading || !isFirebaseReady || isVerifying}>
                 {isVerifying ? (
                     <><Loader2 className="mr-2 h-5 w-5 animate-spin"/> SYNCING ROLE...</>
@@ -162,6 +162,14 @@ export default function LoginPage() {
                     <><Loader2 className="mr-2 h-5 w-5 animate-spin"/> SECURING SESSION...</>
                 ) : 'LOGIN TO WORKSPACE'}
             </Button>
+            <div className="w-full pt-4 border-t border-dashed">
+                <Button asChild variant="outline" className="w-full gap-2 text-xs font-bold text-muted-foreground hover:text-primary transition-colors border-dashed">
+                    <Link href="/admin/login">
+                        <ShieldAlert className="w-4 h-4" />
+                        SWITCH TO ADMIN PORTAL
+                    </Link>
+                </Button>
+            </div>
           </CardFooter>
         </form>
       </Card>

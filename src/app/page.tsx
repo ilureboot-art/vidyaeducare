@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -55,19 +54,19 @@ I'm using this elite platform to prepare for success. Here's why you should join
 
 🏆 MockArena & Quiz Clash: Win REAL cash prizes in live tests!
 - MockArena Rewards: Get paid for excellence! Top 5 scorers with 80%+ accuracy win real cash.
-- Quiz Clash: Compete in live high-stakes tournaments for massive shared prize pools.
+- Quiz Clash: Compete in live high-stakes tournaments for high-value rewards and shared prize pools.
 
-🤖 GuruAI: Get instant bilingual explanations for any doubt, 24/7.
-📝 QuickNotes: Transform heavy chapters into structured study notes instantly.
+🤖 GuruAI: Your 24/7 personal bilingual tutor for instant conceptual clarity.
+📝 QuickNotes: Transform heavy textbook chapters into structured, easy-to-read study notes instantly.
 
 💰 Diverse Earning Opportunities:
-🤝 IBA Program: Become an Independent Business Associate and earn high lifetime commissions!
-⚡ ReferBolt: Unlock continuous passive income as your network grows.
+🤝 IBA Program: Become an Independent Business Associate and start your own zero-investment business earning lifetime commissions!
+⚡ ReferBolt System: Unlock a powerful passive income engine with continuous income cycles from your growing network.
 🎁 Refer & Earn: Get an instant ₹5 wallet bonus for every friend you invite!
 
 Start your journey to excellence and earnings here: ${url}
 
-#VidyaEduCare #MockArena #GuruAI #IBA #ReferBolt #QuizClash #AcademicExcellence`;
+#VidyaEduCare #MockArena #GuruAI #QuickNotes #IBA #ReferBolt #QuizClash #AcademicExcellence`;
     
     try {
         if (navigator.share) {

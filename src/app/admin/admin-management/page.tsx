@@ -41,7 +41,7 @@ import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/e
 
 export default function AdminManagementPage() {
   const db = useDb();
-  const { user, loading: authLoading, isHeadAdmin, isResolved } = useAuth();
+  const { user, isHeadAdmin, isResolved } = useAuth();
   const [allAdmins, setAllAdmins] = useState<Admin[] | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   
@@ -55,6 +55,7 @@ export default function AdminManagementPage() {
   const { toast } = useToast();
   
   const fetchAdmins = useCallback(() => {
+    // If not resolved or not head admin, stop immediately
     if (!isResolved || !db || !user || !isHeadAdmin) {
         if (isResolved && !isHeadAdmin) {
           setAllAdmins([]);

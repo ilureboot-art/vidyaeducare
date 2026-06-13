@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { Zap, Share2, IndianRupee, Users, CheckCircle, Repeat, Loader2, Sparkles, TrendingUp, ShieldCheck } from "lucide-react";
+import { Zap, Share2, IndianRupee, Users, CheckCircle, Repeat, Loader2, Sparkles, TrendingUp, ShieldCheck, History } from "lucide-react";
 import Link from "next/link";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -272,7 +272,7 @@ Start your earning journey to success today! 🚀
                         </TableHeader>
                         <TableBody>
                             {data.referralHistory && data.referralHistory.length > 0 ? data.referralHistory.map((ref: any) => (
-                                <TableRow key={ref.id} className="hover:bg-muted/30 transition-colors">
+                                <TableRow key={ref.id} className="hover:bg-muted/30 transition-colors even:bg-muted/40">
                                     <TableCell className="font-bold text-sm">{ref.name}</TableCell>
                                     <TableCell className="text-xs text-muted-foreground">{new Date(ref.date).toLocaleDateString()}</TableCell>
                                     <TableCell className="text-right font-black text-green-600">+ ₹{ref.commission}</TableCell>

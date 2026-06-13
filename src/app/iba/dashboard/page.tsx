@@ -207,7 +207,7 @@ Join the national community of high-achievers today! 🚀
           
           <div className="text-center p-4 bg-muted rounded-lg border">
             <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Your Unique IBA Code</h3>
-            <div className="flex items-center justify-center gap-2 mt-2">
+            <div className="flex items-center gap-2 mt-2">
               <p className="text-2xl font-mono p-3 bg-background rounded-md w-full max-w-xs text-center tracking-widest border border-dashed">{ibaReferralCode}</p>
             </div>
           </div>
@@ -261,7 +261,7 @@ Join the national community of high-achievers today! 🚀
                 <CardContent className="space-y-4">
                     <div className="p-4 bg-muted/50 rounded-lg flex justify-between items-center border">
                         <div>
-                            <h4 className="font-bold">Mock Test Subscriptions</h4>
+                            <h4 className="font-bold">MockArena Subscriptions</h4>
                             <p className="text-xs text-muted-foreground">Standard Referral Rate</p>
                         </div>
                         <p className="text-2xl font-black text-primary">17.65%</p>
@@ -315,7 +315,7 @@ Join the national community of high-achievers today! 🚀
                         </TableHeader>
                         <TableBody>
                             {referralData!.recentReferrals.length > 0 ? referralData!.recentReferrals.map((ref) => (
-                                <TableRow key={ref.id}>
+                                <TableRow key={ref.id} className="even:bg-muted/40 transition-colors">
                                     <TableCell className="font-medium text-sm">{ref.name}</TableCell>
                                     <TableCell className="text-xs">{new Date(ref.date).toLocaleDateString()}</TableCell>
                                     <TableCell className="text-right text-green-600 font-bold text-sm">+ ₹{formatCurrency(ref.commission)}</TableCell>

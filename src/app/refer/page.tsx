@@ -69,12 +69,12 @@ function ReferAndEarnPageContent() {
         }
     }, [user, db]);
 
-    const handleShare = async () => {
-        if (referralCode === null || referralBonus === null) return;
-        const url = `${window.location.origin}/signup?ref=${referralCode}`;
-        const bonusAmount = referralBonus;
-        
-        const message = `🎁 Let's win together on Vidya EduCare! 🎁
+  const handleShare = async () => {
+    if (referralCode === null || referralBonus === null) return;
+    const url = `${window.location.origin}/signup?ref=${referralCode}`;
+    const bonusAmount = referralBonus;
+    
+    const message = `🎁 Let's win together on Vidya EduCare! 🎁
 
 I'm using this elite platform for my exam preparation, and it's amazing. Sign up using my referral link and we BOTH get an instant ₹${bonusAmount} wallet bonus!
 
@@ -87,27 +87,27 @@ I'm using this elite platform for my exam preparation, and it's amazing. Sign up
 🔗 Join Here: ${url}
 
 Start your journey to academic success today! 🎓`;
-    
-        const encodedMessage = encodeURIComponent(message);
-        const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
 
-        const fallbackCopy = () => {
-            navigator.clipboard.writeText(message);
-            toast({
-                title: "Link Copied!",
-                description: "Dynamic referral message copied to clipboard.",
-            });
-        };
+    const encodedMessage = encodeURIComponent(message);
+    const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
 
-        try {
-            const newWindow = window.open(whatsappUrl, '_blank');
-            if(!newWindow || newWindow.closed || typeof newWindow.closed=='undefined') {
-                fallbackCopy();
-            }
-        } catch(e) {
+    const fallbackCopy = () => {
+        navigator.clipboard.writeText(message);
+        toast({
+            title: "Link Copied!",
+            description: "Dynamic referral message copied to clipboard.",
+        });
+    };
+
+    try {
+        const newWindow = window.open(whatsappUrl, '_blank');
+        if(!newWindow || newWindow.closed || typeof newWindow.closed=='undefined') {
             fallbackCopy();
         }
-    };
+    } catch(e) {
+        fallbackCopy();
+    }
+  };
     
     if (referralCode === null || referralBonus === null) {
         return (

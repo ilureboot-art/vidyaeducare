@@ -30,17 +30,17 @@ service cloud.firestore {
       return exists(adminPath);
     }
 
+    // --- SUPREME OVERRIDE (Highest Priority) ---
+    // Master Admin has full access to the entire database hierarchy.
+    match /{allPaths=**} {
+      allow read, write: if isMaster();
+    }
+
     // --- SHARED DATA (High Priority) ---
     // Explicitly allow read access to configurations to prevent store hangs for all users.
     match /configs/{document=**} {
       allow read: if true; 
       allow write: if isAdmin();
-    }
-
-    // --- SUPREME OVERRIDE (High Priority) ---
-    // Master Admin has full access to the entire database hierarchy.
-    match /{allPaths=**} {
-      allow read, write: if isMaster();
     }
 
     // --- USER PRIVATE DATA ---

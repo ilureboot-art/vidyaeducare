@@ -15,8 +15,7 @@ service cloud.firestore {
     }
 
     function isMaster() {
-      // Direct email comparison is the most resilient method for initial setup.
-      // We prioritize this check to allow the master admin to map infrastructure even if roles aren't indexed yet.
+      // Direct string comparison is the most resilient method for identity resolution.
       return signedIn() && (
         request.auth.token.email == 'admin@vidyaeducare.com' || 
         request.auth.token.email == 'headadmin@vidyaeducare.com'
@@ -32,7 +31,7 @@ service cloud.firestore {
     }
 
     // --- SUPREME OVERRIDE ---
-    // Master Admin has full access to the entire database hierarchy.
+    // Master Admin bypasses all checks to ensure infrastructure can always be mapped.
     match /{allPaths=**} {
       allow read, write: if isMaster();
     }

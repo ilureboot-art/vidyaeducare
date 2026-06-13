@@ -306,7 +306,7 @@ export default function TransactionsPage() {
                       <CardTitle className="text-[10px] font-black uppercase tracking-widest text-red-600/70">Total Outflow (Completed)</CardTitle>
                       <p className="text-2xl font-black text-red-600">{formatCurrency(filteredTotals.withdrawals)}</p>
                   </div>
-                  <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center text-red-600">
+                  <div className="w-10 h-10 rounded-xl bg-red-50/10 flex items-center justify-center text-red-600">
                       <ArrowUpRight size={24}/>
                   </div>
               </CardHeader>
@@ -328,7 +328,7 @@ export default function TransactionsPage() {
           <div className="flex flex-col space-y-4 pt-4">
             <div className="flex flex-col md:flex-row gap-4">
                 <div className="relative flex-1">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input 
                         placeholder="Search user, ID or description..." 
                         className="pl-8"

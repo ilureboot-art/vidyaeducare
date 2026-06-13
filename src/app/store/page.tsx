@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from 'next/link';
-import type { StoreConfig, MockTestPackage, ReferboltSubscription } from "@/lib/store-config";
+import { type StoreConfig, type MockTestPackage, type ReferboltSubscription, defaultStoreConfig } from "@/lib/store-config";
 import type { WalletData } from "@/lib/user-data";
 import { useAuth, useDb } from "@/firebase";
 import { doc, getDoc, runTransaction, collection, serverTimestamp, arrayUnion, query, where, getDocs, orderBy, limit, Timestamp, type Firestore } from "firebase/firestore";
@@ -140,11 +140,18 @@ function StorePageContent() {
                     const config = configRes.value.data() as StoreConfig;
                     setStoreConfig(config);
                     checkRecEligibility(db, user.uid, config);
-                } else if (configRes.status === 'rejected' && configRes.reason?.code === 'permission-denied') {
-                    errorEmitter.emit('permission-error', new FirestorePermissionError({ path: storeConfigRef.path, operation: 'get' }));
+                } else {
+                    if (configRes.status === 'rejected' && configRes.reason?.code === 'permission-denied') {
+                        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: storeConfigRef.path, operation: 'get' }));
+                    }
+                    // FALLBACK: Use defaults to prevent spinning error
+                    setStoreConfig(defaultStoreConfig);
+                    setIsCheckingEligibility(false);
                 }
             } catch (e) {
                 console.warn("Store initialization sync error.");
+                setStoreConfig(defaultStoreConfig);
+                setIsCheckingEligibility(false);
             }
         };
         fetchData();
@@ -218,7 +225,6 @@ function StorePageContent() {
             });
 
             if (ibaUid) {
-                // Use the adjustable rate from storeConfig
                 const baseCommissionRate = (storeConfig.ibaCommissionRate || 10) / 100;
                 const commissionAmount = priceDetails.basePrice * baseCommissionRate;
 

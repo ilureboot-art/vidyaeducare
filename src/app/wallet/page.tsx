@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
@@ -32,7 +33,7 @@ import { Html5Qrcode } from "html5-qrcode";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, LineChart, Line, XAxis, YAxis, CartesianGrid, AreaChart, Area } from "recharts";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { type StoreConfig } from "@/lib/store-config";
+import { type StoreConfig, defaultStoreConfig } from "@/lib/store-config";
 
 const getStatusBadgeVariant = (status: string) => {
     switch (status.toLowerCase()) {
@@ -147,6 +148,7 @@ function WalletPageContent() {
         const storeRef = doc(db, "configs", "store");
         const unsubStore = onSnapshot(storeRef, (docSnap) => {
             if (docSnap.exists()) setStoreConfig(docSnap.data() as StoreConfig);
+            else setStoreConfig(defaultStoreConfig);
         }, async (error) => {
             if (error.code === 'permission-denied') {
                 const permissionError = new FirestorePermissionError({
@@ -155,6 +157,7 @@ function WalletPageContent() {
                 } satisfies SecurityRuleContext);
                 errorEmitter.emit('permission-error', permissionError);
             }
+            setStoreConfig(defaultStoreConfig);
         });
 
         // Fetch Recent Transactions
@@ -164,7 +167,7 @@ function WalletPageContent() {
             const transactionList: Transaction[] = querySnapshot.docs.map(d => {
                 const data = d.data();
                 const date = data.date instanceof Timestamp ? data.date.toDate().toISOString() : data.date;
-                return { id: d.id, ...data, date } as Transaction;
+                return { id: doc.id, ...data, date } as Transaction;
             });
             setTransactions(transactionList);
         }, async (error) => {
@@ -293,20 +296,16 @@ function WalletPageContent() {
 
     try {
         if (isAutoApprove) {
-            // Secure atomic transaction for auto-approval
             await runTransaction(db, async (transaction) => {
                 const walletRef = doc(db, "wallets", user.uid);
                 const walletDoc = await transaction.get(walletRef);
                 const currentBalance = walletDoc.exists() ? walletDoc.data().balance : 0;
                 
-                // Update balance instantly
                 transaction.update(walletRef, { balance: currentBalance + amount });
                 
-                // Create completed transaction record
                 const newTxRef = doc(collection(db, "transactions"));
                 transaction.set(newTxRef, txData);
 
-                // Create success notification
                 const notificationRef = doc(collection(db, "notifications"));
                 transaction.set(notificationRef, {
                     userId: user.uid,
@@ -327,7 +326,6 @@ function WalletPageContent() {
                 throw serverError;
             });
         } else {
-            // Normal path: create pending request
             const txsCol = collection(db, "transactions");
             await addDoc(txsCol, txData).catch(async (serverError) => {
                 if (serverError.code === 'permission-denied') {
@@ -447,7 +445,7 @@ function WalletPageContent() {
       }
   };
 
-  if (!walletInfo || !transactions || !adminPaymentMethods) {
+  if (!walletInfo || !transactions || !adminPaymentMethods || !storeConfig) {
     return (
       <div className="w-full max-w-2xl mx-auto flex flex-col items-center justify-center h-96 space-y-4">
         <Loader2 className="animate-spin text-primary" size={40} />

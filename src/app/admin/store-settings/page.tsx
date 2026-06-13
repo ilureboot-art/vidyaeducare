@@ -280,7 +280,7 @@ export default function AdminStoreSettingsPage() {
                         </div>
                         <div className="space-y-2">
                             <Label className="text-[10px] uppercase font-black text-primary">HSN/SAC Code</Label>
-                            <Input type="text" value={pkg.hsnSacCode} onChange={(e) => handleMockTestPackageChange(index, 'hsnSacCode', e.target.value)} />
+                            <Input type="text" value={pkg.hsnSacCode} onChange={(e) => handleMockTestPackageChange(index, 'gstRate', e.target.value)} />
                         </div>
                         <div className="space-y-2 col-span-full lg:col-span-2 flex flex-col justify-end gap-4 pb-2">
                              <div className="flex items-center space-x-2">

@@ -40,7 +40,6 @@ export default function AdminStoreSettingsPage() {
   const isLoading = isLoadingStore || isLoadingAcademic;
 
   useEffect(() => {
-    // Only attempt sync if auth is resolved and user is an admin
     if (!db || !isResolved || !isAdmin) {
         if (isResolved) {
             setIsLoadingStore(false);

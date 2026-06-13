@@ -28,7 +28,7 @@ service cloud.firestore {
       return exists(adminPath);
     }
 
-    // --- GLOBAL CONFIGURATIONS (Global Priority) ---
+    // --- GLOBAL CONFIGURATIONS (High Priority Read) ---
     // These must be readable by everyone to allow the UI to initialize (prices, subjects, etc.)
     match /configs/{document=**} {
       allow read: if true; 

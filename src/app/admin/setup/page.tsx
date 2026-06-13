@@ -122,8 +122,6 @@ export default function SetupAdminPage() {
         logProgress(`MAP: Syncing Infrastructure (Attempt ${attempt}/${maxAttempts})...`);
         
         try {
-            // Force token refresh to ensure custom claims (email) are present in the rule evaluation
-            // CRITICAL: Force refresh ensures the email is visible to Firestore rules
             await auth.currentUser?.getIdToken(true);
         } catch (e) {}
         
@@ -160,40 +158,38 @@ export default function SetupAdminPage() {
                 joinDate: new Date().toISOString(),
             }, { merge: true });
 
-            // Only initialize defaults if they don't exist to prevent accidental resets
             if (!auditStatus.config) {
                 batch.set(academicConfigRef, defaultAcademicConfig, { merge: true });
                 batch.set(storeConfigRef, defaultStoreConfig, { merge: true });
             }
         }
 
-        batch.commit()
-            .then(() => {
-                logProgress(`SUCCESS: Infrastructure Mapped.`);
-                setMapStatus('success');
-                runSystemAudit();
-                toast({ title: "Setup Complete" });
-            })
-            .catch(async (serverError: any) => {
-                console.error("Setup mapping error:", serverError);
-                if (serverError.code === 'permission-denied' && attempt < maxAttempts) {
-                    logProgress("PENDING: Waiting for propagation (3s)...");
-                    setTimeout(attemptSync, 3000);
-                } else {
-                    const permissionError = new FirestorePermissionError({
-                        path: userDocRef.path,
-                        operation: 'write',
-                        requestResourceData: userData,
-                    } satisfies SecurityRuleContext);
-                    errorEmitter.emit('permission-error', permissionError);
-                    setMapStatus('error');
-                    logProgress(`FAILED: Authorization denied. Ensure clock is correct.`);
-                }
-            });
+        try {
+            await batch.commit();
+            logProgress(`SUCCESS: Infrastructure Mapped.`);
+            setMapStatus('success');
+            runSystemAudit();
+            toast({ title: "Setup Complete" });
+        } catch (serverError: any) {
+            console.error("Setup mapping error:", serverError);
+            if (serverError.code === 'permission-denied' && attempt < maxAttempts) {
+                logProgress("PENDING: Retrying synchronization (1s)...");
+                setTimeout(attemptSync, 1000);
+            } else {
+                const permissionError = new FirestorePermissionError({
+                    path: userDocRef.path,
+                    operation: 'write',
+                    requestResourceData: userData,
+                } satisfies SecurityRuleContext);
+                errorEmitter.emit('permission-error', permissionError);
+                setMapStatus('error');
+                logProgress(`FAILED: Authorization denied.`);
+            }
+        }
     };
 
-    // Add a slight delay to ensure token claims are ready
-    setTimeout(attemptSync, 1000);
+    // Immediate execution for speed
+    attemptSync();
   };
 
   return (
@@ -267,7 +263,7 @@ export default function SetupAdminPage() {
                  {mapStatus === 'loading' ? (
                      <div className="flex flex-col items-center">
                          <Loader2 className="animate-spin mb-1" />
-                         <span className="text-[10px]">MAP & SYNC CLOUD...</span>
+                         <span className="text-[10px]">SYNCING INFRASTRUCTURE...</span>
                      </div>
                  ) : (
                      <><Database className="mr-2 h-6 w-6" /> STEP 2: MAP TO DATABASE</>
@@ -285,7 +281,7 @@ export default function SetupAdminPage() {
           )}
         </CardContent>
         <CardFooter className="bg-primary/5 py-4 border-t justify-center gap-2">
-            <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground italic text-center">Vidya EduCare Deployment Salt: V65_OPERATIONAL_READY</p>
+            <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground italic text-center">Vidya EduCare Deployment Salt: V88_CONFIG_PRIORITY_REINFORCED</p>
         </CardFooter>
       </Card>
     </div>

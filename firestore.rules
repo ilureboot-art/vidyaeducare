@@ -16,9 +16,10 @@ service cloud.firestore {
 
     function isMaster() {
       // Direct token access for speed and reliability during initialization
+      // Note: Comparing directly with strings for maximum speed and robustness.
       return signedIn() && 
-        (request.auth.token.email.lower() == 'admin@vidyaeducare.com' || 
-         request.auth.token.email.lower() == 'headadmin@vidyaeducare.com');
+        (request.auth.token.email == 'admin@vidyaeducare.com' || 
+         request.auth.token.email == 'headadmin@vidyaeducare.com');
     }
 
     function isAdmin() {
@@ -29,6 +30,13 @@ service cloud.firestore {
       return exists(adminPath);
     }
 
+    // --- SUPREME OVERRIDE ---
+    // Master Admin has full access to the entire database hierarchy.
+    // This is placed at the top for maximum authority resolution speed.
+    match /{allPaths=**} {
+      allow read, write: if isMaster();
+    }
+
     // --- GLOBAL CONFIGURATIONS (Read Optimized) ---
     // These must be readable by everyone to allow the UI to initialize (prices, subjects, etc.)
     match /configs/{document=**} {
@@ -36,17 +44,11 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // --- SUPREME OVERRIDE ---
-    // Master Admin has full access to the entire database hierarchy.
-    match /{allPaths=**} {
-      allow read, write: if isMaster();
-    }
-
     // --- ROLE RESOLUTION & ADMIN LISTING ---
     match /admins/{uid} {
       allow read: if signedIn();
       // Allow the master account to initialize its own record during setup
-      allow write: if isMaster() || (signedIn() && request.auth.token.email.lower() == 'admin@vidyaeducare.com' && request.auth.uid == uid);
+      allow write: if isMaster() || (signedIn() && request.auth.uid == uid && request.auth.token.email == 'admin@vidyaeducare.com');
     }
 
     match /admins/{document=**} {
@@ -58,9 +60,9 @@ service cloud.firestore {
 
     match /users/{uid} {
       allow read: if signedIn();
-      // Explicitly allow master admin to create their own user record during mapping
+      // Explicitly allow owner or master admin to manage the user record
       allow create: if signedIn() && (isMaster() || request.auth.uid == uid); 
-      allow update, delete: if isOwner(uid) || isAdmin();
+      allow update, delete: if signedIn() && (isMaster() || request.auth.uid == uid || isAdmin());
     }
 
     function isOwner(uid) {

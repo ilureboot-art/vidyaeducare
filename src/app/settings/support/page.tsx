@@ -34,7 +34,7 @@ const userFaqs = [
     },
     {
         question: "How do the MockArena rewards and leaderboards work?",
-        answer: "MockArena rewards recognize academic excellence. To qualify for cash prizes, a student must participate in a live session and achieve at least 80% accuracy. The top 5 scorers who meet this accuracy criteria win cash prizes (e.g., ₹250 for Rank #1) credited instantly to the parent's wallet."
+        answer: "MockArena rewards recognize academic excellence. To qualify for cash prizes, a student must participate in a live session and achieve at least 80% accuracy. The top 5 scorers who meet this accuracy criteria win cash prizes credited instantly to the parent's wallet."
     },
     {
         question: "What is Quiz Clash and how do the rewards work?",
@@ -102,7 +102,7 @@ export default function SupportPage() {
                  <Accordion type="single" collapsible className="w-full">
                     {userFaqs.map((faq, index) => (
                         <AccordionItem value={`item-${index}`} key={index}>
-                            <AccordionTrigger className="text-left">{faq.question}</AccordionTrigger>
+                            <AccordionTrigger className="text-left italic font-bold">{faq.question}</AccordionTrigger>
                             <AccordionContent className="text-muted-foreground leading-relaxed">
                                 {faq.answer}
                             </AccordionContent>

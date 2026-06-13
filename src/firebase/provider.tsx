@@ -87,7 +87,6 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
         return { isAdmin: cached.isAdmin, isHeadAdmin: cached.isHeadAdmin };
     }
 
-    // SPEED UP: Master admin skip Firestore doc fetch
     if (user.email?.toLowerCase() === MASTER_ADMIN_EMAIL) {
         const roles = { isAdmin: true, isHeadAdmin: true };
         if (typeof window !== 'undefined') {
@@ -131,8 +130,12 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
       setAuthState(prev => ({ ...prev, user, loading: false, isResolved: false }));
 
-      const roles = await resolveUserRole(user, db);
-      setAuthState({ user, loading: false, ...roles, isResolved: true });
+      try {
+          const roles = await resolveUserRole(user, db);
+          setAuthState({ user, loading: false, ...roles, isResolved: true });
+      } catch (e) {
+          setAuthState({ user, loading: false, isAdmin: false, isHeadAdmin: false, isResolved: true });
+      }
     });
 
     return () => unsubscribe();

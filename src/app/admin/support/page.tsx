@@ -82,14 +82,14 @@ export default function SupportPage() {
       </div>
       <Card>
         <CardHeader>
-            <CardTitle>Administrative FAQs</CardTitle>
+            <CardTitle>Frequently Asked Questions</CardTitle>
         </CardHeader>
         <CardContent>
              {adminFaqs.length > 0 ? (
                  <Accordion type="single" collapsible className="w-full">
                     {adminFaqs.map((faq, index) => (
                         <AccordionItem value={`item-${index}`} key={index}>
-                            <AccordionTrigger className="text-left">{faq.question}</AccordionTrigger>
+                            <AccordionTrigger className="text-left font-bold">{faq.question}</AccordionTrigger>
                             <AccordionContent className="text-muted-foreground">
                                 {faq.answer}
                             </AccordionContent>

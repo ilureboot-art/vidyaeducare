@@ -1,4 +1,3 @@
-
 rules_version = '2';
 
 /**
@@ -17,7 +16,6 @@ service cloud.firestore {
 
     function isMaster() {
       // Prioritize direct email check for maximum resilience during initial cold-starts
-      // Explicitly check for token and email before applying comparison logic
       return signedIn() && 
         request.auth.token != null && 
         request.auth.token.email != null && 
@@ -48,7 +46,6 @@ service cloud.firestore {
     // --- USER PRIVATE DATA ---
 
     match /users/{uid} {
-      // Users can read their own profile; admins can read any profile
       allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
       allow create: if signedIn() && (request.auth.uid == uid || isMaster()); 
       allow update, delete: if signedIn() && (request.auth.uid == uid || isAdmin());

@@ -1,16 +1,21 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { BookOpen, Trophy, Users, LogIn, Share2, Quote, User, Shield, ArrowRight, BrainCircuit, ScrollText, Sparkles, Target, Zap, Rocket, ChevronRight, CheckCircle2 } from "lucide-react";
+import { BookOpen, Trophy, Users, LogIn, Share2, Quote, User, Shield, ArrowRight, BrainCircuit, ScrollText, Sparkles, Target, Zap, Rocket, ChevronRight, CheckCircle2, HelpCircle } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/firebase";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 const features = [
   {
@@ -63,7 +68,7 @@ I'm using this elite platform to prepare for success. Here's why you should join
 💰 Diverse Earning Opportunities:
 🤝 IBA Program: Become an Independent Business Associate and start your own zero-investment business earning lifetime commissions!
 ⚡ ReferBolt System: Unlock a powerful passive income engine with continuous income cycles from your growing network.
-🎁 Refer & Earn: Get an instant ₹5 wallet bonus for every friend you invite!
+🎁 Refer & Earn: Win-Win! Every referral gets an instant ₹5 wallet bonus on signup!
 
 Start your journey to excellence and earnings here: ${url}
 
@@ -295,7 +300,7 @@ Start your journey to excellence and earnings here: ${url}
             <div className="md:col-span-2 space-y-8">
               <Quote className="w-20 h-20 text-primary opacity-10" />
               <h2 className="text-4xl md:text-5xl font-black text-primary tracking-tight leading-tight italic">
-                "Our mission is to democratize elite academic coaching and bridge the gap between academic effort and financial reward."
+                &quot;Our mission is to democratize elite academic coaching and bridge the gap between academic effort and financial reward.&quot;
               </h2>
               <div className="pt-6 border-t-4 border-primary/5">
                 <p className="text-3xl font-black text-primary tracking-tight uppercase">Adv. Sanjay Vidya Vijay Gurav</p>
@@ -303,6 +308,57 @@ Start your journey to excellence and earnings here: ${url}
               </div>
             </div>
           </div>
+        </section>
+
+        {/* FAQ Section */}
+        <section className="space-y-12">
+            <div className="text-center space-y-2">
+                <h2 className="text-4xl font-black text-primary tracking-tighter uppercase italic">Frequently Asked Questions</h2>
+                <p className="text-muted-foreground font-bold tracking-widest text-[10px] uppercase">Everything you need to know about Vidya EduCare</p>
+                <div className="h-1.5 bg-accent w-32 mx-auto mt-4 rounded-full shadow-sm" />
+            </div>
+            <div className="max-w-3xl mx-auto bg-white rounded-[3rem] p-8 md:p-12 shadow-xl border border-primary/10">
+                <Accordion type="single" collapsible className="w-full">
+                    <AccordionItem value="vision" className="border-b-2 border-muted py-2">
+                        <AccordionTrigger className="text-xl font-black text-primary hover:no-underline text-left italic">What is the Vision & Mission of Vidya EduCare?</AccordionTrigger>
+                        <AccordionContent className="text-muted-foreground text-lg font-medium leading-relaxed pb-6">
+                            <p><b>Vision:</b> To lead India in academic excellence and financial empowerment.</p>
+                            <p className="mt-4"><b>Mission:</b> To provide elite AI-powered coaching while fostering a sustainable earning ecosystem for all stakeholders.</p>
+                        </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="objectives" className="border-b-2 border-muted py-2">
+                        <AccordionTrigger className="text-xl font-black text-primary hover:no-underline text-left italic">What are the primary Objectives and Benefits?</AccordionTrigger>
+                        <AccordionContent className="text-muted-foreground text-lg font-medium leading-relaxed pb-6">
+                            <p><b>Objectives:</b> Improve exam performance via MockArena, provide instant conceptual clarity via AI tools, and manage a robust referral-based passive income engine.</p>
+                            <p className="mt-4"><b>Benefits:</b> Students win cash rewards for excellence; Parents get a productive learning environment; Associates (IBAs) start a zero-investment professional business.</p>
+                        </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="rewards" className="border-b-2 border-muted py-2">
+                        <AccordionTrigger className="text-xl font-black text-primary hover:no-underline text-left italic">How do MockArena rewards work?</AccordionTrigger>
+                        <AccordionContent className="text-muted-foreground text-lg font-medium leading-relaxed pb-6">
+                            Participate in live curriculum-aligned sessions. Achieve an <b>80% accuracy minimum</b> and rank in the top 5 participants to win instant cash prizes credited to your wallet.
+                        </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="clash" className="border-b-2 border-muted py-2">
+                        <AccordionTrigger className="text-xl font-black text-primary hover:no-underline text-left italic">What is Quiz Clash and its rewards?</AccordionTrigger>
+                        <AccordionContent className="text-muted-foreground text-lg font-medium leading-relaxed pb-6">
+                            Quiz Clash features high-stakes live tournaments. <b>Pro Clashes</b> use entry fees to form a prize pool shared among top performers. <b>Practice Clashes</b> are free and designed for preparation.
+                        </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="iba" className="border-b-2 border-muted py-2">
+                        <AccordionTrigger className="text-xl font-black text-primary hover:no-underline text-left italic">How does the IBA program work?</AccordionTrigger>
+                        <AccordionContent className="text-muted-foreground text-lg font-medium leading-relaxed pb-6">
+                            Becoming an Independent Business Associate (IBA) is a <b>zero-investment opportunity</b>. Share your unique code; earn up to <b>17.65% commission</b> on every MockArena subscription purchased via your code.
+                        </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="referbolt" className="border-none py-2">
+                        <AccordionTrigger className="text-xl font-black text-primary hover:no-underline text-left italic">What is the ReferBolt system?</AccordionTrigger>
+                        <AccordionContent className="text-muted-foreground text-lg font-medium leading-relaxed pb-6">
+                            ReferBolt is a premium multi-level referral engine. It works on <b>&quot;Success Cycles&quot;</b> of just 3 referrals. Every time your network completes a cycle, you unlock a massive bonus. Cycles repeat automatically for continuous passive income.
+                        </AccordionContent>
+                    </AccordionItem>
+                </Accordion>
+            </div>
         </section>
 
         {/* CTA */}

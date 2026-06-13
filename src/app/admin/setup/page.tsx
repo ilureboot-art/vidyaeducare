@@ -117,8 +117,9 @@ export default function SetupAdminPage() {
     logProgress(`MAP: Requesting authority handshake...`);
     
     try {
+        // MANDATORY: Force token sync to ensure Security Rules recognize the admin status
         await auth.currentUser?.getIdToken(true);
-        await new Promise(r => setTimeout(r, 500));
+        await new Promise(r => setTimeout(r, 800));
 
         const batch = writeBatch(db);
         const userDocRef = doc(db, "users", uid);

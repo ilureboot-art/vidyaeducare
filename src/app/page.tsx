@@ -285,7 +285,7 @@ Start your journey to success now: ${url}`;
               </h2>
               <div className="pt-6 border-t-4 border-primary/5">
                 <p className="text-3xl font-black text-primary tracking-tight uppercase">Adv. Sanjay Vidya Vijay Gurav</p>
-                <p className="text-muted-foreground text-sm font-black uppercase tracking-[0.3em] mt-1">Founder & Managing Director, Vidya EduCare</p>
+                <p className="text-muted-foreground text-sm font-black uppercase tracking-[0.3em] mt-1">Founder & Owner, Vidya EduCare</p>
               </div>
             </div>
           </div>

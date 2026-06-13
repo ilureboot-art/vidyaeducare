@@ -25,6 +25,7 @@ import type { StudentProfile } from "@/lib/student-data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
+import { cn } from "@/lib/utils";
 
 type UserStatus = "Active" | "Banned" | "Inactive";
 type UserSummary = {

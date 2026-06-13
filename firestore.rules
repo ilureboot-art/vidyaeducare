@@ -15,9 +15,10 @@ service cloud.firestore {
     }
 
     function isMaster() {
-      // Robust check for the master administrator account using case-insensitive email
+      // Direct token access for speed and reliability during initialization
       return signedIn() && 
-        request.auth.token.get('email', '').lower() in ['admin@vidyaeducare.com', 'headadmin@vidyaeducare.com'];
+        (request.auth.token.email.lower() == 'admin@vidyaeducare.com' || 
+         request.auth.token.email.lower() == 'headadmin@vidyaeducare.com');
     }
 
     function isAdmin() {
@@ -42,8 +43,13 @@ service cloud.firestore {
     }
 
     // --- ROLE RESOLUTION & ADMIN LISTING ---
+    match /admins/{uid} {
+      allow read: if signedIn();
+      // Allow the master account to initialize its own record during setup
+      allow write: if isMaster() || (signedIn() && request.auth.token.email.lower() == 'admin@vidyaeducare.com' && request.auth.uid == uid);
+    }
+
     match /admins/{document=**} {
-      // Allow authenticated listing for role resolution and management
       allow read, list: if signedIn();
       allow write: if isMaster();
     }

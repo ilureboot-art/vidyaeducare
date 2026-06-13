@@ -122,6 +122,7 @@ export default function SetupAdminPage() {
         logProgress(`MAP: Syncing Infrastructure (Attempt ${attempt}/${maxAttempts})...`);
         
         try {
+            // Force token refresh to ensure email claim is present for isMaster() rule
             await auth.currentUser?.getIdToken(true);
         } catch (e) {}
         
@@ -188,7 +189,7 @@ export default function SetupAdminPage() {
         }
     };
 
-    // Immediate execution for speed
+    // Immediate execution
     attemptSync();
   };
 

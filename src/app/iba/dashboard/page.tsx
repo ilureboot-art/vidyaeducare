@@ -156,22 +156,21 @@ function IBADashboardPageContent() {
   const handleShare = async () => {
     if (!ibaReferralCode) return;
     const shareUrl = `${window.location.origin}/signup?ref=${ibaReferralCode}`;
+    const faqUrl = `${window.location.origin}#faq`;
     const message = `🎓 Join Vidya EduCare as an Independent Business Associate! 🎓
 
 I'm earning lifetime commissions by empowering students! As an IBA, you unlock:
 
-💰 Massive Commissions: Earn up to 17.65% on every MockArena subscription.
-🏆 MockArena Rewards: Help students win real cash! Top 5 scorers (80%+ accuracy) get paid.
-🏁 Quiz Clash: Promote high-value live tournaments and earn from registrations.
-⚡ ReferBolt System: Continuous passive income from your multi-level network cycles.
+💰 Massive Commissions: Earn up to 10% on every MockArena subscription.
+🏆 MockArena Rewards: Help students win real cash! Top 5 scorers get paid.
+⚡ ReferBolt System: Continuous passive income from your network cycles.
 🎁 Refer & Earn: Win-Win! Every referral gets an instant ₹5 wallet bonus.
 
-✨ Premium AI Suite Included:
-- 🤖 GuruAI: 24/7 Bilingual tutor for instant clarity.
-- 📝 QuickNotes: Fast textbook summaries.
+🔑 Start your zero-investment business today!
+IBA Code: ${ibaReferralCode}
+🔗 Join: ${shareUrl}
 
-🔑 Start your zero-investment business today! Use my IBA Code for an onboarding discount: ${ibaReferralCode}
-🔗 Join the Network: ${shareUrl}
+Check out our FAQs: ${faqUrl}
 
 Let's build success together! 🚀💸`;
     
@@ -268,7 +267,7 @@ Let's build success together! 🚀💸`;
                             <h4 className="font-bold">MockArena Subscriptions</h4>
                             <p className="text-xs text-muted-foreground">Standard Referral Rate</p>
                         </div>
-                        <p className="text-2xl font-black text-primary">17.65%</p>
+                        <p className="text-2xl font-black text-primary">10%</p>
                     </div>
                      <div className="p-4 bg-primary/10 rounded-lg border border-primary/20 flex justify-between items-center">
                         <div>

@@ -81,27 +81,28 @@ function ReferBoltPageContent() {
     if (!data || !('referralCode' in data)) return;
     const referralCode = data.referralCode;
     const shareUrl = `${window.location.origin}/signup?ref=${referralCode}`;
+    const faqUrl = `${window.location.origin}#faq`;
 
     const message = `⚡ Activate Passive Income with Vidya ReferBolt! ⚡
 
 I've unlocked the ReferBolt Success Cycle on Vidya EduCare! This is a powerful multi-level referral engine for continuous income.
 
 💰 ReferBolt Continuous Earnings:
-🔄 Cycle Bonus: Complete a cycle with just 3 people for massive credit payouts!
-📈 Passive Network: Earn from your direct referrals AND their network activity.
-🤝 Automatic Cycles: The cycles renew automatically for infinite earning potential.
+🔄 Cycle Bonus: Complete a cycle with just 3 people for massive payouts!
+📈 Passive Network: Earn from your direct referrals AND their network.
+🤝 Automatic Cycles: Renew automatically for infinite potential.
 
-🏆 Academic Excellence & Rewards:
-- MockArena: Students win REAL cash prizes for Top 5 rankings (80%+ score).
-- Quiz Clash: Compete in live tournaments with high-value shared prize pools.
-- AI Suite: Includes GuruAI (Personal Tutor) & QuickNotes (Auto-Summaries).
+🏆 Academic Excellence Included:
+- MockArena: Students win REAL cash prizes.
+- Quiz Clash: High-stakes live tournaments.
+- AI Suite: GuruAI Tutor & QuickNotes Summary.
 
-🎁 Bonus: New users get an instant ₹5 wallet bonus on signup!
+🔑 Use my code to join: ${referralCode}
+🔗 Join: ${shareUrl}
 
-🔑 Use my network code to join the success cycle: ${referralCode}
-🔗 Join the Network: ${shareUrl}
+Learn more in our FAQ: ${faqUrl}
 
-Let's build a profitable learning community together! 💸🚀`;
+Let's build a profitable community! 💸🚀`;
 
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;

@@ -73,6 +73,7 @@ function ReferAndEarnPageContent() {
   const handleShare = async () => {
     if (referralCode === null || referralBonus === null) return;
     const url = `${window.location.origin}/signup?ref=${referralCode}`;
+    const faqUrl = `${window.location.origin}#faq`;
     const bonusAmount = referralBonus;
     
     const message = `🎁 Claim your Win-Win Bonus on Vidya EduCare! 🎁
@@ -80,17 +81,15 @@ function ReferAndEarnPageContent() {
 I'm preparing for my exams and winning rewards with Vidya EduCare! Join me using my link and we BOTH get an instant ₹${bonusAmount} wallet bonus!
 
 🚀 Excellence Tools for Students:
-🏆 MockArena: Get paid for scoring! Top 5 scorers with 80%+ accuracy win cash prizes.
-🏁 Quiz Clash: Compete in live tournaments for high-value rewards and shared prize pools.
-🤖 GuruAI: Your 24/7 personal bilingual tutor for instant clarity.
-📝 QuickNotes: Transform textbook chapters into structured summaries instantly.
-
-🤝 Passive Income Opportunities:
-⚡ ReferBolt System: Earn continuous income cycles from your network.
-🤝 IBA Program: Start your own zero-investment business earning commissions.
+🏆 MockArena: Get paid for scoring! Top 5 scorers with 80%+ accuracy win cash.
+🏁 Quiz Clash: Live tournaments with shared prize pools.
+🤖 GuruAI: 24/7 personal bilingual tutor.
+📝 QuickNotes: Instant structured summaries.
 
 🔑 My Referral Code: ${referralCode}
 🔗 Join & Get Bonus: ${url}
+
+Learn more in our FAQ: ${faqUrl}
 
 Let's succeed and earn together! 🎓✨`;
 

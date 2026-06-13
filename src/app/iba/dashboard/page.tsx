@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -165,6 +164,7 @@ I'm earning lifetime commissions by empowering students! As an IBA, you unlock:
 🏆 MockArena Rewards: Help students win real cash! Top 5 scorers get paid.
 ⚡ ReferBolt System: Continuous passive income from your network cycles.
 🎁 Refer & Earn: Win-Win! Every referral gets an instant ₹5 wallet bonus.
+🤖 Vidya AI Doubt Solver: Bilingual AI assistance for all students.
 
 🔑 Start your zero-investment business today!
 IBA Code: ${ibaReferralCode}

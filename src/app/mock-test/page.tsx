@@ -272,7 +272,7 @@ function MockTestContent() {
             });
             setAiExplanation(explanation);
         } catch (error) {
-            toast({ variant: 'destructive', title: "AI Offline", description: "The AI tutor is currently busy. Please try again later." });
+            toast({ variant: 'destructive', title: "AI Offline", description: "The AI Doubt Solver is currently busy. Please try again later." });
             setIsAiDialogOpen(false);
         } finally {
             setIsAiSolving(null);
@@ -376,7 +376,7 @@ function MockTestContent() {
                                             onClick={() => handleAskAi(q)}
                                         >
                                             <BrainCircuit className="w-4 h-4" />
-                                            ASK AI FOR EXPLANATION
+                                            ASK VIDYA AI DOUBT SOLVER
                                         </Button>
                                     </div>
                                 </div>
@@ -398,7 +398,7 @@ function MockTestContent() {
                 <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-primary">
-                            <Sparkles className="w-5 h-5" /> AI Tutor Explanation
+                            <Sparkles className="w-5 h-5" /> Vidya AI Doubt Solver
                         </DialogTitle>
                         <DialogDescription>Conceptual breakdown of the selected question.</DialogDescription>
                     </DialogHeader>

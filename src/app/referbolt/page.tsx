@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -95,7 +94,7 @@ I've unlocked the ReferBolt Success Cycle on Vidya EduCare! This is a powerful m
 🏆 Academic Excellence Included:
 - MockArena: Students win REAL cash prizes.
 - Quiz Clash: High-stakes live tournaments.
-- AI Suite: GuruAI Tutor & QuickNotes Summary.
+- AI Suite: Vidya AI Doubt Solver & QuickNotes Summary.
 
 🔑 Use my code to join: ${referralCode}
 🔗 Join: ${shareUrl}

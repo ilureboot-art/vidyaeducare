@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -285,7 +284,7 @@ function ProfilePageContent() {
                     <div className="flex items-center gap-4">
                         <div className="p-2 bg-accent/10 rounded-lg"><BrainCircuit className="w-6 h-6 text-accent" /></div>
                         <div>
-                            <p className="font-bold text-sm">Vidya GuruAI</p>
+                            <p className="font-bold text-sm">Vidya AI Doubt Solver</p>
                             <p className="text-[10px] text-muted-foreground font-medium">Instant bilingual explanations.</p>
                         </div>
                     </div>

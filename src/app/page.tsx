@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -64,7 +63,7 @@ I'm using this elite platform to prepare for success. Here's why you should join
 - MockArena Rewards: Get paid for excellence! Top 5 scorers with 80%+ accuracy win real cash.
 - Quiz Clash: Compete in live high-stakes tournaments for rewards.
 
-🤖 GuruAI: Your 24/7 personal bilingual tutor for instant clarity.
+🤖 Vidya AI Doubt Solver: Your 24/7 personal bilingual tutor for instant clarity.
 📝 QuickNotes: Transform textbook chapters into study notes instantly.
 
 💰 Diverse Earning Opportunities:
@@ -171,21 +170,21 @@ Learn more in our FAQ: ${faqUrl}
             </div>
         </div>
 
-        {/* Trial Module 1: GuruAI */}
+        {/* Trial Module 1: AI Doubt Solver */}
         <section className="grid md:grid-cols-2 gap-12 items-center bg-accent/5 p-8 md:p-16 rounded-[4rem] border border-accent/10 relative overflow-hidden">
             <div className="absolute top-0 right-0 p-8 opacity-5 rotate-12"><BrainCircuit size={250}/></div>
             <div className="space-y-6 relative z-10">
                 <Badge variant="secondary" className="bg-accent/10 text-accent border-none uppercase font-black tracking-widest px-4 py-1">Free Trial Tool #1</Badge>
-                <h2 className="text-4xl md:text-5xl font-black text-primary tracking-tighter italic uppercase">VIDYA <span className="text-accent">GURUAI</span></h2>
+                <h2 className="text-4xl md:text-5xl font-black text-primary tracking-tighter italic uppercase">VIDYA <span className="text-accent">AI DOUBT SOLVER</span></h2>
                 <p className="text-lg text-muted-foreground font-medium">
-                    Stuck on a complex concept? Ask our GuruAI tutor anything and get a clear, step-by-step pedagogical explanation in both Marathi and English instantly.
+                    Stuck on a complex concept? Ask our Vidya AI tutor anything and get a clear, step-by-step pedagogical explanation in both Marathi and English instantly.
                 </p>
                 <div className="flex items-center gap-3 pt-2">
                     <div className="px-4 py-2 bg-accent text-white font-black rounded-xl shadow-lg animate-pulse">{trialStats.tutor} QUERIES LEFT</div>
                     <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">• Zero Registration</span>
                 </div>
                 <Button asChild size="lg" className="bg-accent hover:bg-accent/90 text-white font-black py-10 px-12 text-xl rounded-[2rem] shadow-xl mt-4">
-                    <Link href="/ai-tutor">TRY GURUAI NOW <Sparkles className="ml-2 h-6 w-6"/></Link>
+                    <Link href="/ai-tutor">TRY AI SOLVER NOW <Sparkles className="ml-2 h-6 w-6"/></Link>
                 </Button>
             </div>
             <div className="bg-white rounded-[3rem] shadow-2xl p-8 border-2 border-accent/20 relative group hover:-translate-y-2 transition-transform">
@@ -194,7 +193,7 @@ Learn more in our FAQ: ${faqUrl}
                     <p className="text-lg font-bold italic">"Explain the concept of Gravitation in simple Marathi."</p>
                 </div>
                 <div className="p-6 bg-accent/5 rounded-2xl border-l-8 border-accent">
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase mb-2 tracking-widest">GuruAI Bilingual Output:</p>
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase mb-2 tracking-widest">Vidya AI Bilingual Output:</p>
                     <p className="text-md font-medium leading-relaxed">गुरुत्वाकर्षण ही एक अशी शक्ती आहे जी विश्वातील कोणत्याही दोन वस्तूंना एकमेकांकडे आकर्षित करते... Gravitation is a force that attracts any two objects with mass.</p>
                 </div>
             </div>

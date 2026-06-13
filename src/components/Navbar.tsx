@@ -8,7 +8,7 @@ import { useAuth } from "@/firebase";
 
 const navItems = [
   { href: "/profile", label: "Students", icon: Users },
-  { href: "/ai-tutor", label: "GuruAI", icon: BrainCircuit },
+  { href: "/ai-tutor", label: "AI Solver", icon: BrainCircuit },
   { href: "/ai-notes", label: "QuickNotes", icon: ScrollText },
   { href: "/quiz-clash", label: "Quiz Clash", icon: Puzzle },
   { href: "/store", label: "Store", icon: Store },

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useToast } from "@/hooks/use-toast";
@@ -83,7 +82,7 @@ I'm preparing for my exams and winning rewards with Vidya EduCare! Join me using
 🚀 Excellence Tools for Students:
 🏆 MockArena: Get paid for scoring! Top 5 scorers with 80%+ accuracy win cash.
 🏁 Quiz Clash: Live tournaments with shared prize pools.
-🤖 GuruAI: 24/7 personal bilingual tutor.
+🤖 Vidya AI Doubt Solver: 24/7 personal bilingual tutor.
 📝 QuickNotes: Instant structured summaries.
 
 🔑 My Referral Code: ${referralCode}

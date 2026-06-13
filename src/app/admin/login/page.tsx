@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -37,13 +36,15 @@ export default function AdminLoginPage() {
     setIsLoading(true);
 
     try {
+      const cleanEmail = email.trim().toLowerCase();
+      
       // CRITICAL: Clear any stale session data before admin login
       sessionStorage.clear();
       
-      const userCredential = await signInWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
+      await signInWithEmailAndPassword(auth, cleanEmail, password);
       
       if (rememberMe) {
-          localStorage.setItem('rememberedAdmin', email);
+          localStorage.setItem('rememberedAdmin', cleanEmail);
       } else {
           localStorage.removeItem('rememberedAdmin');
       }

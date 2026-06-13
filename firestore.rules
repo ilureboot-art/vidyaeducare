@@ -15,16 +15,19 @@ service cloud.firestore {
     }
 
     function isMaster() {
-      // Simplistic but high-priority check for the master admin email.
-      // This ensures that system initialization (Map to Database) can always proceed.
+      // Priority 1: Master Admin Check
       return signedIn() && 
-        request.auth.token.email.lower() in ['admin@vidyaeducare.com', 'headadmin@vidyaeducare.com'];
+        (request.auth.token.email.lower() == 'admin@vidyaeducare.com' || request.auth.token.email.lower() == 'headadmin@vidyaeducare.com');
     }
 
     function isAdmin() {
       if (!signedIn()) return false;
       if (isMaster()) return true;
       return exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
     }
 
     // --- SUPREME OVERRIDE (PRIORITY 1) ---
@@ -43,17 +46,13 @@ service cloud.firestore {
 
     match /users/{uid} {
       allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
-      allow create: if signedIn() && (request.auth.uid == uid || isMaster()); 
+      allow create: if signedIn() && request.auth.uid == uid; 
       allow update, delete: if signedIn() && (request.auth.uid == uid || isAdmin());
-    }
-
-    function isOwner(uid) {
-      return signedIn() && request.auth.uid == uid;
     }
 
     match /wallets/{uid} {
       allow read: if isOwner(uid) || isAdmin();
-      allow create: if signedIn() && (isMaster() || request.auth.uid == uid);
+      allow create: if signedIn() && request.auth.uid == uid;
       allow update: if isAdmin() || isOwner(uid);
     }
 
@@ -76,6 +75,7 @@ service cloud.firestore {
     match /referbolt/{uid} {
       allow read: if signedIn();
       allow write: if isOwner(uid) || isAdmin();
+      allow create: if signedIn() && request.auth.uid == uid;
     }
 
     match /students/{id} {

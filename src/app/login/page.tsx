@@ -40,10 +40,13 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const cleanEmail = email.trim();
+      const cleanEmail = email.trim().toLowerCase();
       if (!cleanEmail || !password) {
           throw new Error("Please enter both email and password.");
       }
+
+      // CRITICAL: Clear stale session data to prevent role leakage
+      sessionStorage.clear();
 
       await signInWithEmailAndPassword(authService, cleanEmail, password);
 

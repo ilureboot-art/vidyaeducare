@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -77,7 +76,7 @@ export default function SignupPage() {
     };
     setIsLoading(true);
     
-    const form = e.currentTarget;
+    const form = e.currentTarget as HTMLFormElement;
     const name = (form.elements.namedItem('name') as HTMLInputElement).value;
     const email = (form.elements.namedItem('email') as HTMLInputElement).value;
     const phone = (form.elements.namedItem('phone') as HTMLInputElement).value;
@@ -115,6 +114,7 @@ export default function SignupPage() {
       await runTransaction(db, async (transaction) => {
         const newUserRef = doc(db, "users", user.uid);
         const newWalletRef = doc(db, "wallets", user.uid);
+        const newReferboltRef = doc(db, "referbolt", user.uid);
 
         transaction.set(newUserRef, {
             id: user.uid,
@@ -125,10 +125,23 @@ export default function SignupPage() {
             status: "Active",
         });
 
+        const myReferralCode = `REF${user.uid.slice(0, 6).toUpperCase()}`;
+
         transaction.set(newWalletRef, {
             balance: welcomeBonus,
             coins: 50, 
-            referralCode: `REF${user.uid.slice(0, 6).toUpperCase()}`,
+            referralCode: myReferralCode,
+        });
+
+        transaction.set(newReferboltRef, {
+            isSubscribed: false,
+            referralCode: myReferralCode,
+            totalCommissions: 0,
+            totalReferrals: 0,
+            cycleProgress: 0,
+            cycleGoal: 3,
+            autoRenew: false,
+            referralHistory: []
         });
 
         if (referrerId && referralBonus && referralBonus > 0) {

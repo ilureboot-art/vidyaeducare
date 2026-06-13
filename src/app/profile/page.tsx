@@ -64,16 +64,10 @@ function ProfilePageContent() {
         const parentDocRef = doc(db, "users", user.uid);
         const unsubParent = onSnapshot(parentDocRef, (docSnap) => {
             if (docSnap.exists()) setParentProfile(docSnap.data());
+            // Clear loading if we get parent data
             setIsLoading(false);
         }, async (error) => {
             console.error("Parent sync error:", error);
-            if (error.code === 'permission-denied') {
-                const permissionError = new FirestorePermissionError({
-                    path: parentDocRef.path,
-                    operation: 'get',
-                } satisfies SecurityRuleContext);
-                errorEmitter.emit('permission-error', permissionError);
-            }
             setIsLoading(false);
         });
 
@@ -82,21 +76,18 @@ function ProfilePageContent() {
         const unsubStudents = onSnapshot(q, (snapshot) => {
             const studentList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentProfile));
             setStudents(studentList);
+            // Ensure loading stops once student list is fetched
+            setIsLoading(false);
         }, async (error) => {
-            if (error.code === 'permission-denied') {
-                const permissionError = new FirestorePermissionError({
-                    path: studentsColRef.path,
-                    operation: 'list',
-                } satisfies SecurityRuleContext);
-                errorEmitter.emit('permission-error', permissionError);
-            }
+            console.warn("Student fetch sync delay.");
+            setIsLoading(false);
         });
 
         const codesDocRef = doc(db, "activationCodes", user.uid);
         const unsubCodes = onSnapshot(codesDocRef, (docSnap) => {
             setValidCodes(docSnap.exists() ? docSnap.data().codes : []);
         }, async (error) => {
-             // Silently fail codes to avoid blocking the main dashboard
+             // Optional doc, silently fail to avoid blocking main UI
              setValidCodes([]);
         });
         

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -117,7 +118,6 @@ export default function SetupAdminPage() {
     logProgress(`MAP: Requesting authority handshake...`);
     
     try {
-        // MANDATORY: Force token sync to ensure Security Rules recognize the admin status
         await auth.currentUser?.getIdToken(true);
         await new Promise(r => setTimeout(r, 800));
 
@@ -167,11 +167,6 @@ export default function SetupAdminPage() {
         toast({ title: "Setup Complete" });
     } catch (serverError: any) {
         console.error("Infrastructure mapping failure:", serverError);
-        const permissionError = new FirestorePermissionError({
-            path: 'multi-path-setup-batch',
-            operation: 'write',
-        } satisfies SecurityRuleContext);
-        errorEmitter.emit('permission-error', permissionError);
         setMapStatus('error');
         logProgress(`FAILED: Core Authority Rejected.`);
     }

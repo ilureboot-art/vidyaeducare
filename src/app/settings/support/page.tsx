@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -30,7 +31,7 @@ const userFaqs = [
     },
     {
         question: "How does the IBA program work?",
-        answer: "The Independent Business Associate (IBA) program is a zero-investment business. Share your unique code and earn up to 17.65% commission (standard adjustable rate) on every subscription sale."
+        answer: "The Independent Business Associate (IBA) program is a zero-investment business. Share your unique code and earn up to 10% commission (standard adjustable rate) on every subscription sale."
     },
     {
         question: "What is ReferBolt passive income?",

@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
@@ -22,7 +23,7 @@ const AuthContext = createContext<AuthState | undefined>(undefined);
 const DbContext = createContext<Firestore | undefined>(undefined);
 const AuthServiceContext = createContext<Auth | undefined>(undefined);
 
-const ROLE_CACHE_KEY = 'vidya_auth_role_v19_resilient';
+const ROLE_CACHE_KEY = 'vidya_auth_role_v20_ultra';
 const MASTER_ADMIN_EMAIL = 'admin@vidyaeducare.com';
 
 const getCachedRoles = () => {
@@ -60,7 +61,6 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   const processSnap = useCallback((snap: DocumentSnapshot | null, user: User) => {
       let roles = { isAdmin: false, isHeadAdmin: false };
       
-      // Master Admin Bypass
       if (user.email?.toLowerCase() === MASTER_ADMIN_EMAIL) {
           roles = { isAdmin: true, isHeadAdmin: true };
       } else if (snap && snap.exists()) {
@@ -83,7 +83,6 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       return { isAdmin: false, isHeadAdmin: false };
     }
 
-    // Master Admin immediate detection
     if (user.email?.toLowerCase() === MASTER_ADMIN_EMAIL) {
         const roles = { isAdmin: true, isHeadAdmin: true };
         if (typeof window !== 'undefined') {
@@ -102,21 +101,12 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       const adminDocSnap = await getDoc(adminDocRef);
       return processSnap(adminDocSnap, user);
     } catch (e) {
-      console.warn("Role resolution fallback applied.");
+      console.warn("Role resolution default applied.");
       return { isAdmin: false, isHeadAdmin: false };
     }
   }, [processSnap]);
 
   useEffect(() => {
-    const cached = getCachedRoles();
-    if (cached) {
-      setAuthState(prev => ({
-        ...prev,
-        isAdmin: cached.isAdmin,
-        isHeadAdmin: cached.isHeadAdmin,
-      }));
-    }
-
     if (!services) {
         setAuthState(prev => ({ ...prev, loading: false, isResolved: true }));
         return;
@@ -131,7 +121,12 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
           return;
       }
 
-      // Start role resolution immediately
+      const cached = getCachedRoles();
+      if (cached && cached.uid === user.uid) {
+          setAuthState({ user, loading: false, isAdmin: cached.isAdmin, isHeadAdmin: cached.isHeadAdmin, isResolved: true });
+          return;
+      }
+
       setAuthState(prev => ({ ...prev, user, loading: false, isResolved: false }));
 
       try {
@@ -159,18 +154,15 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
     if (user) {
       if (isAdmin) {
-        // Administrators are locked to the Admin Hub
         if (isAuthRoute || cleanPath === '/' || (!isAdminArea && !isPublicRoute)) {
           targetPath = '/admin/analytics';
         }
       } else {
-        // Students are blocked from the Admin Panel
         if (isAdminArea || isAuthRoute || cleanPath === '/') {
           if (!isPublicRoute) targetPath = '/profile';
         }
       }
     } else {
-      // Guests belong on the Landing Page
       if (!isPublicRoute && !isAuthRoute) {
         targetPath = '/';
       }

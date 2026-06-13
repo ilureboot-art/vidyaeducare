@@ -1,21 +1,19 @@
+
 rules_version = '2';
 
 /**
- * Vidya EduCare - Hardened Production Infrastructure Rules
- * Target Instance: vidyaeducaredatabase
- * Priority: Absolute Master Admin Bypass & Resilient Auth Handshake
+ * Vidya EduCare - High Performance Production Rules
+ * Priority: Absolute Master Admin Supreme Bypass
  */
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // --- Core Identity Functions ---
-
     function signedIn() {
       return request.auth != null;
     }
 
     function isMaster() {
-      // Priority 1: Master Admin Check
+      // Faster, simplified Master Admin check for high-performance resolution
       return signedIn() && 
         (request.auth.token.email.lower() == 'admin@vidyaeducare.com' || request.auth.token.email.lower() == 'headadmin@vidyaeducare.com');
     }
@@ -31,7 +29,6 @@ service cloud.firestore {
     }
 
     // --- SUPREME OVERRIDE (PRIORITY 1) ---
-    // Master Admin bypasses all checks to ensure infrastructure can always be mapped/synced.
     match /{allPaths=**} {
       allow read, write: if isMaster();
     }
@@ -43,7 +40,6 @@ service cloud.firestore {
     }
 
     // --- USER PRIVATE DATA ---
-
     match /users/{uid} {
       allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
       allow create: if signedIn() && request.auth.uid == uid; 

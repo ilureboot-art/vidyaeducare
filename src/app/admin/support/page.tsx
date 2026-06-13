@@ -1,8 +1,9 @@
+
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { LifeBuoy, BookOpen, Mail, ShieldCheck, Target, Award } from "lucide-react";
+import { LifeBuoy, BookOpen, Mail } from "lucide-react";
 import {
   Accordion,
   AccordionContent,

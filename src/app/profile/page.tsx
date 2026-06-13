@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -64,7 +65,6 @@ function ProfilePageContent() {
         const parentDocRef = doc(db, "users", user.uid);
         const unsubParent = onSnapshot(parentDocRef, (docSnap) => {
             if (docSnap.exists()) setParentProfile(docSnap.data());
-            // Clear loading if we get parent data
             setIsLoading(false);
         }, async (error) => {
             console.error("Parent sync error:", error);
@@ -76,7 +76,6 @@ function ProfilePageContent() {
         const unsubStudents = onSnapshot(q, (snapshot) => {
             const studentList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentProfile));
             setStudents(studentList);
-            // Ensure loading stops once student list is fetched
             setIsLoading(false);
         }, async (error) => {
             console.warn("Student fetch sync delay.");
@@ -87,14 +86,17 @@ function ProfilePageContent() {
         const unsubCodes = onSnapshot(codesDocRef, (docSnap) => {
             setValidCodes(docSnap.exists() ? docSnap.data().codes : []);
         }, async (error) => {
-             // Optional doc, silently fail to avoid blocking main UI
              setValidCodes([]);
+             setIsLoading(false);
         });
         
+        const timeout = setTimeout(() => setIsLoading(false), 3000);
+
         return () => {
             unsubParent();
             unsubStudents();
             unsubCodes();
+            clearTimeout(timeout);
         };
     }, [user, db, isResolved]);
 
@@ -270,7 +272,6 @@ function ProfilePageContent() {
             </Card>
         )}
 
-        {/* AI Learning Tools Reflector Section */}
         <Card className="bg-primary/5 border-primary/20 relative overflow-hidden">
             <div className="absolute top-0 right-0 p-4 opacity-5 rotate-12"><BrainCircuit size={80}/></div>
             <CardHeader className="pb-3">
@@ -418,7 +419,7 @@ function ProfilePageContent() {
                                     <GraduationCap size={16} className="text-primary"/> {student.academic.standard} Standard
                                 </p>
                                 <p className="text-sm font-bold text-muted-foreground flex items-center gap-1.5">
-                                    <Star size={16} className="text-yellow-500 fill-yellow-500"/> Rank #4
+                                    <Star size={16} className="text-yellow-500 fill-yellow-500"/> Global Rank #4
                                 </p>
                             </div>
                         </div>
@@ -437,7 +438,6 @@ function ProfilePageContent() {
                 </CardHeader>
 
                 <CardContent className="p-8 grid grid-cols-1 lg:grid-cols-3 gap-12">
-                    {/* Column 1: Performance Chart */}
                     <div className="space-y-6">
                         <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                             <BarChart2 size={14} className="text-primary"/> Academic Performance
@@ -471,7 +471,6 @@ function ProfilePageContent() {
                         </div>
                     </div>
 
-                    {/* Column 2: Rewards & Badges */}
                     <div className="space-y-6">
                         <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                             <Award size={14} className="text-accent"/> Winning Badges
@@ -501,7 +500,6 @@ function ProfilePageContent() {
                         </div>
                     </div>
 
-                    {/* Column 3: Profile Summary */}
                     <div className="space-y-6">
                         <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                             <Info size={14} className="text-primary"/> Student Insight
@@ -516,7 +514,7 @@ function ProfilePageContent() {
                                 <span className="text-sm font-black text-primary">{student.stats?.testsTaken || 0}</span>
                             </div>
                              <div className="flex justify-between items-center p-3 bg-primary/10 rounded-xl border border-primary/10">
-                                <span className="text-xs font-black text-primary uppercase">Global Ranking</span>
+                                <span className="text-xs font-black text-primary uppercase">Current Standing</span>
                                 <span className="text-sm font-black text-primary">#4 / 1,240</span>
                             </div>
                         </div>

@@ -185,11 +185,10 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   }, [authState, pathname, router, services]);
 
   const cleanPath = pathname === '/' ? '/' : pathname.replace(/\/$/, '');
-  const isPublicRoute = ['/', '/how-to-play', '/admin/setup', '/check-head-admin', '/forgot-password', '/ai-tutor', '/ai-notes', '/trial-mock-test'].includes(cleanPath);
-  const isAuthRoute = ['/login', '/signup', '/admin/login'].includes(cleanPath);
-
+  const isPublicRoute = ['/', '/how-to-play', '/admin/setup', '/check-head-admin', '/forgot-password', '/ai-tutor', '/ai-notes', '/trial-mock-test', '/signup', '/login', '/admin/login'].includes(cleanPath);
+  
   // NO SPINNER for public or auth routes!
-  const shouldShowLoading = !isPublicRoute && !isAuthRoute && (authState.loading || (!authState.isResolved && authState.user));
+  const shouldShowLoading = !isPublicRoute && (authState.loading || (!authState.isResolved && authState.user));
 
   if (shouldShowLoading) {
      return (

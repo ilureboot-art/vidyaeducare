@@ -69,7 +69,7 @@ service cloud.firestore {
     }
 
     match /referbolt/{uid} {
-      allow read: if isOwner(uid) || isAdmin();
+      allow read, list: if isOwner(uid) || isAdmin();
       allow write: if isOwner(uid) || isAdmin();
       allow create: if isOwner(uid);
     }

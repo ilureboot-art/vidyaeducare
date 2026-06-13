@@ -15,10 +15,11 @@ service cloud.firestore {
     }
 
     function isMaster() {
-      // Direct string comparison is the most resilient check during initial cold-starts
+      // Prioritize direct email check for maximum resilience during initial cold-starts
+      // Use .lower() to ensure case-insensitive matching
       return signedIn() && (
-        request.auth.token.email == 'admin@vidyaeducare.com' || 
-        request.auth.token.email == 'headadmin@vidyaeducare.com'
+        request.auth.token.email.lower() == 'admin@vidyaeducare.com' || 
+        request.auth.token.email.lower() == 'headadmin@vidyaeducare.com'
       );
     }
 

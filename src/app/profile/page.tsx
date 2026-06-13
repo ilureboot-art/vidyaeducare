@@ -62,6 +62,7 @@ function ProfilePageContent() {
             const parentDocRef = doc(db, "users", user.uid);
             const unsubParent = onSnapshot(parentDocRef, (docSnap) => {
                 if (docSnap.exists()) setParentProfile(docSnap.data());
+                // We clear loading here primarily, but check sub-syncs too
                 setIsLoading(false);
             }, async (error) => {
                 console.error("Parent sync error:", error);
@@ -72,7 +73,6 @@ function ProfilePageContent() {
                     } satisfies SecurityRuleContext);
                     errorEmitter.emit('permission-error', permissionError);
                 }
-                // Ensure we stop spinning even if permission is denied or doc doesn't exist
                 setIsLoading(false);
             });
 
@@ -102,6 +102,8 @@ function ProfilePageContent() {
                     } satisfies SecurityRuleContext);
                     errorEmitter.emit('permission-error', permissionError);
                 }
+                // Important: clear loading even if codes fail so dashboard opens
+                setIsLoading(false);
             });
             
             return () => {

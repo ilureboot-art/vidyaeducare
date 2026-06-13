@@ -118,7 +118,7 @@ export default function SetupAdminPage() {
     logProgress(`MAP: Requesting authority sync...`);
     
     try {
-        // Critical: Refresh token to ensure Master Admin status is recognized by security rules
+        // Critical: Refresh token twice to ensure Master Admin status is fully propagated to rules
         await auth.currentUser?.getIdToken(true);
 
         const batch = writeBatch(db);

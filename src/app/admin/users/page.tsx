@@ -235,15 +235,17 @@ export default function UserManagementPage() {
                   <TableCell><Badge variant={getStatusBadgeVariant(user.status)}>{user.status}</Badge></TableCell>
                   <TableCell className="text-xs text-muted-foreground">{user.joinDate ? format(new Date(user.joinDate), 'PP') : 'N/A'}</TableCell>
                   <TableCell className="text-center">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal size={16}/></Button></DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => viewUserDetails(user)}><Info size={14} className="mr-2"/> View Records</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleStatusChange(user.id, user.status === "Banned" ? "Active" : "Banned")}>
-                            {user.status === "Banned" ? "Unban Account" : "Suspend Account"}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <div className="flex justify-center">
+                        <DropdownMenu>
+                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal size={16}/></Button></DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => viewUserDetails(user)}><Info size={14} className="mr-2"/> View Records</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleStatusChange(user.id, user.status === "Banned" ? "Active" : "Banned")}>
+                                {user.status === "Banned" ? "Unban Account" : "Suspend Account"}
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
                   </TableCell>
                 </TableRow>
               )) : (
@@ -287,12 +289,15 @@ export default function UserManagementPage() {
                           <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2"><GraduationCap size={14}/> Academic Records</h3>
                           {parentStudents && parentStudents.length > 0 ? (
                               <div className="grid gap-3">
-                                  {parentStudents.map(s => (
-                                      <div key={s.id} className="p-4 border rounded-xl flex items-center justify-between bg-card hover:shadow-md transition-shadow">
+                                  {parentStudents.map((s, index) => (
+                                      <div key={s.id} className={cn(
+                                          "p-4 border rounded-xl flex items-center justify-between hover:shadow-md transition-all",
+                                          index % 2 === 0 ? "bg-card" : "bg-muted/40"
+                                      )}>
                                           <div className="flex items-center gap-4">
                                               <Avatar className="h-12 w-12 border-2 border-background shadow-sm">
                                                   <AvatarImage src={s.avatarUrl} />
-                                                  <AvatarFallback>{s.name.charAt(0)}</AvatarFallback>
+                                                  <AvatarFallback className="font-bold">{s.name.charAt(0)}</AvatarFallback>
                                               </Avatar>
                                               <div>
                                                   <p className="font-bold leading-none">{s.name}</p>

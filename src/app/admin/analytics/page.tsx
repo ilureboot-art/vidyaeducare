@@ -12,12 +12,6 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import { format, subDays, eachDayOfInterval, startOfDay } from "date-fns";
 
-interface ChartPoint {
-    date: string;
-    count?: number;
-    revenue?: number;
-}
-
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
         style: 'currency',
@@ -31,7 +25,7 @@ const AUTO_REFRESH_INTERVAL = 300000; // 5 minutes
 
 export default function AnalyticsPage() {
   const db = useDb();
-  const { user } = useAuth();
+  const { user, isResolved, isAdmin } = useAuth();
   
   // Overall Stats
   const [activeUsers, setActiveUsers] = useState<number | null>(null);
@@ -47,7 +41,8 @@ export default function AnalyticsPage() {
   const [error, setError] = useState<string | null>(null);
   
   const fetchData = useCallback(async (isManualRefresh = false) => {
-      if (!db || !user) return;
+      if (!db || !user || !isResolved || !isAdmin) return;
+      
       if (isManualRefresh) setRefreshing(true);
       else setLoading(true);
       
@@ -117,15 +112,17 @@ export default function AnalyticsPage() {
           setLoading(false);
           setRefreshing(false);
       }
-  }, [db, user]);
+  }, [db, user, isResolved, isAdmin]);
 
   useEffect(() => {
-    if(db && user) {
+    if(db && user && isResolved && isAdmin) {
         fetchData();
         const refreshTimer = setInterval(() => fetchData(true), AUTO_REFRESH_INTERVAL);
         return () => clearInterval(refreshTimer);
+    } else if (isResolved && !isAdmin) {
+        setLoading(false);
     }
-  }, [db, user, fetchData]);
+  }, [db, user, isResolved, isAdmin, fetchData]);
 
   // Data bucket processing
   const timeSeriesData = useMemo(() => {
@@ -161,65 +158,73 @@ export default function AnalyticsPage() {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] space-y-4">
         <Loader2 className="animate-spin text-primary" size={40} />
-        <p className="text-muted-foreground animate-pulse font-medium">Populating 30-Day Intelligence Hub...</p>
+        <p className="text-muted-foreground animate-pulse font-medium">Populating Intelligence Hub...</p>
       </div>
     );
+  }
+
+  if (!isAdmin) {
+      return (
+          <div className="flex justify-center items-center h-96">
+              <Card className="max-w-md w-full border-primary/20"><CardHeader><CardTitle>Admin Level Required</CardTitle><CardDescription>Only administrators can view system-wide analytics.</CardDescription></CardHeader></Card>
+          </div>
+      )
   }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-            <h1 className="text-3xl font-bold tracking-tight text-primary uppercase italic">Admin Analytics</h1>
-            <p className="text-muted-foreground text-sm font-medium">Live growth and financial performance tracking.</p>
+            <h1 className="text-3xl font-bold tracking-tight text-primary uppercase italic">Analytics Terminal</h1>
+            <p className="text-muted-foreground text-sm font-medium">Growth trajectory and financial performance metrics.</p>
         </div>
-        <Button variant="outline" size="sm" className="font-bold rounded-xl" onClick={() => fetchData(true)} disabled={refreshing}>
+        <Button variant="outline" size="sm" className="font-bold rounded-xl shadow-sm" onClick={() => fetchData(true)} disabled={refreshing}>
           <RefreshCcw className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-          RE-SYNC DATA
+          RE-SYNC TERMINAL
         </Button>
       </div>
 
       {error && (
           <Alert variant="destructive" className="bg-destructive/10">
               <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Synchronization Error</AlertTitle>
+              <AlertTitle>Network Synchronization Delay</AlertTitle>
               <AlertDescription>{error}</AlertDescription>
           </Alert>
       )}
 
       {/* High-Level KPIs */}
       <div className="grid gap-6 md:grid-cols-3">
-        <Card className="hover:shadow-md transition-shadow border-primary/10 rounded-2xl overflow-hidden">
+        <Card className="hover:shadow-md transition-shadow border-primary/10 rounded-2xl overflow-hidden shadow-sm">
           <CardHeader className="pb-2 bg-primary/5">
             <CardTitle className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-              <Users className="h-4 w-4 text-primary"/> Total Registrations
+              <Users className="h-4 w-4 text-primary"/> Total Enrollments
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-4">
             <p className="text-4xl font-black tracking-tighter">{activeUsers !== null ? activeUsers.toLocaleString() : '...'}</p>
-            <p className="text-[10px] font-bold text-green-600 mt-1 uppercase tracking-tight">System-wide Total</p>
+            <p className="text-[10px] font-bold text-green-600 mt-1 uppercase tracking-tight">Across All Boards</p>
           </CardContent>
         </Card>
-        <Card className="hover:shadow-md transition-shadow border-primary/10 rounded-2xl overflow-hidden">
+        <Card className="hover:shadow-md transition-shadow border-primary/10 rounded-2xl overflow-hidden shadow-sm">
           <CardHeader className="pb-2 bg-primary/5">
             <CardTitle className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-              <BookOpen className="h-4 w-4 text-primary"/> Academic Activity
+              <BookOpen className="h-4 w-4 text-primary"/> MockArena Sessions
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-4">
             <p className="text-4xl font-black tracking-tighter">{testVolume !== null ? testVolume.toLocaleString() : '...'}</p>
-            <p className="text-[10px] font-bold text-primary mt-1 uppercase tracking-tight">Tests Completed</p>
+            <p className="text-[10px] font-bold text-primary mt-1 uppercase tracking-tight">Active Learning Pulse</p>
           </CardContent>
         </Card>
-        <Card className="hover:shadow-md transition-shadow border-primary/20 bg-primary/[0.02] rounded-2xl overflow-hidden">
+        <Card className="hover:shadow-md transition-shadow border-primary/20 bg-primary/[0.02] rounded-2xl overflow-hidden shadow-sm">
           <CardHeader className="pb-2 bg-primary/10">
             <CardTitle className="text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-2">
-              <IndianRupee className="h-4 w-4 text-primary"/> Revenue Today
+              <IndianRupee className="h-4 w-4 text-primary"/> Revenue Log (Today)
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-4">
             <p className="text-4xl font-black text-primary tracking-tighter">{todaysRevenue !== null ? formatCurrency(todaysRevenue) : '...'}</p>
-            <p className="text-[10px] font-black text-primary/50 mt-1 uppercase tracking-tight italic">Live Inflow</p>
+            <p className="text-[10px] font-black text-primary/50 mt-1 uppercase tracking-tight italic">Live Liquidity</p>
           </CardContent>
         </Card>
       </div>
@@ -229,8 +234,8 @@ export default function AnalyticsPage() {
         <Card className="border-primary/10 rounded-[2rem] shadow-xl overflow-hidden">
           <CardHeader className="bg-primary/5 pb-4 border-b flex flex-row items-center justify-between">
             <div>
-                <CardTitle className="text-lg font-black uppercase italic text-primary">Student Growth Trend</CardTitle>
-                <CardDescription className="text-xs font-bold uppercase tracking-widest">New User Signups (Last 30 Days)</CardDescription>
+                <CardTitle className="text-lg font-black uppercase italic text-primary">Student Acquisition</CardTitle>
+                <CardDescription className="text-xs font-bold uppercase tracking-widest">New Intake (Last 30 Days)</CardDescription>
             </div>
             <div className="p-3 bg-primary/10 rounded-2xl">
                 <TrendingUp className="text-primary" />
@@ -275,7 +280,7 @@ export default function AnalyticsPage() {
           </CardContent>
           <CardFooter className="bg-muted/30 border-t justify-center py-4">
               <p className="text-[10px] font-black uppercase text-muted-foreground tracking-[0.2em] flex items-center gap-2">
-                <Calendar size={12}/> Comprehensive 30-Day Intake Log
+                <Calendar size={12}/> Daily Enrollment Log
               </p>
           </CardFooter>
         </Card>
@@ -284,7 +289,7 @@ export default function AnalyticsPage() {
           <CardHeader className="bg-accent/5 pb-4 border-b flex flex-row items-center justify-between">
             <div>
                 <CardTitle className="text-lg font-black uppercase italic text-accent">Revenue performance</CardTitle>
-                <CardDescription className="text-xs font-bold uppercase tracking-widest">Daily Cash Inflow (Last 30 Days)</CardDescription>
+                <CardDescription className="text-xs font-bold uppercase tracking-widest">Gross Inflow (Last 30 Days)</CardDescription>
             </div>
             <div className="p-3 bg-accent/10 rounded-2xl">
                 <IndianRupee className="text-accent" />
@@ -326,7 +331,7 @@ export default function AnalyticsPage() {
           </CardContent>
            <CardFooter className="bg-muted/30 border-t justify-center py-4">
               <p className="text-[10px] font-black uppercase text-muted-foreground tracking-[0.2em] flex items-center gap-2">
-                <IndianRupee size={12}/> Verified Financial Growth Trajectory
+                <IndianRupee size={12}/> Audited Growth Stream
               </p>
           </CardFooter>
         </Card>

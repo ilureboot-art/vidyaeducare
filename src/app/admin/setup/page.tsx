@@ -98,7 +98,6 @@ export default function SetupAdminPage() {
             } else throw e;
         }
         
-        // Immediate sync force to ensure token has admin claims if set
         await auth.currentUser?.getIdToken(true);
         setAuthStatus('success');
         toast({ title: "Identity Verified" });
@@ -119,10 +118,7 @@ export default function SetupAdminPage() {
     logProgress(`MAP: Requesting authority handshake...`);
     
     try {
-        // Critical: Refresh token to ensure Master Admin status is fully propagated to rules
         await auth.currentUser?.getIdToken(true);
-        
-        // Brief pause to allow rule evaluation context to synchronize
         await new Promise(r => setTimeout(r, 1000));
 
         const batch = writeBatch(db);

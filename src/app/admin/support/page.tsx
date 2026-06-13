@@ -17,8 +17,8 @@ const adminFaqs = [
         answer: "Prizes are automatically calculated based on accuracy and completion time. The system enforces an 80% accuracy minimum for prize eligibility. Once a live session is marked as completed, the top 5 eligible participants receive their rewards via an atomic transaction that credits their wallet and updates the student's earnings record."
     },
     {
-        question: "How are Quiz Clash tournaments managed and rewarded?",
-        answer: "Quiz Clash tournaments can be scheduled manually or via the auto-scheduler in the Quiz Clash dashboard. For 'Pro' tournaments, the system automatically collects entry fees into a prize pool. Once a tournament is completed, the system calculates ranks and automatically credits the top performers' wallets based on the configured distribution (e.g., Top 4 receive shares of 80% of the pool)."
+        question: "How do I manage or explain the ReferBolt system to users?",
+        answer: "ReferBolt is our advanced passive income engine. Every 3 network referrals (direct or indirect) trigger a 'Success Cycle' bonus. Administrators can configure the ReferBolt base price and cycle bonus values in 'Store Settings'. The system tracks these cycles automatically; you can monitor network growth in the 'ReferBolt' management dashboard."
     },
     {
         question: "How do I explain the IBA commission structure to potential associates?",
@@ -31,6 +31,10 @@ const adminFaqs = [
     {
         question: "How do I manage sub-admin requests?",
         answer: "Go to the 'Admin Management' page. Under the 'Sub-admin Requests' card, you will see a list of pending applications. You can approve a request to make them a sub-admin or reject it."
+    },
+    {
+        question: "How are Quiz Clash tournaments managed and rewarded?",
+        answer: "Quiz Clash tournaments can be scheduled manually or via the auto-scheduler in the Quiz Clash dashboard. For 'Pro' tournaments, the system automatically collects entry fees into a prize pool. Once a tournament is completed, the system calculates ranks and automatically credits the top performers' wallets based on the configured distribution."
     },
     {
         question: "What is the Vidya EduCare AI Agent for?",
@@ -69,7 +73,7 @@ export default function SupportPage() {
           </CardHeader>
           <CardContent>
              <p className="text-muted-foreground">
-              Find guides, tutorials, and API references to help you manage your NumberAce application effectively.
+              Find guides, tutorials, and API references to help you manage your application effectively.
             </p>
              <Button variant="outline" className="mt-4 w-full">
                 View Documentation

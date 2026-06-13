@@ -38,6 +38,10 @@ const userFaqs = [
         answer: "The IBA Program is our standard referral system for earning direct commissions. ReferBolt is a premium subscription that unlocks an advanced multi-level network, allowing you to earn from 'indirect' referrals (people your friends refer) through continuous success cycles."
     },
     {
+        question: "What is ReferBolt and how do the earnings work?",
+        answer: "ReferBolt is our premium success engine. Once activated, you start earning from a multi-level network. It uses 'Success Cycles' – every 3 successful referrals (including those made by people you referred) completes a cycle and grants you a substantial bonus credit. These cycles repeat automatically as your network grows, providing a continuous income stream."
+    },
+    {
         question: "How do I add a student to my profile?",
         answer: "To add a student, you first need to purchase a subscription from the Store. This will give you a unique Product Activation Code. Go to the 'My Students' page, click 'Add New Student', enter the code, and then fill in the student's details."
     }

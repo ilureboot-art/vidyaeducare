@@ -118,7 +118,7 @@ export default function SetupAdminPage() {
     logProgress(`MAP: Requesting authority sync...`);
     
     try {
-        // Essential Token Refresh to ensure Firestore rules recognize the identity immediately
+        // Force critical token refresh before mapping
         await auth.currentUser?.getIdToken(true);
 
         const batch = writeBatch(db);

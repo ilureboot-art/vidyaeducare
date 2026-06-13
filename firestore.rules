@@ -3,7 +3,7 @@ rules_version = '2';
 /**
  * Vidya EduCare - Production Infrastructure Rules
  * Target Instance: vidyaeducaredatabase
- * Deployment Salt: V75_MASTER_PRIORITY_RESOLUTION
+ * Deployment Salt: V82_STRICT_CONFIG_PRIORITY
  */
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -29,18 +29,16 @@ service cloud.firestore {
       return exists(adminPath);
     }
 
-    // --- SUPREME OVERRIDE (High Priority) ---
-    // The Master Admin has absolute authority over the database instance.
-    // Placing this at the top ensures Master Admins are never blocked by rules below.
-    match /{allPaths=**} {
-      allow read, write: if isMaster();
-    }
-
-    // --- SHARED DATA ---
-    // Explicitly allow read access to configurations for all users to prevent store hangs.
+    // --- SHARED DATA (High Priority) ---
+    // Explicitly allow read access to configurations to prevent store hangs for all users.
     match /configs/{document=**} {
       allow read: if true; 
       allow write: if isAdmin();
+    }
+
+    // --- SUPREME OVERRIDE (High Priority) ---
+    match /{allPaths=**} {
+      allow read, write: if isMaster();
     }
 
     // --- USER PRIVATE DATA ---

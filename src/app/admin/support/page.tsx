@@ -71,7 +71,7 @@ export default function SupportPage() {
                 View Documentation
             </Button>
           </CardContent>
-        </div>
+        </Card>
       </div>
       <Card>
         <CardHeader>

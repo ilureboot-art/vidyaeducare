@@ -26,7 +26,7 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == uid;
     }
 
-    // --- GLOBAL CONFIGURATIONS (Highest Priority) ---
+    // --- GLOBAL CONFIGURATIONS ---
     // Public for system consistency (Pricing, Bank Details, Academic Rules)
     match /configs/{document=**} {
       allow read: if true; 
@@ -35,14 +35,15 @@ service cloud.firestore {
 
     // --- USER PROFILE & ACCESS ---
     match /users/{uid} {
-      allow read: if isOwner(uid) || isAdmin();
+      allow list: if isAdmin();
+      allow get: if isOwner(uid) || isAdmin();
       allow create: if true;
       allow update, delete: if isOwner(uid) || isAdmin();
     }
 
     match /wallets/{uid} {
       allow read: if isOwner(uid) || isAdmin();
-      allow list: if true; // Allowed for referral verification queries
+      allow list: if isAdmin(); 
       allow create: if isOwner(uid);
       allow update: if isAdmin() || isOwner(uid);
     }
@@ -96,7 +97,7 @@ service cloud.firestore {
 
     match /leaderboard/{id} {
       allow read, list: if true;
-      allow write: if true; // Allowed for result submission
+      allow write: if true; 
     }
 
     match /quizClashTournaments/{id} {

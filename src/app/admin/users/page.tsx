@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
@@ -18,7 +19,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { format } from 'date-fns';
-import { useDb } from "@/firebase";
+import { useDb, useAuth } from "@/firebase";
 import { collection, doc, updateDoc, getDocs, getDoc, query, where, orderBy, limit, onSnapshot } from "firebase/firestore";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import type { StudentProfile } from "@/lib/student-data";
@@ -43,6 +44,7 @@ const getStatusBadgeVariant = (status: string) => {
 
 export default function UserManagementPage() {
   const db = useDb();
+  const { isAdmin, isResolved } = useAuth();
   const { toast } = useToast();
   
   const [users, setUsers] = useState<UserSummary[] | null>(null);
@@ -57,7 +59,8 @@ export default function UserManagementPage() {
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
   
   useEffect(() => {
-    if (!db) return;
+    // CRITICAL: Ensure we only establish the listener once the admin role is verified
+    if (!db || !isResolved || !isAdmin) return;
 
     const usersCollection = collection(db, "users");
     const q = query(usersCollection, orderBy("joinDate", "desc"), limit(200));
@@ -84,7 +87,7 @@ export default function UserManagementPage() {
     });
 
     return () => unsubscribe();
-  }, [db]);
+  }, [db, isResolved, isAdmin]);
 
   const viewUserDetails = async (parent: UserSummary) => {
       if (!db) return;

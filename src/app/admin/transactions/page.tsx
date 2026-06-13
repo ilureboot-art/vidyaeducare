@@ -310,7 +310,7 @@ export default function TransactionsPage() {
                       <ArrowUpRight size={24}/>
                   </div>
               </CardHeader>
-              <div className="h-1 bg-red-500/10 w-full" />
+              <div className="h-1 bg-red-50/10 w-full" />
           </Card>
       </div>
 

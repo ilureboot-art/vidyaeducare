@@ -1,9 +1,9 @@
 rules_version = '2';
 
 /**
- * Vidya EduCare - Hardened Production Infrastructure Rules
+ * Vidya EduCare - Production Infrastructure Rules
  * Target Instance: vidyaeducaredatabase
- * Priority: Absolute Master Bypass & Fail-Safe Role Resolution
+ * Priority: Immediate Master Authorization & Config Accessibility
  */
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -15,12 +15,11 @@ service cloud.firestore {
     }
 
     function isMaster() {
-      // Use the 'get' helper for the token to prevent crashes if the email field is missing
-      // Direct email comparison is the fastest and most reliable method during initial setup
-      let authEmail = request.auth.token.get('email', '').lower();
+      // Direct email comparison is the most resilient method for initial setup.
+      // We prioritize this check to allow the master admin to map infrastructure even if roles aren't indexed yet.
       return signedIn() && (
-        authEmail == 'admin@vidyaeducare.com' || 
-        authEmail == 'headadmin@vidyaeducare.com'
+        request.auth.token.email == 'admin@vidyaeducare.com' || 
+        request.auth.token.email == 'headadmin@vidyaeducare.com'
       );
     }
 
@@ -34,35 +33,26 @@ service cloud.firestore {
 
     // --- SUPREME OVERRIDE ---
     // Master Admin has full access to the entire database hierarchy.
-    // This is the primary fail-safe for infrastructure mapping.
     match /{allPaths=**} {
       allow read, write: if isMaster();
     }
 
     // --- GLOBAL CONFIGURATIONS (Read Optimized) ---
-    // These must be readable by everyone to allow the UI to initialize (prices, subjects, etc.)
     match /configs/{document=**} {
       allow read: if true; 
-      allow write: if isMaster() || isAdmin();
+      allow write: if isAdmin();
     }
 
-    // --- ROLE RESOLUTION & ADMIN LISTING ---
+    // --- ROLE RESOLUTION ---
     match /admins/{uid} {
       allow read: if signedIn();
-      // Allow the master account or the user themselves (if email matches) to initialize the record
-      allow write: if isMaster() || (signedIn() && request.auth.uid == uid && request.auth.token.get('email', '').lower() == 'admin@vidyaeducare.com');
-    }
-
-    match /admins/{document=**} {
-      allow read, list: if signedIn();
-      allow write: if isMaster();
+      allow write: if isMaster() || (signedIn() && request.auth.uid == uid && request.auth.token.email == 'admin@vidyaeducare.com');
     }
 
     // --- USER PRIVATE DATA ---
 
     match /users/{uid} {
       allow read: if signedIn();
-      // Explicitly allow owner or master admin to manage the user record
       allow create: if signedIn() && (isMaster() || request.auth.uid == uid); 
       allow update, delete: if signedIn() && (isMaster() || request.auth.uid == uid || isAdmin());
     }
@@ -74,7 +64,7 @@ service cloud.firestore {
     match /wallets/{uid} {
       allow read: if isOwner(uid) || isAdmin();
       allow create: if signedIn() && (isMaster() || request.auth.uid == uid);
-      allow update: if isMaster() || isAdmin() || isOwner(uid);
+      allow update: if isAdmin() || isOwner(uid);
     }
 
     match /activationCodes/{uid} {
@@ -135,7 +125,7 @@ service cloud.firestore {
     }
     
     match /notifications/{id} {
-      allow read, list: if signedIn() && (isAdmin() || (resource != null && resource.data.userId == request.auth.uid) || (resource != null && resource.data.userId == 'admin' && isAdmin()));
+      allow read, list: if signedIn() && (isAdmin() || (resource != null && (resource.data.userId == request.auth.uid || resource.data.userId == 'admin')));
       allow write: if isAdmin();
     }
     

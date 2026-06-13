@@ -97,7 +97,7 @@ export default function SetupAdminPage() {
             } else throw e;
         }
         
-        // Force immediate claim sync
+        // Force immediate claim sync for Firestore rules
         await auth.currentUser?.getIdToken(true);
         setAuthStatus('success');
         toast({ title: "Identity Verified" });
@@ -118,10 +118,8 @@ export default function SetupAdminPage() {
     logProgress(`MAP: Requesting authority sync...`);
     
     try {
-        // STEP 1: Aggressive Authority Handshake
-        // We force a token refresh and add a tiny wait for Rule Propagation
+        // Aggressive Token Refresh to ensure Firestore rules recognize the identity
         await auth.currentUser?.getIdToken(true);
-        await new Promise(r => setTimeout(r, 500)); 
 
         const batch = writeBatch(db);
         const userDocRef = doc(db, "users", uid);

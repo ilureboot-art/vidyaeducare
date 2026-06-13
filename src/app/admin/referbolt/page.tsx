@@ -63,14 +63,14 @@ export default function ReferBoltManagementPage() {
             errorEmitter.emit('permission-error', permissionError);
             throw e;
         });
-        let totalCycles = 0;
-        let activeReferrers = 0;
+        let totalCyclesCount = 0;
+        let activeReferrersCount = 0;
 
         const cycleList: Cycle[] = referboltSnapshot.docs.map(doc => {
             const data = doc.data();
-            totalCycles += (data.cyclesCompleted || 0);
+            totalCyclesCount += (data.cyclesCompleted || 0);
             if (data.isSubscribed) {
-              activeReferrers++;
+              activeReferrersCount++;
             }
             return {
               id: doc.id,
@@ -90,13 +90,13 @@ export default function ReferBoltManagementPage() {
             errorEmitter.emit('permission-error', permissionError);
             throw e;
         });
-        let totalCommissions = 0;
+        let totalCommissionsCount = 0;
         const referralList: Referral[] = [];
 
         transactionsSnapshot.forEach(doc => {
             const tx = doc.data();
             if (tx.type === 'Referral Bonus' || tx.type === 'Commission') {
-                totalCommissions += tx.amount;
+                totalCommissionsCount += tx.amount;
                 const date = tx.date instanceof Timestamp ? tx.date.toDate().toISOString() : tx.date;
                 referralList.push({
                     id: doc.id,
@@ -109,7 +109,7 @@ export default function ReferBoltManagementPage() {
             }
         });
         
-        setStats({ totalCycles, totalCommissions, activeReferrers });
+        setStats({ totalCycles: totalCyclesCount, totalCommissions: totalCommissionsCount, activeReferrers: activeReferrersCount });
         setCycles(cycleList);
         setReferrals(referralList);
     } catch (error) {

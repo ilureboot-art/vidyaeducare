@@ -253,7 +253,7 @@ export default function AdminStoreSettingsPage() {
       <form onSubmit={handleSubmit}>
         <Card className="mt-6">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><BookOpen /> Mock Test Subscriptions</CardTitle>
+            <CardTitle className="flex items-center gap-2"><BookOpen /> MockArena Subscriptions</CardTitle>
             <CardDescription>Configure packages, taxes, and dynamic discount structures.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-8">
@@ -359,7 +359,7 @@ export default function AdminStoreSettingsPage() {
                <div className="md:col-span-2 space-y-4">
                  <div className="flex items-center space-x-2 p-4 border rounded-lg">
                     <Switch id="free-access" checked={storeConfig.referboltSettings.freeAccessWithMockTest} onCheckedChange={(checked) => handleReferboltSettingsChange('freeAccessWithMockTest', checked)} />
-                    <Label htmlFor="free-access">Grant free ReferBolt access with any mock test purchase (Global Legacy)</Label>
+                    <Label htmlFor="free-access">Grant free ReferBolt access with any MockArena purchase (Global Legacy)</Label>
                 </div>
                  <div className="space-y-2 p-4 border rounded-lg">
                     <Label htmlFor="iba-bonus" className="flex items-center gap-2"><Percent/> IBA Bonus Commission</Label>

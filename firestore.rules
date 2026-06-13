@@ -3,7 +3,7 @@ rules_version = '2';
 /**
  * Vidya EduCare - Production Infrastructure Rules
  * Target Instance: vidyaeducaredatabase
- * Deployment Salt: V86_ADMIN_VISIBILITY_HARDENED
+ * Deployment Salt: V87_CONFIG_PRIORITY_HARDENED
  */
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -43,6 +43,13 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // --- ROLE RESOLUTION & ADMIN LISTING ---
+    match /admins/{document=**} {
+      // Allow authenticated listing for role resolution and management
+      allow read, list: if signedIn();
+      allow write: if isMaster();
+    }
+
     // --- USER PRIVATE DATA ---
 
     match /users/{uid} {
@@ -75,12 +82,6 @@ service cloud.firestore {
     match /referbolt/{uid} {
       allow read: if signedIn();
       allow write: if isOwner(uid) || isAdmin();
-    }
-
-    match /admins/{document=**} {
-      // Allow authenticated listing for role resolution and management
-      allow read, list: if signedIn();
-      allow write: if isMaster();
     }
 
     match /students/{id} {

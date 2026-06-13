@@ -115,11 +115,14 @@ export default function SetupAdminPage() {
     const email = auth.currentUser.email;
 
     setMapStatus('loading');
-    logProgress(`MAP: Requesting authority sync...`);
+    logProgress(`MAP: Requesting authority handshake...`);
     
     try {
-        // Critical: Refresh token twice to ensure Master Admin status is fully propagated to rules
+        // Critical: Refresh token to ensure Master Admin status is fully propagated to rules
         await auth.currentUser?.getIdToken(true);
+        
+        // Brief pause to allow rule evaluation context to synchronize
+        await new Promise(r => setTimeout(r, 1000));
 
         const batch = writeBatch(db);
         const userDocRef = doc(db, "users", uid);

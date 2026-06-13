@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { User, Mail, Calendar, Phone, GraduationCap, Trash2, PlusCircle, BookOpen, Loader2, BarChart2, Users, BrainCircuit, Sparkles, ScrollText, ArrowRight, Trophy, Award, IndianRupee, Star, Target, Search } from "lucide-react";
+import { User, Mail, Calendar, Phone, GraduationCap, Trash2, PlusCircle, BookOpen, Loader2, BarChart2, Users, BrainCircuit, Sparkles, ScrollText, ArrowRight, Trophy, Award, IndianRupee, Star, Target, Search, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -54,66 +54,57 @@ function ProfilePageContent() {
     const [isLoadingTests, setIsLoadingTests] = useState(false);
 
     useEffect(() => {
-        if (!isResolved) return;
-
-        if (user && db) {
-            setIsLoading(true);
-            
-            const parentDocRef = doc(db, "users", user.uid);
-            const unsubParent = onSnapshot(parentDocRef, (docSnap) => {
-                if (docSnap.exists()) setParentProfile(docSnap.data());
-                // We clear loading here primarily, but check sub-syncs too
-                setIsLoading(false);
-            }, async (error) => {
-                console.error("Parent sync error:", error);
-                if (error.code === 'permission-denied') {
-                    const permissionError = new FirestorePermissionError({
-                        path: parentDocRef.path,
-                        operation: 'get',
-                    } satisfies SecurityRuleContext);
-                    errorEmitter.emit('permission-error', permissionError);
-                }
-                setIsLoading(false);
-            });
-
-            const studentsColRef = collection(db, "students");
-            const q = query(studentsColRef, where("parentId", "==", user.uid));
-            const unsubStudents = onSnapshot(q, (snapshot) => {
-                const studentList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentProfile));
-                setStudents(studentList);
-            }, async (error) => {
-                if (error.code === 'permission-denied') {
-                    const permissionError = new FirestorePermissionError({
-                        path: studentsColRef.path,
-                        operation: 'list',
-                    } satisfies SecurityRuleContext);
-                    errorEmitter.emit('permission-error', permissionError);
-                }
-            });
-
-            const codesDocRef = doc(db, "activationCodes", user.uid);
-            const unsubCodes = onSnapshot(codesDocRef, (docSnap) => {
-                setValidCodes(docSnap.exists() ? docSnap.data().codes : []);
-            }, async (error) => {
-                 if (error.code === 'permission-denied') {
-                    const permissionError = new FirestorePermissionError({
-                        path: codesDocRef.path,
-                        operation: 'get',
-                    } satisfies SecurityRuleContext);
-                    errorEmitter.emit('permission-error', permissionError);
-                }
-                // Important: clear loading even if codes fail so dashboard opens
-                setIsLoading(false);
-            });
-            
-            return () => {
-                unsubParent();
-                unsubStudents();
-                unsubCodes();
-            };
-        } else {
-            setIsLoading(false);
+        if (!isResolved || !db || !user) {
+            if (isResolved) setIsLoading(false);
+            return;
         }
+
+        setIsLoading(true);
+        
+        const parentDocRef = doc(db, "users", user.uid);
+        const unsubParent = onSnapshot(parentDocRef, (docSnap) => {
+            if (docSnap.exists()) setParentProfile(docSnap.data());
+            setIsLoading(false);
+        }, async (error) => {
+            console.error("Parent sync error:", error);
+            if (error.code === 'permission-denied') {
+                const permissionError = new FirestorePermissionError({
+                    path: parentDocRef.path,
+                    operation: 'get',
+                } satisfies SecurityRuleContext);
+                errorEmitter.emit('permission-error', permissionError);
+            }
+            setIsLoading(false);
+        });
+
+        const studentsColRef = collection(db, "students");
+        const q = query(studentsColRef, where("parentId", "==", user.uid));
+        const unsubStudents = onSnapshot(q, (snapshot) => {
+            const studentList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentProfile));
+            setStudents(studentList);
+        }, async (error) => {
+            if (error.code === 'permission-denied') {
+                const permissionError = new FirestorePermissionError({
+                    path: studentsColRef.path,
+                    operation: 'list',
+                } satisfies SecurityRuleContext);
+                errorEmitter.emit('permission-error', permissionError);
+            }
+        });
+
+        const codesDocRef = doc(db, "activationCodes", user.uid);
+        const unsubCodes = onSnapshot(codesDocRef, (docSnap) => {
+            setValidCodes(docSnap.exists() ? docSnap.data().codes : []);
+        }, async (error) => {
+             // Silently fail codes to avoid blocking the main dashboard
+             setValidCodes([]);
+        });
+        
+        return () => {
+            unsubParent();
+            unsubStudents();
+            unsubCodes();
+        };
     }, [user, db, isResolved]);
 
     const filteredStudents = useMemo(() => {
@@ -214,11 +205,7 @@ function ProfilePageContent() {
             );
             const snapshot = await getDocs(q).catch(async (serverError) => {
                 if (serverError.code === 'permission-denied') {
-                    const permissionError = new FirestorePermissionError({
-                        path: scheduledColRef.path,
-                        operation: 'list',
-                    } satisfies SecurityRuleContext);
-                    errorEmitter.emit('permission-error', permissionError);
+                    errorEmitter.emit('permission-error', new FirestorePermissionError({ path: scheduledColRef.path, operation: 'list' }));
                 }
                 throw serverError;
             });

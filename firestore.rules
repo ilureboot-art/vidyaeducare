@@ -3,7 +3,7 @@ rules_version = '2';
 /**
  * Vidya EduCare - Production Infrastructure Rules
  * Target Instance: vidyaeducaredatabase
- * Deployment Salt: V87_CONFIG_PRIORITY_HARDENED
+ * Deployment Salt: V88_CONFIG_PRIORITY_REINFORCED
  */
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -16,10 +16,8 @@ service cloud.firestore {
 
     function isMaster() {
       // Robust check for the master administrator account using case-insensitive email
-      return signedIn() && (
-        request.auth.token.get('email', '').lower() == 'admin@vidyaeducare.com' ||
-        request.auth.token.get('email', '').lower() == 'headadmin@vidyaeducare.com'
-      );
+      return signedIn() && 
+        request.auth.token.get('email', '').lower() in ['admin@vidyaeducare.com', 'headadmin@vidyaeducare.com'];
     }
 
     function isAdmin() {
@@ -30,17 +28,17 @@ service cloud.firestore {
       return exists(adminPath);
     }
 
-    // --- SUPREME OVERRIDE (Highest Priority) ---
-    // Master Admin has full access to the entire database hierarchy.
-    match /{allPaths=**} {
-      allow read, write: if isMaster();
-    }
-
-    // --- SHARED DATA (High Priority) ---
-    // Explicitly allow read access to configurations to prevent store hangs for all users.
+    // --- GLOBAL CONFIGURATIONS (Global Priority) ---
+    // These must be readable by everyone to allow the UI to initialize (prices, subjects, etc.)
     match /configs/{document=**} {
       allow read: if true; 
       allow write: if isAdmin();
+    }
+
+    // --- SUPREME OVERRIDE ---
+    // Master Admin has full access to the entire database hierarchy.
+    match /{allPaths=**} {
+      allow read, write: if isMaster();
     }
 
     // --- ROLE RESOLUTION & ADMIN LISTING ---

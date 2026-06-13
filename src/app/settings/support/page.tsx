@@ -18,8 +18,16 @@ const userFaqs = [
         answer: "You can add funds by going to the Wallet page, clicking 'Add Funds', and submitting a request after paying to the admin's UPI. To withdraw, click 'Withdraw', enter the amount (min. ₹200) and your payment details. All requests are processed by an admin."
     },
     {
+        question: "How do I work as an Independent Business Associate (IBA)?",
+        answer: "Working as an IBA is a zero-investment opportunity. You receive a unique Referral Code in your IBA Dashboard. Share this code with students and parents via WhatsApp or social media. When they use your code to subscribe to MockArena packages, you earn instant commissions credited to your wallet."
+    },
+    {
+        question: "What are the income details for the IBA program?",
+        answer: "IBAs earn a substantial base commission of up to 17.65% on every MockArena subscription purchased using their referral code. For example, on a ₹3000 plan, you earn approximately ₹530. Combined with the ReferBolt system, you can also earn continuous 'Cycle Bonuses' from a wider network of referrals."
+    },
+    {
         question: "What's the difference between the IBA Program and the ReferBolt System?",
-        answer: "The IBA (Independent Business Associate) Program is our standard referral system primarily for earning commissions from mock test subscriptions. ReferBolt is a premium subscription that unlocks a more advanced referral structure, allowing you to earn from a larger network (indirect referrals) for continuous, passive income."
+        answer: "The IBA Program is our standard referral system for earning direct commissions. ReferBolt is a premium subscription that unlocks an advanced multi-level network, allowing you to earn from 'indirect' referrals (people your friends refer) through continuous success cycles."
     },
     {
         question: "How do I add a student to my profile?",
@@ -75,8 +83,8 @@ export default function SupportPage() {
                  <Accordion type="single" collapsible className="w-full">
                     {userFaqs.map((faq, index) => (
                         <AccordionItem value={`item-${index}`} key={index}>
-                            <AccordionTrigger>{faq.question}</AccordionTrigger>
-                            <AccordionContent>
+                            <AccordionTrigger className="text-left">{faq.question}</AccordionTrigger>
+                            <AccordionContent className="text-muted-foreground leading-relaxed">
                                 {faq.answer}
                             </AccordionContent>
                         </AccordionItem>

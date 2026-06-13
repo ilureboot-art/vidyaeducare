@@ -13,6 +13,10 @@ import {
 
 const adminFaqs = [
     {
+        question: "How do I explain the IBA commission structure to potential associates?",
+        answer: "IBAs earn up to 17.65% base commission on the total value of MockArena subscriptions purchased with their code. These earnings are credited instantly to their wallet as soon as the transaction is completed. You can view all these commissions in the 'Transactions' dashboard."
+    },
+    {
         question: "How do I approve or reject a user's transaction request?",
         answer: "Navigate to the 'Transactions' page. Find the transaction with a 'Pending' status. You will see 'Approve' and 'Reject' buttons in the 'Actions' column. Clicking 'Approve' for a deposit will add funds to the user's wallet. Clicking 'Reject' for a withdrawal will refund the amount back to the user."
     },
@@ -74,8 +78,8 @@ export default function SupportPage() {
                  <Accordion type="single" collapsible className="w-full">
                     {adminFaqs.map((faq, index) => (
                         <AccordionItem value={`item-${index}`} key={index}>
-                            <AccordionTrigger>{faq.question}</AccordionTrigger>
-                            <AccordionContent>
+                            <AccordionTrigger className="text-left">{faq.question}</AccordionTrigger>
+                            <AccordionContent className="text-muted-foreground">
                                 {faq.answer}
                             </AccordionContent>
                         </AccordionItem>

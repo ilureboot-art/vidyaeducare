@@ -35,7 +35,8 @@ function SignupForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   
-  const isFirebaseReady = !!auth && !!db && referralBonus !== null;
+  // Allow the page to be interactable even if config is slow
+  const isFirebaseReady = !!auth && !!db;
 
   useEffect(() => {
     const refCode = searchParams.get('ref');
@@ -88,7 +89,7 @@ function SignupForm() {
       let referrerId: string | null = null;
       
       const cleanRefCode = referralCode.trim().toUpperCase();
-      if (cleanRefCode && referralBonus && referralBonus > 0) {
+      if (cleanRefCode) {
         const walletsColRef = collection(db, "wallets");
         const q = query(walletsColRef, where("referralCode", "==", cleanRefCode));
         const querySnapshot = await getDocs(q).catch((e) => {
@@ -99,7 +100,7 @@ function SignupForm() {
         if (!querySnapshot.empty) {
           const referrerDoc = querySnapshot.docs[0];
           referrerId = referrerDoc.id;
-          welcomeBonus = referralBonus;
+          welcomeBonus = referralBonus || 5;
         } else if (cleanRefCode !== "") {
             toast({ variant: 'destructive', title: "Invalid Referral Code", description: "The code you entered was not found." });
             setIsLoading(false);
@@ -143,17 +144,18 @@ function SignupForm() {
             referralHistory: []
         });
 
-        if (referrerId && referralBonus && referralBonus > 0) {
+        if (referrerId && (referralBonus || 5) > 0) {
+            const bonus = referralBonus || 5;
             const referrerWalletRef = doc(db, "wallets", referrerId);
             const referrerWalletDoc = await transaction.get(referrerWalletRef);
             if (referrerWalletDoc.exists()) {
                 const referrerBalance = referrerWalletDoc.data().balance || 0;
-                transaction.update(referrerWalletRef, { balance: referrerBalance + referralBonus });
+                transaction.update(referrerWalletRef, { balance: referrerBalance + bonus });
 
                 const referrerTxRef = doc(collection(db, "transactions"));
                 transaction.set(referrerTxRef, { 
                     user: referrerId, 
-                    amount: referralBonus, 
+                    amount: bonus, 
                     date: serverTimestamp(), 
                     description: `Referral bonus for ${name}`, 
                     status: "Completed", 

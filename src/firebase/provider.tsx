@@ -103,6 +103,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
           return processSnap(adminDocSnap, user);
       })();
 
+      // Fast timeout: 1.5 seconds to prevent "spinning" if Firestore is slow
       const timeoutPromise = new Promise<{ isAdmin: boolean; isHeadAdmin: boolean }>((resolve) => 
           setTimeout(() => resolve({ isAdmin: false, isHeadAdmin: false }), 1500)
       );
@@ -187,6 +188,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   const isPublicRoute = ['/', '/how-to-play', '/admin/setup', '/check-head-admin', '/forgot-password', '/ai-tutor', '/ai-notes', '/trial-mock-test'].includes(cleanPath);
   const isAuthRoute = ['/login', '/signup', '/admin/login'].includes(cleanPath);
 
+  // NO SPINNER for public or auth routes!
   const shouldShowLoading = !isPublicRoute && !isAuthRoute && (authState.loading || (!authState.isResolved && authState.user));
 
   if (shouldShowLoading) {

@@ -3,7 +3,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { LifeBuoy, BookOpen, Mail, ArrowLeft } from "lucide-react";
+import { LifeBuoy, BookOpen, Mail, ArrowLeft, Wallet, ShieldCheck, Zap, Trophy, Puzzle } from "lucide-react";
 import Link from "next/link";
 import {
   Accordion,
@@ -31,7 +31,7 @@ const userFaqs = [
     },
     {
         question: "How does the IBA program work?",
-        answer: "The Independent Business Associate (IBA) program is a zero-investment business. Share your unique code and earn up to 10% commission (standard adjustable rate) on every subscription sale."
+        answer: "The Independent Business Associate (IBA) program is a zero-investment business. Share your unique code and earn a 10% commission on every subscription sale."
     },
     {
         question: "What is ReferBolt passive income?",
@@ -87,7 +87,9 @@ export default function SupportPage() {
                  <Accordion type="single" collapsible className="w-full">
                     {userFaqs.map((faq, index) => (
                         <AccordionItem value={`item-${index}`} key={index}>
-                            <AccordionTrigger className="text-left italic font-bold">{faq.question}</AccordionTrigger>
+                            <AccordionTrigger className="text-left italic font-bold">
+                                {faq.question}
+                            </AccordionTrigger>
                             <AccordionContent className="text-muted-foreground leading-relaxed">
                                 {faq.answer}
                             </AccordionContent>

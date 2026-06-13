@@ -3,7 +3,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { LifeBuoy, BookOpen, Mail } from "lucide-react";
+import { LifeBuoy, BookOpen, Mail, Trophy, ShieldCheck, Zap, Puzzle, Wallet } from "lucide-react";
 import {
   Accordion,
   AccordionContent,
@@ -31,6 +31,10 @@ const adminFaqs = [
     {
         question: "How do I approve or reject a transaction request?",
         answer: "Go to the 'Transactions' page. Pending requests have 'Approve' and 'Reject' actions. Approving a deposit updates the user wallet; rejecting a withdrawal returns funds to the user."
+    },
+    {
+        question: "How does the ReferBolt cycle bonus work?",
+        answer: "ReferBolt rewards users who complete a cycle of 3 referrals. You can configure the cycle bonus amount in Store Settings under the ReferBolt section."
     }
 ];
 

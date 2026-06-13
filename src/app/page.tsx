@@ -1,9 +1,10 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { BookOpen, Trophy, Users, LogIn, Share2, Quote, User, Shield, ArrowRight, BrainCircuit, ScrollText, Sparkles, Target, Zap, Rocket, ChevronRight, CheckCircle2, HelpCircle } from "lucide-react";
+import { BookOpen, Trophy, Users, LogIn, Share2, Quote, User, Shield, ArrowRight, BrainCircuit, ScrollText, Sparkles, Target, Zap, Rocket, ChevronRight, CheckCircle2, HelpCircle, Wallet } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
@@ -317,7 +318,7 @@ Start your journey to excellence and earnings here: ${url}
                 <p className="text-muted-foreground font-bold tracking-widest text-[10px] uppercase">Everything you need to know about Vidya EduCare</p>
                 <div className="h-1.5 bg-accent w-32 mx-auto mt-4 rounded-full shadow-sm" />
             </div>
-            <div className="max-w-3xl mx-auto bg-white rounded-[3rem] p-8 md:p-12 shadow-xl border border-primary/10">
+            <div className="max-w-4xl mx-auto bg-white rounded-[3rem] p-8 md:p-12 shadow-xl border border-primary/10">
                 <Accordion type="single" collapsible className="w-full">
                     <AccordionItem value="vision" className="border-b-2 border-muted py-2">
                         <AccordionTrigger className="text-xl font-black text-primary hover:no-underline text-left italic">What is the Vision & Mission of Vidya EduCare?</AccordionTrigger>
@@ -330,31 +331,43 @@ Start your journey to excellence and earnings here: ${url}
                         <AccordionTrigger className="text-xl font-black text-primary hover:no-underline text-left italic">What are the primary Objectives and Benefits?</AccordionTrigger>
                         <AccordionContent className="text-muted-foreground text-lg font-medium leading-relaxed pb-6">
                             <p><b>Objectives:</b> Improve exam performance via MockArena, provide instant conceptual clarity via AI tools, and manage a robust referral-based passive income engine.</p>
-                            <p className="mt-4"><b>Benefits:</b> Students win cash rewards for excellence; Parents get a productive learning environment; Associates (IBAs) start a zero-investment professional business.</p>
+                            <p className="mt-4"><b>Benefits:</b> Students win cash rewards for excellence (MockArena & Quiz Clash); Parents get a productive learning environment; Associates (IBAs) start a zero-investment professional business.</p>
+                        </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="wallet" className="border-b-2 border-muted py-2">
+                        <AccordionTrigger className="text-xl font-black text-primary hover:no-underline text-left italic flex gap-2">
+                            <Wallet className="w-5 h-5 mt-1 shrink-0" />
+                            How do I add or withdraw money from my wallet?
+                        </AccordionTrigger>
+                        <AccordionContent className="text-muted-foreground text-lg font-medium leading-relaxed pb-6">
+                            <p><b>Adding Funds:</b> Navigate to 'Wallet', click 'Add Funds'. Pay via the provided UPI QR or Bank details, then submit your Transaction ID/UTR for verification.</p>
+                            <p className="mt-4"><b>Withdrawals:</b> Go to 'Wallet' and select 'Withdraw'. Enter an amount (minimum ₹200) and your receiving UPI ID. Admins process payouts regularly.</p>
                         </AccordionContent>
                     </AccordionItem>
                     <AccordionItem value="rewards" className="border-b-2 border-muted py-2">
                         <AccordionTrigger className="text-xl font-black text-primary hover:no-underline text-left italic">How do MockArena rewards work?</AccordionTrigger>
                         <AccordionContent className="text-muted-foreground text-lg font-medium leading-relaxed pb-6">
-                            Participate in live curriculum-aligned sessions. Achieve an <b>80% accuracy minimum</b> and rank in the top 5 participants to win instant cash prizes credited to your wallet.
+                            Participate in live curriculum-aligned sessions. Achieve an <b>80% accuracy minimum</b> and rank in the top 5 participants to win instant cash prizes (up to ₹250 per session) credited directly to your parent wallet.
                         </AccordionContent>
                     </AccordionItem>
                     <AccordionItem value="clash" className="border-b-2 border-muted py-2">
                         <AccordionTrigger className="text-xl font-black text-primary hover:no-underline text-left italic">What is Quiz Clash and its rewards?</AccordionTrigger>
                         <AccordionContent className="text-muted-foreground text-lg font-medium leading-relaxed pb-6">
-                            Quiz Clash features high-stakes live tournaments. <b>Pro Clashes</b> use entry fees to form a prize pool shared among top performers. <b>Practice Clashes</b> are free and designed for preparation.
+                            Quiz Clash features high-stakes live tournaments. <b>Pro Clashes</b> use entry fees to form a prize pool, where 80% is shared among the top 4 performers (40%, 30%, 20%, 10%). <b>Practice Clashes</b> are free for preparation.
                         </AccordionContent>
                     </AccordionItem>
                     <AccordionItem value="iba" className="border-b-2 border-muted py-2">
-                        <AccordionTrigger className="text-xl font-black text-primary hover:no-underline text-left italic">How does the IBA program work?</AccordionTrigger>
+                        <AccordionTrigger className="text-xl font-black text-primary hover:no-underline text-left italic">How does the IBA program work and what is the income?</AccordionTrigger>
                         <AccordionContent className="text-muted-foreground text-lg font-medium leading-relaxed pb-6">
-                            Becoming an Independent Business Associate (IBA) is a <b>zero-investment opportunity</b>. Share your unique code; earn up to <b>17.65% commission</b> on every MockArena subscription purchased via your code.
+                            <p>Becoming an Independent Business Associate (IBA) is a <b>zero-investment opportunity</b>. Share your unique code with others.</p>
+                            <p className="mt-4"><b>Income:</b> Earn a <b>10% commission</b> on every MockArena subscription purchased using your code. Commissions are instantly credited to your wallet upon sale approval.</p>
                         </AccordionContent>
                     </AccordionItem>
                     <AccordionItem value="referbolt" className="border-none py-2">
-                        <AccordionTrigger className="text-xl font-black text-primary hover:no-underline text-left italic">What is the ReferBolt system?</AccordionTrigger>
+                        <AccordionTrigger className="text-xl font-black text-primary hover:no-underline text-left italic">What is ReferBolt income and how it works?</AccordionTrigger>
                         <AccordionContent className="text-muted-foreground text-lg font-medium leading-relaxed pb-6">
-                            ReferBolt is a premium multi-level referral engine. It works on <b>&quot;Success Cycles&quot;</b> of just 3 referrals. Every time your network completes a cycle, you unlock a massive bonus. Cycles repeat automatically for continuous passive income.
+                            <p>ReferBolt is a premium multi-level referral engine. It works on <b>"Success Cycles"</b> of just 3 referrals.</p>
+                            <p className="mt-4"><b>How it works:</b> Every time your direct or indirect network completes a cycle, you unlock a massive cycle bonus. These cycles repeat automatically, creating a continuous passive income stream as your community grows.</p>
                         </AccordionContent>
                     </AccordionItem>
                 </Accordion>

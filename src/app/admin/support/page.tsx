@@ -14,7 +14,7 @@ import {
 const adminFaqs = [
     {
         question: "What is the corporate Vision & Mission?",
-        answer: "Vision: To lead India in academic excellence and financial empowerment. Mission: To provide elite AI-powered coaching while fostering a sustainable earning ecosystem for all stakeholders."
+        answer: "Vision: To lead India in academic excellence and financial empowerment. Mission: To provide elite coaching while fostering a sustainable earning ecosystem for all stakeholders."
     },
     {
         question: "How are MockArena prizes calculated?",

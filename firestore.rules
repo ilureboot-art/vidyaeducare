@@ -3,7 +3,6 @@ rules_version = '2';
 
 /**
  * Vidya EduCare - Elite Production Security Rules
- * Optimization: Explicit priority for global configs and public referral verification.
  */
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -28,7 +27,7 @@ service cloud.firestore {
     }
 
     // --- GLOBAL CONFIGURATIONS (Priority 1) ---
-    // Publicly readable for pricing, system flags, and academic standards
+    // Explicitly public for system-wide consistency
     match /configs/{document=**} {
       allow read: if true; 
       allow write: if isAdmin();
@@ -47,7 +46,7 @@ service cloud.firestore {
     }
 
     match /wallets/{uid} {
-      allow read, list: if true; // Public for referral verification during signup
+      allow read, list: if true; // Public for referral verification
       allow create: if isOwner(uid);
       allow update: if isAdmin() || isOwner(uid);
     }
@@ -81,7 +80,7 @@ service cloud.firestore {
     
     match /transactions/{id} {
       allow read, list: if signedIn() && (isAdmin() || (resource != null && resource.data.user == request.auth.uid));
-      allow create: if true; // Allow bonuses and deposits
+      allow create: if true;
       allow update: if isAdmin();
     }
 

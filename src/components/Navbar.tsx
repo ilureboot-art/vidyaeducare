@@ -21,7 +21,6 @@ export function Navbar() {
   const { user } = useAuth();
   
   // Only show bottom navbar for authenticated regular users
-  // Hide in admin, hide in live tests, hide for guests
   if (!user || pathname.startsWith('/admin') || pathname.startsWith('/mock-test') || pathname.startsWith('/quiz-clash/play') || pathname.startsWith('/trial-mock-test')) {
     return null;
   }

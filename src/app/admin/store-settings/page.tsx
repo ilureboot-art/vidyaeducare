@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -16,16 +15,6 @@ import { useDb, useAuth } from "@/firebase";
 import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
-import { Badge } from "@/components/ui/badge";
-
-const UsersIcon = ({ className }: { className?: string }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
-        <circle cx="9" cy="7" r="4"></circle>
-        <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
-        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-    </svg>
-);
 
 export default function AdminStoreSettingsPage() {
   const { toast } = useToast();
@@ -58,15 +47,12 @@ export default function AdminStoreSettingsPage() {
         }
         setIsLoadingStore(false);
     }, async (error) => {
-        console.error("Store config sync error:", error.code);
         if (error.code === 'permission-denied') {
-            const permissionError = new FirestorePermissionError({
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
                 path: storeRef.path,
                 operation: 'get',
-            } satisfies SecurityRuleContext);
-            errorEmitter.emit('permission-error', permissionError);
+            }));
         }
-        setStoreConfig(prev => prev || defaultStoreConfig);
         setIsLoadingStore(false);
     });
 
@@ -79,15 +65,12 @@ export default function AdminStoreSettingsPage() {
         }
         setIsLoadingAcademic(false);
     }, async (error) => {
-        console.error("Academic config sync error:", error.code);
         if (error.code === 'permission-denied') {
-            const permissionError = new FirestorePermissionError({
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
                 path: academicRef.path,
                 operation: 'get',
-            } satisfies SecurityRuleContext);
-            errorEmitter.emit('permission-error', permissionError);
+            }));
         }
-        setAcademicConfig(prev => prev || defaultAcademicConfig);
         setIsLoadingAcademic(false);
     });
 
@@ -117,7 +100,7 @@ export default function AdminStoreSettingsPage() {
     setStoreConfig(prev => {
         if (!prev) return null;
         const newSub = { ...prev.referboltSubscription };
-        if (field === 'price' || field === 'ticketBonus' || field === 'gstRate') {
+        if (field === 'price' || field === 'gstRate') {
             value = Number(value) || 0;
         }
         (newSub as any)[field] = value;
@@ -150,8 +133,8 @@ export default function AdminStoreSettingsPage() {
     setStoreConfig(prev => prev ? ({...prev, mockTestPackages: newPackages }) : null);
   };
 
-  const handleDynamicListChange = (setter: React.Dispatch<React.SetStateAction<AcademicConfig | null>>, listName: keyof AcademicConfig, index: number, value: string) => {
-      setter(prev => {
+  const handleDynamicListChange = (listName: keyof AcademicConfig, index: number, value: string) => {
+      setAcademicConfig(prev => {
           if (!prev) return null;
           const newList = [...(prev[listName] as string[])];
           newList[index] = value;
@@ -159,23 +142,23 @@ export default function AdminStoreSettingsPage() {
       });
   };
 
-  const addToList = (setter: React.Dispatch<React.SetStateAction<AcademicConfig | null>>, listName: keyof AcademicConfig) => {
-      setter(prev => {
+  const addToList = (listName: keyof AcademicConfig) => {
+      setAcademicConfig(prev => {
           if (!prev) return null;
           const newList = [...(prev[listName] as string[]), ''];
           return { ...prev, [listName]: newList };
       });
   };
   
-  const removeFromList = (setter: React.Dispatch<React.SetStateAction<AcademicConfig | null>>, listName: keyof AcademicConfig, index: number) => {
-      setter(prev => {
+  const removeFromList = (listName: keyof AcademicConfig, index: number) => {
+      setAcademicConfig(prev => {
           if (!prev) return null;
           const newList = (prev[listName] as string[]).filter((_, i) => i !== index);
           return { ...prev, [listName]: newList };
       });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!storeConfig || !academicConfig || !db || isSaving) return;
     
@@ -183,33 +166,29 @@ export default function AdminStoreSettingsPage() {
     const storeRef = doc(db, "configs", "store");
     const academicRef = doc(db, "configs", "academic");
 
-    setDoc(storeRef, storeConfig)
-        .then(() => {
-            setDoc(academicRef, academicConfig)
-                .then(() => {
-                    toast({
-                      title: "Configurations Saved!",
-                      description: "System rules have been updated globally.",
-                    });
-                })
-                .catch(async () => {
-                    const permissionError = new FirestorePermissionError({
-                        path: academicRef.path,
-                        operation: 'update',
-                        requestResourceData: academicConfig,
-                    } satisfies SecurityRuleContext);
-                    errorEmitter.emit('permission-error', permissionError);
-                });
-        })
-        .catch(async () => {
-            const permissionError = new FirestorePermissionError({
+    try {
+        await setDoc(storeRef, storeConfig).catch(async (e) => {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
                 path: storeRef.path,
                 operation: 'update',
-                requestResourceData: storeConfig,
-            } satisfies SecurityRuleContext);
-            errorEmitter.emit('permission-error', permissionError);
-        })
-        .finally(() => setIsSaving(false));
+                requestResourceData: storeConfig
+            }));
+        });
+
+        await setDoc(academicRef, academicConfig).catch(async (e) => {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: academicRef.path,
+                operation: 'update',
+                requestResourceData: academicConfig
+            }));
+        });
+
+        toast({ title: "Configurations Saved!", description: "System settings have been updated successfully." });
+    } catch (err) {
+        console.error("Save error:", err);
+    } finally {
+        setIsSaving(false);
+    }
   };
 
   const renderDynamicList = (title: string, listName: keyof AcademicConfig) => {
@@ -220,13 +199,13 @@ export default function AdminStoreSettingsPage() {
               <Label className="text-lg font-semibold">{title}</Label>
               {list.map((item, index) => (
                   <div key={index} className="flex items-center gap-2 p-2 rounded-lg even:bg-muted/40 transition-colors">
-                      <Input value={item} onChange={(e) => handleDynamicListChange(setAcademicConfig, listName, index, e.target.value)} />
-                      <button type="button" className="p-2 text-muted-foreground hover:text-destructive" onClick={() => removeFromList(setAcademicConfig, listName, index)}>
+                      <Input value={item} onChange={(e) => handleDynamicListChange(listName, index, e.target.value)} />
+                      <button type="button" className="p-2 text-muted-foreground hover:text-destructive" onClick={() => removeFromList(listName, index)}>
                           <Trash2 className="h-4 w-4" />
                       </button>
                   </div>
               ))}
-              <Button type="button" variant="outline" className="w-full mt-2" onClick={() => addToList(setAcademicConfig, listName)}>
+              <Button type="button" variant="outline" className="w-full mt-2" onClick={() => addToList(listName)}>
                   <PlusCircle className="mr-2 h-4 w-4" /> Add {title.slice(0, -1)}
               </Button>
           </div>
@@ -263,7 +242,7 @@ export default function AdminStoreSettingsPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                          <div className="space-y-2 col-span-full lg:col-span-2">
                             <Label className="text-xs uppercase font-black text-muted-foreground">Package Name</Label>
-                            <Input value={pkg.name} onChange={(e) => handleMockTestPackageChange(index, 'name', e.target.value)} placeholder="e.g., 1 Year Subscription" />
+                            <Input value={pkg.name} onChange={(e) => handleMockTestPackageChange(index, 'name', e.target.value)} />
                         </div>
                         <div className="space-y-2">
                             <Label className="text-xs uppercase font-black text-muted-foreground">Base Price (₹)</Label>
@@ -281,7 +260,7 @@ export default function AdminStoreSettingsPage() {
                         </div>
                         <div className="space-y-2">
                             <Label className="text-[10px] uppercase font-black text-primary">HSN/SAC Code</Label>
-                            <Input type="text" value={pkg.hsnSacCode} onChange={(e) => handleMockTestPackageChange(index, 'gstRate', e.target.value)} />
+                            <Input type="text" value={pkg.hsnSacCode} onChange={(e) => handleMockTestPackageChange(index, 'hsnSacCode', e.target.value)} />
                         </div>
                         <div className="space-y-2 col-span-full lg:col-span-2 flex flex-col justify-end gap-4 pb-2">
                              <div className="flex items-center space-x-2">
@@ -323,7 +302,7 @@ export default function AdminStoreSettingsPage() {
         <Card className="mt-6">
           <CardHeader>
               <CardTitle className="flex items-center gap-2"><ShieldCheck size={20} className="text-primary"/> Associate Commissions</CardTitle>
-              <CardDescription>Adjust the earnings for Independent Business Associates (IBAs).</CardDescription>
+              <CardDescription>Adjust the standard commission rate for all IBAs.</CardDescription>
           </CardHeader>
           <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 p-4 border rounded-xl bg-primary/[0.02]">
@@ -354,7 +333,7 @@ export default function AdminStoreSettingsPage() {
                       <Label htmlFor="auto-approve-toggle" className="font-bold flex items-center gap-2">
                           <Zap size={14} className="text-primary fill-primary"/> Auto-Approve Deposits
                       </Label>
-                      <p className="text-xs text-muted-foreground max-w-md">When enabled, user payment requests are instantly credited to their wallet without manual admin verification. <span className="text-destructive font-bold">Use with caution.</span></p>
+                      <p className="text-xs text-muted-foreground max-w-md">When enabled, user payment requests are instantly credited without manual admin verification.</p>
                   </div>
                   <Switch 
                     id="auto-approve-toggle" 
@@ -366,51 +345,37 @@ export default function AdminStoreSettingsPage() {
         </Card>
 
         <Card className="mt-6">
-          <CardHeader><CardTitle className="flex items-center gap-2"><UsersIcon className="h-5 w-5" /> Recommendation Rewards</CardTitle><CardDescription>Configure extra discounts for users who refer friends quickly.</CardDescription></CardHeader>
-          <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-              <div className="space-y-2"><Label>Additional Discount (%)</Label><Input type="number" value={storeConfig.recommendationSettings?.additionalDiscount || 0} onChange={(e) => handleRecSettingsChange('additionalDiscount', Number(e.target.value))} /></div>
-              <div className="space-y-2"><Label>Required Referrals</Label><Input type="number" value={storeConfig.recommendationSettings?.requiredCount || 0} onChange={(e) => handleRecSettingsChange('requiredCount', Number(e.target.value))} /></div>
-              <div className="space-y-2"><Label>Time Window (Days)</Label><Input type="number" value={storeConfig.recommendationSettings?.windowDays || 0} onChange={(e) => handleRecSettingsChange('windowDays', Number(e.target.value))} /></div>
-          </CardContent>
-        </Card>
-        <Card className="mt-6">
-          <CardHeader><CardTitle className="flex items-center gap-2"><Zap /> ReferBolt System</CardTitle><CardDescription>Configure the ReferBolt subscription and access rules.</CardDescription></CardHeader>
+          <CardHeader><CardTitle><Zap className="w-5 h-5 mr-2 inline" /> ReferBolt System</CardTitle><CardDescription>Configure ReferBolt pricing and IBA bonuses.</CardDescription></CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <div className="space-y-2"><Label htmlFor="referboltCost">Base Price (₹)</Label><Input id="referboltCost" type="number" value={storeConfig.referboltSubscription.price} onChange={(e) => handleReferboltChange('price', e.target.value)} /></div>
-              <div className="space-y-2"><Label htmlFor="referbolt-gst">GST Rate (%)</Label><Input id="referbolt-gst" type="number" value={storeConfig.referboltSubscription.gstRate} onChange={(e) => handleReferboltChange('gstRate', e.target.value)} /></div>
-               <div className="space-y-2"><Label htmlFor="referbolt-hsn">HSN/SAC Code</Label><Input id="referbolt-hsn" type="text" value={storeConfig.referboltSubscription.hsnSacCode} onChange={(e) => handleReferboltChange('hsnSacCode', e.target.value)} /></div>
-               <div className="md:col-span-2 space-y-4">
+              <div className="space-y-2"><Label>Base Price (₹)</Label><Input type="number" value={storeConfig.referboltSubscription.price} onChange={(e) => handleReferboltChange('price', e.target.value)} /></div>
+              <div className="space-y-2"><Label>GST Rate (%)</Label><Input type="number" value={storeConfig.referboltSubscription.gstRate} onChange={(e) => handleReferboltChange('gstRate', e.target.value)} /></div>
+               <div className="space-y-2"><Label>HSN/SAC Code</Label><Input type="text" value={storeConfig.referboltSubscription.hsnSacCode} onChange={(e) => handleReferboltChange('hsnSacCode', e.target.value)} /></div>
+               <div className="md:col-span-2 space-y-4 pt-2">
                  <div className="flex items-center space-x-2 p-4 border rounded-lg">
                     <Switch id="free-access" checked={storeConfig.referboltSettings.freeAccessWithMockTest} onCheckedChange={(checked) => handleReferboltSettingsChange('freeAccessWithMockTest', checked)} />
-                    <Label htmlFor="free-access">Grant free ReferBolt access with any MockArena purchase (Global Legacy)</Label>
+                    <Label htmlFor="free-access">Grant free ReferBolt access with any MockArena purchase</Label>
                 </div>
                  <div className="space-y-2 p-4 border rounded-lg">
-                    <Label htmlFor="iba-bonus" className="flex items-center gap-2"><Percent/> IBA Bonus Commission (₹)</Label>
-                    <Input id="iba-bonus" type="number" value={storeConfig.referboltSettings.ibaBonusCommission} onChange={(e) => handleReferboltSettingsChange('ibaBonusCommission', Number(e.target.value) || 0)} />
+                    <Label className="flex items-center gap-2"><Percent size={14}/> IBA Bonus Commission (₹)</Label>
+                    <Input type="number" value={storeConfig.referboltSettings.ibaBonusCommission} onChange={(e) => handleReferboltSettingsChange('ibaBonusCommission', Number(e.target.value) || 0)} />
                 </div>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="mt-6">
-          <CardHeader><CardTitle>Referral System</CardTitle><CardDescription>Configure the bonus for simple referrals.</CardDescription></CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2"><Label htmlFor="referralBonus">Referral &amp; Welcome Bonus (₹)</Label><Input id="referralBonus" type="number" value={storeConfig.referralBonus} onChange={(e) => setStoreConfig(prev => prev ? ({...prev, referralBonus: Number(e.target.value)}) : null)} /></div>
-            </div>
-          </CardContent>
-        </Card>
         </>
         )}
+
         <Card className="mt-6">
-            <CardHeader><CardTitle className="flex items-center gap-2"><GraduationCap/> Academic Configurations</CardTitle><CardDescription>Manage the options available for education boards, standards, and subjects across the app.</CardDescription></CardHeader>
+            <CardHeader><CardTitle className="flex items-center gap-2"><GraduationCap/> Academic Configurations</CardTitle><CardDescription>Manage the options for education boards, standards, and subjects.</CardDescription></CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {renderDynamicList("Boards", "boards")}
                 {renderDynamicList("Standards", "standards")}
                 {renderDynamicList("Subjects", "subjects")}
             </CardContent>
         </Card>
+
         <div className="mt-8 flex justify-end">
           <Button type="submit" size="lg" className="px-12 font-black shadow-xl" disabled={isSaving}>
              {isSaving ? <Loader2 className="animate-spin mr-2"/> : <IndianRupee className="mr-2 h-5 w-5"/>} SAVE ALL CONFIGURATIONS

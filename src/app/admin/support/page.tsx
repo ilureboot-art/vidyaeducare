@@ -16,32 +16,20 @@ const adminFaqs = [
         answer: "Vision: To lead India in academic excellence and financial empowerment. Mission: To provide elite AI-powered coaching while fostering a sustainable earning ecosystem for all stakeholders."
     },
     {
-        question: "What are the primary operational Objectives?",
-        answer: "Improving exam performance via MockArena, providing instant conceptual clarity via AI tools, and managing a robust referral-based passive income engine for associates."
+        question: "How are MockArena prizes calculated?",
+        answer: "Prizes are automatically calculated based on accuracy and completion time. Participants must achieve a minimum 80% accuracy to be eligible for the top 5 rank prizes."
     },
     {
-        question: "How are MockArena prizes calculated and disbursed?",
-        answer: "Prizes are automatically calculated based on accuracy and completion time. The system enforces an 80% accuracy minimum for prize eligibility. Once a live session is finalized, the top 5 eligible participants receive their rewards via an atomic transaction to their wallet."
+        question: "How do I manage the IBA commission rate?",
+        answer: "Navigate to 'Store Settings'. You can adjust the 'Standard IBA Commission (%)' which applies to the base price of all subscription sales globally."
     },
     {
-        question: "How are Quiz Clash tournaments managed and rewarded?",
-        answer: "Tournament prize pools are formed by entry fees (for Pro Clashes). Ranks are calculated automatically, and the shared prize pool is disbursed to the top 4 performers once the tournament status is updated to 'completed'."
-    },
-    {
-        question: "How do I explain the IBA commission structure?",
-        answer: "IBAs earn up to 17.65% base commission on every MockArena subscription. These earnings are credited instantly to their wallet. They can also earn additional bonuses via the ReferBolt Success Cycles as their network expands."
-    },
-    {
-        question: "How do I manage ReferBolt cycles and bonuses?",
-        answer: "ReferBolt uses 'Success Cycles' of 3 referrals. Administrators can configure the ReferBolt base price and the cycle bonus values in the 'Store Settings' dashboard. The system tracks cycle completions automatically."
+        question: "How are Quiz Clash shared prize pools managed?",
+        answer: "For Pro Clashes, 80% of entry fees form the distributable prize pool, shared among the top 4 performers (40%, 30%, 20%, 10%). disbursement is automated upon tournament completion."
     },
     {
         question: "How do I approve or reject a transaction request?",
-        answer: "Navigate to the 'Transactions' page. Pending requests will have 'Approve' and 'Reject' buttons. Approving a deposit credits the user wallet; rejecting a withdrawal returns the held funds to the user wallet."
-    },
-    {
-        question: "How can I change subscription prices or referral bonuses?",
-        answer: "Navigate to 'Store Settings'. You can modify MockArena packages, adjust Referral Bonus amounts (Welcome Credits), and update ReferBolt subscription details globally."
+        answer: "Go to the 'Transactions' page. Pending requests have 'Approve' and 'Reject' actions. Approving a deposit updates the user wallet; rejecting a withdrawal returns funds to the user."
     }
 ];
 
@@ -53,11 +41,11 @@ export default function SupportPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><LifeBuoy /> Contact Support</CardTitle>
-            <CardDescription>Reach out to the Firebase Studio support team for assistance.</CardDescription>
+            <CardDescription>Reach out to the technical team for assistance.</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground">
-              If you encounter issues with the admin panel or need help with integrations, please contact our support team.
+            <p className="text-muted-foreground text-sm">
+              If you encounter issues with the admin panel or need help with infrastructure, please contact support.
             </p>
             <Button className="mt-4 w-full">
               <Mail className="mr-2" />
@@ -67,12 +55,12 @@ export default function SupportPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><BookOpen /> Documentation</CardTitle>
-            <CardDescription>Browse our comprehensive documentation for self-service.</CardDescription>
+            <CardTitle className="flex items-center gap-2"><BookOpen /> Operational Guides</CardTitle>
+            <CardDescription>System management documentation.</CardDescription>
           </CardHeader>
           <CardContent>
-             <p className="text-muted-foreground">
-              Find guides, tutorials, and API references to help you manage your application effectively.
+             <p className="text-muted-foreground text-sm">
+              Review tutorials on managing users, scheduling tests, and setting prices.
             </p>
              <Button variant="outline" className="mt-4 w-full">
                 View Documentation
@@ -82,7 +70,7 @@ export default function SupportPage() {
       </div>
       <Card>
         <CardHeader>
-            <CardTitle>Frequently Asked Questions</CardTitle>
+            <CardTitle>Administrative FAQs</CardTitle>
         </CardHeader>
         <CardContent>
              {adminFaqs.length > 0 ? (
@@ -90,7 +78,7 @@ export default function SupportPage() {
                     {adminFaqs.map((faq, index) => (
                         <AccordionItem value={`item-${index}`} key={index}>
                             <AccordionTrigger className="text-left font-bold">{faq.question}</AccordionTrigger>
-                            <AccordionContent className="text-muted-foreground">
+                            <AccordionContent className="text-muted-foreground leading-relaxed">
                                 {faq.answer}
                             </AccordionContent>
                         </AccordionItem>

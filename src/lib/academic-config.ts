@@ -1,4 +1,3 @@
-
 'use client';
 
 /**
@@ -23,11 +22,11 @@ export const defaultAcademicConfig: AcademicConfig = {
         "Kumarbharati",
         "Sugam bharati",
         "Sulabh Bharati",
+        "EVS",
         "Maths I",
         "Maths II",
         "Science I",
         "Science II",
-        "EVS",
         "English",
         "History",
         "General Knowledge"

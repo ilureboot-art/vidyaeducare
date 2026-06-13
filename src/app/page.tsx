@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -36,7 +37,6 @@ export default function HomePage() {
   const [trialStats, setTrialStatus] = useState({ tutor: 5, notes: 5 });
 
   useEffect(() => {
-    // Only access localStorage on the client after mount
     if (typeof window !== 'undefined') {
         const tutorCount = parseInt(localStorage.getItem('trial_ai_tutor_count') || '0');
         const notesCount = parseInt(localStorage.getItem('trial_ai_notes_count') || '0');
@@ -53,13 +53,16 @@ export default function HomePage() {
 
 I'm using this elite platform to prepare for success. Here's why you should join:
 
-🏆 MockArena & Quiz Clash: Win REAL cash prizes in live curriculum-aligned tests!
+🏆 MockArena & Quiz Clash: Win REAL cash prizes in live tests!
+- MockArena Rewards: Get paid for excellence! Top 5 scorers with 80%+ accuracy win real cash.
+- Quiz Clash: Compete in live high-stakes tournaments for massive shared prize pools.
+
 🤖 GuruAI: Get instant bilingual explanations for any doubt, 24/7.
 📝 QuickNotes: Transform heavy chapters into structured study notes instantly.
 
-💰 Earning Opportunities:
-🤝 IBA Program: Become an Associate and earn high lifetime commissions!
-⚡ ReferBolt: Unlock continuous passive income cycles from your network.
+💰 Diverse Earning Opportunities:
+🤝 IBA Program: Become an Independent Business Associate and earn high lifetime commissions!
+⚡ ReferBolt: Unlock continuous passive income as your network grows.
 🎁 Refer & Earn: Get an instant ₹5 wallet bonus for every friend you invite!
 
 Start your journey to excellence and earnings here: ${url}
@@ -160,8 +163,6 @@ Start your journey to excellence and earnings here: ${url}
             </div>
         </div>
 
-        {/* --- SEPARATE TRIAL MODULES --- */}
-        
         {/* Trial Module 1: GuruAI */}
         <section className="grid md:grid-cols-2 gap-12 items-center bg-accent/5 p-8 md:p-16 rounded-[4rem] border border-accent/10 relative overflow-hidden">
             <div className="absolute top-0 right-0 p-8 opacity-5 rotate-12"><BrainCircuit size={250}/></div>

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -157,23 +158,22 @@ function IBADashboardPageContent() {
     const shareUrl = `${window.location.origin}/signup?ref=${ibaReferralCode}`;
     const message = `🎓 Join Vidya EduCare as an Independent Business Associate! 🎓
 
-I'm earning lifelong commissions by helping students excel! As an IBA, you get:
+I'm earning lifetime commissions by empowering students! As an IBA, you unlock:
 
-💰 Massive Commissions: Earn up to 17.65% on every MockArena subscription!
-⚡ ReferBolt System: Continuous passive income from a multi-level network.
-🏆 MockArena Rewards: Help students win real cash prizes in live tests.
+💰 Massive Commissions: Earn up to 17.65% on every MockArena subscription.
+🏆 MockArena Rewards: Help students win real cash! Top 5 scorers (80%+ accuracy) get paid.
+🏁 Quiz Clash: Promote high-value live tournaments and earn from registrations.
+⚡ ReferBolt System: Continuous passive income from your multi-level network cycles.
+🎁 Refer & Earn: Win-Win! Every referral gets an instant ₹5 wallet bonus.
 
-✨ Why Vidya EduCare?
-- 🤖 GuruAI: 24/7 Bilingual pedagogical tutor.
-- 📝 QuickNotes: Textbook summaries at lightning speed.
-- 🏁 Quiz Clash: Exciting live tournaments with cash rewards.
+✨ Premium AI Suite Included:
+- 🤖 GuruAI: 24/7 Bilingual tutor for instant clarity.
+- 📝 QuickNotes: Fast textbook summaries.
 
-🔑 Start your zero-investment business today! Use my IBA Code for a special onboarding discount: ${ibaReferralCode}
+🔑 Start your zero-investment business today! Use my IBA Code for an onboarding discount: ${ibaReferralCode}
 🔗 Join the Network: ${shareUrl}
 
-Build your passive income empire while empowering students! 🚀
-
-#VidyaEduCare #IBA #PassiveIncome #BusinessOpportunity #MockArena #GuruAI`;
+Let's build success together! 🚀💸`;
     
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');

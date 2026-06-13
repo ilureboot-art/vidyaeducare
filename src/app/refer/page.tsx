@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useToast } from "@/hooks/use-toast";
@@ -74,20 +75,24 @@ function ReferAndEarnPageContent() {
     const url = `${window.location.origin}/signup?ref=${referralCode}`;
     const bonusAmount = referralBonus;
     
-    const message = `🎁 Win-Win Bonus on Vidya EduCare! 🎁
+    const message = `🎁 Claim your Win-Win Bonus on Vidya EduCare! 🎁
 
-I'm preparing for my exams with Vidya EduCare and it's life-changing! Sign up using my link and we BOTH get an instant ₹${bonusAmount} wallet bonus!
+I'm preparing for my exams and winning rewards with Vidya EduCare! Join me using my link and we BOTH get an instant ₹${bonusAmount} wallet bonus!
 
-🚀 Start your journey to Excellence:
-🏆 MockArena: Win REAL cash prizes in live tests!
-🤖 GuruAI: Your 24/7 personal bilingual tutor.
-📝 QuickNotes: Get textbook summaries instantly.
-🏁 Quiz Clash: Compete in tournaments for high-value rewards!
+🚀 Excellence Tools for Students:
+🏆 MockArena: Get paid for scoring! Top 5 scorers with 80%+ accuracy win cash prizes.
+🏁 Quiz Clash: Compete in live tournaments for high-value rewards and shared prize pools.
+🤖 GuruAI: Your 24/7 personal bilingual tutor for instant clarity.
+📝 QuickNotes: Transform textbook chapters into structured summaries instantly.
+
+🤝 Passive Income Opportunities:
+⚡ ReferBolt System: Earn continuous income cycles from your network.
+🤝 IBA Program: Start your own zero-investment business earning commissions.
 
 🔑 My Referral Code: ${referralCode}
 🔗 Join & Get Bonus: ${url}
 
-Let's learn and earn together! 🎓✨`;
+Let's succeed and earn together! 🎓✨`;
 
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
@@ -153,7 +158,7 @@ Let's learn and earn together! 🎓✨`;
                                 <p className="text-5xl font-black text-accent tracking-tighter">₹{referralBonus}</p>
                                 <p className="text-[10px] font-black uppercase text-muted-foreground mt-2 tracking-widest">Instant Welcome Bonus</p>
                             </CardContent>
-                        </div>
+                        </Card>
                     </div>
 
                     <div className="p-8 bg-muted/30 rounded-[2rem] border-2 border-dashed text-center space-y-4">

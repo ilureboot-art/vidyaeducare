@@ -67,7 +67,7 @@ export const defaultStoreConfig: StoreConfig = {
     mockTestPackages: [
         { 
             name: "1 Year Subscription", 
-            price: 3000, 
+            price: 7200, 
             months: 12, 
             bestValue: true, 
             gstRate: 18, 
@@ -79,7 +79,7 @@ export const defaultStoreConfig: StoreConfig = {
         },
         { 
             name: "6 Months Subscription", 
-            price: 1500, 
+            price: 3600, 
             months: 6, 
             bestValue: false, 
             gstRate: 18, 

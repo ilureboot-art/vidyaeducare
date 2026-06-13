@@ -49,17 +49,22 @@ export default function HomePage() {
 
   const handleShare = async () => {
     const url = window.location.origin;
-    const message = `🚀 Ace your academic goals with Vidya EduCare! 📚
+    const message = `🚀 Ace your academic goals & Earn with Vidya EduCare! 📚
 
-I'm using this elite platform to prepare for success. Check it out:
+I'm using this elite platform to prepare for success. Here's why you should join:
 
-🏆 MockArena: Win cash prizes in live curriculum-aligned tests.
-🤖 GuruAI: Get instant bilingual explanations for any doubt.
-📝 QuickNotes: Transform chapters into structured study notes.
+🏆 MockArena & Quiz Clash: Win REAL cash prizes in live curriculum-aligned tests!
+🤖 GuruAI: Get instant bilingual explanations for any doubt, 24/7.
+📝 QuickNotes: Transform heavy chapters into structured study notes instantly.
 
-Start your journey to excellence here: ${url}
+💰 Earning Opportunities:
+🤝 IBA Program: Become an Associate and earn high lifetime commissions!
+⚡ ReferBolt: Unlock continuous passive income cycles from your network.
+🎁 Refer & Earn: Get an instant ₹5 wallet bonus for every friend you invite!
 
-#VidyaEduCare #MockArena #GuruAI #QuickNotes #AcademicExcellence`;
+Start your journey to excellence and earnings here: ${url}
+
+#VidyaEduCare #MockArena #GuruAI #IBA #ReferBolt #QuizClash #AcademicExcellence`;
     
     try {
         if (navigator.share) {
@@ -293,7 +298,7 @@ Start your journey to excellence here: ${url}
               </h2>
               <div className="pt-6 border-t-4 border-primary/5">
                 <p className="text-3xl font-black text-primary tracking-tight uppercase">Adv. Sanjay Vidya Vijay Gurav</p>
-                <p className="text-muted-foreground text-sm font-black uppercase tracking-[0.3em] mt-1">Founder & Owner, Vidya EduCare</p>
+                <p className="text-muted-foreground text-sm font-black uppercase tracking-[0.3em] mt-1">Owner, Vidya EduCare</p>
               </div>
             </div>
           </div>

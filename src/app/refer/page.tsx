@@ -2,7 +2,7 @@
 
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Share2, IndianRupee, Gift, Loader2, Sparkles, CheckCircle2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { doc, getDoc, type Firestore } from "firebase/firestore";
@@ -74,19 +74,20 @@ function ReferAndEarnPageContent() {
     const url = `${window.location.origin}/signup?ref=${referralCode}`;
     const bonusAmount = referralBonus;
     
-    const message = `🎁 Let's win together on Vidya EduCare! 🎁
+    const message = `🎁 Win-Win Bonus on Vidya EduCare! 🎁
 
-I'm using this elite platform for my exam preparation, and it's amazing. Sign up using my referral link and we BOTH get an instant ₹${bonusAmount} wallet bonus!
+I'm preparing for my exams with Vidya EduCare and it's life-changing! Sign up using my link and we BOTH get an instant ₹${bonusAmount} wallet bonus!
 
-🚀 Elite Features:
-- 🏆 MockArena: High-impact curriculum practice.
-- 🤖 GuruAI: 24/7 Bilingual concept tutor.
-- 📝 QuickNotes: Instant textbook summaries.
+🚀 Start your journey to Excellence:
+🏆 MockArena: Win REAL cash prizes in live tests!
+🤖 GuruAI: Your 24/7 personal bilingual tutor.
+📝 QuickNotes: Get textbook summaries instantly.
+🏁 Quiz Clash: Compete in tournaments for high-value rewards!
 
 🔑 My Referral Code: ${referralCode}
-🔗 Join Here: ${url}
+🔗 Join & Get Bonus: ${url}
 
-Start your journey to academic success today! 🎓`;
+Let's learn and earn together! 🎓✨`;
 
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
@@ -152,7 +153,7 @@ Start your journey to academic success today! 🎓`;
                                 <p className="text-5xl font-black text-accent tracking-tighter">₹{referralBonus}</p>
                                 <p className="text-[10px] font-black uppercase text-muted-foreground mt-2 tracking-widest">Instant Welcome Bonus</p>
                             </CardContent>
-                        </Card>
+                        </div>
                     </div>
 
                     <div className="p-8 bg-muted/30 rounded-[2rem] border-2 border-dashed text-center space-y-4">

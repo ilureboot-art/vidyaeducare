@@ -155,21 +155,25 @@ function IBADashboardPageContent() {
   const handleShare = async () => {
     if (!ibaReferralCode) return;
     const shareUrl = `${window.location.origin}/signup?ref=${ibaReferralCode}`;
-    const message = `🎓 Transform your education with Vidya EduCare! 🎓
+    const message = `🎓 Join Vidya EduCare as an Independent Business Associate! 🎓
 
-I'm an Independent Business Associate with Vidya EduCare, and I'm sharing my exclusive referral code to help you get a special discount on premium MockArena packages.
+I'm earning lifelong commissions by helping students excel! As an IBA, you get:
+
+💰 Massive Commissions: Earn up to 17.65% on every MockArena subscription!
+⚡ ReferBolt System: Continuous passive income from a multi-level network.
+🏆 MockArena Rewards: Help students win real cash prizes in live tests.
 
 ✨ Why Vidya EduCare?
-- 🏆 MockArena: Win cash prizes in live curriculum tests.
-- 🤖 GuruAI: Your personal 24/7 bilingual tutor.
-- 📝 QuickNotes: Transform textbooks into structured summaries.
+- 🤖 GuruAI: 24/7 Bilingual pedagogical tutor.
+- 📝 QuickNotes: Textbook summaries at lightning speed.
+- 🏁 Quiz Clash: Exciting live tournaments with cash rewards.
 
-🔑 Use my IBA Code for a special discount: ${ibaReferralCode}
-🔗 Sign Up Here: ${shareUrl}
+🔑 Start your zero-investment business today! Use my IBA Code for a special onboarding discount: ${ibaReferralCode}
+🔗 Join the Network: ${shareUrl}
 
-Join the national community of high-achievers today! 🚀
+Build your passive income empire while empowering students! 🚀
 
-#VidyaEduCare #IBA #MockArena #GuruAI #EducationSuccess #ReferralDiscount`;
+#VidyaEduCare #IBA #PassiveIncome #BusinessOpportunity #MockArena #GuruAI`;
     
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
@@ -315,7 +319,7 @@ Join the national community of high-achievers today! 🚀
                         </TableHeader>
                         <TableBody>
                             {referralData!.recentReferrals.length > 0 ? referralData!.recentReferrals.map((ref) => (
-                                <TableRow key={ref.id} className="even:bg-muted/40 transition-colors">
+                                <TableRow key={ref.id} className="even:bg-muted/40 transition-colors hover:bg-muted/50 transition-colors">
                                     <TableCell className="font-medium text-sm">{ref.name}</TableCell>
                                     <TableCell className="text-xs">{new Date(ref.date).toLocaleDateString()}</TableCell>
                                     <TableCell className="text-right text-green-600 font-bold text-sm">+ ₹{formatCurrency(ref.commission)}</TableCell>

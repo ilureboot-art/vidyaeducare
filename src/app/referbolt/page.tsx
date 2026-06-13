@@ -81,21 +81,25 @@ function ReferBoltPageContent() {
     const referralCode = data.referralCode;
     const shareUrl = `${window.location.origin}/signup?ref=${referralCode}`;
 
-    const message = `⚡ Unlock Continuous Earnings with Vidya ReferBolt! ⚡
+    const message = `⚡ Build Passive Income with Vidya ReferBolt! ⚡
 
-I've started my earning cycle on Vidya EduCare! This premium system lets you earn commissions not just from your friends, but from their friends too! 💸
+I've activated my ReferBolt earning cycle on Vidya EduCare! This is not just a referral system; it's a multi-level passive income engine.
 
-✨ Why Subscribe to ReferBolt?
-✅ Earn from Direct & Indirect Referrals.
-✅ Complete a cycle with just 3 people.
-✅ Build a steady stream of passive income.
+💰 Continuous Earnings:
+🔄 Cycle Bonus: Complete a cycle with just 3 people for massive credits!
+📈 Direct & Indirect: Earn from your friends AND their referrals!
+🤝 Automatic Renewal: Keep earning cycles going infinitely.
 
-🔑 Use my code to join my network: ${referralCode}
-🔗 Sign Up & Subscribe: ${shareUrl}
+🚀 Academic Power:
+🏆 MockArena & Quiz Clash: Students win REAL cash prizes for high scores.
+🤖 GuruAI & QuickNotes: Elite AI study tools for exam success.
 
-Start your earning journey to success today! 🚀
+🔑 Use my network code to join the success cycle: ${referralCode}
+🔗 Sign Up & Start Earning: ${shareUrl}
 
-#VidyaEduCare #ReferBolt #PassiveIncome #BusinessOpportunity #SuccessCycle`;
+Build your learning community and your wallet today! 💸🚀
+
+#VidyaEduCare #ReferBolt #PassiveIncome #MockArena #QuizClash #SuccessCycle`;
 
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
@@ -272,7 +276,7 @@ Start your earning journey to success today! 🚀
                         </TableHeader>
                         <TableBody>
                             {data.referralHistory && data.referralHistory.length > 0 ? data.referralHistory.map((ref: any) => (
-                                <TableRow key={ref.id} className="hover:bg-muted/30 transition-colors even:bg-muted/40">
+                                <TableRow key={ref.id} className="hover:bg-muted/30 transition-colors even:bg-muted/40 hover:bg-muted/50 transition-colors">
                                     <TableCell className="font-bold text-sm">{ref.name}</TableCell>
                                     <TableCell className="text-xs text-muted-foreground">{new Date(ref.date).toLocaleDateString()}</TableCell>
                                     <TableCell className="text-right font-black text-green-600">+ ₹{ref.commission}</TableCell>

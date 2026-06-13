@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -27,13 +28,13 @@ const benefits = [
 
 function ReferBoltPageContent() {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, isResolved } = useAuth();
   const db = useDb();
   
   const [data, setData] = useState<DocumentData | null | { isSubscribed: boolean }>(null);
   
   useEffect(() => {
-    if (user && db) {
+    if (user && db && isResolved) {
         const referboltDocRef = doc(db, "referbolt", user.uid);
         const unsub = onSnapshot(referboltDocRef, (docSnap) => {
             if (docSnap.exists()) {
@@ -53,7 +54,7 @@ function ReferBoltPageContent() {
         });
         return () => unsub();
     }
-  }, [user, db]);
+  }, [user, db, isResolved]);
 
   const handleAutoRenewToggle = async (checked: boolean) => {
       if (!user || !db || !data || !('isSubscribed' in data) || !data.isSubscribed) return;

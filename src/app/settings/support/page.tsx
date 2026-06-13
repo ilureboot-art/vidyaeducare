@@ -18,6 +18,10 @@ const userFaqs = [
         answer: "You can add funds by going to the Wallet page, clicking 'Add Funds', and submitting a request after paying to the admin's UPI. To withdraw, click 'Withdraw', enter the amount (min. ₹200) and your payment details. All requests are processed by an admin."
     },
     {
+        question: "How do the MockArena rewards and leaderboards work?",
+        answer: "MockArena rewards are designed to recognize academic excellence. To qualify for cash prizes, a student must participate in a live session and achieve at least 80% accuracy. The top 5 scorers who meet this accuracy criteria win cash prizes (e.g., ₹250 for Rank #1) credited instantly to the parent's wallet once results are finalized."
+    },
+    {
         question: "How do I work as an Independent Business Associate (IBA)?",
         answer: "Working as an IBA is a zero-investment opportunity. You receive a unique Referral Code in your IBA Dashboard. Share this code with students and parents via WhatsApp or social media. When they use your code to subscribe to MockArena packages, you earn instant commissions credited to your wallet."
     },

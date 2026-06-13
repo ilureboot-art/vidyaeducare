@@ -13,6 +13,10 @@ import {
 
 const adminFaqs = [
     {
+        question: "How are MockArena prizes calculated and disbursed?",
+        answer: "Prizes are automatically calculated based on accuracy and completion time. The system enforces an 80% accuracy minimum for prize eligibility. Once a live session is marked as completed, the top 5 eligible participants receive their rewards via an atomic transaction that credits their wallet and updates the student's earnings record."
+    },
+    {
         question: "How do I explain the IBA commission structure to potential associates?",
         answer: "IBAs earn up to 17.65% base commission on the total value of MockArena subscriptions purchased with their code. These earnings are credited instantly to their wallet as soon as the transaction is completed. You can view all these commissions in the 'Transactions' dashboard."
     },

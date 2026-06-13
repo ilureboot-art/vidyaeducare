@@ -72,6 +72,7 @@ function ProfilePageContent() {
                     } satisfies SecurityRuleContext);
                     errorEmitter.emit('permission-error', permissionError);
                 }
+                // Ensure we stop spinning even if permission is denied or doc doesn't exist
                 setIsLoading(false);
             });
 

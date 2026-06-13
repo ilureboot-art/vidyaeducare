@@ -97,7 +97,7 @@ export default function SetupAdminPage() {
             } else throw e;
         }
         
-        // Immediate sync force
+        // Immediate sync force to ensure token has admin claims if set
         await auth.currentUser?.getIdToken(true);
         setAuthStatus('success');
         toast({ title: "Identity Verified" });
@@ -118,7 +118,7 @@ export default function SetupAdminPage() {
     logProgress(`MAP: Requesting authority sync...`);
     
     try {
-        // Force critical token refresh before mapping
+        // Critical: Refresh token to ensure Master Admin status is recognized by security rules
         await auth.currentUser?.getIdToken(true);
 
         const batch = writeBatch(db);
@@ -266,7 +266,7 @@ export default function SetupAdminPage() {
           )}
         </CardContent>
         <CardFooter className="bg-primary/5 py-4 border-t justify-center gap-2">
-            <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground italic text-center">Vidya EduCare Deployment Salt: V22_RESILIENT_SYNC</p>
+            <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground italic text-center">Vidya EduCare Deployment Salt: V23_RESILIENT_SYNC</p>
         </CardFooter>
       </Card>
     </div>

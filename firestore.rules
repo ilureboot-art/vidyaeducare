@@ -15,10 +15,10 @@ service cloud.firestore {
     }
 
     function isMaster() {
-      // Hardened master identity resolution. Uses matches for case-insensitive resilience.
+      // Direct comparison is more resilient than matches/regex during initial handshake
       return signedIn() && (
-        request.auth.token.email.matches('(?i)admin@vidyaeducare.com') || 
-        request.auth.token.email.matches('(?i)headadmin@vidyaeducare.com')
+        request.auth.token.email == 'admin@vidyaeducare.com' || 
+        request.auth.token.email == 'headadmin@vidyaeducare.com'
       );
     }
 
@@ -26,8 +26,7 @@ service cloud.firestore {
       if (!signedIn()) return false;
       if (isMaster()) return true;
       
-      let adminPath = /databases/$(database)/documents/admins/$(request.auth.uid);
-      return exists(adminPath);
+      return exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
     // --- SUPREME OVERRIDE ---

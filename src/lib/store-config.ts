@@ -113,5 +113,5 @@ export const defaultStoreConfig: StoreConfig = {
     },
 
     autoApproveDeposits: false,
-    ibaCommissionRate: 10
+    ibaCommissionRate: 10 // Fixed at 10% as requested
 };

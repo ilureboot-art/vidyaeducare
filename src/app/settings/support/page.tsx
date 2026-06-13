@@ -1,8 +1,9 @@
+
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { LifeBuoy, BookOpen, Mail, ArrowLeft, Target, Award, Rocket, Sparkles } from "lucide-react";
+import { LifeBuoy, BookOpen, Mail, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import {
   Accordion,
@@ -14,43 +15,27 @@ import {
 const userFaqs = [
     {
         question: "What is the Vision of Vidya EduCare?",
-        answer: "Our vision is to become India's most trusted platform for academic excellence and financial empowerment, bridging the gap between student effort and real-world reward through innovation."
+        answer: "Our vision is to become India's most trusted platform for academic excellence and financial empowerment, bridging the gap between student effort and real-world reward."
     },
     {
         question: "What is the Mission of Vidya EduCare?",
-        answer: "To democratize elite academic coaching using AI-powered bilingual tools while creating a sustainable, zero-investment earning ecosystem for students, parents, and associates across the country."
-    },
-    {
-        question: "What are the core Objectives of the platform?",
-        answer: "1. Academic Performance: To improve student scores through curriculum-aligned MockArena tests. 2. Conceptual Clarity: To provide 24/7 bilingual doubt resolution via GuruAI. 3. Financial Empowerment: To provide a professional passive income engine through ReferBolt and the IBA program."
-    },
-    {
-        question: "What are the primary Benefits of joining Vidya EduCare?",
-        answer: "Students benefit from personalized AI learning and cash rewards for excellence. Parents gain a productive environment for their children. Associates (IBAs) unlock a professional business opportunity with lifetime commissions and network growth cycles."
+        answer: "To democratize elite academic coaching using AI-powered bilingual tools while creating a sustainable, zero-investment earning ecosystem for students and associates."
     },
     {
         question: "How do I add or withdraw money from my wallet?",
-        answer: "You can add funds by going to the Wallet page, clicking 'Add Funds', and submitting a request after paying to the admin's UPI. To withdraw, click 'Withdraw', enter the amount (min. ₹200) and your payment details. All requests are processed by an admin."
+        answer: "You can add funds by paying to the admin's UPI/QR and submitting the Transaction ID. Withdrawals (min ₹200) are requested via the wallet page and processed by administrators."
     },
     {
-        question: "How do the MockArena rewards and leaderboards work?",
-        answer: "MockArena rewards recognize academic excellence. To qualify for cash prizes, a student must participate in a live session and achieve at least 80% accuracy. The top 5 scorers who meet this accuracy criteria win cash prizes credited instantly to the parent's wallet."
+        question: "How do the MockArena rewards work?",
+        answer: "Achieve at least 80% accuracy in a live session and rank in the top 5 to win instant cash prizes credited to your parent wallet."
     },
     {
-        question: "What is Quiz Clash and how do the rewards work?",
-        answer: "Quiz Clash features high-stakes live tournaments. Pro Clashes require an entry fee which forms a prize pool. This pool is distributed among the top 4 performers based on score and speed. Prizes are credited automatically to your wallet upon tournament completion."
+        question: "What is the IBA program?",
+        answer: "The Independent Business Associate (IBA) program is a zero-investment business. Share your code and earn up to 10% (adjustable by admin) commission on every subscription sale."
     },
     {
-        question: "How do I work as an Independent Business Associate (IBA)?",
-        answer: "Working as an IBA is a zero-investment opportunity. You receive a unique Referral Code in your IBA Dashboard. Share this code with students and parents. When they subscribe to MockArena packages, you earn instant commissions (up to 17.65%) credited to your wallet."
-    },
-    {
-        question: "What is ReferBolt and how do the earnings work?",
-        answer: "ReferBolt is a premium success engine. Once activated, you earn from a multi-level network using 'Success Cycles'. Every 3 successful referrals (including those made by people you referred) completes a cycle and grants a substantial bonus. Cycles repeat automatically for continuous income."
-    },
-    {
-        question: "How do I add a student to my profile?",
-        answer: "To add a student, purchase a subscription from the Store to receive a Product Activation Code. Go to the 'My Students' page, click 'Add New Student', enter the code, and then fill in the student's details."
+        question: "How do I earn from ReferBolt?",
+        answer: "ReferBolt uses 'Success Cycles' of 3 referrals. Every cycle completed by you or your network grants a substantial bonus, repeating automatically for passive income."
     }
 ];
 

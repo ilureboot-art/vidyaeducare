@@ -1,21 +1,21 @@
 rules_version = '2';
 
 /**
- * Vidya EduCare - Production Infrastructure Rules
+ * Vidya EduCare - Hardened Production Infrastructure Rules
  * Target Instance: vidyaeducaredatabase
- * Priority: Immediate Master Authorization & Config Accessibility
+ * Priority: Absolute Master Admin Bypass & Resilient Auth Handshake
  */
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // --- Helper Functions ---
+    // --- Core Identity Functions ---
 
     function signedIn() {
       return request.auth != null;
     }
 
     function isMaster() {
-      // Direct comparison is more resilient than matches/regex during initial handshake
+      // Direct string comparison is the most resilient check during initial cold-starts
       return signedIn() && (
         request.auth.token.email == 'admin@vidyaeducare.com' || 
         request.auth.token.email == 'headadmin@vidyaeducare.com'
@@ -25,34 +25,28 @@ service cloud.firestore {
     function isAdmin() {
       if (!signedIn()) return false;
       if (isMaster()) return true;
-      
       return exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
-    // --- SUPREME OVERRIDE ---
-    // Master Admin bypasses all checks to ensure infrastructure can always be mapped.
+    // --- SUPREME OVERRIDE (PRIORITY 1) ---
+    // Master Admin bypasses all checks to ensure infrastructure can always be mapped/synced.
     match /{allPaths=**} {
       allow read, write: if isMaster();
     }
 
-    // --- GLOBAL CONFIGURATIONS (Read Optimized) ---
+    // --- GLOBAL CONFIGURATIONS ---
     match /configs/{document=**} {
       allow read: if true; 
       allow write: if isAdmin();
     }
 
-    // --- ROLE RESOLUTION ---
-    match /admins/{uid} {
-      allow read: if signedIn();
-      allow write: if isMaster() || (signedIn() && request.auth.uid == uid);
-    }
-
     // --- USER PRIVATE DATA ---
 
     match /users/{uid} {
+      // Users can read their own profile; admins can read any profile
       allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
-      allow create: if signedIn() && (isMaster() || request.auth.uid == uid); 
-      allow update, delete: if signedIn() && (isMaster() || request.auth.uid == uid || isAdmin());
+      allow create: if signedIn() && (request.auth.uid == uid || isMaster()); 
+      allow update, delete: if signedIn() && (request.auth.uid == uid || isAdmin());
     }
 
     function isOwner(uid) {
@@ -67,6 +61,11 @@ service cloud.firestore {
 
     match /activationCodes/{uid} {
       allow read, write: if isOwner(uid) || isAdmin();
+    }
+
+    match /admins/{uid} {
+      allow read: if signedIn();
+      allow write: if isMaster();
     }
 
     match /chats/{uid} {

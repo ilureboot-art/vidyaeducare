@@ -97,7 +97,7 @@ export default function SetupAdminPage() {
             } else throw e;
         }
         
-        // Forced token refresh ensures email claim is available for security rules immediately
+        // Force immediate claim sync
         await auth.currentUser?.getIdToken(true);
         setAuthStatus('success');
         toast({ title: "Identity Verified" });
@@ -115,12 +115,13 @@ export default function SetupAdminPage() {
     const email = auth.currentUser.email;
 
     setMapStatus('loading');
-    logProgress(`MAP: Initiating Infrastructure Sync...`);
+    logProgress(`MAP: Requesting authority sync...`);
     
-    // Internal helper for atomic batch write
-    const commitInfrastructure = async () => {
-        // Ensure the absolute latest token is used for the master bypass
+    try {
+        // STEP 1: Aggressive Authority Handshake
+        // We force a token refresh and add a tiny wait for Rule Propagation
         await auth.currentUser?.getIdToken(true);
+        await new Promise(r => setTimeout(r, 500)); 
 
         const batch = writeBatch(db);
         const userDocRef = doc(db, "users", uid);
@@ -162,35 +163,19 @@ export default function SetupAdminPage() {
         }
 
         await batch.commit();
-    };
-
-    try {
-        await commitInfrastructure();
         logProgress(`SUCCESS: Infrastructure Mapped.`);
         setMapStatus('success');
         runSystemAudit();
         toast({ title: "Setup Complete" });
     } catch (serverError: any) {
-        console.warn("Retrying sync due to potential claim latency...");
-        
-        // Final fallback: Forced token refresh and immediate retry
-        try {
-            await auth.currentUser?.getIdToken(true);
-            await commitInfrastructure();
-            logProgress(`SUCCESS: Infrastructure Mapped (Final Sync).`);
-            setMapStatus('success');
-            runSystemAudit();
-            toast({ title: "Setup Complete" });
-        } catch (retryError: any) {
-            console.error("Infrastructure mapping failure:", retryError);
-            const permissionError = new FirestorePermissionError({
-                path: 'multi-path-setup-batch',
-                operation: 'write',
-            } satisfies SecurityRuleContext);
-            errorEmitter.emit('permission-error', permissionError);
-            setMapStatus('error');
-            logProgress(`FAILED: Core Authority Rejected.`);
-        }
+        console.error("Infrastructure mapping failure:", serverError);
+        const permissionError = new FirestorePermissionError({
+            path: 'multi-path-setup-batch',
+            operation: 'write',
+        } satisfies SecurityRuleContext);
+        errorEmitter.emit('permission-error', permissionError);
+        setMapStatus('error');
+        logProgress(`FAILED: Core Authority Rejected.`);
     }
   };
 

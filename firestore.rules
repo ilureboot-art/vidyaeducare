@@ -3,7 +3,7 @@ rules_version = '2';
 /**
  * Vidya EduCare - Hardened Production Infrastructure Rules
  * Target Instance: vidyaeducaredatabase
- * Priority: High-Speed Authorization & Absolute Master Bypass
+ * Priority: Absolute Master Bypass & Fail-Safe Role Resolution
  */
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -15,11 +15,12 @@ service cloud.firestore {
     }
 
     function isMaster() {
-      // Direct, resilient comparison for speed during initialization
-      // This bypasses the need for an existing 'admins' document for the head account
+      // Use the 'get' helper for the token to prevent crashes if the email field is missing
+      // Direct email comparison is the fastest and most reliable method during initial setup
+      let authEmail = request.auth.token.get('email', '').lower();
       return signedIn() && (
-        request.auth.token.email == 'admin@vidyaeducare.com' || 
-        request.auth.token.email == 'headadmin@vidyaeducare.com'
+        authEmail == 'admin@vidyaeducare.com' || 
+        authEmail == 'headadmin@vidyaeducare.com'
       );
     }
 
@@ -33,7 +34,7 @@ service cloud.firestore {
 
     // --- SUPREME OVERRIDE ---
     // Master Admin has full access to the entire database hierarchy.
-    // This is placed at the top for maximum authority resolution speed.
+    // This is the primary fail-safe for infrastructure mapping.
     match /{allPaths=**} {
       allow read, write: if isMaster();
     }
@@ -49,7 +50,7 @@ service cloud.firestore {
     match /admins/{uid} {
       allow read: if signedIn();
       // Allow the master account or the user themselves (if email matches) to initialize the record
-      allow write: if isMaster() || (signedIn() && request.auth.uid == uid && request.auth.token.email == 'admin@vidyaeducare.com');
+      allow write: if isMaster() || (signedIn() && request.auth.uid == uid && request.auth.token.get('email', '').lower() == 'admin@vidyaeducare.com');
     }
 
     match /admins/{document=**} {

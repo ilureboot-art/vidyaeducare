@@ -627,7 +627,7 @@ const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
             </TableHeader>
             <TableBody>
               {filteredTestSets.length > 0 ? filteredTestSets.map((ts) => (
-                <TableRow key={ts.id} className="even:bg-muted/40 transition-colors">
+                <TableRow key={ts.id} className="even:bg-muted/40 transition-colors group">
                   <TableCell className="font-medium">{ts.name}</TableCell>
                   <TableCell>{ts.subject}</TableCell>
                   <TableCell>{ts.standard}</TableCell>

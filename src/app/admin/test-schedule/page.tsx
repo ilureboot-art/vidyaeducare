@@ -220,7 +220,7 @@ export default function TestSchedulePage() {
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-3xl font-bold flex items-center gap-2">
-                        <CalendarIcon /> Mock Test Scheduler
+                        <CalendarIcon /> MockArena Scheduler
                     </h1>
                     <p className="text-sm text-muted-foreground">Manage and assign dates to your practice test sets.</p>
                 </div>
@@ -243,7 +243,7 @@ export default function TestSchedulePage() {
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Schedule a New Mock Test</CardTitle>
+                    <CardTitle>Schedule a New MockArena Session</CardTitle>
                     <CardDescription>
                         Select a pre-defined test set and assign it a date and time on the calendar.
                     </CardDescription>
@@ -310,7 +310,7 @@ export default function TestSchedulePage() {
                 <CardHeader>
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div>
-                            <CardTitle>Upcoming & Past Tests</CardTitle>
+                            <CardTitle>Upcoming & Past Sessions</CardTitle>
                             <CardDescription>Filter and search through the academic calendar.</CardDescription>
                         </div>
                         <Button variant="ghost" size="sm" onClick={resetFilters} className="text-muted-foreground">
@@ -372,7 +372,7 @@ export default function TestSchedulePage() {
                         </TableHeader>
                         <TableBody>
                             {filteredSchedules.length > 0 ? filteredSchedules.map(test => (
-                                <TableRow key={test.id} className="even:bg-muted/40 transition-colors">
+                                <TableRow key={test.id} className="even:bg-muted/40 transition-colors group">
                                     <TableCell>{format(new Date(test.dateTime), "PPP p")}</TableCell>
                                     <TableCell className="font-medium">{test.testSetName}</TableCell>
                                     <TableCell className="text-sm text-muted-foreground">{`${test.board} / ${test.standard} / ${test.subject}`}</TableCell>

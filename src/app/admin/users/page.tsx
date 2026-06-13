@@ -81,7 +81,7 @@ export default function UserManagementPage() {
         setUsers(userList);
     } catch (error) {
         console.error("Fetch Users Error:", error);
-        setUsers([]); // Ensure the spinner stops on error
+        setUsers([]); 
     } finally {
         setIsRefreshing(false);
     }
@@ -302,11 +302,11 @@ export default function UserManagementPage() {
                                               </Avatar>
                                               <div>
                                                   <p className="font-bold leading-none">{s.name}</p>
-                                                  <p className="text-[10px] font-bold text-muted-foreground uppercase mt-1">{s.academic.standard} • {s.academic.board} Board</p>
+                                                  <p className="text-[10px] font-bold text-muted-foreground uppercase mt-1">{s.academic.standard} Standard • {s.academic.board} Board</p>
                                               </div>
                                           </div>
                                           <div className="text-right">
-                                              <p className="font-black text-primary text-sm">{s.stats?.testsTaken || 0} Tests</p>
+                                              <p className="font-black text-primary text-sm">{s.stats?.testsTaken || 0} Sessions</p>
                                           </div>
                                       </div>
                                   ))}

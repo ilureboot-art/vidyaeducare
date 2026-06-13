@@ -55,7 +55,6 @@ export default function AdminManagementPage() {
   const { toast } = useToast();
   
   const fetchAdmins = useCallback(() => {
-    // If not resolved or not head admin, stop immediately
     if (!isResolved || !db || !user || !isHeadAdmin) {
         if (isResolved && !isHeadAdmin) {
           setAllAdmins([]);
@@ -311,7 +310,7 @@ export default function AdminManagementPage() {
             </TableHeader>
             <TableBody>
               {filteredAdmins.map((admin) => (
-                <TableRow key={admin.id} className="even:bg-muted/40 transition-colors">
+                <TableRow key={admin.id} className="even:bg-muted/40 transition-colors group">
                   <TableCell className="font-medium">{admin.name}</TableCell>
                    <TableCell className="text-xs font-mono">{admin.email}</TableCell>
                    <TableCell><Badge variant={admin.role === "Head Admin" ? "default" : "secondary"}>{admin.role}</Badge></TableCell>

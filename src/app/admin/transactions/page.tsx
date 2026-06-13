@@ -93,13 +93,11 @@ export default function TransactionsPage() {
         
         const txs = querySnapshot.docs.map(doc => {
             const data = doc.data();
-            // Handle both Firestore Timestamps and ISO strings gracefully
             let dateStr;
             try {
                 if (data.date instanceof Timestamp) {
                     dateStr = data.date.toDate().toISOString();
                 } else if (data.date && typeof data.date === 'object' && 'seconds' in data.date) {
-                    // Fallback for plain objects that look like Timestamps
                     dateStr = new Date(data.date.seconds * 1000).toISOString();
                 } else {
                     dateStr = data.date || new Date().toISOString();
@@ -113,7 +111,7 @@ export default function TransactionsPage() {
         setTransactions(txs);
     } catch (e) {
         console.error("Fetch Transactions Error:", e);
-        setTransactions([]); // Resolve to empty state to stop spinner
+        setTransactions([]); 
     } finally {
         if (manual) setIsRefreshing(false);
     }
@@ -411,7 +409,7 @@ export default function TransactionsPage() {
             </TableHeader>
             <TableBody>
               {filteredTransactions.map((tx) => (
-                <TableRow key={tx.id} className="even:bg-muted/40 transition-colors">
+                <TableRow key={tx.id} className="even:bg-muted/40 transition-colors group">
                   <TableCell className="font-medium text-xs font-mono">{tx.user?.substring(0, 8) || 'System'}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">

@@ -1,9 +1,9 @@
 rules_version = '2';
 
 /**
- * Vidya EduCare - Production Infrastructure Rules
+ * Vidya EduCare - Hardened Production Infrastructure Rules
  * Target Instance: vidyaeducaredatabase
- * Deployment Salt: V88_CONFIG_PRIORITY_REINFORCED
+ * Priority: High-Speed Authorization & Conflict Resolution
  */
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -29,7 +29,7 @@ service cloud.firestore {
       return exists(adminPath);
     }
 
-    // --- GLOBAL CONFIGURATIONS (High Priority Read) ---
+    // --- GLOBAL CONFIGURATIONS (Read Optimized) ---
     // These must be readable by everyone to allow the UI to initialize (prices, subjects, etc.)
     match /configs/{document=**} {
       allow read: if true; 
@@ -58,7 +58,8 @@ service cloud.firestore {
 
     match /users/{uid} {
       allow read: if signedIn();
-      allow create: if signedIn(); 
+      // Explicitly allow master admin to create their own user record during mapping
+      allow create: if signedIn() && (isMaster() || request.auth.uid == uid); 
       allow update, delete: if isOwner(uid) || isAdmin();
     }
 

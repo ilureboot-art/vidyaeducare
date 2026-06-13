@@ -50,14 +50,12 @@ export default function AdminQuizClashPage() {
         if (manual) setIsRefreshing(true);
         
         try {
-            // Parallel settled fetches to prevent one failure from blocking others
             const results = await Promise.allSettled([
                 getDocs(collection(db, "quizClashTournaments")),
                 getDocs(collection(db, "testSets")),
                 getDoc(doc(db, "configs", "quizClash"))
             ]);
 
-            // 1. Tournaments
             const tourneyRes = results[0];
             if (tourneyRes.status === 'fulfilled') {
                 setTournaments(tourneyRes.value.docs.map(doc => ({ id: doc.id, ...doc.data() } as QuizClashTournament)));
@@ -68,7 +66,6 @@ export default function AdminQuizClashPage() {
                 setTournaments([]);
             }
 
-            // 2. Test Sets
             const testSetRes = results[1];
             if (testSetRes.status === 'fulfilled') {
                 setTestSets(testSetRes.value.docs.map(doc => ({ id: doc.id, ...doc.data() } as TestSet)));
@@ -76,7 +73,6 @@ export default function AdminQuizClashPage() {
                 setTestSets([]);
             }
 
-            // 3. Config
             const configRes = results[2];
             if (configRes.status === 'fulfilled' && configRes.value.exists()) {
                 setAutoConfig(configRes.value.data() as QuizClashAutoCreateConfig);
@@ -334,7 +330,7 @@ export default function AdminQuizClashPage() {
                         </TableHeader>
                         <TableBody>
                             {tournaments.length > 0 ? tournaments.map(t => (
-                                <TableRow key={t.id} className="even:bg-muted/40 transition-colors">
+                                <TableRow key={t.id} className="even:bg-muted/40 transition-colors group">
                                     <TableCell>{t.title}</TableCell>
                                      <TableCell><Badge variant={t.type === 'Pro' ? 'default' : 'secondary'}>{t.type}</Badge></TableCell>
                                     <TableCell>{format(new Date(t.startTime), 'P p')}</TableCell>

@@ -114,18 +114,10 @@ export default function SetupAdminPage() {
     const email = auth.currentUser.email;
 
     setMapStatus('loading');
-    let attempt = 0;
-    const maxAttempts = 3;
-
-    const attemptSync = async (): Promise<void> => {
-        attempt++;
-        logProgress(`MAP: Syncing Infrastructure (Attempt ${attempt}/${maxAttempts})...`);
-        
-        try {
-            // Force token refresh to ensure email claim is present for isMaster() rule
-            await auth.currentUser?.getIdToken(true);
-        } catch (e) {}
-        
+    logProgress(`MAP: Initiating High-Speed Infrastructure Sync...`);
+    
+    // Attempt mapping immediately without delay
+    const attemptSync = async () => {
         const batch = writeBatch(db);
         const userDocRef = doc(db, "users", uid);
         const walletDocRef = doc(db, "wallets", uid);
@@ -173,23 +165,17 @@ export default function SetupAdminPage() {
             toast({ title: "Setup Complete" });
         } catch (serverError: any) {
             console.error("Setup mapping error:", serverError);
-            if (serverError.code === 'permission-denied' && attempt < maxAttempts) {
-                logProgress("PENDING: Retrying synchronization (1s)...");
-                setTimeout(attemptSync, 1000);
-            } else {
-                const permissionError = new FirestorePermissionError({
-                    path: userDocRef.path,
-                    operation: 'write',
-                    requestResourceData: userData,
-                } satisfies SecurityRuleContext);
-                errorEmitter.emit('permission-error', permissionError);
-                setMapStatus('error');
-                logProgress(`FAILED: Authorization denied.`);
-            }
+            const permissionError = new FirestorePermissionError({
+                path: userDocRef.path,
+                operation: 'write',
+                requestResourceData: userData,
+            } satisfies SecurityRuleContext);
+            errorEmitter.emit('permission-error', permissionError);
+            setMapStatus('error');
+            logProgress(`FAILED: Authorization denied.`);
         }
     };
 
-    // Immediate execution
     attemptSync();
   };
 

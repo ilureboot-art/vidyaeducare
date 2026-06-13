@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -119,7 +118,7 @@ export default function SetupAdminPage() {
     
     try {
         await auth.currentUser?.getIdToken(true);
-        await new Promise(r => setTimeout(r, 1000));
+        await new Promise(r => setTimeout(r, 500));
 
         const batch = writeBatch(db);
         const userDocRef = doc(db, "users", uid);

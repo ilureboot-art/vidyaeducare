@@ -1,9 +1,8 @@
-
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { LifeBuoy, BookOpen, Mail, ArrowLeft } from "lucide-react";
+import { LifeBuoy, BookOpen, Mail, ArrowLeft, Target, Award, Rocket, Sparkles } from "lucide-react";
 import Link from "next/link";
 import {
   Accordion,
@@ -14,36 +13,44 @@ import {
 
 const userFaqs = [
     {
+        question: "What is the Vision of Vidya EduCare?",
+        answer: "Our vision is to become India's most trusted platform for academic excellence and financial empowerment, bridging the gap between student effort and real-world reward through innovation."
+    },
+    {
+        question: "What is the Mission of Vidya EduCare?",
+        answer: "To democratize elite academic coaching using AI-powered bilingual tools while creating a sustainable, zero-investment earning ecosystem for students, parents, and associates across the country."
+    },
+    {
+        question: "What are the core Objectives of the platform?",
+        answer: "1. Academic Performance: To improve student scores through curriculum-aligned MockArena tests. 2. Conceptual Clarity: To provide 24/7 bilingual doubt resolution via GuruAI. 3. Financial Empowerment: To provide a professional passive income engine through ReferBolt and the IBA program."
+    },
+    {
+        question: "What are the primary Benefits of joining Vidya EduCare?",
+        answer: "Students benefit from personalized AI learning and cash rewards for excellence. Parents gain a productive environment for their children. Associates (IBAs) unlock a professional business opportunity with lifetime commissions and network growth cycles."
+    },
+    {
         question: "How do I add or withdraw money from my wallet?",
         answer: "You can add funds by going to the Wallet page, clicking 'Add Funds', and submitting a request after paying to the admin's UPI. To withdraw, click 'Withdraw', enter the amount (min. ₹200) and your payment details. All requests are processed by an admin."
     },
     {
         question: "How do the MockArena rewards and leaderboards work?",
-        answer: "MockArena rewards are designed to recognize academic excellence. To qualify for cash prizes, a student must participate in a live session and achieve at least 80% accuracy. The top 5 scorers who meet this accuracy criteria win cash prizes (e.g., ₹250 for Rank #1) credited instantly to the parent's wallet once results are finalized."
+        answer: "MockArena rewards recognize academic excellence. To qualify for cash prizes, a student must participate in a live session and achieve at least 80% accuracy. The top 5 scorers who meet this accuracy criteria win cash prizes (e.g., ₹250 for Rank #1) credited instantly to the parent's wallet."
     },
     {
         question: "What is Quiz Clash and how do the rewards work?",
-        answer: "Quiz Clash features high-stakes live tournaments with shared prize pools. Users register a student for a specific clash (Practice or Pro). In Pro Clashes, the entry fees form a prize pool, which is distributed among the top performers based on score and speed. Unlike MockArena, prizes are based on relative ranking within the tournament participants."
+        answer: "Quiz Clash features high-stakes live tournaments. Pro Clashes require an entry fee which forms a prize pool. This pool is distributed among the top 4 performers based on score and speed. Prizes are credited automatically to your wallet upon tournament completion."
     },
     {
         question: "How do I work as an Independent Business Associate (IBA)?",
-        answer: "Working as an IBA is a zero-investment opportunity. You receive a unique Referral Code in your IBA Dashboard. Share this code with students and parents via WhatsApp or social media. When they use your code to subscribe to MockArena packages, you earn instant commissions credited to your wallet."
-    },
-    {
-        question: "What are the income details for the IBA program?",
-        answer: "IBAs earn a substantial base commission of up to 17.65% on every MockArena subscription purchased using their referral code. For example, on a ₹3000 plan, you earn approximately ₹530. Combined with the ReferBolt system, you can also earn continuous 'Cycle Bonuses' from a wider network of referrals."
-    },
-    {
-        question: "What's the difference between the IBA Program and the ReferBolt System?",
-        answer: "The IBA Program is our standard referral system for earning direct commissions. ReferBolt is a premium subscription that unlocks an advanced multi-level network, allowing you to earn from 'indirect' referrals (people your friends refer) through continuous success cycles."
+        answer: "Working as an IBA is a zero-investment opportunity. You receive a unique Referral Code in your IBA Dashboard. Share this code with students and parents. When they subscribe to MockArena packages, you earn instant commissions (up to 17.65%) credited to your wallet."
     },
     {
         question: "What is ReferBolt and how do the earnings work?",
-        answer: "ReferBolt is our premium success engine. Once activated, you start earning from a multi-level network. It uses 'Success Cycles' – every 3 successful referrals (including those made by people you referred) completes a cycle and grants you a substantial bonus credit. These cycles repeat automatically as your network grows, providing a continuous income stream."
+        answer: "ReferBolt is a premium success engine. Once activated, you earn from a multi-level network using 'Success Cycles'. Every 3 successful referrals (including those made by people you referred) completes a cycle and grants a substantial bonus. Cycles repeat automatically for continuous income."
     },
     {
         question: "How do I add a student to my profile?",
-        answer: "To add a student, you first need to purchase a subscription from the Store. This will give you a unique Product Activation Code. Go to the 'My Students' page, click 'Add New Student', enter the code, and then fill in the student's details."
+        answer: "To add a student, purchase a subscription from the Store to receive a Product Activation Code. Go to the 'My Students' page, click 'Add New Student', enter the code, and then fill in the student's details."
     }
 ];
 

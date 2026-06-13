@@ -1,9 +1,8 @@
-
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { LifeBuoy, BookOpen, Mail } from "lucide-react";
+import { LifeBuoy, BookOpen, Mail, ShieldCheck, Target, Award } from "lucide-react";
 import {
   Accordion,
   AccordionContent,
@@ -13,36 +12,36 @@ import {
 
 const adminFaqs = [
     {
+        question: "What is the corporate Vision & Mission?",
+        answer: "Vision: To lead India in academic excellence and financial empowerment. Mission: To provide elite AI-powered coaching while fostering a sustainable earning ecosystem for all stakeholders."
+    },
+    {
+        question: "What are the primary operational Objectives?",
+        answer: "Improving exam performance via MockArena, providing instant conceptual clarity via AI tools, and managing a robust referral-based passive income engine for associates."
+    },
+    {
         question: "How are MockArena prizes calculated and disbursed?",
-        answer: "Prizes are automatically calculated based on accuracy and completion time. The system enforces an 80% accuracy minimum for prize eligibility. Once a live session is marked as completed, the top 5 eligible participants receive their rewards via an atomic transaction that credits their wallet and updates the student's earnings record."
-    },
-    {
-        question: "How do I manage or explain the ReferBolt system to users?",
-        answer: "ReferBolt is our advanced passive income engine. Every 3 network referrals (direct or indirect) trigger a 'Success Cycle' bonus. Administrators can configure the ReferBolt base price and cycle bonus values in 'Store Settings'. The system tracks these cycles automatically; you can monitor network growth in the 'ReferBolt' management dashboard."
-    },
-    {
-        question: "How do I explain the IBA commission structure to potential associates?",
-        answer: "IBAs earn up to 17.65% base commission on the total value of MockArena subscriptions purchased with their code. These earnings are credited instantly to their wallet as soon as the transaction is completed. You can view all these commissions in the 'Transactions' dashboard."
-    },
-    {
-        question: "How do I approve or reject a user's transaction request?",
-        answer: "Navigate to the 'Transactions' page. Find the transaction with a 'Pending' status. You will see 'Approve' and 'Reject' buttons in the 'Actions' column. Clicking 'Approve' for a deposit will add funds to the user's wallet. Clicking 'Reject' for a withdrawal will refund the amount back to the user."
-    },
-    {
-        question: "How do I manage sub-admin requests?",
-        answer: "Go to the 'Admin Management' page. Under the 'Sub-admin Requests' card, you will see a list of pending applications. You can approve a request to make them a sub-admin or reject it."
+        answer: "Prizes are automatically calculated based on accuracy and completion time. The system enforces an 80% accuracy minimum for prize eligibility. Once a live session is finalized, the top 5 eligible participants receive their rewards via an atomic transaction to their wallet."
     },
     {
         question: "How are Quiz Clash tournaments managed and rewarded?",
-        answer: "Quiz Clash tournaments can be scheduled manually or via the auto-scheduler in the Quiz Clash dashboard. For 'Pro' tournaments, the system automatically collects entry fees into a prize pool. Once a tournament is completed, the system calculates ranks and automatically credits the top performers' wallets based on the configured distribution."
+        answer: "Tournament prize pools are formed by entry fees (for Pro Clashes). Ranks are calculated automatically, and the shared prize pool is disbursed to the top 4 performers once the tournament status is updated to 'completed'."
     },
     {
-        question: "What is the Vidya EduCare AI Agent for?",
-        answer: "The AI Agent is a powerful tool for generating educational content. You can find it under the 'Vidya EduCare AI Agent' tab. Provide it with study material (text or a file), specify the topic, grade, and desired outputs (like notes, MCQs, or a study plan), and the AI will generate the content for you to use on the platform."
+        question: "How do I explain the IBA commission structure?",
+        answer: "IBAs earn up to 17.65% base commission on every MockArena subscription. These earnings are credited instantly to their wallet. They can also earn additional bonuses via the ReferBolt Success Cycles as their network expands."
     },
     {
-        question: "How can I change the subscription prices or referral bonuses?",
-        answer: "All store-related configurations are on the 'Store Settings' page. There, you can add or remove mock test packages, change their prices, and adjust the monetary values for the referral bonus and the ReferBolt system."
+        question: "How do I manage ReferBolt cycles and bonuses?",
+        answer: "ReferBolt uses 'Success Cycles' of 3 referrals. Administrators can configure the ReferBolt base price and the cycle bonus values in the 'Store Settings' dashboard. The system tracks cycle completions automatically."
+    },
+    {
+        question: "How do I approve or reject a transaction request?",
+        answer: "Navigate to the 'Transactions' page. Pending requests will have 'Approve' and 'Reject' buttons. Approving a deposit credits the user wallet; rejecting a withdrawal returns the held funds to the user wallet."
+    },
+    {
+        question: "How can I change subscription prices or referral bonuses?",
+        answer: "Navigate to 'Store Settings'. You can modify MockArena packages, adjust Referral Bonus amounts (Welcome Credits), and update ReferBolt subscription details globally."
     }
 ];
 
@@ -83,7 +82,7 @@ export default function SupportPage() {
       </div>
       <Card>
         <CardHeader>
-            <CardTitle>Frequently Asked Questions</CardTitle>
+            <CardTitle>Administrative FAQs</CardTitle>
         </CardHeader>
         <CardContent>
              {adminFaqs.length > 0 ? (
@@ -98,7 +97,7 @@ export default function SupportPage() {
                     ))}
                 </Accordion>
             ) : (
-                <p className="text-muted-foreground">No FAQs available at the moment. This section will be populated with common questions and answers for administrators.</p>
+                <p className="text-muted-foreground">No FAQs available at the moment.</p>
             )}
         </CardContent>
       </Card>

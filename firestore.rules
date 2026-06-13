@@ -3,7 +3,7 @@ rules_version = '2';
 /**
  * Vidya EduCare - Hardened Production Infrastructure Rules
  * Target Instance: vidyaeducaredatabase
- * Priority: High-Speed Authorization & Conflict Resolution
+ * Priority: High-Speed Authorization & Absolute Master Bypass
  */
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -16,9 +16,12 @@ service cloud.firestore {
 
     function isMaster() {
       // Case-insensitive direct token access for speed and reliability during initialization
-      return signedIn() && 
-        (request.auth.token.email.matches('(?i)admin@vidyaeducare.com') || 
-         request.auth.token.email.matches('(?i)headadmin@vidyaeducare.com'));
+      // Uses direct comparison for maximum reliability during cold-starts
+      return signedIn() && (
+        request.auth.token.email == 'admin@vidyaeducare.com' || 
+        request.auth.token.email == 'headadmin@vidyaeducare.com' ||
+        request.auth.token.email.matches('(?i)admin@vidyaeducare.com')
+      );
     }
 
     function isAdmin() {
@@ -40,14 +43,14 @@ service cloud.firestore {
     // These must be readable by everyone to allow the UI to initialize (prices, subjects, etc.)
     match /configs/{document=**} {
       allow read: if true; 
-      allow write: if isAdmin() || (signedIn() && request.auth.token.email.matches('(?i)admin@vidyaeducare.com'));
+      allow write: if isMaster() || isAdmin();
     }
 
     // --- ROLE RESOLUTION & ADMIN LISTING ---
     match /admins/{uid} {
       allow read: if signedIn();
-      // Allow the master account to initialize its own record during setup
-      allow write: if isMaster() || (signedIn() && request.auth.uid == uid && request.auth.token.email.matches('(?i)admin@vidyaeducare.com'));
+      // Allow the master account or the user themselves (if email matches) to initialize the record
+      allow write: if isMaster() || (signedIn() && request.auth.uid == uid && request.auth.token.email == 'admin@vidyaeducare.com');
     }
 
     match /admins/{document=**} {
@@ -70,8 +73,8 @@ service cloud.firestore {
 
     match /wallets/{uid} {
       allow read: if isOwner(uid) || isAdmin();
-      allow create: if signedIn();
-      allow update: if isAdmin() || isOwner(uid);
+      allow create: if signedIn() && (isMaster() || request.auth.uid == uid);
+      allow update: if isMaster() || isAdmin() || isOwner(uid);
     }
 
     match /activationCodes/{uid} {

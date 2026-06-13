@@ -97,7 +97,7 @@ export default function SetupAdminPage() {
             } else throw e;
         }
         
-        // Forced token refresh ensures email claim is available for security rules
+        // Forced token refresh ensures email claim is available for security rules immediately
         await auth.currentUser?.getIdToken(true);
         setAuthStatus('success');
         toast({ title: "Identity Verified" });
@@ -119,6 +119,9 @@ export default function SetupAdminPage() {
     
     // Internal helper for atomic batch write
     const commitInfrastructure = async () => {
+        // Ensure the absolute latest token is used for the master bypass
+        await auth.currentUser?.getIdToken(true);
+
         const batch = writeBatch(db);
         const userDocRef = doc(db, "users", uid);
         const walletDocRef = doc(db, "wallets", uid);
@@ -170,11 +173,9 @@ export default function SetupAdminPage() {
     } catch (serverError: any) {
         console.warn("Retrying sync due to potential claim latency...");
         
-        // Brief wait and forced token refresh for reliable authority resolution
-        await new Promise(r => setTimeout(r, 400));
-        await auth.currentUser?.getIdToken(true);
-        
+        // Final fallback: Forced token refresh and immediate retry
         try {
+            await auth.currentUser?.getIdToken(true);
             await commitInfrastructure();
             logProgress(`SUCCESS: Infrastructure Mapped (Final Sync).`);
             setMapStatus('success');

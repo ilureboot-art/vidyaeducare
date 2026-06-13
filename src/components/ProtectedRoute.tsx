@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useAuth } from "@/firebase";
@@ -15,11 +14,11 @@ export default function ProtectedRoute({
   children: React.ReactNode;
   adminOnly?: boolean;
 }) {
-  const { user, loading, isAdmin } = useAuth();
+  const { user, loading, isAdmin, isResolved } = useAuth();
   const pathname = usePathname();
 
-  // The provider handles the core state resolve.
-  if (loading) return null;
+  // Wait for the auth session and the role resolution to complete
+  if (loading || !isResolved) return null;
 
   if (!user) return null;
   

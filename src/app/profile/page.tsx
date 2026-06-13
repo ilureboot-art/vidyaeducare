@@ -35,7 +35,7 @@ const BADGE_COLORS = {
 function ProfilePageContent() {
     const { toast } = useToast();
     const router = useRouter();
-    const { user } = useAuth();
+    const { user, isResolved } = useAuth();
     const db = useDb();
     
     const [parentProfile, setParentProfile] = useState<DocumentData | null>(null);
@@ -54,14 +54,17 @@ function ProfilePageContent() {
     const [isLoadingTests, setIsLoadingTests] = useState(false);
 
     useEffect(() => {
+        if (!isResolved) return;
+
         if (user && db) {
             setIsLoading(true);
             
             const parentDocRef = doc(db, "users", user.uid);
-            const unsubParent = onSnapshot(parentDocRef, (doc) => {
-                if (doc.exists()) setParentProfile(doc.data());
+            const unsubParent = onSnapshot(parentDocRef, (docSnap) => {
+                if (docSnap.exists()) setParentProfile(docSnap.data());
                 setIsLoading(false);
             }, async (error) => {
+                console.error("Parent sync error:", error);
                 if (error.code === 'permission-denied') {
                     const permissionError = new FirestorePermissionError({
                         path: parentDocRef.path,
@@ -88,8 +91,8 @@ function ProfilePageContent() {
             });
 
             const codesDocRef = doc(db, "activationCodes", user.uid);
-            const unsubCodes = onSnapshot(codesDocRef, (doc) => {
-                setValidCodes(doc.exists() ? doc.data().codes : []);
+            const unsubCodes = onSnapshot(codesDocRef, (docSnap) => {
+                setValidCodes(docSnap.exists() ? docSnap.data().codes : []);
             }, async (error) => {
                  if (error.code === 'permission-denied') {
                     const permissionError = new FirestorePermissionError({
@@ -105,8 +108,10 @@ function ProfilePageContent() {
                 unsubStudents();
                 unsubCodes();
             };
+        } else {
+            setIsLoading(false);
         }
-    }, [user, db]);
+    }, [user, db, isResolved]);
 
     const filteredStudents = useMemo(() => {
         return students.filter(s => s.name.toLowerCase().includes(studentSearchTerm.toLowerCase()));

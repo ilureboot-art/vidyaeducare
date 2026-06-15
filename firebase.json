@@ -1,0 +1,8 @@
+{
+  "firestore": [
+    {
+      "database": "vidyaeducaredatabase",
+      "rules": "firestore.rules"
+    }
+  ]
+}

@@ -11,6 +11,7 @@ import { collection, doc, updateDoc, addDoc, serverTimestamp, query, orderBy, Ti
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
 type Message = {
     id: string;

@@ -218,9 +218,9 @@ export default function SetupAdminPage() {
               <p className="text-[9px] font-bold text-white/50 uppercase flex items-center gap-2"><Activity size={10}/> Deployment Stream</p>
               <div className="space-y-1 min-h-[140px] overflow-hidden">
                   {progressLog.length > 0 ? progressLog.map((log, i) => (
-                      <p key={i} className="text-[10px] font-mono text-green-400 animate-in fade-in slide-in-from-left-2">> {log}</p>
+                      <p key={i} className="text-[10px] font-mono text-green-400 animate-in fade-in slide-in-from-left-2">{'>'} {log}</p>
                   )) : (
-                      <p className="text-[10px] font-mono text-white/20 italic">> Waiting for commands...</p>
+                      <p className="text-[10px] font-mono text-white/20 italic">{'>'} Waiting for commands...</p>
                   )}
               </div>
           </div>

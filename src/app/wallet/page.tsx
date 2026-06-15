@@ -94,6 +94,7 @@ function WalletPageContent() {
   const [storeConfig, setStoreConfig] = useState<StoreConfig | null>(null);
   const [activeView, setActiveView] = useState<WalletView>('main');
   const [successAmount, setSuccessAmount] = useState<number>(0);
+  const [successType, setSuccessType] = useState<'deposit' | 'withdrawal' | null>(null);
 
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   
@@ -167,7 +168,7 @@ function WalletPageContent() {
             const transactionList: Transaction[] = querySnapshot.docs.map(d => {
                 const data = d.data();
                 const date = data.date instanceof Timestamp ? data.date.toDate().toISOString() : data.date;
-                return { id: doc.id, ...data, date } as Transaction;
+                return { id: d.id, ...data, date } as Transaction;
             });
             setTransactions(transactionList);
         }, async (error) => {
@@ -341,6 +342,7 @@ function WalletPageContent() {
         }
 
         setSuccessAmount(amount);
+        setSuccessType('deposit');
         setActiveView('success');
         setReceiptImage(null);
         form.reset();
@@ -382,6 +384,7 @@ function WalletPageContent() {
         transaction.set(newTxRef, { type: 'withdrawal', description: 'Withdrawal Request', amount: -amount, date: serverTimestamp(), status: 'Pending', paymentMethod: upiId, user: user.uid });
     }).then(() => {
         setSuccessAmount(amount);
+        setSuccessType('withdrawal');
         setActiveView('success');
         form.reset();
         setTimeout(() => {
@@ -606,7 +609,7 @@ function WalletPageContent() {
                             <ResponsiveContainer width="100%" height="100%">
                                 <AreaChart data={trendData}>
                                     <defs>
-                                        <linearGradient id="colorBalance" x1="0" x2="0" x2="0" y2="1">
+                                        <linearGradient id="colorBalance" x1="0" y1="0" x2="0" y2="1">
                                             <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.1}/>
                                             <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
                                         </linearGradient>
@@ -949,10 +952,10 @@ function WalletPageContent() {
                   </div>
                   <div className="space-y-2">
                       <h2 className="text-3xl font-black tracking-tighter uppercase italic text-primary">Success!</h2>
-                      <p className="text-muted-foreground font-medium">Your request for ₹{formatCurrency(successAmount)} has been {storeConfig?.autoApproveDeposits && activeView === 'add' ? 'instantly approved' : 'queued for review'}.</p>
+                      <p className="text-muted-foreground font-medium">Your request for ₹{formatCurrency(successAmount)} has been {storeConfig?.autoApproveDeposits && successType === 'deposit' ? 'instantly approved' : 'queued for review'}.</p>
                   </div>
                   <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 px-6 py-1.5 font-black uppercase tracking-widest">
-                      {storeConfig?.autoApproveDeposits && activeView === 'add' ? 'COMPLETED' : 'PENDING APPROVAL'}
+                      {storeConfig?.autoApproveDeposits && successType === 'deposit' ? 'COMPLETED' : 'PENDING APPROVAL'}
                   </Badge>
                   <Button variant="ghost" className="text-[10px] font-black uppercase tracking-widest opacity-50" onClick={() => { setActiveView('main'); setIsSubmitting(false); }}>
                       Returning to Wallet...

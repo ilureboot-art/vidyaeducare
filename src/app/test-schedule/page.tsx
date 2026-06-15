@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar as CalendarIcon, FilePlus, Loader2, Clock, Hourglass, Search, FilterX } from "lucide-react";
+import { Calendar as CalendarIcon, FilePlus, Loader2, Clock, Hourglass, Search, FilterX, Trophy } from "lucide-react";
 import { format, differenceInSeconds, addMinutes, isAfter, isBefore } from "date-fns";
 import {
   Table,

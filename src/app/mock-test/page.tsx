@@ -264,6 +264,7 @@ function MockTestContent() {
 
         try {
             const explanation = await solveDoubt({
+                userDoubt: "Explain this question and its correct answer.",
                 question: {
                     text: question.text,
                     options: question.options,

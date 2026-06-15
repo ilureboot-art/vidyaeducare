@@ -11,12 +11,24 @@ import { Zap, Share2, IndianRupee, Users, CheckCircle, Repeat, Loader2, Sparkles
 import Link from "next/link";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { useAuth, useDb } from "@/firebase";
 import { doc, onSnapshot, DocumentData, updateDoc } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import UserLayout from "@/components/UserLayout";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
+
+type ReferBoltState = {
+    isSubscribed: boolean;
+    referralCode?: string;
+    totalCommissions?: number;
+    totalReferrals?: number;
+    autoRenew?: boolean;
+    cycleProgress?: number;
+    cycleGoal?: number;
+    referralHistory?: any[];
+};
 
 const benefits = [
     { text: "Earn continuous commissions from a multi-level referral network." },
@@ -31,14 +43,14 @@ function ReferBoltPageContent() {
   const { user, isResolved } = useAuth();
   const db = useDb();
   
-  const [data, setData] = useState<DocumentData | null | { isSubscribed: boolean }>(null);
+  const [data, setData] = useState<ReferBoltState | null>(null);
   
   useEffect(() => {
     if (user && db && isResolved) {
         const referboltDocRef = doc(db, "referbolt", user.uid);
         const unsub = onSnapshot(referboltDocRef, (docSnap) => {
             if (docSnap.exists()) {
-                setData(docSnap.data());
+                setData({ isSubscribed: true, ...docSnap.data() } as ReferBoltState);
             } else {
                 setData({ isSubscribed: false });
             }

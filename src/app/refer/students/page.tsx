@@ -160,8 +160,7 @@ function StudentAccessPageContent() {
                 )}
               </TableBody>
             </Table>
-          </Table>
-        </CardContent>
+          </CardContent>
         </Card>
       </div>
   );

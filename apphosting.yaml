@@ -10,7 +10,4 @@ runConfig:
   # See https://firebase.google.com/docs/app-hosting/configure#secrets
   env:
     - variable: GEMINI_API_KEY
-      # For production, replace this value with a secret from Google Cloud Secret Manager.
-      # Example:
-      # secret: YOUR_GEMINI_API_KEY_SECRET_NAME
-      value: "AIzaSyArX4ziyytJoYRgSj1Sevq0dGIxLO7PRiY"
+      secret: GEMINI_API_KEY

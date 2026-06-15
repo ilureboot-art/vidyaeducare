@@ -376,7 +376,7 @@ function StorePageContent() {
                         <CardDescription className="font-bold text-xs uppercase">{product.months} Months Access</CardDescription>
                       </CardHeader>
                       <CardContent className="flex-grow flex flex-col justify-center items-center space-y-6">
-                         <div className="space-y-1">
+                         <div className="space-y-1 w-full">
                             <p className="text-muted-foreground line-through text-sm">₹{product.price}</p>
                             <p className="text-5xl font-black text-primary tracking-tighter">₹{finalPrice.toFixed(0)}</p>
                             <p className="text-[9px] text-muted-foreground uppercase font-bold">
@@ -387,8 +387,24 @@ function StorePageContent() {
                                     SAVE {(totalDiscount * 100).toFixed(0)}%
                                 </Badge>
                             )}
+                            
+                            <div className="text-xs text-muted-foreground border-t pt-4 w-full mt-4 space-y-1 font-medium">
+                                <div className="flex justify-between">
+                                    <span>Base Price:</span>
+                                    <span className="font-bold text-foreground">₹{discountedBasePrice.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span>GST ({product.gstRate}%):</span>
+                                    <span className="font-bold text-foreground">₹{gstAmount.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between border-t border-dashed pt-1 mt-1 text-sm font-black text-primary">
+                                    <span>Total Price:</span>
+                                    <span>₹{finalPrice.toFixed(2)}</span>
+                                </div>
+                            </div>
+
                             {product.grantFreeReferbolt && (
-                                <div className="mt-3 flex items-center justify-center gap-1.5 text-[10px] font-black text-primary uppercase tracking-widest bg-primary/10 py-1.5 rounded-lg border border-primary/20">
+                                <div className="mt-4 flex items-center justify-center gap-1.5 text-[10px] font-black text-primary uppercase tracking-widest bg-primary/10 py-1.5 rounded-lg border border-primary/20">
                                     <Zap size={12} className="fill-primary" /> Free ReferBolt Included
                                 </div>
                             )}
@@ -415,9 +431,25 @@ function StorePageContent() {
                         <CardTitle className="text-2xl font-black">{storeConfig.referboltSubscription.name}</CardTitle>
                          <CardDescription className="font-medium">Continuous Referral Earning Cycle</CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent className="space-y-4 w-full">
                         <p className="text-5xl font-black text-primary tracking-tighter">₹{(storeConfig.referboltSubscription.price + (storeConfig.referboltSubscription.price * (storeConfig.referboltSubscription.gstRate / 100))).toFixed(0)}</p>
                          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Inclusive of GST</p>
+                        
+                        <div className="text-xs text-muted-foreground border-t pt-4 w-full mt-4 space-y-1 font-medium">
+                            <div className="flex justify-between">
+                                <span>Base Price:</span>
+                                <span className="font-bold text-foreground">₹{storeConfig.referboltSubscription.price.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span>GST ({storeConfig.referboltSubscription.gstRate}%):</span>
+                                <span className="font-bold text-foreground">₹{(storeConfig.referboltSubscription.price * (storeConfig.referboltSubscription.gstRate / 100)).toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between border-t border-dashed pt-1 mt-1 text-sm font-black text-primary">
+                                <span>Total Price:</span>
+                                <span>₹{(storeConfig.referboltSubscription.price + (storeConfig.referboltSubscription.price * (storeConfig.referboltSubscription.gstRate / 100))).toFixed(2)}</span>
+                            </div>
+                        </div>
+
                         <Button size="lg" className="w-full font-black py-7 mt-4" onClick={() => handlePurchase(storeConfig.referboltSubscription, 'referbolt')} disabled={isPurchasing !== null}>
                             {isPurchasing === storeConfig.referboltSubscription.name ? <Loader2 className="animate-spin"/> : "START EARNING"}
                         </Button>

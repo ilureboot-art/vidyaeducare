@@ -5,9 +5,10 @@ import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { ShoppingCart, Sparkles, Loader2, BookOpen, Zap, CheckCircle2, AlertCircle } from "lucide-react";
+import { ShoppingCart, Sparkles, Loader2, BookOpen, Zap, CheckCircle2, AlertCircle, FileText, Printer } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from 'next/link';
 import { type StoreConfig, type MockTestPackage, type ReferboltSubscription, defaultStoreConfig } from "@/lib/store-config";
@@ -33,6 +34,7 @@ function StorePageContent() {
   const [recommendationCount, setRecommendationCount] = useState(0);
   
   const [referralCode1, setReferralCode1] = useState("");
+  const [purchasedInvoice, setPurchasedInvoice] = useState<any | null>(null);
 
   const checkRecEligibility = useCallback(async (db: Firestore, userId: string, config: StoreConfig) => {
     if (!config.recommendationSettings) {
@@ -163,7 +165,23 @@ function StorePageContent() {
 
     setIsPurchasing(item.name);
 
-    let priceDetails;
+    let priceDetails: {
+        basePrice: number;
+        discountDetails: {
+            base: number;
+            referral: number;
+            special: number;
+            recommendation: number;
+            totalPercentage: number;
+            totalAmount: number;
+        };
+        taxableAmount: number;
+        gstRate: number;
+        gstAmount: number;
+        finalPrice: number;
+        hasReferral: boolean;
+    };
+
     if (type === 'mock') {
         const mockItem = item as MockTestPackage;
         const baseDiscount = (mockItem.baseDiscount || 0) / 100;
@@ -175,11 +193,43 @@ function StorePageContent() {
         const discountedBasePrice = item.price * (1 - totalDiscountFactor);
         const gstAmount = discountedBasePrice * (item.gstRate / 100);
         const finalPrice = discountedBasePrice + gstAmount;
-        priceDetails = { finalPrice, basePrice: item.price, hasReferral: referralCode1.trim() !== "" };
+
+        priceDetails = {
+            basePrice: item.price,
+            discountDetails: {
+                base: baseDiscount * 100,
+                referral: referralDiscount * 100,
+                special: specialDiscount * 100,
+                recommendation: recommendationDiscount * 100,
+                totalPercentage: totalDiscountFactor * 100,
+                totalAmount: item.price * totalDiscountFactor,
+            },
+            taxableAmount: discountedBasePrice,
+            gstRate: item.gstRate,
+            gstAmount: gstAmount,
+            finalPrice: finalPrice,
+            hasReferral: referralCode1.trim() !== ""
+        };
     } else {
         const gstAmount = item.price * (item.gstRate / 100);
         const finalPrice = item.price + gstAmount;
-        priceDetails = { finalPrice, basePrice: item.price, hasReferral: false };
+
+        priceDetails = {
+            basePrice: item.price,
+            discountDetails: {
+                base: 0,
+                referral: 0,
+                special: 0,
+                recommendation: 0,
+                totalPercentage: 0,
+                totalAmount: 0,
+            },
+            taxableAmount: item.price,
+            gstRate: item.gstRate,
+            gstAmount: gstAmount,
+            finalPrice: finalPrice,
+            hasReferral: false
+        };
     }
 
     if (walletData.balance < priceDetails.finalPrice) {
@@ -187,6 +237,24 @@ function StorePageContent() {
         setIsPurchasing(null);
         return;
     }
+
+    const invoiceNum = `INV-${Date.now().toString().slice(-6)}-${user.uid.slice(0, 4).toUpperCase()}`;
+    const invoiceData = {
+        invoiceNumber: invoiceNum,
+        packageName: item.name,
+        basePrice: priceDetails.basePrice,
+        discountDetails: priceDetails.discountDetails,
+        taxableAmount: priceDetails.taxableAmount,
+        gstRate: priceDetails.gstRate,
+        gstAmount: priceDetails.gstAmount,
+        finalPrice: priceDetails.finalPrice,
+        hsnSacCode: item.hsnSacCode || "999294",
+        date: new Date().toISOString(),
+        billingDetails: {
+            email: user.email || "student@vidyaeducare.com",
+            name: user.displayName || "Vidya EduCare Student",
+        }
+    };
 
     try {
         let ibaUid: string | null = null;
@@ -222,6 +290,18 @@ function StorePageContent() {
                 description: `Purchase: ${item.name}`,
                 status: "Completed",
                 type: "Purchase",
+                
+                // Detailed Invoice Fields
+                invoiceNumber: invoiceData.invoiceNumber,
+                basePrice: invoiceData.basePrice,
+                discountDetails: invoiceData.discountDetails,
+                taxableAmount: invoiceData.taxableAmount,
+                gstRate: invoiceData.gstRate,
+                gstAmount: invoiceData.gstAmount,
+                finalPrice: invoiceData.finalPrice,
+                billingDetails: invoiceData.billingDetails,
+                hsnSacCode: invoiceData.hsnSacCode,
+                packageName: invoiceData.packageName,
             });
 
             if (ibaUid) {
@@ -263,6 +343,7 @@ function StorePageContent() {
         });
 
         toast({ title: "Purchase Successful!", description: `${item.name} activated.` });
+        setPurchasedInvoice(invoiceData);
         checkRecEligibility(db, user.uid, storeConfig);
     } catch (e: any) {
         console.error("Store Purchase Error:", e);
@@ -388,17 +469,50 @@ function StorePageContent() {
                                 </Badge>
                             )}
                             
-                            <div className="text-xs text-muted-foreground border-t pt-4 w-full mt-4 space-y-1 font-medium">
+                            <div className="text-xs text-muted-foreground border-t pt-4 w-full mt-4 space-y-2 font-medium">
                                 <div className="flex justify-between">
-                                    <span>Base Price:</span>
+                                    <span>Base Product Price:</span>
+                                    <span className="font-bold text-foreground">₹{product.price.toFixed(2)}</span>
+                                </div>
+                                {totalDiscount > 0 && (
+                                    <div className="space-y-1 bg-accent/5 p-2.5 rounded-xl border border-accent/10">
+                                        <div className="text-[9px] font-black text-accent uppercase tracking-wider mb-1">Applied Discounts:</div>
+                                        {(product.baseDiscount || 0) > 0 && (
+                                            <div className="flex justify-between text-[11px] text-accent">
+                                                <span>• Base Discount ({product.baseDiscount}%):</span>
+                                                <span>-₹{(product.price * (product.baseDiscount || 0) / 100).toFixed(2)}</span>
+                                            </div>
+                                        )}
+                                        {referralCode1.trim() !== "" && (product.referralDiscount || 0) > 0 && (
+                                            <div className="flex justify-between text-[11px] text-accent">
+                                                <span>• Referral Discount ({product.referralDiscount}%):</span>
+                                                <span>-₹{(product.price * (product.referralDiscount || 0) / 100).toFixed(2)}</span>
+                                            </div>
+                                        )}
+                                        {(product.specialDiscount || 0) > 0 && (
+                                            <div className="flex justify-between text-[11px] text-accent">
+                                                <span>• Special Discount ({product.specialDiscount}%):</span>
+                                                <span>-₹{(product.price * (product.specialDiscount || 0) / 100).toFixed(2)}</span>
+                                            </div>
+                                        )}
+                                        {isEligibleForRecDiscount && (storeConfig.recommendationSettings?.additionalDiscount || 0) > 0 && (
+                                            <div className="flex justify-between text-[11px] text-accent">
+                                                <span>• Fast-Mover Bonus ({(storeConfig.recommendationSettings?.additionalDiscount || 0)}%):</span>
+                                                <span>-₹{(product.price * (storeConfig.recommendationSettings?.additionalDiscount || 0) / 100).toFixed(2)}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                                <div className="flex justify-between border-t border-dashed pt-1.5 mt-1.5">
+                                    <span>Taxable Value (Total):</span>
                                     <span className="font-bold text-foreground">₹{discountedBasePrice.toFixed(2)}</span>
                                 </div>
                                 <div className="flex justify-between">
                                     <span>GST ({product.gstRate}%):</span>
                                     <span className="font-bold text-foreground">₹{gstAmount.toFixed(2)}</span>
                                 </div>
-                                <div className="flex justify-between border-t border-dashed pt-1 mt-1 text-sm font-black text-primary">
-                                    <span>Total Price:</span>
+                                <div className="flex justify-between border-t border-dashed pt-1.5 mt-1.5 text-sm font-black text-primary">
+                                    <span>Final Price:</span>
                                     <span>₹{finalPrice.toFixed(2)}</span>
                                 </div>
                             </div>
@@ -464,6 +578,140 @@ function StorePageContent() {
           </Tabs>
         </CardContent>
       </Card>
+
+      {purchasedInvoice && (
+        <Dialog open={!!purchasedInvoice} onOpenChange={(open) => !open && setPurchasedInvoice(null)}>
+            <DialogContent className="max-w-2xl p-8 rounded-[2rem] border-none shadow-2xl overflow-y-auto max-h-[90vh]">
+                <div id="invoice-print-area" className="bg-background text-foreground space-y-6">
+                    <style>{`
+                      @media print {
+                        body * {
+                          visibility: hidden;
+                        }
+                        #invoice-print-area, #invoice-print-area * {
+                          visibility: visible;
+                        }
+                        #invoice-print-area {
+                          position: absolute;
+                          left: 0;
+                          top: 0;
+                          width: 100%;
+                        }
+                      }
+                    `}</style>
+                    <div className="flex justify-between items-start border-b pb-6">
+                        <div>
+                            <h1 className="text-3xl font-black text-primary italic uppercase tracking-tighter">VIDYA <span className="text-accent">EDUCARE</span></h1>
+                            <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest mt-1">Academic Excellence Platform</p>
+                        </div>
+                        <div className="text-right">
+                            <Badge className="bg-primary/10 text-primary border-none font-black text-xs uppercase tracking-widest px-4 py-1.5">TAX INVOICE</Badge>
+                            <p className="text-xs font-mono font-bold mt-2">{purchasedInvoice.invoiceNumber}</p>
+                            <p className="text-[10px] text-muted-foreground">{new Date(purchasedInvoice.date).toLocaleString('en-IN')}</p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-8 text-sm">
+                        <div>
+                            <h3 className="font-black uppercase text-[10px] text-muted-foreground tracking-wider mb-2">Billed To</h3>
+                            <p className="font-black text-foreground">{purchasedInvoice.billingDetails.name}</p>
+                            <p className="text-muted-foreground text-xs">{purchasedInvoice.billingDetails.email}</p>
+                        </div>
+                        <div className="text-right">
+                            <h3 className="font-black uppercase text-[10px] text-muted-foreground tracking-wider mb-2">Service Provider</h3>
+                            <p className="font-black text-foreground">Vidya EduCare Private Ltd.</p>
+                            <p className="text-muted-foreground text-xs">GSTIN: 27AACCV1234F1Z5</p>
+                        </div>
+                    </div>
+
+                    <div className="border rounded-2xl overflow-hidden mt-6">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="bg-muted/50 border-b text-[10px] font-black uppercase tracking-wider text-muted-foreground">
+                                    <th className="p-4">Description</th>
+                                    <th className="p-4 text-center">HSN/SAC</th>
+                                    <th className="p-4 text-right">Base Price</th>
+                                </tr>
+                            </thead>
+                            <tbody className="text-sm font-bold">
+                                <tr className="border-b">
+                                    <td className="p-4">
+                                        <p className="text-foreground font-black">{purchasedInvoice.packageName}</p>
+                                        <p className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">Bilingual Mock Test Portal</p>
+                                    </td>
+                                    <td className="p-4 text-center font-mono text-xs">{purchasedInvoice.hsnSacCode}</td>
+                                    <td className="p-4 text-right">₹{purchasedInvoice.basePrice.toFixed(2)}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div className="flex justify-end pt-4">
+                        <div className="w-80 space-y-3 text-sm font-bold">
+                            <div className="flex justify-between text-muted-foreground text-xs">
+                                <span>Base Product Price:</span>
+                                <span>₹{purchasedInvoice.basePrice.toFixed(2)}</span>
+                            </div>
+                            {purchasedInvoice.discountDetails.totalAmount > 0 && (
+                                <div className="space-y-1 bg-accent/5 p-3 rounded-xl border border-accent/10 animate-in fade-in">
+                                    <div className="text-[10px] font-black text-accent uppercase tracking-wider mb-1">Applied Discounts:</div>
+                                    {purchasedInvoice.discountDetails.base > 0 && (
+                                        <div className="flex justify-between text-xs text-accent">
+                                            <span>• Base Discount ({purchasedInvoice.discountDetails.base}%):</span>
+                                            <span>-₹{(purchasedInvoice.basePrice * purchasedInvoice.discountDetails.base / 100).toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                    {purchasedInvoice.discountDetails.referral > 0 && (
+                                        <div className="flex justify-between text-xs text-accent">
+                                            <span>• Referral Discount ({purchasedInvoice.discountDetails.referral}%):</span>
+                                            <span>-₹{(purchasedInvoice.basePrice * purchasedInvoice.discountDetails.referral / 100).toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                    {purchasedInvoice.discountDetails.recommendation > 0 && (
+                                        <div className="flex justify-between text-xs text-accent">
+                                            <span>• Fast-Mover Bonus ({purchasedInvoice.discountDetails.recommendation}%):</span>
+                                            <span>-₹{(purchasedInvoice.basePrice * purchasedInvoice.discountDetails.recommendation / 100).toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                    {purchasedInvoice.discountDetails.special > 0 && (
+                                        <div className="flex justify-between text-xs text-accent">
+                                            <span>• Special Promotion ({purchasedInvoice.discountDetails.special}%):</span>
+                                            <span>-₹{(purchasedInvoice.basePrice * purchasedInvoice.discountDetails.special / 100).toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                    <div className="flex justify-between text-xs font-black border-t border-dashed border-accent/20 pt-1.5 mt-1.5 text-accent">
+                                        <span>Total Discount:</span>
+                                        <span>-₹{purchasedInvoice.discountDetails.totalAmount.toFixed(2)}</span>
+                                    </div>
+                                </div>
+                            )}
+                            <div className="flex justify-between border-t pt-2 mt-2">
+                                <span>Taxable Value (Total):</span>
+                                <span>₹{purchasedInvoice.taxableAmount.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between text-muted-foreground text-xs">
+                                <span>GST ({purchasedInvoice.gstRate}%):</span>
+                                <span>₹{purchasedInvoice.gstAmount.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between border-t border-dashed pt-3 text-lg font-black text-primary">
+                                <span>Final Total (Paid):</span>
+                                <span>₹{purchasedInvoice.finalPrice.toFixed(2)}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="border-t pt-6 text-center text-muted-foreground text-[9px] font-black uppercase tracking-[0.2em]">
+                        Thank you for choosing Vidya EduCare!
+                    </div>
+                </div>
+
+                <div className="flex justify-end gap-3 mt-8 pt-4 border-t print:hidden">
+                    <Button variant="ghost" onClick={() => setPurchasedInvoice(null)} className="font-bold">Close</Button>
+                    <Button onClick={() => window.print()} className="font-black gap-2 bg-primary text-white shadow-lg"><Printer size={16} /> Print / Save PDF</Button>
+                </div>
+            </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

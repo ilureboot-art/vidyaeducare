@@ -23,7 +23,7 @@ const userFaqs = [
     },
     {
         question: "How do I add or withdraw money from my wallet?",
-        answer: "Add funds via UPI/Bank transfer and submit the Transaction ID. Withdrawals (min ₹200) are processed by administrators into your designated UPI ID."
+        answer: "Add funds via UPI/Bank transfer and submit the Transaction ID. Withdrawals (min ₹650, maintaining a ₹200 minimum balance) are processed by administrators into your designated UPI ID."
     },
     {
         question: "How do the MockArena rewards work?",

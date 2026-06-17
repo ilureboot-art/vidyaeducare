@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { PlusCircle, MinusCircle, History, ArrowUpRight, ArrowDownLeft, Loader2, AlertCircle, Scan, X, PieChart as PieChartIcon, AlertTriangle, FileText, CheckCircle2, Clock, XCircle, Copy, ArrowLeft, ShieldCheck, Zap, CheckCircle, TrendingUp, Users, Store, LineChart as LineChartIcon, Camera, Image as ImageIcon } from "lucide-react";
+import { PlusCircle, MinusCircle, History, ArrowUpRight, ArrowDownLeft, Loader2, AlertCircle, Scan, X, PieChart as PieChartIcon, AlertTriangle, FileText, CheckCircle2, Clock, XCircle, Copy, ArrowLeft, ShieldCheck, Zap, CheckCircle, TrendingUp, Users, Store, LineChart as LineChartIcon, Camera, Image as ImageIcon, Printer } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { type Transaction, type AdminPaymentMethods } from "@/lib/user-data";
@@ -97,6 +97,52 @@ function WalletPageContent() {
   const [successType, setSuccessType] = useState<'deposit' | 'withdrawal' | null>(null);
 
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
+  const [viewingInvoice, setViewingInvoice] = useState<any | null>(null);
+  
+  const getInvoiceDetails = (tx: Transaction) => {
+    if (tx.invoiceNumber) {
+        return {
+            invoiceNumber: tx.invoiceNumber,
+            packageName: tx.packageName || tx.description || 'Mock Test Package',
+            basePrice: tx.basePrice || Math.abs(tx.amount) / 1.18,
+            discountDetails: tx.discountDetails || { base: 0, referral: 0, recommendation: 0, special: 0, totalAmount: 0 },
+            taxableAmount: tx.taxableAmount || Math.abs(tx.amount) / 1.18,
+            gstRate: tx.gstRate || 18,
+            gstAmount: tx.gstAmount || Math.abs(tx.amount) - (Math.abs(tx.amount) / 1.18),
+            finalPrice: tx.finalPrice || Math.abs(tx.amount),
+            hsnSacCode: tx.hsnSacCode || '999294',
+            date: tx.date,
+            billingDetails: tx.billingDetails || {
+                name: user?.displayName || 'Vidya EduCare Student',
+                email: user?.email || 'student@vidyaeducare.com'
+            }
+        };
+    }
+    
+    const isPurchase = tx.type === 'Purchase' || tx.description?.toLowerCase().includes('purchase:');
+    if (isPurchase) {
+        const amount = Math.abs(tx.amount);
+        const basePrice = amount / 1.18;
+        const gstAmount = amount - basePrice;
+        return {
+            invoiceNumber: `INV-${new Date(tx.date).getTime().toString().slice(-6)}-${user?.uid?.slice(0, 4).toUpperCase() || 'STU'}`,
+            packageName: tx.description?.replace('Purchase: ', '') || 'Mock Test Package',
+            basePrice: basePrice,
+            discountDetails: { base: 0, referral: 0, recommendation: 0, special: 0, totalAmount: 0 },
+            taxableAmount: basePrice,
+            gstRate: 18,
+            gstAmount: gstAmount,
+            finalPrice: amount,
+            hsnSacCode: '999294',
+            date: tx.date,
+            billingDetails: {
+                name: user?.displayName || 'Vidya EduCare Student',
+                email: user?.email || 'student@vidyaeducare.com'
+            }
+        };
+    }
+    return null;
+  };
   
   // Add Funds Form State
   const [receiptImage, setReceiptImage] = useState<string | null>(null);
@@ -367,8 +413,13 @@ function WalletPageContent() {
     const amount = parseFloat(amountInput.value);
     const upiId = upiIdInput.value;
 
-    if (!amount || !upiId || amount > walletInfo.balance || amount < 200) {
-        toast({ variant: 'destructive', title: "Invalid Request", description: "Min ₹200 required." });
+    if (!amount || !upiId || amount < 650) {
+        toast({ variant: 'destructive', title: "Invalid Request", description: "Minimum withdrawal amount is ₹650." });
+        return;
+    }
+
+    if (walletInfo.balance - amount < 200) {
+        toast({ variant: 'destructive', title: "Insufficient Balance", description: "A minimum wallet balance of ₹200 must be maintained after withdrawal." });
         return;
     }
 
@@ -379,6 +430,7 @@ function WalletPageContent() {
         const walletDoc = await transaction.get(walletRef);
         if (!walletDoc.exists()) throw new Error("Wallet not found.");
         const currentBalance = walletDoc.data().balance;
+        if (currentBalance - amount < 200) throw new Error("Insufficient balance to maintain the ₹200 minimum limit.");
         transaction.update(walletRef, { balance: currentBalance - amount });
         const newTxRef = doc(collection(db, "transactions"));
         transaction.set(newTxRef, { type: 'withdrawal', description: 'Withdrawal Request', amount: -amount, date: serverTimestamp(), status: 'Pending', paymentMethod: upiId, user: user.uid });
@@ -912,10 +964,10 @@ function WalletPageContent() {
           </Card>
       ) : activeView === 'withdraw' ? (
           <Card className="shadow-2xl border-accent/20 overflow-hidden animate-in fade-in slide-in-from-right-4 duration-500">
-             <CardHeader className="bg-accent/5 border-b flex flex-row items-center justify-between">
+              <CardHeader className="bg-accent/5 border-b flex flex-row items-center justify-between">
                   <div>
                     <CardTitle className="text-2xl font-black text-accent uppercase italic tracking-tighter">Request Payout</CardTitle>
-                    <CardDescription className="font-bold">Minimum withdrawal amount is ₹200.</CardDescription>
+                    <CardDescription className="font-bold">Minimum withdrawal amount is ₹650. A minimum wallet balance of ₹200 must be maintained.</CardDescription>
                   </div>
                   <Button variant="ghost" size="icon" onClick={() => setActiveView('main')} className="rounded-full">
                       <X size={20}/>
@@ -925,7 +977,7 @@ function WalletPageContent() {
                 <form onSubmit={handleWithdraw} className="space-y-6">
                     <div className="space-y-2">
                         <Label htmlFor="amount-withdraw" className="font-black uppercase text-[10px] text-muted-foreground">Withdrawal Amount (INR)</Label>
-                        <Input id="amount-withdraw" name="amount-withdraw" type="number" required min="200" placeholder="Min. 200" className="h-14 text-2xl font-black rounded-2xl text-accent" disabled={isSubmitting}/>
+                        <Input id="amount-withdraw" name="amount-withdraw" type="number" required min="650" placeholder="Min. 650" className="h-14 text-2xl font-black rounded-2xl text-accent" disabled={isSubmitting}/>
                         <p className="text-[10px] text-muted-foreground italic">Available: ₹{formatCurrency(walletInfo.balance)}</p>
                     </div>
                     <div className="space-y-2">
@@ -1036,6 +1088,25 @@ function WalletPageContent() {
                                       <p className="text-sm font-bold">{selectedTx.paymentMethod}</p>
                                   </div>
                               )}
+                              {(selectedTx.type === 'Purchase' || selectedTx.description?.toLowerCase().includes('purchase:') || selectedTx.invoiceNumber) && (
+                                  <div className="flex justify-between items-center pt-4 border-t border-dashed">
+                                      <p className="text-[10px] font-black uppercase text-muted-foreground">Tax Invoice</p>
+                                      <Button 
+                                          variant="outline" 
+                                          size="sm" 
+                                          className="font-bold gap-2 text-xs text-primary border-primary/20 hover:bg-primary/5"
+                                          onClick={() => {
+                                              const details = getInvoiceDetails(selectedTx);
+                                              if (details) {
+                                                  setViewingInvoice(details);
+                                                  setSelectedTx(null);
+                                              }
+                                          }}
+                                      >
+                                          <FileText size={14} /> View Invoice
+                                      </Button>
+                                  </div>
+                              )}
                           </div>
                           
                           {selectedTx.receiptUrl && (
@@ -1067,6 +1138,140 @@ function WalletPageContent() {
               )}
           </DialogContent>
       </Dialog>
+
+      {viewingInvoice && (
+        <Dialog open={!!viewingInvoice} onOpenChange={(open) => !open && setViewingInvoice(null)}>
+            <DialogContent className="max-w-2xl p-8 rounded-[2rem] border-none shadow-2xl overflow-y-auto max-h-[90vh]">
+                <div id="invoice-print-area" className="bg-background text-foreground space-y-6">
+                    <style>{`
+                      @media print {
+                        body * {
+                          visibility: hidden;
+                        }
+                        #invoice-print-area, #invoice-print-area * {
+                          visibility: visible;
+                        }
+                        #invoice-print-area {
+                          position: absolute;
+                          left: 0;
+                          top: 0;
+                          width: 100%;
+                        }
+                      }
+                    `}</style>
+                    <div className="flex justify-between items-start border-b pb-6">
+                        <div>
+                            <h1 className="text-3xl font-black text-primary italic uppercase tracking-tighter">VIDYA <span className="text-accent">EDUCARE</span></h1>
+                            <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest mt-1">Academic Excellence Platform</p>
+                        </div>
+                        <div className="text-right">
+                            <Badge className="bg-primary/10 text-primary border-none font-black text-xs uppercase tracking-widest px-4 py-1.5">TAX INVOICE</Badge>
+                            <p className="text-xs font-mono font-bold mt-2">{viewingInvoice.invoiceNumber}</p>
+                            <p className="text-[10px] text-muted-foreground">{new Date(viewingInvoice.date).toLocaleString('en-IN')}</p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-8 text-sm">
+                        <div>
+                            <h3 className="font-black uppercase text-[10px] text-muted-foreground tracking-wider mb-2">Billed To</h3>
+                            <p className="font-black text-foreground">{viewingInvoice.billingDetails.name}</p>
+                            <p className="text-muted-foreground text-xs">{viewingInvoice.billingDetails.email}</p>
+                        </div>
+                        <div className="text-right">
+                            <h3 className="font-black uppercase text-[10px] text-muted-foreground tracking-wider mb-2">Service Provider</h3>
+                            <p className="font-black text-foreground">Vidya EduCare Private Ltd.</p>
+                            <p className="text-muted-foreground text-xs">GSTIN: 27AACCV1234F1Z5</p>
+                        </div>
+                    </div>
+
+                    <div className="border rounded-2xl overflow-hidden mt-6">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="bg-muted/50 border-b text-[10px] font-black uppercase tracking-wider text-muted-foreground">
+                                    <th className="p-4">Description</th>
+                                    <th className="p-4 text-center">HSN/SAC</th>
+                                    <th className="p-4 text-right">Base Price</th>
+                                </tr>
+                            </thead>
+                            <tbody className="text-sm font-bold">
+                                <tr className="border-b">
+                                    <td className="p-4">
+                                        <p className="text-foreground font-black">{viewingInvoice.packageName}</p>
+                                        <p className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">Bilingual Mock Test Portal</p>
+                                    </td>
+                                    <td className="p-4 text-center font-mono text-xs">{viewingInvoice.hsnSacCode}</td>
+                                    <td className="p-4 text-right">₹{viewingInvoice.basePrice.toFixed(2)}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div className="flex justify-end pt-4">
+                        <div className="w-80 space-y-3 text-sm font-bold">
+                            <div className="flex justify-between text-muted-foreground text-xs">
+                                <span>Base Product Price:</span>
+                                <span>₹{viewingInvoice.basePrice.toFixed(2)}</span>
+                            </div>
+                            {viewingInvoice.discountDetails && viewingInvoice.discountDetails.totalAmount > 0 && (
+                                <div className="space-y-1 bg-accent/5 p-3 rounded-xl border border-accent/10 animate-in fade-in">
+                                    <div className="text-[10px] font-black text-accent uppercase tracking-wider mb-1">Applied Discounts:</div>
+                                    {viewingInvoice.discountDetails.base > 0 && (
+                                        <div className="flex justify-between text-xs text-accent">
+                                            <span>• Base Discount ({viewingInvoice.discountDetails.base}%):</span>
+                                            <span>-₹{(viewingInvoice.basePrice * viewingInvoice.discountDetails.base / 100).toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                    {viewingInvoice.discountDetails.referral > 0 && (
+                                        <div className="flex justify-between text-xs text-accent">
+                                            <span>• Referral Discount ({viewingInvoice.discountDetails.referral}%):</span>
+                                            <span>-₹{(viewingInvoice.basePrice * viewingInvoice.discountDetails.referral / 100).toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                    {viewingInvoice.discountDetails.recommendation > 0 && (
+                                        <div className="flex justify-between text-xs text-accent">
+                                            <span>• Fast-Mover Bonus ({viewingInvoice.discountDetails.recommendation}%):</span>
+                                            <span>-₹{(viewingInvoice.basePrice * viewingInvoice.discountDetails.recommendation / 100).toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                    {viewingInvoice.discountDetails.special > 0 && (
+                                        <div className="flex justify-between text-xs text-accent">
+                                            <span>• Special Promotion ({viewingInvoice.discountDetails.special}%):</span>
+                                            <span>-₹{(viewingInvoice.basePrice * viewingInvoice.discountDetails.special / 100).toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                    <div className="flex justify-between text-xs font-black border-t border-dashed border-accent/20 pt-1.5 mt-1.5 text-accent">
+                                        <span>Total Discount:</span>
+                                        <span>-₹{viewingInvoice.discountDetails.totalAmount.toFixed(2)}</span>
+                                    </div>
+                                </div>
+                            )}
+                            <div className="flex justify-between border-t pt-2 mt-2">
+                                <span>Taxable Value (Total):</span>
+                                <span>₹{viewingInvoice.taxableAmount.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between text-muted-foreground text-xs">
+                                <span>GST ({viewingInvoice.gstRate}%):</span>
+                                <span>₹{viewingInvoice.gstAmount.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between border-t border-dashed pt-3 text-lg font-black text-primary">
+                                <span>Final Total (Paid):</span>
+                                <span>₹{viewingInvoice.finalPrice.toFixed(2)}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="border-t pt-6 text-center text-muted-foreground text-[9px] font-black uppercase tracking-[0.2em]">
+                        Thank you for choosing Vidya EduCare!
+                    </div>
+                </div>
+
+                <div className="flex justify-end gap-3 mt-8 pt-4 border-t print:hidden">
+                    <Button variant="ghost" onClick={() => setViewingInvoice(null)} className="font-bold">Close</Button>
+                    <Button onClick={() => window.print()} className="font-black gap-2 bg-primary text-white shadow-lg"><Printer size={16} /> Print / Save PDF</Button>
+                </div>
+            </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

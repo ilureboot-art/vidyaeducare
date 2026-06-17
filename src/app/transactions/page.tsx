@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Download, ArrowUpRight, ArrowDownLeft, Loader2, Calendar as CalendarIcon, FilterX, BarChart3, FileText, CheckCircle2, Clock, XCircle, Copy, Info, IndianRupee } from "lucide-react";
+import { Search, Download, ArrowUpRight, ArrowDownLeft, Loader2, Calendar as CalendarIcon, FilterX, BarChart3, FileText, CheckCircle2, Clock, XCircle, Copy, Info, IndianRupee, Printer } from "lucide-react";
 import type { Transaction } from "@/lib/user-data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
@@ -78,6 +78,52 @@ function TransactionsPageContent() {
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
+  const [viewingInvoice, setViewingInvoice] = useState<any | null>(null);
+  
+  const getInvoiceDetails = (tx: Transaction) => {
+    if (tx.invoiceNumber) {
+        return {
+            invoiceNumber: tx.invoiceNumber,
+            packageName: tx.packageName || tx.description || 'Mock Test Package',
+            basePrice: tx.basePrice || Math.abs(tx.amount) / 1.18,
+            discountDetails: tx.discountDetails || { base: 0, referral: 0, recommendation: 0, special: 0, totalAmount: 0 },
+            taxableAmount: tx.taxableAmount || Math.abs(tx.amount) / 1.18,
+            gstRate: tx.gstRate || 18,
+            gstAmount: tx.gstAmount || Math.abs(tx.amount) - (Math.abs(tx.amount) / 1.18),
+            finalPrice: tx.finalPrice || Math.abs(tx.amount),
+            hsnSacCode: tx.hsnSacCode || '999294',
+            date: tx.date,
+            billingDetails: tx.billingDetails || {
+                name: user?.displayName || 'Vidya EduCare Student',
+                email: user?.email || 'student@vidyaeducare.com'
+            }
+        };
+    }
+    
+    const isPurchase = tx.type === 'Purchase' || tx.description?.toLowerCase().includes('purchase:');
+    if (isPurchase) {
+        const amount = Math.abs(tx.amount);
+        const basePrice = amount / 1.18;
+        const gstAmount = amount - basePrice;
+        return {
+            invoiceNumber: `INV-${new Date(tx.date).getTime().toString().slice(-6)}-${user?.uid?.slice(0, 4).toUpperCase() || 'STU'}`,
+            packageName: tx.description?.replace('Purchase: ', '') || 'Mock Test Package',
+            basePrice: basePrice,
+            discountDetails: { base: 0, referral: 0, recommendation: 0, special: 0, totalAmount: 0 },
+            taxableAmount: basePrice,
+            gstRate: 18,
+            gstAmount: gstAmount,
+            finalPrice: amount,
+            hsnSacCode: '999294',
+            date: tx.date,
+            billingDetails: {
+                name: user?.displayName || 'Vidya EduCare Student',
+                email: user?.email || 'student@vidyaeducare.com'
+            }
+        };
+    }
+    return null;
+  };
   
   useEffect(() => {
     if (user && db) {
@@ -501,6 +547,25 @@ function TransactionsPageContent() {
                                       <p className="text-sm font-bold">{selectedTx.paymentMethod}</p>
                                   </div>
                               )}
+                              {(selectedTx.type === 'Purchase' || selectedTx.description?.toLowerCase().includes('purchase:') || selectedTx.invoiceNumber) && (
+                                  <div className="flex justify-between items-center pt-4 border-t border-dashed">
+                                      <p className="text-[10px] font-black uppercase text-muted-foreground">Tax Invoice</p>
+                                      <Button 
+                                          variant="outline" 
+                                          size="sm" 
+                                          className="font-bold gap-2 text-xs text-primary border-primary/20 hover:bg-primary/5"
+                                          onClick={() => {
+                                              const details = getInvoiceDetails(selectedTx);
+                                              if (details) {
+                                                  setViewingInvoice(details);
+                                                  setSelectedTx(null);
+                                              }
+                                          }}
+                                      >
+                                          <FileText size={14} /> View Invoice
+                                      </Button>
+                                  </div>
+                              )}
                           </div>
 
                           <div className="pt-6 border-t">
@@ -523,6 +588,140 @@ function TransactionsPageContent() {
               )}
           </DialogContent>
       </Dialog>
+
+      {viewingInvoice && (
+        <Dialog open={!!viewingInvoice} onOpenChange={(open) => !open && setViewingInvoice(null)}>
+            <DialogContent className="max-w-2xl p-8 rounded-[2rem] border-none shadow-2xl overflow-y-auto max-h-[90vh]">
+                <div id="invoice-print-area" className="bg-background text-foreground space-y-6">
+                    <style>{`
+                      @media print {
+                        body * {
+                          visibility: hidden;
+                        }
+                        #invoice-print-area, #invoice-print-area * {
+                          visibility: visible;
+                        }
+                        #invoice-print-area {
+                          position: absolute;
+                          left: 0;
+                          top: 0;
+                          width: 100%;
+                        }
+                      }
+                    `}</style>
+                    <div className="flex justify-between items-start border-b pb-6">
+                        <div>
+                            <h1 className="text-3xl font-black text-primary italic uppercase tracking-tighter">VIDYA <span className="text-accent">EDUCARE</span></h1>
+                            <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest mt-1">Academic Excellence Platform</p>
+                        </div>
+                        <div className="text-right">
+                            <Badge className="bg-primary/10 text-primary border-none font-black text-xs uppercase tracking-widest px-4 py-1.5">TAX INVOICE</Badge>
+                            <p className="text-xs font-mono font-bold mt-2">{viewingInvoice.invoiceNumber}</p>
+                            <p className="text-[10px] text-muted-foreground">{new Date(viewingInvoice.date).toLocaleString('en-IN')}</p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-8 text-sm">
+                        <div>
+                            <h3 className="font-black uppercase text-[10px] text-muted-foreground tracking-wider mb-2">Billed To</h3>
+                            <p className="font-black text-foreground">{viewingInvoice.billingDetails.name}</p>
+                            <p className="text-muted-foreground text-xs">{viewingInvoice.billingDetails.email}</p>
+                        </div>
+                        <div className="text-right">
+                            <h3 className="font-black uppercase text-[10px] text-muted-foreground tracking-wider mb-2">Service Provider</h3>
+                            <p className="font-black text-foreground">Vidya EduCare Private Ltd.</p>
+                            <p className="text-muted-foreground text-xs">GSTIN: 27AACCV1234F1Z5</p>
+                        </div>
+                    </div>
+
+                    <div className="border rounded-2xl overflow-hidden mt-6">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="bg-muted/50 border-b text-[10px] font-black uppercase tracking-wider text-muted-foreground">
+                                    <th className="p-4">Description</th>
+                                    <th className="p-4 text-center">HSN/SAC</th>
+                                    <th className="p-4 text-right">Base Price</th>
+                                </tr>
+                            </thead>
+                            <tbody className="text-sm font-bold">
+                                <tr className="border-b">
+                                    <td className="p-4">
+                                        <p className="text-foreground font-black">{viewingInvoice.packageName}</p>
+                                        <p className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">Bilingual Mock Test Portal</p>
+                                    </td>
+                                    <td className="p-4 text-center font-mono text-xs">{viewingInvoice.hsnSacCode}</td>
+                                    <td className="p-4 text-right">₹{viewingInvoice.basePrice.toFixed(2)}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div className="flex justify-end pt-4">
+                        <div className="w-80 space-y-3 text-sm font-bold">
+                            <div className="flex justify-between text-muted-foreground text-xs">
+                                <span>Base Product Price:</span>
+                                <span>₹{viewingInvoice.basePrice.toFixed(2)}</span>
+                            </div>
+                            {viewingInvoice.discountDetails && viewingInvoice.discountDetails.totalAmount > 0 && (
+                                <div className="space-y-1 bg-accent/5 p-3 rounded-xl border border-accent/10 animate-in fade-in">
+                                    <div className="text-[10px] font-black text-accent uppercase tracking-wider mb-1">Applied Discounts:</div>
+                                    {viewingInvoice.discountDetails.base > 0 && (
+                                        <div className="flex justify-between text-xs text-accent">
+                                            <span>• Base Discount ({viewingInvoice.discountDetails.base}%):</span>
+                                            <span>-₹{(viewingInvoice.basePrice * viewingInvoice.discountDetails.base / 100).toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                    {viewingInvoice.discountDetails.referral > 0 && (
+                                        <div className="flex justify-between text-xs text-accent">
+                                            <span>• Referral Discount ({viewingInvoice.discountDetails.referral}%):</span>
+                                            <span>-₹{(viewingInvoice.basePrice * viewingInvoice.discountDetails.referral / 100).toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                    {viewingInvoice.discountDetails.recommendation > 0 && (
+                                        <div className="flex justify-between text-xs text-accent">
+                                            <span>• Fast-Mover Bonus ({viewingInvoice.discountDetails.recommendation}%):</span>
+                                            <span>-₹{(viewingInvoice.basePrice * viewingInvoice.discountDetails.recommendation / 100).toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                    {viewingInvoice.discountDetails.special > 0 && (
+                                        <div className="flex justify-between text-xs text-accent">
+                                            <span>• Special Promotion ({viewingInvoice.discountDetails.special}%):</span>
+                                            <span>-₹{(viewingInvoice.basePrice * viewingInvoice.discountDetails.special / 100).toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                    <div className="flex justify-between text-xs font-black border-t border-dashed border-accent/20 pt-1.5 mt-1.5 text-accent">
+                                        <span>Total Discount:</span>
+                                        <span>-₹{viewingInvoice.discountDetails.totalAmount.toFixed(2)}</span>
+                                    </div>
+                                </div>
+                            )}
+                            <div className="flex justify-between border-t pt-2 mt-2">
+                                <span>Taxable Value (Total):</span>
+                                <span>₹{viewingInvoice.taxableAmount.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between text-muted-foreground text-xs">
+                                <span>GST ({viewingInvoice.gstRate}%):</span>
+                                <span>₹{viewingInvoice.gstAmount.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between border-t border-dashed pt-3 text-lg font-black text-primary">
+                                <span>Final Total (Paid):</span>
+                                <span>₹{viewingInvoice.finalPrice.toFixed(2)}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="border-t pt-6 text-center text-muted-foreground text-[9px] font-black uppercase tracking-[0.2em]">
+                        Thank you for choosing Vidya EduCare!
+                    </div>
+                </div>
+
+                <div className="flex justify-end gap-3 mt-8 pt-4 border-t print:hidden">
+                    <Button variant="ghost" onClick={() => setViewingInvoice(null)} className="font-bold">Close</Button>
+                    <Button onClick={() => window.print()} className="font-black gap-2 bg-primary text-white shadow-lg"><Printer size={16} /> Print / Save PDF</Button>
+                </div>
+            </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

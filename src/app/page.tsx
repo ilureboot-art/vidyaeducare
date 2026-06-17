@@ -343,7 +343,7 @@ Learn more in our FAQ: ${faqUrl}
                         </AccordionTrigger>
                         <AccordionContent className="text-muted-foreground text-lg font-medium leading-relaxed pb-6">
                             <p><b>Adding Funds:</b> Navigate to 'Wallet', click 'Add Funds'. Pay via the provided UPI QR or Bank details, then submit your Transaction ID/UTR for verification.</p>
-                            <p className="mt-4"><b>Withdrawals:</b> Go to 'Wallet' and select 'Withdraw'. Enter an amount (minimum ₹200) and your receiving UPI ID. Admins process payouts regularly.</p>
+                            <p className="mt-4"><b>Withdrawals:</b> Go to 'Wallet' and select 'Withdraw'. Enter an amount (minimum ₹650, maintaining a ₹200 minimum balance) and your receiving UPI ID. Admins process payouts regularly.</p>
                         </AccordionContent>
                     </AccordionItem>
                     <AccordionItem value="rewards" className="border-b-2 border-muted py-2">

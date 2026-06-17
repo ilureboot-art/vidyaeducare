@@ -2,7 +2,7 @@
 
 export type Transaction = {
   id: number | string;
-  type: 'deposit' | 'withdrawal';
+  type: 'deposit' | 'withdrawal' | 'Purchase' | string;
   description: string;
   amount: number;
   date: string;
@@ -11,6 +11,26 @@ export type Transaction = {
   referenceId?: string;
   user?: string;
   receiptUrl?: string; // Data URI or URL for payment receipt image
+  invoiceNumber?: string;
+  basePrice?: number;
+  discountDetails?: {
+    base: number;
+    referral: number;
+    special: number;
+    recommendation: number;
+    totalPercentage: number;
+    totalAmount: number;
+  };
+  taxableAmount?: number;
+  gstRate?: number;
+  gstAmount?: number;
+  finalPrice?: number;
+  billingDetails?: {
+    name: string;
+    email: string;
+  };
+  hsnSacCode?: string;
+  packageName?: string;
 };
 
 export type AdminPaymentMethods = {

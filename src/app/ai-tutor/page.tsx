@@ -17,7 +17,7 @@ import UserLayout from "@/components/UserLayout";
 import Link from "next/link";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { exportToPdf, exportToDoc } from "@/lib/export-utils";
+import { exportToPdf, exportToDoc, exportToTxt } from "@/lib/export-utils";
 
 const GUEST_TRIAL_LIMIT = 5;
 
@@ -71,9 +71,21 @@ function AiTutorPageContent() {
                             ]);
 
                             const isFreeAccessAllowed = configSnap.exists() && (configSnap.data() as any).grantFreeAiToolsWithMockArena;
-                            const userHasPurchased = aiAccessSnap.exists() && (aiAccessSnap.data() as any).hasDoubtSolver;
+                             
+                             let hasActiveSubscription = false;
+                             if (aiAccessSnap.exists()) {
+                                 const data = aiAccessSnap.data() as any;
+                                 if (data.hasDoubtSolver === true) {
+                                     hasActiveSubscription = true;
+                                 } else if (data.doubtSolverExpiresAt) {
+                                     const expiry = data.doubtSolverExpiresAt.toDate ? data.doubtSolverExpiresAt.toDate() : new Date(data.doubtSolverExpiresAt);
+                                     if (expiry > new Date()) {
+                                         hasActiveSubscription = true;
+                                     }
+                                 }
+                             }
 
-                            setHasActivePackage(!!userHasPurchased || (!!isFreeAccessAllowed && hasMockArena));
+                             setHasActivePackage(hasActiveSubscription || (!!isFreeAccessAllowed && hasMockArena));
                             
                             if (hasStudents) {
                                 const list = studentSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentProfile));
@@ -133,6 +145,19 @@ function AiTutorPageContent() {
         `;
         exportToDoc(filename, title, html);
         toast({ title: "Word Document Exported!", description: "Check your downloads directory." });
+    };
+
+    const handleDownloadTxt = () => {
+        if (!result) return;
+        const filename = `doubt_${result.keyConcept.toLowerCase().replace(/\s+/g, '_')}`;
+        const title = `Vidya AI Doubt Solver - ${result.keyConcept}`;
+        const sections = [
+            { subtitle: "Student Doubt", content: queryText },
+            { subtitle: "Marathi Explanation / मराठी स्पष्टीकरण", content: result.explanation.mr },
+            { subtitle: "English Explanation", content: result.explanation.en }
+        ];
+        exportToTxt(filename, title, sections);
+        toast({ title: "Text Document Exported!", description: "Check your downloads directory." });
     };
 
     const handleAskAi = async (e: React.FormEvent) => {
@@ -219,7 +244,7 @@ function AiTutorPageContent() {
 
     return (
         <div className="w-full max-w-3xl mx-auto space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between print:hidden">
                 <h1 className="text-3xl font-black text-primary flex items-center gap-2 italic tracking-tighter uppercase">
                     <BrainCircuit className="w-8 h-8 text-accent" /> VIDYA AI DOUBT SOLVER
                 </h1>
@@ -229,7 +254,7 @@ function AiTutorPageContent() {
             </div>
 
             {!user && (
-                <Alert className={isLocked ? "bg-red-50 border-red-200" : "bg-accent/5 border-accent/20"}>
+                <Alert className={isLocked ? "bg-red-50 border-red-200 print:hidden" : "bg-accent/5 border-accent/20 print:hidden"}>
                     {isLocked ? <Lock className="h-4 w-4 text-red-600" /> : <Sparkles className="h-4 w-4 text-accent" />}
                     <AlertTitle className={isLocked ? "text-red-700 font-black" : "text-accent font-black"}>
                         {isLocked ? "TRIAL LIMIT REACHED" : `FREE AI SOLVER TRIAL ACTIVE (${GUEST_TRIAL_LIMIT - trialCount} Queries Left)`}
@@ -322,7 +347,7 @@ function AiTutorPageContent() {
 
             {result && (
                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <div className="flex justify-between items-center flex-wrap gap-3">
+                    <div className="flex justify-between items-center flex-wrap gap-3 print:hidden">
                         <Button 
                             variant="outline" 
                             onClick={() => { setQueryText(""); setResult(null); }} 
@@ -339,11 +364,11 @@ function AiTutorPageContent() {
                                 Export PDF
                             </Button>
                             <Button 
-                                onClick={handleDownloadDoc} 
+                                onClick={handleDownloadTxt} 
                                 className="font-bold bg-accent text-white gap-2 shadow-md"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-                                Export DOC
+                                Export TXT
                             </Button>
                         </div>
                     </div>

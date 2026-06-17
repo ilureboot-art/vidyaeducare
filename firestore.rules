@@ -100,7 +100,8 @@ service cloud.firestore {
 
     match /leaderboard/{id} {
       allow read, list: if true;
-      allow write: if true; 
+      allow create: if signedIn();
+      allow update, delete: if isAdmin();
     }
 
     match /quizClashTournaments/{id} {

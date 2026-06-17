@@ -81,7 +81,7 @@ export default function AdminStoreSettingsPage() {
     if (!storeConfig) return;
     const newPackages = [...storeConfig.mockTestPackages];
     const pkg = { ...newPackages[index] };
-    if (['price', 'months', 'gstRate', 'baseDiscount', 'referralDiscount', 'specialDiscount'].includes(field as string)) {
+    if (['price', 'months', 'gstRate', 'baseDiscount', 'referralDiscount', 'specialDiscount', 'freeAiMonths'].includes(field as string)) {
         value = Number(value) || 0;
     }
     (pkg as any)[field] = value;
@@ -119,7 +119,7 @@ export default function AdminStoreSettingsPage() {
     if (!storeConfig) return;
     const newPackages = [...storeConfig.mockTestPackages, { 
         name: 'New Subscription', price: 0, months: 1, bestValue: false, gstRate: 18, hsnSacCode: '999294',
-        baseDiscount: 0, referralDiscount: 0, specialDiscount: 0, grantFreeReferbolt: true
+        baseDiscount: 0, referralDiscount: 0, specialDiscount: 0, grantFreeReferbolt: true, freeAiMonths: 0
     }];
     setStoreConfig(prev => prev ? ({...prev, mockTestPackages: newPackages}) : null);
   };
@@ -250,7 +250,7 @@ export default function AdminStoreSettingsPage() {
                             <Input type="number" value={pkg.months} onChange={(e) => handleMockTestPackageChange(index, 'months', e.target.value)} />
                         </div>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 bg-background rounded-lg border">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-4 p-4 bg-background rounded-lg border">
                         <div className="space-y-2">
                             <Label className="text-[10px] uppercase font-black text-primary">GST Rate (%)</Label>
                             <Input type="number" value={pkg.gstRate} onChange={(e) => handleMockTestPackageChange(index, 'gstRate', e.target.value)} />
@@ -258,6 +258,10 @@ export default function AdminStoreSettingsPage() {
                         <div className="space-y-2">
                             <Label className="text-[10px] uppercase font-black text-primary">HSN/SAC Code</Label>
                             <Input type="text" value={pkg.hsnSacCode} onChange={(e) => handleMockTestPackageChange(index, 'hsnSacCode', e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-[10px] uppercase font-black text-primary">Free AI Access (Months)</Label>
+                            <Input type="number" value={pkg.freeAiMonths || 0} onChange={(e) => handleMockTestPackageChange(index, 'freeAiMonths', e.target.value)} />
                         </div>
                         <div className="space-y-2 col-span-full lg:col-span-2 flex flex-col justify-end gap-4 pb-2">
                              <div className="flex items-center space-x-2">

@@ -134,3 +134,32 @@ export function exportToDoc(filename: string, title: string, htmlContent: string
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+
+/**
+ * Exports text sections to a clean plain text file (.txt).
+ * @param filename File name (without extension)
+ * @param title Document title header
+ * @param textSections Array of sections containing subtitle and text content
+ */
+export function exportToTxt(filename: string, title: string, textSections: { subtitle?: string; content: string }[]) {
+  let text = `=========================================\n`;
+  text += ` ${title.toUpperCase()} \n`;
+  text += `=========================================\n\n`;
+
+  for (const sec of textSections) {
+    if (sec.subtitle) {
+      text += `--- ${sec.subtitle.toUpperCase()} ---\n`;
+    }
+    text += `${sec.content}\n\n`;
+  }
+
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${filename}.txt`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}

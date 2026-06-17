@@ -63,22 +63,53 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Product not found or invalid type.' }, { status: 404 });
     }
 
-    // Check Recommendation Discount Eligibility on Server
+    // Check Recommendation Discount Eligibility on Server (Fast-Mover: 2 referred clients who purchased in last 30 days)
     let recommendationDiscount = 0;
     let isEligibleForRecDiscount = false;
     if (productType === 'mock' && storeConfig.recommendationSettings) {
       const { windowDays, requiredCount, additionalDiscount } = storeConfig.recommendationSettings;
-      const limitDate = new Date();
-      limitDate.setDate(limitDate.getDate() - windowDays);
-
-      const usersSnap = await adminDb.collection('users')
-        .where('referredBy', '==', uid)
-        .where('createdAt', '>=', limitDate)
-        .get();
-
-      if (usersSnap.size >= requiredCount) {
-        isEligibleForRecDiscount = true;
-        recommendationDiscount = (additionalDiscount || 0) / 100;
+      
+      const userDocRef = adminDb.collection('users').doc(uid);
+      const userDoc = await userDocRef.get();
+      if (userDoc.exists) {
+        const joinDate = userDoc.data()?.joinDate ? new Date(userDoc.data()?.joinDate) : new Date();
+        
+        const txsSnap = await adminDb.collection('transactions')
+          .where('user', '==', uid)
+          .where('type', '==', 'Purchase')
+          .orderBy('date', 'desc')
+          .limit(1)
+          .get();
+        
+        let lastPurchaseDate = null;
+        if (!txsSnap.empty) {
+          const d = txsSnap.docs[0].data().date;
+          lastPurchaseDate = d.toDate ? d.toDate() : new Date(d);
+        }
+        
+        const anchorDate = lastPurchaseDate && lastPurchaseDate > joinDate ? lastPurchaseDate : joinDate;
+        const windowEnd = new Date(anchorDate.getTime() + (windowDays * 24 * 60 * 60 * 1000));
+        const now = new Date();
+        
+        if (now <= windowEnd) {
+          const clientsSnap = await adminDb.collection('clients')
+            .where('referrerId', '==', uid)
+            .get();
+          
+          let validCount = 0;
+          clientsSnap.forEach(doc => {
+            const data = doc.data();
+            const pDate = new Date(data.purchaseDate);
+            if (pDate >= anchorDate && pDate <= windowEnd) {
+              validCount++;
+            }
+          });
+          
+          if (validCount >= requiredCount) {
+            isEligibleForRecDiscount = true;
+            recommendationDiscount = (additionalDiscount || 0) / 100;
+          }
+        }
       }
     }
 
@@ -121,9 +152,11 @@ export async function POST(request: NextRequest) {
 
       const specialDiscount = (mockItem.specialDiscount || 0) / 100;
       const totalDiscountFactor = baseDiscount + referralDiscount + specialDiscount + recommendationDiscount;
-      const discountedBasePrice = basePrice * (1 - totalDiscountFactor);
-      const gstAmount = discountedBasePrice * (gstRate / 100);
-      const finalPrice = discountedBasePrice + gstAmount;
+      
+      // Formula: (Base + GST) = Total, Total - Discounts = Final Price
+      const originalTotal = basePrice + (basePrice * (gstRate / 100));
+      const discountAmount = originalTotal * totalDiscountFactor;
+      const finalPrice = originalTotal - discountAmount;
 
       priceDetails = {
         basePrice: basePrice,
@@ -133,11 +166,11 @@ export async function POST(request: NextRequest) {
           special: specialDiscount * 100,
           recommendation: recommendationDiscount * 100,
           totalPercentage: totalDiscountFactor * 100,
-          totalAmount: basePrice * totalDiscountFactor,
+          totalAmount: discountAmount,
         },
-        taxableAmount: discountedBasePrice,
+        taxableAmount: basePrice,
         gstRate: gstRate,
-        gstAmount: gstAmount,
+        gstAmount: basePrice * (gstRate / 100),
         finalPrice: finalPrice,
         ibaUid: ibaUid
       };
@@ -188,6 +221,9 @@ export async function POST(request: NextRequest) {
       if (!walletDoc.exists) {
         throw new Error('Wallet not found.');
       }
+      
+      const aiAccessRef = adminDb.collection('aiAccess').doc(uid);
+      const aiAccessDoc = await transaction.get(aiAccessRef);
       
       const currentBalance = walletDoc.data()?.balance || 0;
       if (currentBalance < priceDetails.finalPrice) {
@@ -254,20 +290,74 @@ export async function POST(request: NextRequest) {
           transaction.set(adminDb.collection('referbolt').doc(uid), { isSubscribed: true, referralCode: studentReferralCode }, { merge: true });
         }
 
-        // Grant free AI tools if configured
-        if (storeConfig.grantFreeAiToolsWithMockArena) {
-          const aiAccessRef = adminDb.collection('aiAccess').doc(uid);
-          transaction.set(aiAccessRef, { hasDoubtSolver: true, hasNotesGenerator: true }, { merge: true });
+        // Grant free AI tools based on freeAiMonths
+        const freeAiMonths = mockItem.freeAiMonths || 0;
+        if (freeAiMonths > 0) {
+          const now = new Date();
+          
+          let currentDoubtExpiry = now;
+          let currentNotesExpiry = now;
+          
+          if (aiAccessDoc.exists) {
+            const data = aiAccessDoc.data() as any;
+            if (data.doubtSolverExpiresAt) {
+              const d = data.doubtSolverExpiresAt.toDate ? data.doubtSolverExpiresAt.toDate() : new Date(data.doubtSolverExpiresAt);
+              if (d > now) currentDoubtExpiry = d;
+            }
+            if (data.notesGeneratorExpiresAt) {
+              const d = data.notesGeneratorExpiresAt.toDate ? data.notesGeneratorExpiresAt.toDate() : new Date(data.notesGeneratorExpiresAt);
+              if (d > now) currentNotesExpiry = d;
+            }
+          }
+          
+          const newDoubtExpiry = new Date(currentDoubtExpiry.getTime() + freeAiMonths * 30 * 24 * 60 * 60 * 1000);
+          const newNotesExpiry = new Date(currentNotesExpiry.getTime() + freeAiMonths * 30 * 24 * 60 * 60 * 1000);
+          
+          transaction.set(aiAccessRef, { 
+            doubtSolverExpiresAt: newDoubtExpiry, 
+            notesGeneratorExpiresAt: newNotesExpiry 
+          }, { merge: true });
+        }
+
+        // Save referred user to clients collection for IBA tracking
+        if (priceDetails.ibaUid) {
+          const clientRef = adminDb.collection('clients').doc();
+          transaction.set(clientRef, {
+            name: userName,
+            type: "Direct",
+            product: selectedProduct.name,
+            purchaseDate: new Date().toISOString(),
+            validity: new Date(Date.now() + mockItem.months * 30 * 24 * 60 * 60 * 1000).toISOString(),
+            referrerId: priceDetails.ibaUid
+          });
         }
       } else if (productType === 'referbolt') {
         const studentReferralCode = walletDoc.data()?.referralCode || `REF${uid.slice(0, 6).toUpperCase()}`;
         transaction.set(adminDb.collection('referbolt').doc(uid), { isSubscribed: true, referralCode: studentReferralCode }, { merge: true });
       } else if (productType === 'ai_tool') {
-        const aiAccessRef = adminDb.collection('aiAccess').doc(uid);
+        const now = new Date();
         if (productId === 'ai_doubt') {
-          transaction.set(aiAccessRef, { hasDoubtSolver: true }, { merge: true });
+          let currentExpiry = now;
+          if (aiAccessDoc.exists) {
+            const data = aiAccessDoc.data() as any;
+            if (data.doubtSolverExpiresAt) {
+              const d = data.doubtSolverExpiresAt.toDate ? data.doubtSolverExpiresAt.toDate() : new Date(data.doubtSolverExpiresAt);
+              if (d > now) currentExpiry = d;
+            }
+          }
+          const newExpiry = new Date(currentExpiry.getTime() + 30 * 24 * 60 * 60 * 1000);
+          transaction.set(aiAccessRef, { doubtSolverExpiresAt: newExpiry }, { merge: true });
         } else if (productId === 'ai_notes') {
-          transaction.set(aiAccessRef, { hasNotesGenerator: true }, { merge: true });
+          let currentExpiry = now;
+          if (aiAccessDoc.exists) {
+            const data = aiAccessDoc.data() as any;
+            if (data.notesGeneratorExpiresAt) {
+              const d = data.notesGeneratorExpiresAt.toDate ? data.notesGeneratorExpiresAt.toDate() : new Date(data.notesGeneratorExpiresAt);
+              if (d > now) currentExpiry = d;
+            }
+          }
+          const newExpiry = new Date(currentExpiry.getTime() + 30 * 24 * 60 * 60 * 1000);
+          transaction.set(aiAccessRef, { notesGeneratorExpiresAt: newExpiry }, { merge: true });
         }
       }
     });

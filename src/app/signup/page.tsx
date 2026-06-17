@@ -123,6 +123,8 @@ function SignupForm() {
             phone: phone,
             joinDate: new Date().toISOString(),
             status: "Active",
+            referredBy: referrerId || null,
+            createdAt: serverTimestamp(),
         });
 
         const myReferralCode = `REF${user.uid.slice(0, 6).toUpperCase()}`;

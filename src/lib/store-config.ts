@@ -12,6 +12,7 @@ export type MockTestPackage = {
     referralDiscount: number;
     specialDiscount: number;
     grantFreeReferbolt: boolean;
+    freeAiMonths: number;
 };
 
 export type ReferboltSubscription = {
@@ -70,7 +71,8 @@ export const defaultStoreConfig: StoreConfig = {
             baseDiscount: 5,
             referralDiscount: 10,
             specialDiscount: 0,
-            grantFreeReferbolt: true
+            grantFreeReferbolt: true,
+            freeAiMonths: 12
         },
         { 
             name: "6 Months Subscription", 
@@ -82,7 +84,8 @@ export const defaultStoreConfig: StoreConfig = {
             baseDiscount: 5,
             referralDiscount: 10,
             specialDiscount: 0,
-            grantFreeReferbolt: true
+            grantFreeReferbolt: true,
+            freeAiMonths: 6
         },
     ],
 

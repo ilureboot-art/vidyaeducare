@@ -18,7 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
-import { exportToPdf, exportToDoc } from "@/lib/export-utils";
+import { exportToPdf, exportToDoc, exportToTxt } from "@/lib/export-utils";
 
 const GUEST_TRIAL_LIMIT = 5;
 
@@ -72,9 +72,21 @@ function AiNotesPageContent() {
                             ]);
 
                             const isFreeAccessAllowed = configSnap.exists() && (configSnap.data() as any).grantFreeAiToolsWithMockArena;
-                            const userHasPurchased = aiAccessSnap.exists() && (aiAccessSnap.data() as any).hasNotesGenerator;
+                             
+                             let hasActiveSubscription = false;
+                             if (aiAccessSnap.exists()) {
+                                 const data = aiAccessSnap.data() as any;
+                                 if (data.hasNotesGenerator === true) {
+                                     hasActiveSubscription = true;
+                                 } else if (data.notesGeneratorExpiresAt) {
+                                     const expiry = data.notesGeneratorExpiresAt.toDate ? data.notesGeneratorExpiresAt.toDate() : new Date(data.notesGeneratorExpiresAt);
+                                     if (expiry > new Date()) {
+                                         hasActiveSubscription = true;
+                                     }
+                                 }
+                             }
 
-                            setHasActivePackage(!!userHasPurchased || (!!isFreeAccessAllowed && hasMockArena));
+                             setHasActivePackage(hasActiveSubscription || (!!isFreeAccessAllowed && hasMockArena));
                             
                             if (hasStudents) {
                                 const list = studentSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentProfile));
@@ -125,27 +137,22 @@ function AiNotesPageContent() {
         toast({ title: "PDF Exported!", description: "Check your downloads directory." });
     };
 
-    const handleDownloadDoc = () => {
+    const handleDownloadTxt = () => {
         if (!result) return;
         const filename = `quicknotes_${result.title.toLowerCase().replace(/\s+/g, '_')}`;
         const title = `Vidya QuickNotes - ${result.title}`;
-
-        let html = `<h1>Vidya QuickNotes - ${result.title}</h1>`;
-        html += `<div class="summary-box"><h2>Concept Summary / मुख्य सारांश</h2><p><b>${result.summary.mr}</b></p><p><i>${result.summary.en}</i></p></div>`;
+        
+        const sections: { subtitle?: string; content: string }[] = [];
+        sections.push({ subtitle: "Concept Summary / मुख्य सारांश", content: `${result.summary.mr}\n\n${result.summary.en}` });
 
         for (const s of result.sections) {
-            html += `<h2>${s.heading.mr} (${s.heading.en})</h2>`;
-            html += `<p><b>${s.content.mr}</b></p>`;
-            html += `<p><i>${s.content.en}</i></p>`;
-            html += `<h3>Key Points / मुख्य मुद्दे</h3><ul>`;
-            for (const p of s.keyPoints) {
-                html += `<li><b>${p.mr}</b> <br/><i>${p.en}</i></li>`;
-            }
-            html += `</ul>`;
+            sections.push({ subtitle: `${s.heading.mr} (${s.heading.en})`, content: `${s.content.mr}\n\n${s.content.en}` });
+            
+            const pointsText = s.keyPoints.map(p => `• ${p.mr}\n  (${p.en})`).join('\n');
+            sections.push({ content: pointsText });
         }
 
-        exportToDoc(filename, title, html);
-        toast({ title: "Word Document Exported!", description: "Check your downloads directory." });
+        exportToTxt(filename, title, sections);
     };
 
     const handleGenerate = async (e: React.FormEvent) => {
@@ -241,7 +248,7 @@ function AiNotesPageContent() {
 
     return (
         <div className="w-full max-w-4xl mx-auto space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between print:hidden">
                 <h1 className="text-3xl font-black text-primary flex items-center gap-2 italic uppercase tracking-tighter">
                     <ScrollText className="w-8 h-8 text-accent" /> VIDYA QUICKNOTES
                 </h1>
@@ -251,7 +258,7 @@ function AiNotesPageContent() {
             </div>
 
             {!user && (
-                <Alert className={isLocked ? "bg-red-50 border-red-200" : "bg-primary/5 border-primary/20"}>
+                <Alert className={isLocked ? "bg-red-50 border-red-200 print:hidden" : "bg-primary/5 border-primary/20 print:hidden"}>
                     {isLocked ? <Lock className="h-4 w-4 text-red-600" /> : <Sparkles className="h-4 w-4 text-primary" />}
                     <AlertTitle className={isLocked ? "text-red-700 font-black" : "text-primary font-black uppercase tracking-tight"}>
                         {isLocked ? "TRIAL LIMIT REACHED" : `FREE QUICKNOTES TRIAL ACTIVE (${GUEST_TRIAL_LIMIT - trialCount} Generations Left)`}
@@ -331,7 +338,7 @@ function AiNotesPageContent() {
                 </Card>
             ) : (
                 <div className="space-y-6">
-                     <div className="flex justify-between items-center flex-wrap gap-3">
+                     <div className="flex justify-between items-center flex-wrap gap-3 print:hidden">
                         <Button variant="outline" onClick={() => setResult(null)} className="font-bold"><ArrowLeft className="mr-2 h-4 w-4"/> New Material</Button>
                         <div className="flex gap-2">
                             <Button 
@@ -344,11 +351,11 @@ function AiNotesPageContent() {
                             </Button>
                             <Button 
                                 size="sm" 
-                                onClick={handleDownloadDoc} 
+                                onClick={handleDownloadTxt} 
                                 className="font-bold bg-accent text-white gap-2 shadow-md"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-                                Export DOC
+                                Export TXT
                             </Button>
                         </div>
                     </div>

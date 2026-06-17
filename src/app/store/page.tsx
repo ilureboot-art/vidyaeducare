@@ -191,9 +191,22 @@ function StorePageContent() {
         const recommendationDiscount = isEligibleForRecDiscount ? (storeConfig.recommendationSettings?.additionalDiscount || 0) / 100 : 0;
         
         const totalDiscountFactor = baseDiscount + referralDiscount + specialDiscount + recommendationDiscount;
-        const discountedBasePrice = item.price * (1 - totalDiscountFactor);
-        const gstAmount = discountedBasePrice * (item.gstRate / 100);
-        const finalPrice = discountedBasePrice + gstAmount;
+        
+        // Transparent Billing: (Base + GST) = Total, then Total - Discounts = Final Price
+        const basePrice = item.price;
+        const gstAmountPkg = basePrice * (item.gstRate / 100);
+        const originalTotal = basePrice + gstAmountPkg;
+        const discountAmount = originalTotal * totalDiscountFactor;
+        const finalPrice = originalTotal - discountAmount;
+
+        // Bundled values
+        const freeAiMonths = mockItem.freeAiMonths || 0;
+        const referboltValue = mockItem.grantFreeReferbolt ? (storeConfig.referboltSubscription.price * 1.18) : 0;
+        const aiToolsValue = freeAiMonths > 0 ? (((storeConfig.aiDoubtSolverPrice || 750) * 1.18) + ((storeConfig.aiNotesGeneratorPrice || 750) * 1.18)) * freeAiMonths : 0;
+        const bundledValue = referboltValue + aiToolsValue;
+
+        const marketValue = originalTotal + bundledValue;
+        const totalSavings = discountAmount + bundledValue;
 
         priceDetails = {
             basePrice: item.price,
@@ -203,14 +216,23 @@ function StorePageContent() {
                 special: specialDiscount * 100,
                 recommendation: recommendationDiscount * 100,
                 totalPercentage: totalDiscountFactor * 100,
-                totalAmount: item.price * totalDiscountFactor,
+                totalAmount: discountAmount, // calculated on Total (Base + GST)
             },
-            taxableAmount: discountedBasePrice,
+            taxableAmount: basePrice,
             gstRate: item.gstRate,
-            gstAmount: gstAmount,
+            gstAmount: gstAmountPkg,
             finalPrice: finalPrice,
-            hasReferral: referralCode1.trim() !== ""
-        };
+            hasReferral: referralCode1.trim() !== "",
+            
+            // New Transparent Billing / Savings Fields
+            originalTotal: originalTotal,
+            bundledValue: bundledValue,
+            marketValue: marketValue,
+            totalSavings: totalSavings,
+            freeAiMonths: freeAiMonths,
+            referboltValue: referboltValue,
+            aiToolsValue: aiToolsValue
+        } as any;
     } else if (type === 'referbolt' || type === 'ai_tool') {
         const gstAmount = item.price * (item.gstRate / 100);
         const finalPrice = item.price + gstAmount;
@@ -254,7 +276,14 @@ function StorePageContent() {
         billingDetails: {
             email: user.email || "student@vidyaeducare.com",
             name: user.displayName || "Vidya EduCare Student",
-        }
+        },
+        originalTotal: (priceDetails as any).originalTotal || priceDetails.finalPrice,
+        bundledValue: (priceDetails as any).bundledValue || 0,
+        marketValue: (priceDetails as any).marketValue || priceDetails.finalPrice,
+        totalSavings: (priceDetails as any).totalSavings || 0,
+        freeAiMonths: (priceDetails as any).freeAiMonths || 0,
+        referboltValue: (priceDetails as any).referboltValue || 0,
+        aiToolsValue: (priceDetails as any).aiToolsValue || 0
     };
 
     try {
@@ -368,9 +397,23 @@ function StorePageContent() {
                     const recommendationDisc = isEligibleForRecDiscount ? (storeConfig.recommendationSettings?.additionalDiscount || 0) / 100 : 0;
                     
                     const totalDiscount = baseDisc + referralDisc + specialDisc + recommendationDisc;
-                    const discountedBasePrice = product.price * (1 - totalDiscount);
-                    const gstAmount = discountedBasePrice * (product.gstRate / 100);
-                    const finalPrice = discountedBasePrice + gstAmount;
+                    
+                    // Transparent Billing: (Base + GST) = Total, then Total - Discounts = Final Price
+                    const basePrice = product.price;
+                    const gstAmountPkg = basePrice * (product.gstRate / 100);
+                    const originalTotal = basePrice + gstAmountPkg;
+                    
+                    const discountAmount = originalTotal * totalDiscount;
+                    const finalPrice = originalTotal - discountAmount;
+
+                    // Bundled products
+                    const freeAiMonths = product.freeAiMonths || 0;
+                    const referboltValue = product.grantFreeReferbolt ? (storeConfig.referboltSubscription.price * 1.18) : 0;
+                    const aiToolsValue = freeAiMonths > 0 ? (((storeConfig.aiDoubtSolverPrice || 750) * 1.18) + ((storeConfig.aiNotesGeneratorPrice || 750) * 1.18)) * freeAiMonths : 0;
+                    const bundledValue = referboltValue + aiToolsValue;
+
+                    const marketValue = originalTotal + bundledValue;
+                    const totalSavings = discountAmount + bundledValue;
 
                   return (
                     <Card
@@ -404,56 +447,81 @@ function StorePageContent() {
                                     SAVE {(totalDiscount * 100).toFixed(0)}%
                                 </Badge>
                             )}
-                            
-                            <div className="text-xs text-muted-foreground border-t pt-4 w-full mt-4 space-y-2 font-medium">
+                                                   <div className="text-xs text-muted-foreground border-t pt-4 w-full mt-4 space-y-2 font-medium text-left">
                                 <div className="flex justify-between">
-                                    <span>Base Product Price:</span>
-                                    <span className="font-bold text-foreground">₹{product.price.toFixed(2)}</span>
+                                    <span>Market Value (Bundle Total):</span>
+                                    <span className="font-bold text-foreground">₹{marketValue.toFixed(2)}</span>
                                 </div>
-                                {totalDiscount > 0 && (
-                                    <div className="space-y-1 bg-accent/5 p-2.5 rounded-xl border border-accent/10">
-                                        <div className="text-[9px] font-black text-accent uppercase tracking-wider mb-1">Applied Discounts:</div>
-                                        {(product.baseDiscount || 0) > 0 && (
-                                            <div className="flex justify-between text-[11px] text-accent">
-                                                <span>• Base Discount ({product.baseDiscount}%):</span>
-                                                <span>-₹{(product.price * (product.baseDiscount || 0) / 100).toFixed(2)}</span>
+                                <div className="text-[10px] pl-2 border-l border-primary/20 space-y-1">
+                                    <div className="flex justify-between">
+                                        <span>• MockArena Base Price:</span>
+                                        <span>₹{basePrice.toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span>• MockArena GST ({product.gstRate}%):</span>
+                                        <span>₹{gstAmountPkg.toFixed(2)}</span>
+                                    </div>
+                                    {referboltValue > 0 && (
+                                        <div className="flex justify-between text-primary font-bold">
+                                            <span>• Bundled ReferBolt Access (Included):</span>
+                                            <span>₹{referboltValue.toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                    {aiToolsValue > 0 && (
+                                        <div className="flex justify-between text-accent font-bold">
+                                            <span>• Bundled AI Learning Tools ({freeAiMonths} Months):</span>
+                                            <span>₹{aiToolsValue.toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {totalSavings > 0 && (
+                                    <div className="space-y-1 bg-green-500/[0.03] p-2.5 rounded-xl border border-green-500/10">
+                                        <div className="text-[9px] font-black text-green-600 uppercase tracking-wider mb-1">Applied Savings & Discounts:</div>
+                                        {baseDisc > 0 && (
+                                            <div className="flex justify-between text-[11px] text-green-600">
+                                                <span>• Package Base Discount ({product.baseDiscount}%):</span>
+                                                <span>-₹{(originalTotal * baseDisc).toFixed(2)}</span>
                                             </div>
                                         )}
-                                        {referralCode1.trim() !== "" && (product.referralDiscount || 0) > 0 && (
-                                            <div className="flex justify-between text-[11px] text-accent">
-                                                <span>• Referral Discount ({product.referralDiscount}%):</span>
-                                                <span>-₹{(product.price * (product.referralDiscount || 0) / 100).toFixed(2)}</span>
+                                        {referralDisc > 0 && (
+                                            <div className="flex justify-between text-[11px] text-green-600">
+                                                <span>• IBA Referral Discount ({product.referralDiscount}%):</span>
+                                                <span>-₹{(originalTotal * referralDisc).toFixed(2)}</span>
                                             </div>
                                         )}
-                                        {(product.specialDiscount || 0) > 0 && (
-                                            <div className="flex justify-between text-[11px] text-accent">
-                                                <span>• Special Discount ({product.specialDiscount}%):</span>
-                                                <span>-₹{(product.price * (product.specialDiscount || 0) / 100).toFixed(2)}</span>
+                                        {specialDisc > 0 && (
+                                            <div className="flex justify-between text-[11px] text-green-600">
+                                                <span>• Package Special Discount ({product.specialDiscount}%):</span>
+                                                <span>-₹{(originalTotal * specialDisc).toFixed(2)}</span>
                                             </div>
                                         )}
-                                        {isEligibleForRecDiscount && (storeConfig.recommendationSettings?.additionalDiscount || 0) > 0 && (
-                                            <div className="flex justify-between text-[11px] text-accent">
+                                        {recommendationDisc > 0 && (
+                                            <div className="flex justify-between text-[11px] text-green-600">
                                                 <span>• Fast-Mover Bonus ({(storeConfig.recommendationSettings?.additionalDiscount || 0)}%):</span>
-                                                <span>-₹{(product.price * (storeConfig.recommendationSettings?.additionalDiscount || 0) / 100).toFixed(2)}</span>
+                                                <span>-₹{(originalTotal * recommendationDisc).toFixed(2)}</span>
+                                            </div>
+                                        )}
+                                        {referboltValue > 0 && (
+                                            <div className="flex justify-between text-[11px] text-green-600 font-bold">
+                                                <span>• Free ReferBolt Access:</span>
+                                                <span>-₹{referboltValue.toFixed(2)}</span>
+                                            </div>
+                                        )}
+                                        {aiToolsValue > 0 && (
+                                            <div className="flex justify-between text-[11px] text-green-600 font-bold">
+                                                <span>• Free AI Learning Tools:</span>
+                                                <span>-₹{aiToolsValue.toFixed(2)}</span>
                                             </div>
                                         )}
                                     </div>
                                 )}
-                                <div className="flex justify-between border-t border-dashed pt-1.5 mt-1.5">
-                                    <span>Taxable Value (Total):</span>
-                                    <span className="font-bold text-foreground">₹{discountedBasePrice.toFixed(2)}</span>
+                                
+                                <div className="flex justify-between border-t border-dashed pt-1.5 mt-1.5 text-green-600 font-bold">
+                                    <span>Total Savings:</span>
+                                    <span>-₹{totalSavings.toFixed(2)}</span>
                                 </div>
-                                <div className="flex justify-between">
-                                     <span>GST ({product.gstRate}%):</span>
-                                     <span className="font-bold text-foreground">₹{gstAmount.toFixed(2)}</span>
-                                 </div>
-                                 {totalDiscount > 0 && (
-                                     <div className="flex justify-between text-green-600 font-bold text-[11px] animate-in fade-in">
-                                         <span>Total Savings:</span>
-                                         <span>-₹{(product.price * totalDiscount).toFixed(2)}</span>
-                                     </div>
-                                 )}
-                                 <div className="flex justify-between border-t border-dashed pt-1.5 mt-1.5 text-sm font-black text-primary">
+                                <div className="flex justify-between border-t border-dashed pt-1.5 mt-1.5 text-sm font-black text-primary">
                                      <span>Final Price:</span>
                                      <span>₹{finalPrice.toFixed(2)}</span>
                                  </div>
@@ -722,23 +790,43 @@ function StorePageContent() {
                                     </div>
                                 </div>
                             )}
-                            <div className="flex justify-between border-t pt-2 mt-2">
-                                <span>Taxable Value (Total):</span>
-                                <span>₹{purchasedInvoice.taxableAmount.toFixed(2)}</span>
-                            </div>
-                            <div className="flex justify-between text-muted-foreground text-xs">
-                                <span>GST ({purchasedInvoice.gstRate}%):</span>
-                                <span>₹{purchasedInvoice.gstAmount.toFixed(2)}</span>
-                            </div>
-                            {purchasedInvoice.discountDetails.totalAmount > 0 && (
-                                <div className="flex justify-between text-green-600 font-bold text-xs">
-                                    <span>Total Savings:</span>
-                                    <span>-₹{purchasedInvoice.discountDetails.totalAmount.toFixed(2)}</span>
+                            <div className="border-t pt-2 mt-2 text-xs space-y-1">
+                                <div className="flex justify-between">
+                                    <span>Market Value (Bundle Total):</span>
+                                    <span>₹{(purchasedInvoice.marketValue || purchasedInvoice.finalPrice).toFixed(2)}</span>
                                 </div>
-                            )}
-                            <div className="flex justify-between border-t border-dashed pt-3 text-lg font-black text-primary">
-                                <span>Final Total (Paid):</span>
-                                <span>₹{purchasedInvoice.finalPrice.toFixed(2)}</span>
+                                <div className="text-[10px] pl-2 border-l border-primary/20 space-y-0.5 text-muted-foreground">
+                                    <div className="flex justify-between">
+                                        <span>• MockArena Base Price:</span>
+                                        <span>₹{purchasedInvoice.basePrice.toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span>• MockArena GST ({purchasedInvoice.gstRate}%):</span>
+                                        <span>₹{purchasedInvoice.gstAmount.toFixed(2)}</span>
+                                    </div>
+                                    {purchasedInvoice.referboltValue > 0 && (
+                                        <div className="flex justify-between">
+                                            <span>• Bundled ReferBolt Access:</span>
+                                            <span>₹{purchasedInvoice.referboltValue.toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                    {purchasedInvoice.aiToolsValue > 0 && (
+                                        <div className="flex justify-between">
+                                            <span>• Bundled AI Learning Tools ({purchasedInvoice.freeAiMonths} M):</span>
+                                            <span>₹{purchasedInvoice.aiToolsValue.toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                </div>
+                                {purchasedInvoice.totalSavings > 0 && (
+                                    <div className="flex justify-between text-green-600 font-bold">
+                                        <span>Total Savings:</span>
+                                        <span>-₹{purchasedInvoice.totalSavings.toFixed(2)}</span>
+                                    </div>
+                                )}
+                                <div className="flex justify-between border-t border-dashed pt-2 text-base font-black text-primary">
+                                    <span>Final Total (Paid):</span>
+                                    <span>₹{purchasedInvoice.finalPrice.toFixed(2)}</span>
+                                </div>
                             </div>
                         </div>
                     </div>

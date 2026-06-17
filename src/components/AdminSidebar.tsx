@@ -21,7 +21,8 @@ import {
     Bell,
     BookCopy,
     Calendar,
-    Puzzle
+    Puzzle,
+    Trophy
 } from "lucide-react";
 import {
     Sidebar,
@@ -44,6 +45,7 @@ const adminNavItems = [
   { href: "/admin/question-bank", label: "Test Set Management", icon: BookCopy },
   { href: "/admin/test-schedule", label: "Test Schedule", icon: Calendar },
   { href: "/admin/quiz-clash", label: "Quiz Clash", icon: Puzzle },
+  { href: "/admin/leaderboard", label: "Leaderboard Manager", icon: Trophy },
   { href: "/admin/store-settings", label: "Store Settings", icon: ShoppingCart },
   { href: "/admin/payment-settings", label: "Payment Settings", icon: Landmark },
   { href: "/admin/referbolt", label: "ReferBolt", icon: Zap },

@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ShoppingCart, Sparkles, Loader2, BookOpen, Zap, CheckCircle2, AlertCircle, FileText, Printer } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { downloadInvoicePDF } from "@/lib/pdf-export";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from 'next/link';
@@ -257,93 +258,27 @@ function StorePageContent() {
     };
 
     try {
-        let ibaUid: string | null = null;
-        if (priceDetails.hasReferral) {
-            const walletsColRef = collection(db, "wallets");
-            const q = query(walletsColRef, where("referralCode", "==", referralCode1.trim()));
-            const snap = await getDocs(q).catch(async (e) => {
-                if (e.code === 'permission-denied') {
-                    errorEmitter.emit('permission-error', new FirestorePermissionError({ path: walletsColRef.path, operation: 'list' }));
-                }
-                throw e;
-            });
-            if (!snap.empty) {
-                ibaUid = snap.docs[0].id;
-            }
-        }
-
-        await runTransaction(db, async (transaction) => {
-            const userWalletRef = doc(db, "wallets", user.uid);
-            const userWalletDoc = await transaction.get(userWalletRef);
-            if (!userWalletDoc.exists()) throw new Error("Wallet not found.");
-            
-            const currentBalance = userWalletDoc.data().balance;
-            if (currentBalance < priceDetails.finalPrice) throw new Error("Insufficient balance.");
-
-            transaction.update(userWalletRef, { balance: currentBalance - priceDetails.finalPrice });
-
-            const purchaseTxRef = doc(collection(db, "transactions"));
-            transaction.set(purchaseTxRef, {
-                user: user.uid,
-                amount: -priceDetails.finalPrice,
-                date: serverTimestamp(),
-                description: `Purchase: ${item.name}`,
-                status: "Completed",
-                type: "Purchase",
-                
-                // Detailed Invoice Fields
-                invoiceNumber: invoiceData.invoiceNumber,
-                basePrice: invoiceData.basePrice,
-                discountDetails: invoiceData.discountDetails,
-                taxableAmount: invoiceData.taxableAmount,
-                gstRate: invoiceData.gstRate,
-                gstAmount: invoiceData.gstAmount,
-                finalPrice: invoiceData.finalPrice,
-                billingDetails: invoiceData.billingDetails,
-                hsnSacCode: invoiceData.hsnSacCode,
-                packageName: invoiceData.packageName,
-            });
-
-            if (ibaUid) {
-                const baseCommissionRate = (storeConfig.ibaCommissionRate || 10) / 100;
-                const commissionAmount = priceDetails.basePrice * baseCommissionRate;
-
-                const ibaWalletRef = doc(db, "wallets", ibaUid);
-                const ibaWalletDoc = await transaction.get(ibaWalletRef);
-                if (ibaWalletDoc.exists()) {
-                    const ibaCurrentBalance = ibaWalletDoc.data().balance || 0;
-                    transaction.update(ibaWalletRef, { balance: ibaCurrentBalance + commissionAmount });
-                    
-                    const ibaCommissionTxRef = doc(collection(db, "transactions"));
-                    transaction.set(ibaCommissionTxRef, {
-                        user: ibaUid, amount: commissionAmount, date: serverTimestamp(),
-                        description: `Commission from student purchase`,
-                        status: "Completed", type: "Commission",
-                    });
-                }
-            }
-
-            if (type === 'mock') {
-                const mockItem = item as MockTestPackage;
-                const activationCode = `PROD-${Date.now().toString().slice(-6)}`;
-                const activationCodesRef = doc(db, 'activationCodes', user.uid);
-                transaction.set(activationCodesRef, { codes: arrayUnion(activationCode) }, { merge: true });
-
-                if (mockItem.grantFreeReferbolt || storeConfig.referboltSettings.freeAccessWithMockTest) {
-                     transaction.set(doc(db, "referbolt", user.uid), { isSubscribed: true, referralCode: walletData.referralCode }, { merge: true });
-                }
-            } else if (type === 'referbolt') {
-                 transaction.set(doc(db, "referbolt", user.uid), { isSubscribed: true, referralCode: walletData.referralCode }, { merge: true });
-            }
-        }).catch(async (e) => {
-            if (e.code === 'permission-denied') {
-                errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'store-purchase-transaction', operation: 'write' }));
-            }
-            throw e;
+        const idToken = await user.getIdToken();
+        const response = await fetch('/api/store/purchase', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${idToken}`
+            },
+            body: JSON.stringify({
+                productId: item.name,
+                productType: type,
+                referralCode: referralCode1.trim()
+            })
         });
 
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Purchase processing failed.');
+        }
+
         toast({ title: "Purchase Successful!", description: `${item.name} activated.` });
-        setPurchasedInvoice(invoiceData);
+        setPurchasedInvoice(data.invoice);
         checkRecEligibility(db, user.uid, storeConfig);
     } catch (e: any) {
         console.error("Store Purchase Error:", e);
@@ -707,7 +642,7 @@ function StorePageContent() {
 
                 <div className="flex justify-end gap-3 mt-8 pt-4 border-t print:hidden">
                     <Button variant="ghost" onClick={() => setPurchasedInvoice(null)} className="font-bold">Close</Button>
-                    <Button onClick={() => window.print()} className="font-black gap-2 bg-primary text-white shadow-lg"><Printer size={16} /> Print / Save PDF</Button>
+                    <Button onClick={() => downloadInvoicePDF(purchasedInvoice)} className="font-black gap-2 bg-primary text-white shadow-lg"><Printer size={16} /> Download PDF</Button>
                 </div>
             </DialogContent>
         </Dialog>

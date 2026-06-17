@@ -19,10 +19,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { format, startOfDay, endOfDay, subDays, eachDayOfInterval } from "date-fns";
 import { useAuth, useDb } from "@/firebase";
-import { collection, query, where, orderBy, onSnapshot, Timestamp } from "firebase/firestore";
+import { collection, query, where, orderBy, getDocs, limit, startAfter, Timestamp } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import UserLayout from "@/components/UserLayout";
 import Papa from "papaparse";
+import { downloadInvoicePDF } from "@/lib/pdf-export";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -71,14 +72,62 @@ function TransactionsPageContent() {
   const { toast } = useToast();
   const db = useDb();
   const [transactions, setTransactions] = useState<Transaction[] | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'rejected'>('all');
-  const [typeFilter, setTypeFilter] = useState<'all' | 'deposit' | 'withdrawal'>('all');
-  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
-  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [lastVisible, setLastVisible] = useState<any>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   const [viewingInvoice, setViewingInvoice] = useState<any | null>(null);
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'pending' | 'rejected'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'deposit' | 'withdrawal'>('all');
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+
+  const fetchTransactions = async (isFirstPage: boolean = false) => {
+    if (!user || !db) return;
+    if (!isFirstPage && (isLoadingMore || !hasMore)) return;
+    
+    if (!isFirstPage) {
+      setIsLoadingMore(true);
+    }
+
+    try {
+      const txsRef = collection(db, "transactions");
+      const PAGE_SIZE = 15;
+      let q;
+      if (isFirstPage) {
+        q = query(txsRef, where("user", "==", user.uid), orderBy("date", "desc"), limit(PAGE_SIZE));
+      } else {
+        q = query(txsRef, where("user", "==", user.uid), orderBy("date", "desc"), startAfter(lastVisible), limit(PAGE_SIZE));
+      }
+
+      const querySnapshot = await getDocs(q);
+      const newTxs = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        const date = data.date instanceof Timestamp ? data.date.toDate().toISOString() : data.date;
+        return { id: doc.id, ...data, date } as Transaction;
+      });
+
+      if (isFirstPage) {
+        setTransactions(newTxs);
+      } else {
+        setTransactions(prev => [...(prev || []), ...newTxs]);
+      }
+
+      if (querySnapshot.docs.length < PAGE_SIZE) {
+        setHasMore(false);
+      } else {
+        setHasMore(true);
+        setLastVisible(querySnapshot.docs[querySnapshot.docs.length - 1]);
+      }
+    } catch (e) {
+      console.error("Failed to fetch transactions:", e);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
   
   const getInvoiceDetails = (tx: Transaction) => {
     if (tx.invoiceNumber) {
@@ -126,19 +175,7 @@ function TransactionsPageContent() {
   };
   
   useEffect(() => {
-    if (user && db) {
-        const txsRef = collection(db, "transactions");
-        const q = query(txsRef, where("user", "==", user.uid), orderBy("date", "desc"));
-        const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            const txs = querySnapshot.docs.map(doc => {
-                const data = doc.data();
-                const date = data.date instanceof Timestamp ? data.date.toDate().toISOString() : data.date;
-                return { id: doc.id, ...data, date } as Transaction;
-            });
-            setTransactions(txs);
-        });
-        return () => unsubscribe();
-    }
+    fetchTransactions(true);
   }, [user, db]);
 
   const filteredTransactions = useMemo(() => {
@@ -479,6 +516,19 @@ function TransactionsPageContent() {
             </TableBody>
           </Table>
         </CardContent>
+        {hasMore && transactions && transactions.length > 0 && (
+            <div className="flex justify-center pb-6">
+                <Button 
+                    variant="outline" 
+                    onClick={() => fetchTransactions(false)} 
+                    disabled={isLoadingMore}
+                    className="font-bold border-primary/20 text-primary hover:bg-primary/5 px-8 rounded-xl h-10 shadow-sm"
+                >
+                    {isLoadingMore ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                    LOAD MORE TRANSACTIONS
+                </Button>
+            </div>
+        )}
       </Card>
 
       {/* Transaction Detail Receipt Modal */}
@@ -717,7 +767,7 @@ function TransactionsPageContent() {
 
                 <div className="flex justify-end gap-3 mt-8 pt-4 border-t print:hidden">
                     <Button variant="ghost" onClick={() => setViewingInvoice(null)} className="font-bold">Close</Button>
-                    <Button onClick={() => window.print()} className="font-black gap-2 bg-primary text-white shadow-lg"><Printer size={16} /> Print / Save PDF</Button>
+                    <Button onClick={() => downloadInvoicePDF(viewingInvoice)} className="font-black gap-2 bg-primary text-white shadow-lg"><Printer size={16} /> Download PDF</Button>
                 </div>
             </DialogContent>
         </Dialog>

@@ -1,11 +1,11 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { BrainCircuit, Sparkles, Loader2, Send, Users, ArrowLeft, MessageSquare, Info, LogIn, Lock, ShoppingCart } from "lucide-react";
+import { BrainCircuit, Sparkles, Loader2, Send, Users, ArrowLeft, MessageSquare, Info, LogIn, Lock, ShoppingCart, Image as ImageIcon, Camera, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -28,6 +28,8 @@ function AiTutorPageContent() {
     const [students, setStudents] = useState<StudentProfile[]>([]);
     const [selectedStudentId, setSelectedStudentId] = useState<string>("");
     const [queryText, setQueryText] = useState("");
+    const [attachedImage, setAttachedImage] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const [isSolving, setIsSolving] = useState(false);
     const [result, setResult] = useState<SolveDoubtOutput | null>(null);
     const [isLoadingAccess, setIsLoadingAccess] = useState(true);
@@ -87,6 +89,21 @@ function AiTutorPageContent() {
         }
     }, [user, db]);
 
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+          if (!file.type.startsWith('image/')) {
+            toast({ variant: 'destructive', title: 'Invalid File', description: 'Please upload an image.' });
+            return;
+          }
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            setAttachedImage(reader.result as string);
+          };
+          reader.readAsDataURL(file);
+        }
+    };
+
     const handleAskAi = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!queryText.trim()) return;
@@ -112,7 +129,8 @@ function AiTutorPageContent() {
         try {
             const response = await solveDoubt({
                 userDoubt: queryText,
-                context: context
+                context: context,
+                image: attachedImage || undefined
             });
             setResult(response);
 
@@ -233,6 +251,68 @@ function AiTutorPageContent() {
                                     disabled={isLocked}
                                 />
                             </div>
+                            
+                            <div className="space-y-2">
+                                <Label className="font-bold">Attach Image (Optional)</Label>
+                                <div className="flex flex-col gap-3">
+                                    <input 
+                                        type="file" 
+                                        ref={fileInputRef} 
+                                        className="hidden" 
+                                        accept="image/*" 
+                                        onChange={handleFileChange}
+                                    />
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <Button 
+                                            type="button" 
+                                            variant="outline" 
+                                            className="h-14 gap-2 rounded-2xl border-dashed border-2 hover:bg-primary/5"
+                                            disabled={isSolving || isLocked}
+                                            onClick={() => {
+                                                if (fileInputRef.current) {
+                                                    fileInputRef.current.removeAttribute('capture');
+                                                    fileInputRef.current.click();
+                                                }
+                                            }}
+                                        >
+                                            <ImageIcon className="w-5 h-5 text-primary" />
+                                            <span>Upload Gallery</span>
+                                        </Button>
+                                        <Button 
+                                            type="button" 
+                                            variant="outline" 
+                                            className="h-14 gap-2 rounded-2xl border-dashed border-2 hover:bg-accent/5"
+                                            disabled={isSolving || isLocked}
+                                            onClick={() => {
+                                                if (fileInputRef.current) {
+                                                    fileInputRef.current.setAttribute('capture', 'environment');
+                                                    fileInputRef.current.click();
+                                                }
+                                            }}
+                                        >
+                                            <Camera className="w-5 h-5 text-accent" />
+                                            <span>Take Photo</span>
+                                        </Button>
+                                    </div>
+                                    
+                                    {attachedImage && (
+                                        <div className="relative aspect-video w-full rounded-2xl overflow-hidden border-2 border-primary/20 shadow-lg group bg-muted/20">
+                                            <img src={attachedImage} alt="Doubt Preview" className="w-full h-full object-contain" />
+                                            <Button 
+                                                type="button" 
+                                                variant="destructive" 
+                                                size="icon" 
+                                                className="absolute top-2 right-2 rounded-full h-8 w-8 opacity-90 hover:opacity-100"
+                                                onClick={() => setAttachedImage(null)}
+                                                disabled={isSolving}
+                                            >
+                                                <X size={16} />
+                                            </Button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
                             <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 p-3 rounded-xl border-dashed border-2">
                                 <Info size={14} className="text-primary"/>
                                 <span>Vidya AI results are pedagogical and provided in both Marathi and English.</span>
@@ -243,7 +323,7 @@ function AiTutorPageContent() {
                         <Button 
                             type="button" 
                             variant="ghost" 
-                            onClick={() => { setQueryText(""); setResult(null); }}
+                            onClick={() => { setQueryText(""); setResult(null); setAttachedImage(null); }}
                             disabled={isSolving}
                             className="font-bold"
                         >

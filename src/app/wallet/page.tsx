@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { PlusCircle, MinusCircle, History, ArrowUpRight, ArrowDownLeft, Loader2, AlertCircle, Scan, X, PieChart as PieChartIcon, AlertTriangle, FileText, CheckCircle2, Clock, XCircle, Copy, ArrowLeft, ShieldCheck, Zap, CheckCircle, TrendingUp, Users, Store, LineChart as LineChartIcon, Camera, Image as ImageIcon, Printer } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { downloadInvoicePDF } from "@/lib/pdf-export";
 import Link from "next/link";
 import { type Transaction, type AdminPaymentMethods } from "@/lib/user-data";
 import { Badge } from "@/components/ui/badge";
@@ -328,63 +329,24 @@ function WalletPageContent() {
 
     setIsSubmitting(true);
 
-    const isAutoApprove = storeConfig?.autoApproveDeposits || false;
-
-    const txData = {
-        type: 'deposit',
-        description: 'Fund Deposit Request',
-        amount: amount,
-        date: serverTimestamp(),
-        status: isAutoApprove ? 'Completed' : 'Pending',
-        referenceId: txnId,
-        user: user.uid,
-        receiptUrl: receiptImage || null,
-    };
-
     try {
-        if (isAutoApprove) {
-            await runTransaction(db, async (transaction) => {
-                const walletRef = doc(db, "wallets", user.uid);
-                const walletDoc = await transaction.get(walletRef);
-                const currentBalance = walletDoc.exists() ? walletDoc.data().balance : 0;
-                
-                transaction.update(walletRef, { balance: currentBalance + amount });
-                
-                const newTxRef = doc(collection(db, "transactions"));
-                transaction.set(newTxRef, txData);
+        const idToken = await user.getIdToken();
+        const response = await fetch('/api/wallet/deposit', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${idToken}`
+            },
+            body: JSON.stringify({
+                amount: amount,
+                referenceId: txnId,
+                receiptUrl: receiptImage || null
+            })
+        });
 
-                const notificationRef = doc(collection(db, "notifications"));
-                transaction.set(notificationRef, {
-                    userId: user.uid,
-                    type: 'deposit_received',
-                    message: `₹${amount.toFixed(2)} has been instantly credited to your wallet via auto-approval.`,
-                    status: 'unread',
-                    timestamp: serverTimestamp(),
-                });
-            }).catch(async (serverError) => {
-                if (serverError.code === 'permission-denied') {
-                    const permissionError = new FirestorePermissionError({
-                        path: 'wallet-auto-approve-path',
-                        operation: 'write',
-                        requestResourceData: txData,
-                    } satisfies SecurityRuleContext);
-                    errorEmitter.emit('permission-error', permissionError);
-                }
-                throw serverError;
-            });
-        } else {
-            const txsCol = collection(db, "transactions");
-            await addDoc(txsCol, txData).catch(async (serverError) => {
-                if (serverError.code === 'permission-denied') {
-                    const permissionError = new FirestorePermissionError({
-                        path: txsCol.path,
-                        operation: 'create',
-                        requestResourceData: txData,
-                    } satisfies SecurityRuleContext);
-                    errorEmitter.emit('permission-error', permissionError);
-                }
-                throw serverError;
-            });
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Deposit processing failed.');
         }
 
         setSuccessAmount(amount);
@@ -400,6 +362,7 @@ function WalletPageContent() {
     } catch (serverError: any) {
         setIsSubmitting(false);
         console.error("Add funds failed:", serverError);
+        toast({ variant: 'destructive', title: 'Deposit Failed', description: serverError.message || 'Could not process deposit request.' });
     }
   }
   
@@ -425,16 +388,25 @@ function WalletPageContent() {
 
     setIsSubmitting(true);
     
-    runTransaction(db, async (transaction) => {
-        const walletRef = doc(db, "wallets", user.uid);
-        const walletDoc = await transaction.get(walletRef);
-        if (!walletDoc.exists()) throw new Error("Wallet not found.");
-        const currentBalance = walletDoc.data().balance;
-        if (currentBalance - amount < 200) throw new Error("Insufficient balance to maintain the ₹200 minimum limit.");
-        transaction.update(walletRef, { balance: currentBalance - amount });
-        const newTxRef = doc(collection(db, "transactions"));
-        transaction.set(newTxRef, { type: 'withdrawal', description: 'Withdrawal Request', amount: -amount, date: serverTimestamp(), status: 'Pending', paymentMethod: upiId, user: user.uid });
-    }).then(() => {
+    try {
+        const idToken = await user.getIdToken();
+        const response = await fetch('/api/wallet/withdraw', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${idToken}`
+            },
+            body: JSON.stringify({
+                amount: amount,
+                upiId: upiId
+            })
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Withdrawal processing failed.');
+        }
+
         setSuccessAmount(amount);
         setSuccessType('withdrawal');
         setActiveView('success');
@@ -443,18 +415,11 @@ function WalletPageContent() {
             setActiveView('main');
             setIsSubmitting(false);
         }, 4000);
-    }).catch(async (serverError) => {
+    } catch (serverError: any) {
         setIsSubmitting(false);
-        if (serverError.code === 'permission-denied') {
-            const permissionError = new FirestorePermissionError({
-                path: 'multi-path-transaction',
-                operation: 'write',
-            } satisfies SecurityRuleContext);
-            errorEmitter.emit('permission-error', permissionError);
-        } else {
-             toast({ variant: 'destructive', title: "Error", description: serverError.message });
-        }
-    });
+        console.error("Withdrawal failed:", serverError);
+        toast({ variant: 'destructive', title: "Error", description: serverError.message || "Withdrawal failed." });
+    }
   }
 
   const copyId = (id: string) => {
@@ -1267,7 +1232,7 @@ function WalletPageContent() {
 
                 <div className="flex justify-end gap-3 mt-8 pt-4 border-t print:hidden">
                     <Button variant="ghost" onClick={() => setViewingInvoice(null)} className="font-bold">Close</Button>
-                    <Button onClick={() => window.print()} className="font-black gap-2 bg-primary text-white shadow-lg"><Printer size={16} /> Print / Save PDF</Button>
+                    <Button onClick={() => downloadInvoicePDF(viewingInvoice)} className="font-black gap-2 bg-primary text-white shadow-lg"><Printer size={16} /> Download PDF</Button>
                 </div>
             </DialogContent>
         </Dialog>

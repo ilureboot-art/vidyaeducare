@@ -43,7 +43,7 @@ service cloud.firestore {
       allow read: if isOwner(uid) || isAdmin();
       allow list: if isAdmin(); 
       allow create: if isOwner(uid);
-      allow update: if isAdmin() || isOwner(uid);
+      allow update: if isAdmin();
     }
 
     match /activationCodes/{uid} {
@@ -75,7 +75,7 @@ service cloud.firestore {
     
     match /transactions/{id} {
       allow read, list: if signedIn() && (isAdmin() || (resource != null && resource.data.user == request.auth.uid));
-      allow create: if true;
+      allow create: if isAdmin();
       allow update: if isAdmin();
     }
 

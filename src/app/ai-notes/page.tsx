@@ -4,21 +4,21 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { ScrollText, Sparkles, Loader2, Send, FileUp, Info, CheckCircle, ArrowLeft, BrainCircuit, X, Image as ImageIcon, LogIn, Lock, ShoppingCart } from "lucide-react";
+import { ScrollText, Sparkles, Loader2, Info, CheckCircle, ArrowLeft, BrainCircuit, LogIn, Lock, ShoppingCart } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth, useDb } from "@/firebase";
-import { collection, query, where, getDocs, doc, onSnapshot } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, onSnapshot, getDoc } from "firebase/firestore";
 import type { StudentProfile } from "@/lib/student-data";
 import { generateStudyNotes, type GenerateNotesOutput } from "@/ai/flows/generate-notes-flow";
 import UserLayout from "@/components/UserLayout";
 import Link from "next/link";
 import { Label } from "@/components/ui/label";
-import Image from "next/image";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
+import { exportToPdf, exportToDoc } from "@/lib/export-utils";
 
 const GUEST_TRIAL_LIMIT = 5;
 
@@ -26,12 +26,10 @@ function AiNotesPageContent() {
     const { toast } = useToast();
     const { user } = useAuth();
     const db = useDb();
-    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [students, setStudents] = useState<StudentProfile[]>([]);
     const [selectedStudentId, setSelectedStudentId] = useState<string>("");
     const [materialText, setMaterialText] = useState("");
-    const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [result, setResult] = useState<GenerateNotesOutput | null>(null);
     const [isLoadingAccess, setIsLoadingAccess] = useState(true);
@@ -59,18 +57,35 @@ function AiNotesPageContent() {
                     const studentSnap = await getDocs(q);
                     
                     const codesDocRef = doc(db, "activationCodes", user.uid);
-                    const unsubCodes = onSnapshot(codesDocRef, (codeSnap) => {
-                        const hasCodes = codeSnap.exists() && codeSnap.data().codes?.length > 0;
-                        const hasStudents = !studentSnap.empty;
-                        
-                        setHasActivePackage(hasStudents || hasCodes);
-                        
-                        if (hasStudents) {
-                            const list = studentSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentProfile));
-                            setStudents(list);
-                            if (list.length > 0) setSelectedStudentId(list[0].id);
+                    const storeConfigRef = doc(db, "configs", "store");
+                    const aiAccessRef = doc(db, "aiAccess", user.uid);
+
+                    const unsubCodes = onSnapshot(codesDocRef, async (codeSnap) => {
+                        try {
+                            const hasCodes = codeSnap.exists() && codeSnap.data().codes?.length > 0;
+                            const hasStudents = !studentSnap.empty;
+                            const hasMockArena = hasStudents || hasCodes;
+
+                            const [configSnap, aiAccessSnap] = await Promise.all([
+                                getDoc(storeConfigRef),
+                                getDoc(aiAccessRef)
+                            ]);
+
+                            const isFreeAccessAllowed = configSnap.exists() && (configSnap.data() as any).grantFreeAiToolsWithMockArena;
+                            const userHasPurchased = aiAccessSnap.exists() && (aiAccessSnap.data() as any).hasNotesGenerator;
+
+                            setHasActivePackage(!!userHasPurchased || (!!isFreeAccessAllowed && hasMockArena));
+                            
+                            if (hasStudents) {
+                                const list = studentSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentProfile));
+                                setStudents(list);
+                                if (list.length > 0) setSelectedStudentId(list[0].id);
+                            }
+                        } catch (err) {
+                            console.error("Access check details error:", err);
+                        } finally {
+                            setIsLoadingAccess(false);
                         }
-                        setIsLoadingAccess(false);
                     }, () => {
                         setHasActivePackage(!studentSnap.empty);
                         setIsLoadingAccess(false);
@@ -91,25 +106,52 @@ function AiNotesPageContent() {
         }
     }, [user, db]);
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            if (!file.type.startsWith('image/')) {
-                toast({ variant: 'destructive', title: 'Invalid File', description: 'Please upload an image (JPG, PNG).' });
-                return;
-            }
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setImagePreview(reader.result as string);
-            };
-            reader.readAsDataURL(file);
+    const handleDownloadPdf = () => {
+        if (!result) return;
+        const filename = `quicknotes_${result.title.toLowerCase().replace(/\s+/g, '_')}`;
+        const title = `Vidya QuickNotes - ${result.title}`;
+        
+        const sections: { subtitle?: string; content: string }[] = [];
+        sections.push({ subtitle: "Concept Summary / मुख्य सारांश", content: `${result.summary.mr}\n\n${result.summary.en}` });
+
+        for (const s of result.sections) {
+            sections.push({ subtitle: `${s.heading.mr} (${s.heading.en})`, content: `${s.content.mr}\n\n${s.content.en}` });
+            
+            const pointsText = s.keyPoints.map(p => `• ${p.mr}\n  (${p.en})`).join('\n');
+            sections.push({ content: pointsText });
         }
+
+        exportToPdf(filename, title, sections);
+        toast({ title: "PDF Exported!", description: "Check your downloads directory." });
+    };
+
+    const handleDownloadDoc = () => {
+        if (!result) return;
+        const filename = `quicknotes_${result.title.toLowerCase().replace(/\s+/g, '_')}`;
+        const title = `Vidya QuickNotes - ${result.title}`;
+
+        let html = `<h1>Vidya QuickNotes - ${result.title}</h1>`;
+        html += `<div class="summary-box"><h2>Concept Summary / मुख्य सारांश</h2><p><b>${result.summary.mr}</b></p><p><i>${result.summary.en}</i></p></div>`;
+
+        for (const s of result.sections) {
+            html += `<h2>${s.heading.mr} (${s.heading.en})</h2>`;
+            html += `<p><b>${s.content.mr}</b></p>`;
+            html += `<p><i>${s.content.en}</i></p>`;
+            html += `<h3>Key Points / मुख्य मुद्दे</h3><ul>`;
+            for (const p of s.keyPoints) {
+                html += `<li><b>${p.mr}</b> <br/><i>${p.en}</i></li>`;
+            }
+            html += `</ul>`;
+        }
+
+        exportToDoc(filename, title, html);
+        toast({ title: "Word Document Exported!", description: "Check your downloads directory." });
     };
 
     const handleGenerate = async (e: React.FormEvent) => {
         e.preventDefault();
-        if ((!materialText.trim() && !imagePreview)) {
-            toast({ variant: 'destructive', title: 'Input Required', description: 'Please provide text or an image of your study material.' });
+        if (!materialText.trim()) {
+            toast({ variant: 'destructive', title: 'Input Required', description: 'Please provide text of your study material.' });
             return;
         }
 
@@ -134,7 +176,7 @@ function AiNotesPageContent() {
         try {
             const response = await generateStudyNotes({
                 materialDescription: materialText,
-                photoDataUri: imagePreview || undefined,
+                photoDataUri: undefined,
                 subject: 'Academic General',
                 standard: academic.standard,
                 board: academic.board,
@@ -262,52 +304,6 @@ function AiNotesPageContent() {
                                 />
                             </div>
 
-                            <div className="space-y-4">
-                                <Label className="font-bold">Or Upload Photo (JPG/PNG)</Label>
-                                <div className="flex items-center gap-4">
-                                    <Button 
-                                        type="button" 
-                                        variant="outline" 
-                                        className="border-dashed border-4 h-32 w-full flex-col gap-2 bg-muted/20 hover:bg-muted/40 transition-all rounded-3xl"
-                                        onClick={() => fileInputRef.current?.click()}
-                                        disabled={isLocked}
-                                    >
-                                        {imagePreview ? (
-                                            <div className="flex items-center gap-2">
-                                                <ImageIcon className="w-6 h-6 text-primary" />
-                                                <span className="text-xs font-bold text-primary">Photo Attached</span>
-                                            </div>
-                                        ) : (
-                                            <>
-                                                <FileUp className="w-8 h-8 text-muted-foreground" />
-                                                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Upload Textbook Page</span>
-                                            </>
-                                        )}
-                                    </Button>
-                                    <input 
-                                        type="file" 
-                                        ref={fileInputRef} 
-                                        className="hidden" 
-                                        accept="image/*" 
-                                        onChange={handleFileChange}
-                                    />
-                                    {imagePreview && (
-                                        <div className="relative h-32 w-32 shrink-0 border-4 border-white shadow-xl rounded-3xl overflow-hidden group">
-                                            <Image src={imagePreview} alt="Preview" fill className="object-cover" />
-                                            <Button 
-                                                type="button" 
-                                                variant="destructive" 
-                                                size="icon" 
-                                                className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                onClick={() => setImagePreview(null)}
-                                            >
-                                                <X size={12} />
-                                            </Button>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
                             <div className="flex items-center gap-2 text-[10px] font-black uppercase text-muted-foreground tracking-widest bg-muted/50 p-4 rounded-2xl border-dashed border-2">
                                 <Info size={16} className="text-primary"/>
                                 <span>QuickNotes will generate structured key points in both English and Marathi.</span>
@@ -317,7 +313,7 @@ function AiNotesPageContent() {
                             <Button 
                                 type="button" 
                                 variant="ghost" 
-                                onClick={() => { setMaterialText(""); setImagePreview(null); }}
+                                onClick={() => { setMaterialText(""); }}
                                 disabled={isGenerating}
                                 className="font-bold"
                             >
@@ -335,9 +331,26 @@ function AiNotesPageContent() {
                 </Card>
             ) : (
                 <div className="space-y-6">
-                    <div className="flex justify-between items-center">
+                     <div className="flex justify-between items-center flex-wrap gap-3">
                         <Button variant="outline" onClick={() => setResult(null)} className="font-bold"><ArrowLeft className="mr-2 h-4 w-4"/> New Material</Button>
-                        <Button variant="ghost" onClick={() => window.print()} className="text-muted-foreground text-[10px] font-black uppercase tracking-widest">Save to PDF / Print</Button>
+                        <div className="flex gap-2">
+                            <Button 
+                                size="sm" 
+                                onClick={handleDownloadPdf} 
+                                className="font-bold bg-primary text-white gap-2 shadow-md"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                                Export PDF
+                            </Button>
+                            <Button 
+                                size="sm" 
+                                onClick={handleDownloadDoc} 
+                                className="font-bold bg-accent text-white gap-2 shadow-md"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                                Export DOC
+                            </Button>
+                        </div>
                     </div>
 
                     <Card className="border-none shadow-2xl ring-1 ring-primary/20 rounded-[3rem] overflow-hidden">

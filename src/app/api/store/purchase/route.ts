@@ -39,6 +39,24 @@ export async function POST(request: NextRequest) {
       selectedProduct = storeConfig.mockTestPackages.find(p => p.name === productId) || null;
     } else if (productType === 'referbolt') {
       selectedProduct = storeConfig.referboltSubscription.name === productId ? storeConfig.referboltSubscription : null;
+    } else if (productType === 'ai_tool') {
+      if (productId === 'ai_doubt') {
+        selectedProduct = {
+          name: "AI Doubt Solver",
+          price: storeConfig.aiDoubtSolverPrice || 750,
+          description: "Unlimited access to bilingual AI tutor to solve academic doubts.",
+          gstRate: 18,
+          hsnSacCode: '998313'
+        } as any;
+      } else if (productId === 'ai_notes') {
+        selectedProduct = {
+          name: "AI Notes Generator",
+          price: storeConfig.aiNotesGeneratorPrice || 750,
+          description: "Generate structured study notes and summaries from academic text.",
+          gstRate: 18,
+          hsnSacCode: '998313'
+        } as any;
+      }
     }
 
     if (!selectedProduct) {
@@ -235,9 +253,22 @@ export async function POST(request: NextRequest) {
           const studentReferralCode = walletDoc.data()?.referralCode || `REF${uid.slice(0, 6).toUpperCase()}`;
           transaction.set(adminDb.collection('referbolt').doc(uid), { isSubscribed: true, referralCode: studentReferralCode }, { merge: true });
         }
+
+        // Grant free AI tools if configured
+        if (storeConfig.grantFreeAiToolsWithMockArena) {
+          const aiAccessRef = adminDb.collection('aiAccess').doc(uid);
+          transaction.set(aiAccessRef, { hasDoubtSolver: true, hasNotesGenerator: true }, { merge: true });
+        }
       } else if (productType === 'referbolt') {
         const studentReferralCode = walletDoc.data()?.referralCode || `REF${uid.slice(0, 6).toUpperCase()}`;
         transaction.set(adminDb.collection('referbolt').doc(uid), { isSubscribed: true, referralCode: studentReferralCode }, { merge: true });
+      } else if (productType === 'ai_tool') {
+        const aiAccessRef = adminDb.collection('aiAccess').doc(uid);
+        if (productId === 'ai_doubt') {
+          transaction.set(aiAccessRef, { hasDoubtSolver: true }, { merge: true });
+        } else if (productId === 'ai_notes') {
+          transaction.set(aiAccessRef, { hasNotesGenerator: true }, { merge: true });
+        }
       }
     });
 

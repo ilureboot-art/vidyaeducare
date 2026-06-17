@@ -39,6 +39,11 @@ service cloud.firestore {
       allow update, delete: if isOwner(uid) || isAdmin();
     }
 
+    match /aiAccess/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow write: if isAdmin();
+    }
+
     match /wallets/{uid} {
       allow read: if isOwner(uid) || isAdmin();
       allow list: if isAdmin(); 

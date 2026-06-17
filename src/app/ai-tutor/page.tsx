@@ -5,18 +5,19 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { BrainCircuit, Sparkles, Loader2, Send, Users, ArrowLeft, MessageSquare, Info, LogIn, Lock, ShoppingCart, Image as ImageIcon, Camera, X } from "lucide-react";
+import { BrainCircuit, Sparkles, Loader2, Send, ArrowLeft, MessageSquare, Info, Lock, ShoppingCart } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth, useDb } from "@/firebase";
-import { collection, query, where, getDocs, doc, onSnapshot } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, onSnapshot, getDoc } from "firebase/firestore";
 import type { StudentProfile } from "@/lib/student-data";
 import { solveDoubt, type SolveDoubtOutput } from "@/ai/flows/solve-doubt-flow";
 import UserLayout from "@/components/UserLayout";
 import Link from "next/link";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { exportToPdf, exportToDoc } from "@/lib/export-utils";
 
 const GUEST_TRIAL_LIMIT = 5;
 
@@ -28,8 +29,6 @@ function AiTutorPageContent() {
     const [students, setStudents] = useState<StudentProfile[]>([]);
     const [selectedStudentId, setSelectedStudentId] = useState<string>("");
     const [queryText, setQueryText] = useState("");
-    const [attachedImage, setAttachedImage] = useState<string | null>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
     const [isSolving, setIsSolving] = useState(false);
     const [result, setResult] = useState<SolveDoubtOutput | null>(null);
     const [isLoadingAccess, setIsLoadingAccess] = useState(true);
@@ -57,18 +56,35 @@ function AiTutorPageContent() {
                     const studentSnap = await getDocs(q);
                     
                     const codesDocRef = doc(db, "activationCodes", user.uid);
-                    const unsubCodes = onSnapshot(codesDocRef, (codeSnap) => {
-                        const hasCodes = codeSnap.exists() && codeSnap.data().codes?.length > 0;
-                        const hasStudents = !studentSnap.empty;
-                        
-                        setHasActivePackage(hasStudents || hasCodes);
-                        
-                        if (hasStudents) {
-                            const list = studentSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentProfile));
-                            setStudents(list);
-                            if (list.length > 0) setSelectedStudentId(list[0].id);
+                    const storeConfigRef = doc(db, "configs", "store");
+                    const aiAccessRef = doc(db, "aiAccess", user.uid);
+
+                    const unsubCodes = onSnapshot(codesDocRef, async (codeSnap) => {
+                        try {
+                            const hasCodes = codeSnap.exists() && codeSnap.data().codes?.length > 0;
+                            const hasStudents = !studentSnap.empty;
+                            const hasMockArena = hasStudents || hasCodes;
+
+                            const [configSnap, aiAccessSnap] = await Promise.all([
+                                getDoc(storeConfigRef),
+                                getDoc(aiAccessRef)
+                            ]);
+
+                            const isFreeAccessAllowed = configSnap.exists() && (configSnap.data() as any).grantFreeAiToolsWithMockArena;
+                            const userHasPurchased = aiAccessSnap.exists() && (aiAccessSnap.data() as any).hasDoubtSolver;
+
+                            setHasActivePackage(!!userHasPurchased || (!!isFreeAccessAllowed && hasMockArena));
+                            
+                            if (hasStudents) {
+                                const list = studentSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentProfile));
+                                setStudents(list);
+                                if (list.length > 0) setSelectedStudentId(list[0].id);
+                            }
+                        } catch (err) {
+                            console.error("Access check details error:", err);
+                        } finally {
+                            setIsLoadingAccess(false);
                         }
-                        setIsLoadingAccess(false);
                     }, () => {
                         setHasActivePackage(!studentSnap.empty);
                         setIsLoadingAccess(false);
@@ -89,19 +105,34 @@ function AiTutorPageContent() {
         }
     }, [user, db]);
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-          if (!file.type.startsWith('image/')) {
-            toast({ variant: 'destructive', title: 'Invalid File', description: 'Please upload an image.' });
-            return;
-          }
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            setAttachedImage(reader.result as string);
-          };
-          reader.readAsDataURL(file);
-        }
+    const handleDownloadPdf = () => {
+        if (!result) return;
+        const filename = `doubt_${result.keyConcept.toLowerCase().replace(/\s+/g, '_')}`;
+        const title = `Vidya AI Doubt Solver - ${result.keyConcept}`;
+        const sections = [
+            { subtitle: "Student Doubt", content: queryText },
+            { subtitle: "Marathi Explanation / मराठी स्पष्टीकरण", content: result.explanation.mr },
+            { subtitle: "English Explanation", content: result.explanation.en }
+        ];
+        exportToPdf(filename, title, sections);
+        toast({ title: "PDF Exported!", description: "Check your downloads directory." });
+    };
+
+    const handleDownloadDoc = () => {
+        if (!result) return;
+        const filename = `doubt_${result.keyConcept.toLowerCase().replace(/\s+/g, '_')}`;
+        const title = `Vidya AI Doubt Solver - ${result.keyConcept}`;
+        const html = `
+            <h1>Vidya AI Doubt Solver - ${result.keyConcept}</h1>
+            <h2>Student Doubt</h2>
+            <p>${queryText}</p>
+            <h2>मराठी स्पष्टीकरण (Marathi Explanation)</h2>
+            <p>${result.explanation.mr}</p>
+            <h2>English Explanation</h2>
+            <p><i>${result.explanation.en}</i></p>
+        `;
+        exportToDoc(filename, title, html);
+        toast({ title: "Word Document Exported!", description: "Check your downloads directory." });
     };
 
     const handleAskAi = async (e: React.FormEvent) => {
@@ -130,7 +161,7 @@ function AiTutorPageContent() {
             const response = await solveDoubt({
                 userDoubt: queryText,
                 context: context,
-                image: attachedImage || undefined
+                image: undefined
             });
             setResult(response);
 
@@ -252,67 +283,6 @@ function AiTutorPageContent() {
                                 />
                             </div>
                             
-                            <div className="space-y-2">
-                                <Label className="font-bold">Attach Image (Optional)</Label>
-                                <div className="flex flex-col gap-3">
-                                    <input 
-                                        type="file" 
-                                        ref={fileInputRef} 
-                                        className="hidden" 
-                                        accept="image/*" 
-                                        onChange={handleFileChange}
-                                    />
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <Button 
-                                            type="button" 
-                                            variant="outline" 
-                                            className="h-14 gap-2 rounded-2xl border-dashed border-2 hover:bg-primary/5"
-                                            disabled={isSolving || isLocked}
-                                            onClick={() => {
-                                                if (fileInputRef.current) {
-                                                    fileInputRef.current.removeAttribute('capture');
-                                                    fileInputRef.current.click();
-                                                }
-                                            }}
-                                        >
-                                            <ImageIcon className="w-5 h-5 text-primary" />
-                                            <span>Upload Gallery</span>
-                                        </Button>
-                                        <Button 
-                                            type="button" 
-                                            variant="outline" 
-                                            className="h-14 gap-2 rounded-2xl border-dashed border-2 hover:bg-accent/5"
-                                            disabled={isSolving || isLocked}
-                                            onClick={() => {
-                                                if (fileInputRef.current) {
-                                                    fileInputRef.current.setAttribute('capture', 'environment');
-                                                    fileInputRef.current.click();
-                                                }
-                                            }}
-                                        >
-                                            <Camera className="w-5 h-5 text-accent" />
-                                            <span>Take Photo</span>
-                                        </Button>
-                                    </div>
-                                    
-                                    {attachedImage && (
-                                        <div className="relative aspect-video w-full rounded-2xl overflow-hidden border-2 border-primary/20 shadow-lg group bg-muted/20">
-                                            <img src={attachedImage} alt="Doubt Preview" className="w-full h-full object-contain" />
-                                            <Button 
-                                                type="button" 
-                                                variant="destructive" 
-                                                size="icon" 
-                                                className="absolute top-2 right-2 rounded-full h-8 w-8 opacity-90 hover:opacity-100"
-                                                onClick={() => setAttachedImage(null)}
-                                                disabled={isSolving}
-                                            >
-                                                <X size={16} />
-                                            </Button>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
                             <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 p-3 rounded-xl border-dashed border-2">
                                 <Info size={14} className="text-primary"/>
                                 <span>Vidya AI results are pedagogical and provided in both Marathi and English.</span>
@@ -323,7 +293,7 @@ function AiTutorPageContent() {
                         <Button 
                             type="button" 
                             variant="ghost" 
-                            onClick={() => { setQueryText(""); setResult(null); setAttachedImage(null); }}
+                            onClick={() => { setQueryText(""); setResult(null); }}
                             disabled={isSolving}
                             className="font-bold"
                         >
@@ -352,6 +322,32 @@ function AiTutorPageContent() {
 
             {result && (
                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="flex justify-between items-center flex-wrap gap-3">
+                        <Button 
+                            variant="outline" 
+                            onClick={() => { setQueryText(""); setResult(null); }} 
+                            className="font-bold"
+                        >
+                            <ArrowLeft className="mr-2 h-4 w-4"/> Ask Another Question
+                        </Button>
+                        <div className="flex gap-2">
+                            <Button 
+                                onClick={handleDownloadPdf} 
+                                className="font-bold bg-primary text-white gap-2 shadow-md"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                                Export PDF
+                            </Button>
+                            <Button 
+                                onClick={handleDownloadDoc} 
+                                className="font-bold bg-accent text-white gap-2 shadow-md"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                                Export DOC
+                            </Button>
+                        </div>
+                    </div>
+
                     <Card className="border-none shadow-2xl ring-1 ring-primary/20 overflow-hidden">
                         <CardHeader className="pb-2 bg-primary/[0.02] border-b">
                             <div className="flex items-center justify-between">

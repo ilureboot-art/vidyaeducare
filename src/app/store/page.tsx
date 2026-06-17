@@ -161,26 +161,26 @@ function StorePageContent() {
     }
   }, [user, db, checkRecEligibility]);
 
-  const handlePurchase = async (item: MockTestPackage | ReferboltSubscription, type: 'mock' | 'referbolt') => {
+  const handlePurchase = async (item: MockTestPackage | ReferboltSubscription | { name: string; price: number; gstRate: number; hsnSacCode: string }, type: 'mock' | 'referbolt' | 'ai_tool') => {
     if (!user || !storeConfig || !walletData || !db) return;
 
     setIsPurchasing(item.name);
 
-    let priceDetails: {
-        basePrice: number;
+    let priceDetails = {
+        basePrice: 0,
         discountDetails: {
-            base: number;
-            referral: number;
-            special: number;
-            recommendation: number;
-            totalPercentage: number;
-            totalAmount: number;
-        };
-        taxableAmount: number;
-        gstRate: number;
-        gstAmount: number;
-        finalPrice: number;
-        hasReferral: boolean;
+            base: 0,
+            referral: 0,
+            special: 0,
+            recommendation: 0,
+            totalPercentage: 0,
+            totalAmount: 0,
+        },
+        taxableAmount: 0,
+        gstRate: 0,
+        gstAmount: 0,
+        finalPrice: 0,
+        hasReferral: false
     };
 
     if (type === 'mock') {
@@ -211,7 +211,7 @@ function StorePageContent() {
             finalPrice: finalPrice,
             hasReferral: referralCode1.trim() !== ""
         };
-    } else {
+    } else if (type === 'referbolt' || type === 'ai_tool') {
         const gstAmount = item.price * (item.gstRate / 100);
         const finalPrice = item.price + gstAmount;
 
@@ -266,7 +266,7 @@ function StorePageContent() {
                 'Authorization': `Bearer ${idToken}`
             },
             body: JSON.stringify({
-                productId: item.name,
+                productId: item.name === 'AI Doubt Solver' ? 'ai_doubt' : (item.name === 'AI Notes Generator' ? 'ai_notes' : item.name),
                 productType: type,
                 referralCode: referralCode1.trim()
             })
@@ -310,9 +310,10 @@ function StorePageContent() {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="tests" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 h-12">
+            <TabsList className="grid w-full grid-cols-3 h-12">
               <TabsTrigger value="tests" className="font-bold uppercase text-[10px]">MockArena Packs</TabsTrigger>
               <TabsTrigger value="referbolt" className="font-bold uppercase text-[10px]">ReferBolt Access</TabsTrigger>
+              <TabsTrigger value="ai-tools" className="font-bold uppercase text-[10px]">AI Learning Tools</TabsTrigger>
             </TabsList>
             <TabsContent value="tests" className="space-y-6 pt-6">
                  
@@ -443,13 +444,19 @@ function StorePageContent() {
                                     <span className="font-bold text-foreground">₹{discountedBasePrice.toFixed(2)}</span>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span>GST ({product.gstRate}%):</span>
-                                    <span className="font-bold text-foreground">₹{gstAmount.toFixed(2)}</span>
-                                </div>
-                                <div className="flex justify-between border-t border-dashed pt-1.5 mt-1.5 text-sm font-black text-primary">
-                                    <span>Final Price:</span>
-                                    <span>₹{finalPrice.toFixed(2)}</span>
-                                </div>
+                                     <span>GST ({product.gstRate}%):</span>
+                                     <span className="font-bold text-foreground">₹{gstAmount.toFixed(2)}</span>
+                                 </div>
+                                 {totalDiscount > 0 && (
+                                     <div className="flex justify-between text-green-600 font-bold text-[11px] animate-in fade-in">
+                                         <span>Total Savings:</span>
+                                         <span>-₹{(product.price * totalDiscount).toFixed(2)}</span>
+                                     </div>
+                                 )}
+                                 <div className="flex justify-between border-t border-dashed pt-1.5 mt-1.5 text-sm font-black text-primary">
+                                     <span>Final Price:</span>
+                                     <span>₹{finalPrice.toFixed(2)}</span>
+                                 </div>
                             </div>
 
                             {product.grantFreeReferbolt && (
@@ -509,6 +516,101 @@ function StorePageContent() {
                         </Button>
                     </CardContent>
                 </Card>
+            </TabsContent>
+            <TabsContent value="ai-tools" className="pt-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Card for AI Doubt Solver */}
+                    <Card className="flex flex-col text-center items-center p-4 border hover:shadow-md transition-all">
+                        <CardHeader>
+                            <div className="w-16 h-16 bg-accent/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-accent"><path d="m12 3-1.912 5.886L4.2 9l5.886 1.912L12 16.8l1.912-5.886L19.8 9l-5.886-1.912Z"/><path d="m5 3 1 2.5L8.5 6 6 7 5 9.5 4 7 1.5 6 4 5.5Z"/><path d="m19 17 1 2.5 2.5.5-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1Z"/></svg>
+                            </div>
+                            <CardTitle className="text-2xl font-black">AI Doubt Solver</CardTitle>
+                            <CardDescription className="font-medium">Unlimited bilingual explanations & answers for academic queries.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4 w-full flex-grow flex flex-col justify-end">
+                            <div>
+                                <p className="text-5xl font-black text-primary tracking-tighter">₹{((storeConfig.aiDoubtSolverPrice || 750) * 1.18).toFixed(0)}</p>
+                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Inclusive of 18% GST (Base: ₹{storeConfig.aiDoubtSolverPrice || 750})</p>
+                            </div>
+                            
+                            <div className="text-xs text-muted-foreground border-t pt-4 w-full mt-4 space-y-1 font-medium text-left">
+                                <div className="flex justify-between">
+                                    <span>Base Price:</span>
+                                    <span>₹{(storeConfig.aiDoubtSolverPrice || 750).toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span>GST (18%):</span>
+                                    <span>₹{((storeConfig.aiDoubtSolverPrice || 750) * 0.18).toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between border-t border-dashed pt-1 mt-1 text-sm font-black text-primary">
+                                    <span>Total Price:</span>
+                                    <span>₹{((storeConfig.aiDoubtSolverPrice || 750) * 1.18).toFixed(2)}</span>
+                                </div>
+                            </div>
+
+                            <Button 
+                                size="lg" 
+                                className="w-full font-black py-7 mt-4" 
+                                onClick={() => handlePurchase({
+                                    name: "AI Doubt Solver",
+                                    price: storeConfig.aiDoubtSolverPrice || 750,
+                                    gstRate: 18,
+                                    hsnSacCode: '998313'
+                                }, 'ai_tool')} 
+                                disabled={isPurchasing !== null}
+                            >
+                                {isPurchasing === "AI Doubt Solver" ? <Loader2 className="animate-spin"/> : "ACTIVATE SOLVER"}
+                            </Button>
+                        </CardContent>
+                    </Card>
+
+                    {/* Card for AI Notes Generator */}
+                    <Card className="flex flex-col text-center items-center p-4 border hover:shadow-md transition-all">
+                        <CardHeader>
+                            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <BookOpen className="text-primary w-8 h-8" />
+                            </div>
+                            <CardTitle className="text-2xl font-black">AI Notes Generator</CardTitle>
+                            <CardDescription className="font-medium">Generate structured keynotes and bilingual chapter summaries.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4 w-full flex-grow flex flex-col justify-end">
+                            <div>
+                                <p className="text-5xl font-black text-primary tracking-tighter">₹{((storeConfig.aiNotesGeneratorPrice || 750) * 1.18).toFixed(0)}</p>
+                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Inclusive of 18% GST (Base: ₹{storeConfig.aiNotesGeneratorPrice || 750})</p>
+                            </div>
+                            
+                            <div className="text-xs text-muted-foreground border-t pt-4 w-full mt-4 space-y-1 font-medium text-left">
+                                <div className="flex justify-between">
+                                    <span>Base Price:</span>
+                                    <span>₹{(storeConfig.aiNotesGeneratorPrice || 750).toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span>GST (18%):</span>
+                                    <span>₹{((storeConfig.aiNotesGeneratorPrice || 750) * 0.18).toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between border-t border-dashed pt-1 mt-1 text-sm font-black text-primary">
+                                    <span>Total Price:</span>
+                                    <span>₹{((storeConfig.aiNotesGeneratorPrice || 750) * 1.18).toFixed(2)}</span>
+                                </div>
+                            </div>
+
+                            <Button 
+                                size="lg" 
+                                className="w-full font-black py-7 mt-4" 
+                                onClick={() => handlePurchase({
+                                    name: "AI Notes Generator",
+                                    price: storeConfig.aiNotesGeneratorPrice || 750,
+                                    gstRate: 18,
+                                    hsnSacCode: '998313'
+                                }, 'ai_tool')} 
+                                disabled={isPurchasing !== null}
+                            >
+                                {isPurchasing === "AI Notes Generator" ? <Loader2 className="animate-spin"/> : "ACTIVATE GENERATOR"}
+                            </Button>
+                        </CardContent>
+                    </Card>
+                </div>
             </TabsContent>
           </Tabs>
         </CardContent>
@@ -628,6 +730,12 @@ function StorePageContent() {
                                 <span>GST ({purchasedInvoice.gstRate}%):</span>
                                 <span>₹{purchasedInvoice.gstAmount.toFixed(2)}</span>
                             </div>
+                            {purchasedInvoice.discountDetails.totalAmount > 0 && (
+                                <div className="flex justify-between text-green-600 font-bold text-xs">
+                                    <span>Total Savings:</span>
+                                    <span>-₹{purchasedInvoice.discountDetails.totalAmount.toFixed(2)}</span>
+                                </div>
+                            )}
                             <div className="flex justify-between border-t border-dashed pt-3 text-lg font-black text-primary">
                                 <span>Final Total (Paid):</span>
                                 <span>₹{purchasedInvoice.finalPrice.toFixed(2)}</span>

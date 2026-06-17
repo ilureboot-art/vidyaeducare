@@ -51,6 +51,9 @@ export type StoreConfig = {
     recommendationSettings: RecommendationSettings;
     autoApproveDeposits: boolean;
     ibaCommissionRate: number;
+    aiDoubtSolverPrice: number;
+    aiNotesGeneratorPrice: number;
+    grantFreeAiToolsWithMockArena: boolean;
 };
 
 export const defaultStoreConfig: StoreConfig = {
@@ -113,5 +116,9 @@ export const defaultStoreConfig: StoreConfig = {
     },
 
     autoApproveDeposits: false,
-    ibaCommissionRate: 10 // Fixed at 10% as requested
+    ibaCommissionRate: 10, // Fixed at 10% as requested
+    aiDoubtSolverPrice: 750,
+    aiNotesGeneratorPrice: 750,
+    grantFreeAiToolsWithMockArena: false
 };
+

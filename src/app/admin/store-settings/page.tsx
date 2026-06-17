@@ -361,6 +361,53 @@ export default function AdminStoreSettingsPage() {
             </div>
           </CardContent>
         </Card>
+
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary"><path d="m12 3-1.912 5.886L4.2 9l5.886 1.912L12 16.8l1.912-5.886L19.8 9l-5.886-1.912Z"/><path d="m5 3 1 2.5L8.5 6 6 7 5 9.5 4 7 1.5 6 4 5.5Z"/><path d="m19 17 1 2.5 2.5.5-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1Z"/></svg>
+              AI Tools Monetization & Rules
+            </CardTitle>
+            <CardDescription>Configure pricing and purchase rules for AI Doubt Solver & QuickNotes.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="ai-doubt-price">AI Doubt Solver Price (₹)</Label>
+                <Input 
+                  id="ai-doubt-price" 
+                  type="number" 
+                  value={storeConfig.aiDoubtSolverPrice || 0} 
+                  onChange={(e) => setStoreConfig(prev => prev ? ({...prev, aiDoubtSolverPrice: Number(e.target.value) || 0}) : null)} 
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="ai-notes-price">AI Notes Generator Price (₹)</Label>
+                <Input 
+                  id="ai-notes-price" 
+                  type="number" 
+                  value={storeConfig.aiNotesGeneratorPrice || 0} 
+                  onChange={(e) => setStoreConfig(prev => prev ? ({...prev, aiNotesGeneratorPrice: Number(e.target.value) || 0}) : null)} 
+                />
+              </div>
+              <div className="md:col-span-2 space-y-4 pt-2">
+                <div className="flex items-center justify-between p-4 border rounded-xl bg-primary/[0.02]">
+                  <div className="space-y-1">
+                    <Label htmlFor="grant-free-ai-toggle" className="font-bold">
+                      Allow free access to both AI tools on MockArena purchase
+                    </Label>
+                    <p className="text-xs text-muted-foreground max-w-md">When enabled, purchasing any MockArena package automatically activates access to both AI Doubt Solver & QuickNotes.</p>
+                  </div>
+                  <Switch 
+                    id="grant-free-ai-toggle" 
+                    checked={storeConfig.grantFreeAiToolsWithMockArena || false} 
+                    onCheckedChange={(checked) => setStoreConfig(prev => prev ? ({...prev, grantFreeAiToolsWithMockArena: checked}) : null)} 
+                  />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
         </>
         )}
 

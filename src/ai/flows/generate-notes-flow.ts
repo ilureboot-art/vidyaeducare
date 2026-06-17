@@ -67,5 +67,11 @@ export const generateStudyNotesFlow = ai.defineFlow(
 );
 
 export async function generateStudyNotes(input: GenerateNotesInput): Promise<GenerateNotesOutput> {
-  return generateStudyNotesFlow(input);
+  try {
+    return await generateStudyNotesFlow(input);
+  } catch (error) {
+    console.error("❌ Error in generateStudyNotes Server Action:", error);
+    throw error;
+  }
 }
+

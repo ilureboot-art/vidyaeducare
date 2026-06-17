@@ -69,5 +69,11 @@ const generateQuestionsFlow = ai.defineFlow(
 );
 
 export async function generateQuestions(input: GenerateQuestionsInput): Promise<GenerateQuestionsOutput> {
-  return generateQuestionsFlow(input);
+  try {
+    return await generateQuestionsFlow(input);
+  } catch (error) {
+    console.error("❌ Error in generateQuestions Server Action:", error);
+    throw error;
+  }
 }
+

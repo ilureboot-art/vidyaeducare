@@ -8,11 +8,17 @@ import { googleAI } from '@genkit-ai/google-genai';
  * Bridge: Connects Firebase Studio code to Google AI Studio intelligence via GEMINI_API_KEY.
  */
 
+const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY || process.env.GOOGLE_API_KEY;
+
+if (!apiKey) {
+  console.warn("⚠️ Warning: GEMINI_API_KEY is not defined in the environment variables or secrets manager!");
+}
+
 export const ai = genkit({
   plugins: [
     googleAI({
       // Prioritize GEMINI_API_KEY from App Hosting secrets, with fallbacks for local dev
-      apiKey: process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY || process.env.GOOGLE_API_KEY,
+      apiKey: apiKey,
     }),
   ],
   // Standardize on the latest flash alias for optimal balance of speed, accuracy, and reliability
@@ -20,3 +26,4 @@ export const ai = genkit({
 });
 
 export { z } from 'genkit';
+

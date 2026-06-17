@@ -82,5 +82,11 @@ export const solveDoubtFlow = ai.defineFlow(
 );
 
 export async function solveDoubt(input: SolveDoubtInput): Promise<SolveDoubtOutput> {
-  return solveDoubtFlow(input);
+  try {
+    return await solveDoubtFlow(input);
+  } catch (error) {
+    console.error("❌ Error in solveDoubt Server Action:", error);
+    throw error;
+  }
 }
+

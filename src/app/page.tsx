@@ -4,13 +4,16 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { BookOpen, Trophy, Users, LogIn, Share2, Quote, User, Shield, ArrowRight, BrainCircuit, ScrollText, Sparkles, Target, Zap, Rocket, ChevronRight, CheckCircle2, HelpCircle, Wallet } from "lucide-react";
+import { BookOpen, Trophy, Users, LogIn, Share2, Quote, User, Shield, ArrowRight, BrainCircuit, ScrollText, Sparkles, Target, Zap, Rocket, ChevronRight, CheckCircle2, HelpCircle, Wallet, Loader2 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/firebase";
+import { useAuth, useDb } from "@/firebase";
+import { collection, getDocs, doc, getDoc } from "firebase/firestore";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Coins, Star, Calendar as CalendarIcon } from "lucide-react";
 import {
   Accordion,
   AccordionContent,
@@ -39,8 +42,12 @@ const features = [
 export default function HomePage() {
   const { toast } = useToast();
   const { user, isAdmin } = useAuth();
+  const db = useDb();
   
   const [trialStats, setTrialStatus] = useState({ tutor: 5, notes: 5 });
+  const [topStudents, setTopStudents] = useState<any[]>([]);
+  const [topIbas, setTopIbas] = useState<any[]>([]);
+  const [loadingHallOfFame, setLoadingHallOfFame] = useState(true);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -52,6 +59,88 @@ export default function HomePage() {
         });
     }
   }, []);
+
+  useEffect(() => {
+    const fetchHallOfFame = async () => {
+      if (!db) return;
+      setLoadingHallOfFame(true);
+      try {
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth();
+
+        // 1. Fetch Leaderboard Entries for Monthly Standings
+        const leaderboardRef = collection(db, "leaderboard");
+        const leaderboardSnap = await getDocs(leaderboardRef);
+        const parsedEntries = leaderboardSnap.docs.map(doc => {
+            const data = doc.data();
+            const parts = doc.id.split("-");
+            const studentId = data.studentId || parts[0] || "";
+            const testId = data.testId || parts[1] || "";
+            const rawScore = data.score || 0;
+            const totalQuestions = data.totalQuestions || 30;
+            const accuracy = data.accuracy !== undefined ? data.accuracy : (rawScore / totalQuestions) * 100;
+            return {
+                id: doc.id,
+                studentId,
+                testId,
+                name: data.name || "Unknown Student",
+                avatar: data.avatar || "S",
+                score: rawScore,
+                accuracy,
+                time: data.time || "00:00",
+                createdAt: data.createdAt || data.date || new Date().toISOString()
+            };
+        });
+
+        // Filter for current calendar month
+        const currentMonthEntries = parsedEntries.filter(entry => {
+            const entryDate = new Date(entry.createdAt);
+            return entryDate.getFullYear() === currentYear && entryDate.getMonth() === currentMonth;
+        });
+
+        // Group by studentId, take their best score
+        const studentBestMap: Record<string, any> = {};
+        currentMonthEntries.forEach(entry => {
+            const existing = studentBestMap[entry.studentId];
+            if (!existing || entry.score > existing.score || (entry.score === existing.score && entry.time.localeCompare(existing.time) < 0)) {
+                studentBestMap[entry.studentId] = entry;
+            }
+        });
+
+        const sortedStudents = Object.values(studentBestMap)
+          .sort((a: any, b: any) => {
+              if (b.score !== a.score) return b.score - a.score;
+              return a.time.localeCompare(b.time);
+          })
+          .slice(0, 5)
+          .map((entry: any, idx) => ({ ...entry, rank: idx + 1 }));
+
+        setTopStudents(sortedStudents);
+
+        // 2. Fetch Top IBAs from configs/businessAchievers
+        const achieversRef = doc(db, "configs", "businessAchievers");
+        const achieversSnap = await getDoc(achieversRef);
+        if (achieversSnap.exists()) {
+            const data = achieversSnap.data();
+            const currentYearMonth = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+            if (data.yearMonth === currentYearMonth && data.achievers) {
+                setTopIbas(data.achievers);
+            } else {
+                setTopIbas([]);
+            }
+        } else {
+            setTopIbas([]);
+        }
+      } catch (error) {
+          console.error("Error loading Hall of Fame:", error);
+      } finally {
+          setLoadingHallOfFame(false);
+      }
+    };
+
+    fetchHallOfFame();
+  }, [db]);
 
   const handleShare = async () => {
     const url = window.location.origin;
@@ -258,6 +347,109 @@ Learn more in our FAQ: ${faqUrl}
                     <span>• GLOBAL RANKING</span>
                 </div>
             </div>
+        </section>
+
+        {/* Monthly Hall of Fame */}
+        <section className="space-y-12">
+            <div className="text-center space-y-2">
+                <h2 className="text-4xl font-black text-primary tracking-tighter uppercase italic flex items-center justify-center gap-2">
+                    <Trophy className="text-yellow-500 fill-yellow-500/10 h-8 w-8 animate-pulse" /> Monthly Hall of Fame
+                </h2>
+                <p className="text-muted-foreground font-bold tracking-widest text-[10px] uppercase">Honoring Academic and Business Excellence</p>
+                <div className="h-1.5 bg-accent w-32 mx-auto mt-4 rounded-full shadow-sm" />
+            </div>
+
+            {loadingHallOfFame ? (
+                <div className="flex flex-col items-center justify-center py-12 space-y-3">
+                    <Loader2 className="animate-spin text-primary" size={32} />
+                    <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest animate-pulse">Syncing Hall of Fame...</p>
+                </div>
+            ) : (
+                <div className="grid md:grid-cols-2 gap-8">
+                    {/* Academic Leaderboard */}
+                    <Card className="border-none ring-1 ring-primary/10 rounded-[2.5rem] shadow-xl overflow-hidden bg-card">
+                        <CardHeader className="bg-primary/5 pb-4 border-b">
+                            <CardTitle className="text-2xl font-black text-primary uppercase italic flex items-center gap-2">
+                                <Sparkles className="text-yellow-500 h-5 w-5" /> Top Student Rankers
+                            </CardTitle>
+                            <CardDescription className="text-xs font-bold uppercase tracking-widest">MockArena monthly elite standings</CardDescription>
+                        </CardHeader>
+                        <CardContent className="pt-6 space-y-4">
+                            {topStudents.length > 0 ? (
+                                topStudents.map((student) => (
+                                    <div key={student.id} className="flex items-center justify-between p-3 rounded-2xl hover:bg-muted/40 transition-colors border">
+                                        <div className="flex items-center gap-3">
+                                            <span className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-black uppercase text-xs">
+                                                {student.rank === 1 ? "🥇" : student.rank === 2 ? "🥈" : student.rank === 3 ? "🥉" : student.rank}
+                                            </span>
+                                            <Avatar className="h-10 w-10 border shadow-sm">
+                                                <AvatarFallback className="bg-primary/10 text-primary font-bold">{student.name.charAt(0)}</AvatarFallback>
+                                            </Avatar>
+                                            <div>
+                                                <p className="font-bold text-sm leading-none">{student.name}</p>
+                                                <p className="text-[10px] text-muted-foreground mt-1 uppercase font-bold tracking-tight">Time: {student.time}</p>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <Badge className="bg-accent text-accent-foreground font-black text-xs px-2.5 py-1">
+                                                {student.accuracy.toFixed(0)}% Accuracy
+                                            </Badge>
+                                            <p className="text-[10px] font-bold text-muted-foreground mt-1 uppercase">{student.score} / 30 Correct</p>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="text-center py-12 text-muted-foreground">
+                                    <Trophy className="w-12 h-12 opacity-10 mx-auto mb-2" />
+                                    <p className="text-sm font-black uppercase tracking-wider">No Submissions Yet</p>
+                                    <p className="text-xs">Submit a mock test this month to see your ranking!</p>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    {/* Business Achievers */}
+                    <Card className="border-none ring-1 ring-primary/10 rounded-[2.5rem] shadow-xl overflow-hidden bg-card">
+                        <CardHeader className="bg-accent/5 pb-4 border-b">
+                            <CardTitle className="text-2xl font-black text-accent uppercase italic flex items-center gap-2">
+                                <Coins className="text-accent h-5 w-5 animate-bounce" /> Business Achievers
+                            </CardTitle>
+                            <CardDescription className="text-xs font-bold uppercase tracking-widest">Monthly top earning associates (IBAs)</CardDescription>
+                        </CardHeader>
+                        <CardContent className="pt-6 space-y-4">
+                            {topIbas.length > 0 ? (
+                                topIbas.map((iba, index) => (
+                                    <div key={iba.uid || index} className="flex items-center justify-between p-4 rounded-2xl hover:bg-muted/40 transition-colors border">
+                                        <div className="flex items-center gap-3">
+                                            <span className="w-8 h-8 rounded-full bg-accent/10 text-accent flex items-center justify-center font-black uppercase text-xs">
+                                                {index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : index + 1}
+                                            </span>
+                                            <Avatar className="h-10 w-10 border shadow-sm">
+                                                <AvatarFallback className="bg-accent/10 text-accent font-bold">{iba.name.charAt(0)}</AvatarFallback>
+                                            </Avatar>
+                                            <div>
+                                                <p className="font-bold text-sm leading-none">{iba.name}</p>
+                                                <p className="text-[10px] text-muted-foreground mt-1 uppercase font-bold tracking-tight">Active Associate</p>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-500/10 text-green-600 rounded-full font-black text-xs shadow-sm border border-green-500/20">
+                                                ₹{iba.commission.toLocaleString()} Earned
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="text-center py-12 text-muted-foreground">
+                                    <Coins className="w-12 h-12 opacity-10 mx-auto mb-2" />
+                                    <p className="text-sm font-black uppercase tracking-wider">Awaiting Business Activity</p>
+                                    <p className="text-xs">Achievers are calculated and published by admin operations regularly.</p>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
         </section>
 
         {/* Standard Features grid */}

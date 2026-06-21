@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { BarChart, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Line, Bar, ResponsiveContainer, AreaChart, Area, Legend } from "recharts";
 import { Users, IndianRupee, Loader2, AlertCircle, RefreshCcw, BookOpen, TrendingUp, Calendar } from "lucide-react";
 import { useDb, useAuth } from "@/firebase";
-import { collection, getDocs, query, where, Timestamp, getCountFromServer, orderBy } from "firebase/firestore";
+import { collection, getDocs, query, where, Timestamp, getCountFromServer, orderBy, doc, getDoc, setDoc } from "firebase/firestore";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -102,7 +102,46 @@ export default function AnalyticsPage() {
               setRecentUsers(results[3].value.docs.map(d => d.data()));
           }
           if (results[4].status === 'fulfilled') {
-              setRecentTransactions(results[4].value.docs.map(d => d.data()));
+              const txs = results[4].value.docs.map(d => d.data());
+              setRecentTransactions(txs);
+
+              // Compute and publish monthly top 3 IBAs to configs/businessAchievers
+              try {
+                  const now = new Date();
+                  const currentYear = now.getFullYear();
+                  const currentMonth = now.getMonth();
+                  const startOfMonth = new Date(currentYear, currentMonth, 1);
+                  
+                  const currentMonthCommissions = txs.filter((tx: any) => {
+                      const txDate = tx.date instanceof Timestamp ? tx.date.toDate() : new Date(tx.date);
+                      return txDate >= startOfMonth && (tx.type === 'Commission' || tx.type === 'Referral Bonus');
+                  });
+                  
+                  const ibaEarnings: Record<string, number> = {};
+                  currentMonthCommissions.forEach((tx: any) => {
+                      ibaEarnings[tx.user] = (ibaEarnings[tx.user] || 0) + (tx.amount || 0);
+                  });
+                  
+                  const sortedIbas = Object.entries(ibaEarnings)
+                      .sort((a, b) => b[1] - a[1])
+                      .slice(0, 3);
+                      
+                  const achievers = [];
+                  for (const [uid, commission] of sortedIbas) {
+                      const userSnap = await getDoc(doc(db, "users", uid));
+                      const name = userSnap.exists() ? userSnap.data().name || "Partner IBA" : "Partner IBA";
+                      achievers.push({ uid, name, commission });
+                  }
+                  
+                  const docRef = doc(db, "configs", "businessAchievers");
+                  await setDoc(docRef, {
+                      updatedAt: new Date().toISOString(),
+                      yearMonth: `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`,
+                      achievers
+                  });
+              } catch (err) {
+                  console.error("Error publishing business achievers:", err);
+              }
           }
 
       } catch (err: any) {

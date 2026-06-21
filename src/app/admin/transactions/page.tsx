@@ -27,6 +27,14 @@ import Papa from "papaparse";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -72,6 +80,9 @@ export default function TransactionsPage() {
   const [typeFilter, setTypeFilter] = useState<'all' | 'deposit' | 'withdrawal'>('all');
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [utrDialogOpen, setUtrDialogOpen] = useState(false);
+  const [selectedTxForUtr, setSelectedTxForUtr] = useState<string | null>(null);
+  const [utrNumber, setUtrNumber] = useState("");
   
   const fetchTransactions = useCallback(async (manual = false) => {
     if (!db) return;
@@ -122,7 +133,7 @@ export default function TransactionsPage() {
   }, [db, fetchTransactions]);
 
 
-  const handleTransactionStatus = async (id: string, newStatus: "Completed" | "Rejected") => {
+  const handleTransactionStatus = async (id: string, newStatus: "Completed" | "Rejected", referenceId?: string) => {
     if (!transactions || !db) return;
 
     const txToUpdate = transactions.find(tx => tx.id === id);
@@ -149,16 +160,20 @@ export default function TransactionsPage() {
                     if (txToUpdate.type === 'deposit') {
                         const newBalance = (walletData.balance || 0) + txToUpdate.amount;
                         transaction.update(userWalletRef!, { balance: newBalance });
-                    }
-                } else if (newStatus === 'Rejected') {
-                    if (txToUpdate.type === 'withdrawal') {
-                        const newBalance = (walletData.balance || 0) + Math.abs(txToUpdate.amount); 
+                    } else if (txToUpdate.type === 'withdrawal') {
+                        const newBalance = (walletData.balance || 0) - Math.abs(txToUpdate.amount);
+                        if (newBalance < 200) {
+                            throw new Error("Student has insufficient balance to complete this withdrawal.");
+                        }
                         transaction.update(userWalletRef!, { balance: newBalance });
                     }
                 }
             }
             
-            transaction.update(txDocRef, { status: newStatus });
+            transaction.update(txDocRef, { 
+                status: newStatus,
+                ...(referenceId ? { referenceId } : {})
+            });
 
             if (txToUpdate.user) {
                 const notificationRef = doc(collection(db, "notifications"));
@@ -191,8 +206,9 @@ export default function TransactionsPage() {
 
         toast({ title: "Transaction Updated", description: `Transaction marked as ${newStatus}.` });
         fetchTransactions(true);
-    } catch(error) {
+    } catch(error: any) {
         console.error("Transaction Update Error:", error);
+        toast({ variant: "destructive", title: "Action Failed", description: error.message || "Failed to update transaction status." });
     }
   };
 
@@ -430,7 +446,22 @@ export default function TransactionsPage() {
                   <TableCell className="text-center">
                     {tx.status === "Pending" && (
                         <div className="flex gap-1 justify-center">
-                            <Button variant="ghost" size="sm" className="h-7 text-green-600 hover:text-green-700 px-2 text-[10px]" onClick={() => handleTransactionStatus(String(tx.id), "Completed")}>Approve</Button>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 text-green-600 hover:text-green-700 px-2 text-[10px]"
+                                onClick={() => {
+                                    if (tx.type === "withdrawal") {
+                                        setSelectedTxForUtr(String(tx.id));
+                                        setUtrNumber("");
+                                        setUtrDialogOpen(true);
+                                    } else {
+                                        handleTransactionStatus(String(tx.id), "Completed");
+                                    }
+                                }}
+                            >
+                                Approve
+                            </Button>
                             <Button variant="ghost" size="sm" className="h-7 text-red-600 hover:text-red-700 px-2 text-[10px]" onClick={() => handleTransactionStatus(String(tx.id), "Rejected")}>Reject</Button>
                         </div>
                     )}
@@ -446,6 +477,47 @@ export default function TransactionsPage() {
           </Table>
         </CardContent>
       </Card>
+
+      <Dialog open={utrDialogOpen} onOpenChange={setUtrDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Enter Payment UTR / Reference ID</DialogTitle>
+            <DialogDescription>
+              To approve this withdrawal, please enter the transaction UTR or Reference ID. The user's wallet will be debited immediately upon approval.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="utr" className="text-right">
+                UTR No.
+              </Label>
+              <Input
+                id="utr"
+                placeholder="e.g., 612345678901"
+                className="col-span-3"
+                value={utrNumber}
+                onChange={(e) => setUtrNumber(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUtrDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              disabled={!utrNumber.trim()}
+              onClick={() => {
+                if (selectedTxForUtr) {
+                  handleTransactionStatus(selectedTxForUtr, "Completed", utrNumber.trim());
+                  setUtrDialogOpen(false);
+                }
+              }}
+            >
+              Approve & Debit
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

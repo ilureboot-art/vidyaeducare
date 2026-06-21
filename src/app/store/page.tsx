@@ -35,6 +35,8 @@ function StorePageContent() {
   const [recommendationCount, setRecommendationCount] = useState(0);
   
   const [referralCode1, setReferralCode1] = useState("");
+  const [referralCode2, setReferralCode2] = useState("");
+  const [activationCode, setActivationCode] = useState<string | null>(null);
   const [purchasedInvoice, setPurchasedInvoice] = useState<any | null>(null);
 
   const checkRecEligibility = useCallback(async (db: Firestore, userId: string, config: StoreConfig) => {
@@ -297,7 +299,8 @@ function StorePageContent() {
             body: JSON.stringify({
                 productId: item.name === 'AI Doubt Solver' ? 'ai_doubt' : (item.name === 'AI Notes Generator' ? 'ai_notes' : item.name),
                 productType: type,
-                referralCode: referralCode1.trim()
+                referralCode: referralCode1.trim(),
+                referralCode2: referralCode2.trim()
             })
         });
 
@@ -308,6 +311,11 @@ function StorePageContent() {
 
         toast({ title: "Purchase Successful!", description: `${item.name} activated.` });
         setPurchasedInvoice(data.invoice);
+        if (data.activationCode) {
+            setActivationCode(data.activationCode);
+        } else {
+            setActivationCode(null);
+        }
         checkRecEligibility(db, user.uid, storeConfig);
     } catch (e: any) {
         console.error("Store Purchase Error:", e);
@@ -373,26 +381,38 @@ function StorePageContent() {
                  )}
 
                  <div className="max-w-md mx-auto space-y-4 p-5 border rounded-xl bg-muted/30 mt-4">
-                    <div className="text-center space-y-1 mb-2">
-                        <p className="text-sm font-bold">Have an IBA referral code?</p>
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-black">Support your associate & get a discount</p>
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="referralCode1" className="text-[10px] font-bold uppercase">Primary IBA Code</Label>
-                        <Input 
-                            id="referralCode1" 
-                            placeholder="Enter IBA code here"
-                            value={referralCode1}
-                            onChange={(e) => setReferralCode1(e.target.value)}
-                            className="bg-background"
-                        />
-                    </div>
-                </div>
+                     <div className="text-center space-y-1 mb-2">
+                         <p className="text-sm font-bold">Have an IBA referral code?</p>
+                         <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-black">Support your associates & split commissions 50-50</p>
+                     </div>
+                     <div className="grid grid-cols-2 gap-3">
+                         <div className="space-y-2">
+                             <Label htmlFor="referralCode1" className="text-[10px] font-bold uppercase">Primary IBA Code</Label>
+                             <Input 
+                                 id="referralCode1" 
+                                 placeholder="Primary Code"
+                                 value={referralCode1}
+                                 onChange={(e) => setReferralCode1(e.target.value)}
+                                 className="bg-background"
+                             />
+                         </div>
+                         <div className="space-y-2">
+                             <Label htmlFor="referralCode2" className="text-[10px] font-bold uppercase">Secondary IBA Code</Label>
+                             <Input 
+                                 id="referralCode2" 
+                                 placeholder="Secondary Code"
+                                 value={referralCode2}
+                                 onChange={(e) => setReferralCode2(e.target.value)}
+                                 className="bg-background"
+                             />
+                         </div>
+                     </div>
+                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
                 {storeConfig.mockTestPackages.map((product, index) => {
                     const baseDisc = (product.baseDiscount || 0) / 100;
-                    const referralDisc = referralCode1.trim() !== "" ? (product.referralDiscount || 0) / 100 : 0;
+                    const referralDisc = (referralCode1.trim() !== "" || referralCode2.trim() !== "") ? (product.referralDiscount || 0) / 100 : 0;
                     const specialDisc = (product.specialDiscount || 0) / 100;
                     const recommendationDisc = isEligibleForRecDiscount ? (storeConfig.recommendationSettings?.additionalDiscount || 0) / 100 : 0;
                     
@@ -728,6 +748,27 @@ function StorePageContent() {
                             <p className="text-muted-foreground text-xs">GSTIN: 27AACCV1234F1Z5</p>
                         </div>
                     </div>
+
+                    {activationCode && (
+                      <div className="bg-green-500/10 border border-green-500/20 rounded-2xl p-4 text-center mt-4">
+                        <p className="text-[10px] font-black text-green-600 uppercase tracking-widest mb-1">Your Mock Test Activation Code</p>
+                        <div className="flex items-center justify-center gap-3">
+                          <p className="text-2xl font-mono font-black text-green-700 tracking-wider">{activationCode}</p>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="text-xs h-8 border-green-500/30 text-green-700 hover:bg-green-500/20 font-bold"
+                            onClick={() => {
+                              navigator.clipboard.writeText(activationCode);
+                              toast({ title: "Copied!", description: "Activation code copied to clipboard." });
+                            }}
+                          >
+                            Copy
+                          </Button>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground mt-2">Use this code on the <b>Profile</b> page to activate a student workspace profile.</p>
+                      </div>
+                    )}
 
                     <div className="border rounded-2xl overflow-hidden mt-6">
                         <table className="w-full text-left border-collapse">

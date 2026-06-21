@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized: Invalid authentication' }, { status: 401 });
     }
 
-    const { productId, productType, referralCode } = await request.json();
+    const { productId, productType, referralCode, referralCode2 } = await request.json();
 
     // Fetch Store Config from Firestore
     const storeConfigRef = adminDb.collection('configs').doc('store');
@@ -131,6 +131,7 @@ export async function POST(request: NextRequest) {
       gstAmount: number;
       finalPrice: number;
       ibaUid: string | null;
+      ibaUid2: string | null;
     };
 
     if (productType === 'mock') {
@@ -139,6 +140,7 @@ export async function POST(request: NextRequest) {
       
       let referralDiscount = 0;
       let ibaUid: string | null = null;
+      let ibaUid2: string | null = null;
       
       if (referralCode && referralCode.trim() !== '') {
         const walletsSnap = await adminDb.collection('wallets')
@@ -146,6 +148,16 @@ export async function POST(request: NextRequest) {
           .get();
         if (!walletsSnap.empty) {
           ibaUid = walletsSnap.docs[0].id;
+          referralDiscount = (mockItem.referralDiscount || 0) / 100;
+        }
+      }
+
+      if (referralCode2 && referralCode2.trim() !== '') {
+        const walletsSnap2 = await adminDb.collection('wallets')
+          .where('referralCode', '==', referralCode2.trim())
+          .get();
+        if (!walletsSnap2.empty) {
+          ibaUid2 = walletsSnap2.docs[0].id;
           referralDiscount = (mockItem.referralDiscount || 0) / 100;
         }
       }
@@ -172,7 +184,8 @@ export async function POST(request: NextRequest) {
         gstRate: gstRate,
         gstAmount: basePrice * (gstRate / 100),
         finalPrice: finalPrice,
-        ibaUid: ibaUid
+        ibaUid: ibaUid,
+        ibaUid2: ibaUid2
       };
     } else {
       const gstAmount = basePrice * (gstRate / 100);
@@ -192,7 +205,8 @@ export async function POST(request: NextRequest) {
         gstRate: gstRate,
         gstAmount: gstAmount,
         finalPrice: finalPrice,
-        ibaUid: null
+        ibaUid: null,
+        ibaUid2: null
       };
     }
 
@@ -213,8 +227,32 @@ export async function POST(request: NextRequest) {
       billingDetails: {
         email: userEmail,
         name: userName,
-      }
+      },
+      companyName: storeConfig.companyName || 'Vidya EduCare Private Ltd.',
+      companyGstin: storeConfig.companyGstin || '27AACCV1234F1Z5',
+      companyAddress: storeConfig.companyAddress || 'Mumbai, Maharashtra, India',
     };
+
+    let activationCode: string | undefined;
+
+    // Resolve Head Admin UID for crediting purchase revenue
+    let adminUid: string | null = null;
+    const adminsSnap = await adminDb.collection('admins')
+      .where('role', '==', 'Head Admin')
+      .limit(1)
+      .get();
+    if (!adminsSnap.empty) {
+      adminUid = adminsSnap.docs[0].id;
+    } else {
+      // Fallback: search users collection by email
+      const usersSnap = await adminDb.collection('users')
+        .where('email', '==', 'admin@vidyaeducare.com')
+        .limit(1)
+        .get();
+      if (!usersSnap.empty) {
+        adminUid = usersSnap.docs[0].id;
+      }
+    }
 
     await adminDb.runTransaction(async (transaction) => {
       const walletDoc = await transaction.get(studentWalletRef);
@@ -231,6 +269,30 @@ export async function POST(request: NextRequest) {
       }
 
       transaction.update(studentWalletRef, { balance: currentBalance - priceDetails.finalPrice });
+
+      // Credit purchase revenue to Head Admin wallet
+      if (adminUid) {
+        const adminWalletRef = adminDb.collection('wallets').doc(adminUid);
+        const adminWalletDoc = await transaction.get(adminWalletRef);
+        const adminCurrentBalance = adminWalletDoc.exists ? (adminWalletDoc.data()?.balance || 0) : 0;
+        
+        transaction.set(adminWalletRef, { 
+          balance: adminCurrentBalance + priceDetails.finalPrice,
+          coins: adminWalletDoc.exists ? (adminWalletDoc.data()?.coins || 0) : 0,
+          referralCode: adminWalletDoc.exists ? (adminWalletDoc.data()?.referralCode || 'HEADADMIN') : 'HEADADMIN'
+        }, { merge: true });
+
+        const adminRevenueTxRef = adminDb.collection('transactions').doc();
+        transaction.set(adminRevenueTxRef, {
+          user: adminUid,
+          amount: priceDetails.finalPrice,
+          date: FieldValue.serverTimestamp(),
+          description: `Revenue: Purchase of ${selectedProduct.name} by ${userName}`,
+          status: 'Completed',
+          type: 'deposit'
+        });
+      }
+
 
       const purchaseTxRef = adminDb.collection('transactions').doc();
       transaction.set(purchaseTxRef, {
@@ -255,33 +317,61 @@ export async function POST(request: NextRequest) {
       });
 
       // Handle IBA Commissions
-      if (priceDetails.ibaUid) {
+      if (priceDetails.ibaUid || priceDetails.ibaUid2) {
         const baseCommissionRate = (storeConfig.ibaCommissionRate || 10) / 100;
-        const commissionAmount = priceDetails.basePrice * baseCommissionRate;
+        const totalCommissionAmount = priceDetails.basePrice * baseCommissionRate;
 
-        const ibaWalletRef = adminDb.collection('wallets').doc(priceDetails.ibaUid);
-        const ibaWalletDoc = await transaction.get(ibaWalletRef);
-        
-        if (ibaWalletDoc.exists) {
-          const ibaCurrentBalance = ibaWalletDoc.data()?.balance || 0;
-          transaction.update(ibaWalletRef, { balance: ibaCurrentBalance + commissionAmount });
+        // If both are present, split 50%-50%. Otherwise, the active one gets 100% of the commission.
+        const isSplit = !!(priceDetails.ibaUid && priceDetails.ibaUid2);
+        const splitFactor = isSplit ? 0.5 : 1.0;
+
+        if (priceDetails.ibaUid) {
+          const ibaWalletRef = adminDb.collection('wallets').doc(priceDetails.ibaUid);
+          const ibaWalletDoc = await transaction.get(ibaWalletRef);
           
-          const ibaTxRef = adminDb.collection('transactions').doc();
-          transaction.set(ibaTxRef, {
-            user: priceDetails.ibaUid,
-            amount: commissionAmount,
-            date: FieldValue.serverTimestamp(),
-            description: `Commission from student purchase`,
-            status: 'Completed',
-            type: 'deposit'
-          });
+          if (ibaWalletDoc.exists) {
+            const ibaCurrentBalance = ibaWalletDoc.data()?.balance || 0;
+            const amountForIba = totalCommissionAmount * splitFactor;
+            transaction.update(ibaWalletRef, { balance: ibaCurrentBalance + amountForIba });
+            
+            const ibaTxRef = adminDb.collection('transactions').doc();
+            transaction.set(ibaTxRef, {
+              user: priceDetails.ibaUid,
+              amount: amountForIba,
+              date: FieldValue.serverTimestamp(),
+              description: `Commission from student purchase${isSplit ? " (50% Primary IBA Split)" : ""}`,
+              status: 'Completed',
+              type: 'deposit'
+            });
+          }
+        }
+
+        if (priceDetails.ibaUid2) {
+          const ibaWalletRef2 = adminDb.collection('wallets').doc(priceDetails.ibaUid2);
+          const ibaWalletDoc2 = await transaction.get(ibaWalletRef2);
+          
+          if (ibaWalletDoc2.exists) {
+            const ibaCurrentBalance2 = ibaWalletDoc2.data()?.balance || 0;
+            const amountForIba2 = totalCommissionAmount * splitFactor;
+            transaction.update(ibaWalletRef2, { balance: ibaCurrentBalance2 + amountForIba2 });
+            
+            const ibaTxRef2 = adminDb.collection('transactions').doc();
+            transaction.set(ibaTxRef2, {
+              user: priceDetails.ibaUid2,
+              amount: amountForIba2,
+              date: FieldValue.serverTimestamp(),
+              description: `Commission from student purchase${isSplit ? " (50% Secondary IBA Split)" : ""}`,
+              status: 'Completed',
+              type: 'deposit'
+            });
+          }
         }
       }
 
       // Handle Student Entitlements (Activation Codes & ReferBolt Subscriptions)
       if (productType === 'mock') {
         const mockItem = selectedProduct as MockTestPackage;
-        const activationCode = `PROD-${Date.now().toString().slice(-6)}`;
+        activationCode = `PROD-${Date.now().toString().slice(-6)}`;
         const activationCodesRef = adminDb.collection('activationCodes').doc(uid);
         transaction.set(activationCodesRef, { codes: FieldValue.arrayUnion(activationCode) }, { merge: true });
 
@@ -331,6 +421,18 @@ export async function POST(request: NextRequest) {
             referrerId: priceDetails.ibaUid
           });
         }
+
+        if (priceDetails.ibaUid2) {
+          const clientRef2 = adminDb.collection('clients').doc();
+          transaction.set(clientRef2, {
+            name: userName,
+            type: "Direct",
+            product: selectedProduct.name,
+            purchaseDate: new Date().toISOString(),
+            validity: new Date(Date.now() + mockItem.months * 30 * 24 * 60 * 60 * 1000).toISOString(),
+            referrerId: priceDetails.ibaUid2
+          });
+        }
       } else if (productType === 'referbolt') {
         const studentReferralCode = walletDoc.data()?.referralCode || `REF${uid.slice(0, 6).toUpperCase()}`;
         transaction.set(adminDb.collection('referbolt').doc(uid), { isSubscribed: true, referralCode: studentReferralCode }, { merge: true });
@@ -362,7 +464,11 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    return NextResponse.json({ success: true, invoice: invoiceData });
+    return NextResponse.json({ 
+      success: true, 
+      invoice: invoiceData, 
+      activationCode: productType === 'mock' ? activationCode : undefined 
+    });
   } catch (error: any) {
     console.error('Purchase processing failed:', error);
     return NextResponse.json({ error: error.message || 'Purchase processing failed.' }, { status: 500 });

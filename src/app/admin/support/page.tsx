@@ -30,7 +30,7 @@ const adminFaqs = [
     },
     {
         question: "How do I approve or reject a transaction request?",
-        answer: "Go to the 'Transactions' page. Pending requests have 'Approve' and 'Reject' actions. Approving a deposit updates the user wallet; rejecting a withdrawal returns funds to the user."
+        answer: "Go to the 'Transactions' page. Pending requests have 'Approve' and 'Reject' actions. Approving a deposit updates the user wallet; approving a withdrawal requires entering a UTR number and debits the user's wallet immediately. Rejecting a withdrawal does not debit or refund any money."
     },
     {
         question: "How does the ReferBolt cycle bonus work?",

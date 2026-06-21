@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
-import { PlusCircle, Trash2, Zap, BookOpen, GraduationCap, Percent, Loader2, IndianRupee, RefreshCcw, Landmark, ShieldCheck } from "lucide-react";
+import { PlusCircle, Trash2, Zap, BookOpen, GraduationCap, Percent, Loader2, IndianRupee, RefreshCcw, Landmark, ShieldCheck, FileText } from "lucide-react";
 import { type StoreConfig, type MockTestPackage, type ReferboltSubscription, type ReferboltSettings, type RecommendationSettings, defaultStoreConfig } from "@/lib/store-config";
 import { type AcademicConfig, defaultAcademicConfig } from "@/lib/academic-config";
 import { Switch } from "@/components/ui/switch";
@@ -326,9 +326,9 @@ export default function AdminStoreSettingsPage() {
         <Card className="mt-6">
           <CardHeader>
               <CardTitle className="flex items-center gap-2"><Landmark size={20} className="text-primary"/> Financial System Rules</CardTitle>
-              <CardDescription>Global rules for payments and wallet management.</CardDescription>
+              <CardDescription>Global rules for payments, wallet management, and rewards.</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-6">
               <div className="flex items-center justify-between p-4 border rounded-xl bg-primary/[0.02]">
                   <div className="space-y-1">
                       <Label htmlFor="auto-approve-toggle" className="font-bold flex items-center gap-2">
@@ -341,6 +341,19 @@ export default function AdminStoreSettingsPage() {
                     checked={storeConfig.autoApproveDeposits} 
                     onCheckedChange={(checked) => setStoreConfig(prev => prev ? ({...prev, autoApproveDeposits: checked}) : null)} 
                   />
+              </div>
+
+              <div className="space-y-2 p-4 border rounded-xl bg-primary/[0.02]">
+                  <Label htmlFor="monthly-reward-amount" className="font-bold flex items-center gap-2">
+                      <IndianRupee size={14} className="text-primary"/> Monthly 1st Ranker Cash Reward (₹)
+                  </Label>
+                  <Input 
+                    id="monthly-reward-amount" 
+                    type="number" 
+                    value={storeConfig.monthlyFirstRankerReward ?? 1000} 
+                    onChange={(e) => setStoreConfig(prev => prev ? ({...prev, monthlyFirstRankerReward: Number(e.target.value) || 0}) : null)} 
+                  />
+                  <p className="text-[10px] text-muted-foreground italic">Cash prize credited to the parent's wallet of the monthly 1st ranker upon finalization.</p>
               </div>
           </CardContent>
         </Card>
@@ -408,6 +421,49 @@ export default function AdminStoreSettingsPage() {
                     onCheckedChange={(checked) => setStoreConfig(prev => prev ? ({...prev, grantFreeAiToolsWithMockArena: checked}) : null)} 
                   />
                 </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText size={20} className="text-primary"/> Invoice & Company Settings
+            </CardTitle>
+            <CardDescription>Configure billing name, GSTIN, and company address printed on purchase invoices.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="company-name" className="font-bold">Company Name</Label>
+                <Input 
+                  id="company-name" 
+                  type="text" 
+                  value={storeConfig.companyName || ''} 
+                  onChange={(e) => setStoreConfig(prev => prev ? ({...prev, companyName: e.target.value}) : null)} 
+                  placeholder="e.g. Vidya EduCare Private Ltd."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="company-gstin" className="font-bold">GSTIN</Label>
+                <Input 
+                  id="company-gstin" 
+                  type="text" 
+                  value={storeConfig.companyGstin || ''} 
+                  onChange={(e) => setStoreConfig(prev => prev ? ({...prev, companyGstin: e.target.value}) : null)} 
+                  placeholder="e.g. 27AACCV1234F1Z5"
+                />
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="company-address" className="font-bold">Company Address</Label>
+                <Input 
+                  id="company-address" 
+                  type="text" 
+                  value={storeConfig.companyAddress || ''} 
+                  onChange={(e) => setStoreConfig(prev => prev ? ({...prev, companyAddress: e.target.value}) : null)} 
+                  placeholder="e.g. Mumbai, Maharashtra, India"
+                />
               </div>
             </div>
           </CardContent>

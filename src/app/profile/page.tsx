@@ -359,6 +359,27 @@ function ProfilePageContent() {
                                 />
                                 <p className="text-[10px] text-center text-muted-foreground">Found in your purchase receipt or activation card.</p>
                             </div>
+
+                            {validCodes.length > 0 && (
+                                <div className="p-4 bg-muted/50 rounded-2xl border border-dashed border-primary/20 space-y-2">
+                                    <p className="text-[10px] font-black text-primary uppercase tracking-widest">Your Purchased Unused Activation Codes:</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {validCodes.map(code => (
+                                            <Button 
+                                                key={code}
+                                                type="button"
+                                                variant="outline" 
+                                                size="sm" 
+                                                className="font-mono text-xs font-bold bg-background hover:bg-primary/10 hover:border-primary/30"
+                                                onClick={() => setActivationCode(code)}
+                                            >
+                                                {code}
+                                            </Button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
                             <Button className="w-full font-bold" onClick={handleVerifyCode} disabled={!activationCode.trim()}>Verify Product Code</Button>
                         </div>
                     ) : (

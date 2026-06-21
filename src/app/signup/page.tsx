@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Gamepad2, Loader2, Eye, EyeOff } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { doc, getDoc, runTransaction, collection, query, where, getDocs, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, runTransaction, collection, query, where, getDocs, serverTimestamp, arrayUnion } from "firebase/firestore";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { useAuthService, useDb } from "@/firebase";
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -174,6 +174,61 @@ function SignupForm() {
                         status: "Completed", 
                         type: "Welcome Bonus" 
                     });
+                }
+
+                // Update ReferBolt cycle progress and history if the referrer is subscribed
+                const referrerReferboltRef = doc(db, "referbolt", referrerId);
+                const referrerReferboltDoc = await transaction.get(referrerReferboltRef);
+                if (referrerReferboltDoc.exists()) {
+                    const rData = referrerReferboltDoc.data();
+                    if (rData.isSubscribed === true) {
+                        const currentProgress = rData.cycleProgress || 0;
+                        const goal = rData.cycleGoal || 3;
+                        const newProgress = currentProgress + 1;
+
+                        const updatedReferbolt: any = {
+                            totalReferrals: (rData.totalReferrals || 0) + 1,
+                            referralHistory: arrayUnion({
+                                id: user.uid,
+                                name: name,
+                                date: new Date().toISOString(),
+                                commission: bonus
+                            })
+                        };
+
+                        if (newProgress >= goal) {
+                            // Cycle completed! Reset progress and increment completed cycles
+                            updatedReferbolt.cycleProgress = 0;
+                            updatedReferbolt.cyclesCompleted = (rData.cyclesCompleted || 0) + 1;
+
+                            // Fetch store configurations to retrieve the ReferBolt cycle bonus amount
+                            const storeConfigRef = doc(db, "configs", "store");
+                            const storeConfigDoc = await transaction.get(storeConfigRef);
+                            const ibaBonus = storeConfigDoc.exists()
+                                ? (storeConfigDoc.data().referboltSettings?.ibaBonusCommission || 5)
+                                : 5;
+
+                            updatedReferbolt.totalCommissions = (rData.totalCommissions || 0) + ibaBonus;
+
+                            // Update wallet balance with the cycle bonus (referrerBalance already includes the signup bonus)
+                            transaction.update(referrerWalletRef, { balance: referrerBalance + bonus + ibaBonus });
+
+                            // Create transaction record for the ReferBolt Success Cycle Bonus
+                            const cycleTxRef = doc(collection(db, "transactions"));
+                            transaction.set(cycleTxRef, {
+                                user: referrerId,
+                                amount: ibaBonus,
+                                date: serverTimestamp(),
+                                description: "ReferBolt Success Cycle Bonus",
+                                status: "Completed",
+                                type: "Commission"
+                            });
+                        } else {
+                            updatedReferbolt.cycleProgress = newProgress;
+                        }
+
+                        transaction.update(referrerReferboltRef, updatedReferbolt);
+                    }
                 }
             }
         }

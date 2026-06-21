@@ -58,10 +58,17 @@ export function downloadInvoicePDF(invoice: any) {
   doc.setFontSize(9);
   doc.text(invoice.billingDetails?.email || 'student@vidyaeducare.com', 20, 62);
 
+  const companyName = invoice.companyName || 'Vidya EduCare Private Ltd.';
+  const companyGstin = invoice.companyGstin || '27AACCV1234F1Z5';
+  const companyAddress = invoice.companyAddress || 'Mumbai, Maharashtra, India';
+
   doc.setFont('Helvetica', 'bold');
-  doc.text('Vidya EduCare Private Ltd.', 120, 56);
+  doc.text(companyName, 120, 56);
   doc.setFont('Helvetica', 'normal');
-  doc.text('GSTIN: 27AACCV1234F1Z5', 120, 62);
+  doc.text(companyGstin.startsWith('GSTIN:') ? companyGstin : `GSTIN: ${companyGstin}`, 120, 62);
+  if (companyAddress) {
+    doc.text(companyAddress, 120, 68);
+  }
 
   // Product description table headers
   doc.setFillColor(243, 244, 246);

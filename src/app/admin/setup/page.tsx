@@ -136,10 +136,11 @@ export default function SetupAdminPage() {
             status: "Active",
         };
 
+        const walletDocSnap = await getDoc(walletDocRef);
         const walletData = {
-            balance: type === 'admin' ? 0 : 5000,
-            coins: 100,
-            referralCode: type === 'admin' ? 'HEADADMIN' : `STUDENT-${uid.slice(-4).toUpperCase()}`
+            balance: walletDocSnap.exists() ? (walletDocSnap.data()?.balance ?? 5000) : (type === 'admin' ? 0 : 5000),
+            coins: walletDocSnap.exists() ? (walletDocSnap.data()?.coins ?? 100) : 100,
+            referralCode: walletDocSnap.exists() ? (walletDocSnap.data()?.referralCode ?? (type === 'admin' ? 'HEADADMIN' : `STUDENT-${uid.slice(-4).toUpperCase()}`)) : (type === 'admin' ? 'HEADADMIN' : `STUDENT-${uid.slice(-4).toUpperCase()}`)
         };
 
         batch.set(userDocRef, userData, { merge: true });

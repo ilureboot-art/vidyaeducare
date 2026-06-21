@@ -42,8 +42,6 @@ export async function POST(request: NextRequest) {
       if (currentBalance - withdrawAmount < 200) {
         throw new Error('A minimum wallet balance of ₹200 must be maintained after withdrawal.');
       }
-
-      transaction.update(walletRef, { balance: currentBalance - withdrawAmount });
       
       const txRef = adminDb.collection('transactions').doc();
       transaction.set(txRef, {

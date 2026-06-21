@@ -215,7 +215,12 @@ function MockTestContent() {
                     score: correctAnswers, 
                     accuracy: finalAccuracy, 
                     totalQuestions: activeQuestions.length,
-                    time: timeString
+                    time: timeString,
+                    testId: scheduledTest.id,
+                    testName: scheduledTest.testSetName,
+                    studentId: studentProfile.id,
+                    parentId: studentProfile.parentId || "",
+                    createdAt: new Date().toISOString()
                 };
                 await setDoc(leaderboardDocRef, leaderboardData).catch(async (e) => {
                     if (e.code === 'permission-denied') {

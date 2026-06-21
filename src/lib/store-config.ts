@@ -55,6 +55,10 @@ export type StoreConfig = {
     aiDoubtSolverPrice: number;
     aiNotesGeneratorPrice: number;
     grantFreeAiToolsWithMockArena: boolean;
+    companyName?: string;
+    companyGstin?: string;
+    companyAddress?: string;
+    monthlyFirstRankerReward?: number;
 };
 
 export const defaultStoreConfig: StoreConfig = {
@@ -62,7 +66,7 @@ export const defaultStoreConfig: StoreConfig = {
     
     mockTestPackages: [
         { 
-            name: "1 Year Subscription", 
+            name: "Mock Arena (Mock test) - 1 year subcription", 
             price: 7200, 
             months: 12, 
             bestValue: true, 
@@ -75,7 +79,7 @@ export const defaultStoreConfig: StoreConfig = {
             freeAiMonths: 12
         },
         { 
-            name: "6 Months Subscription", 
+            name: "Mock Arena (Mock test) - 6 month subcription", 
             price: 3600, 
             months: 6, 
             bestValue: false, 
@@ -122,6 +126,10 @@ export const defaultStoreConfig: StoreConfig = {
     ibaCommissionRate: 10, // Fixed at 10% as requested
     aiDoubtSolverPrice: 750,
     aiNotesGeneratorPrice: 750,
-    grantFreeAiToolsWithMockArena: false
+    grantFreeAiToolsWithMockArena: false,
+    companyName: "Vidya EduCare Private Ltd.",
+    companyGstin: "27AACCV1234F1Z5",
+    companyAddress: "Mumbai, Maharashtra, India",
+    monthlyFirstRankerReward: 1000
 };
 

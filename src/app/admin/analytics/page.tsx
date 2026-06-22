@@ -89,7 +89,8 @@ export default function AnalyticsPage() {
               let todayRev = 0;
               results[0].value.forEach(doc => {
                   const data = doc.data();
-                  if (data.amount > 0) todayRev += data.amount;
+                  const typeLower = (data.type || "").toLowerCase();
+                  if (typeLower === 'purchase') todayRev += Math.abs(data.amount);
               });
               setTodaysRevenue(todayRev);
           }
@@ -181,9 +182,10 @@ export default function AnalyticsPage() {
           const dayRevenue = recentTransactions
             .filter(tx => {
                 const txDate = tx.date instanceof Timestamp ? tx.date.toDate() : new Date(tx.date);
-                return format(txDate, 'yyyy-MM-dd') === dateStrStr && tx.amount > 0;
+                const typeLower = (tx.type || "").toLowerCase();
+                return format(txDate, 'yyyy-MM-dd') === dateStrStr && typeLower === 'purchase';
             })
-            .reduce((sum, tx) => sum + tx.amount, 0);
+            .reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
 
           return {
               name: dateLabel,

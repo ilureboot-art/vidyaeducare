@@ -25,6 +25,7 @@ import {
 import { useAuth, useDb } from "@/firebase";
 import { doc, getDoc, collection, query, where, getDocs, Timestamp, type Firestore } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import { defaultStoreConfig } from "@/lib/store-config";
 import UserLayout from "@/components/UserLayout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -66,6 +67,7 @@ function IBADashboardPageContent() {
   const [ibaReferralCode, setIbaReferralCode] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [ibaShareMessage, setIbaShareMessage] = useState<string | null>(null);
   
   useEffect(() => {
     if (user && db) {
@@ -89,6 +91,12 @@ function IBADashboardPageContent() {
                     setIbaReferralCode(userWalletSnap.data().referralCode);
                 } else {
                     setIbaReferralCode(`REF${user.uid.slice(0, 6).toUpperCase()}`);
+                }
+
+                const storeRef = doc(db, "configs", "store");
+                const storeSnap = await getDoc(storeRef).catch(() => null);
+                if (storeSnap && storeSnap.exists()) {
+                    setIbaShareMessage(storeSnap.data().ibaShareMessage || null);
                 }
 
                 const txColRef = collection(db, "transactions");
@@ -156,23 +164,12 @@ function IBADashboardPageContent() {
     if (!ibaReferralCode) return;
     const shareUrl = `${window.location.origin}/signup?ref=${ibaReferralCode}`;
     const faqUrl = `${window.location.origin}#faq`;
-    const message = `🎓 Join Vidya EduCare as an Independent Business Associate! 🎓
-
-I'm earning lifetime commissions by empowering students! As an IBA, you unlock:
-
-💰 Massive Commissions: Earn up to 10% on every MockArena subscription.
-🏆 MockArena Rewards: Help students win real cash! Top 5 scorers get paid.
-⚡ ReferBolt System: Continuous passive income from your network cycles.
-🎁 Refer & Earn: Win-Win! Every referral gets an instant ₹5 wallet bonus.
-🤖 Vidya AI Doubt Solver: Bilingual AI assistance for all students.
-
-🔑 Start your zero-investment business today!
-IBA Code: ${ibaReferralCode}
-🔗 Join: ${shareUrl}
-
-Check out our FAQs: ${faqUrl}
-
-Let's build success together! 🚀💸`;
+    
+    const template = ibaShareMessage || defaultStoreConfig.ibaShareMessage || "";
+    const message = template
+      .replace(/{share_url}/g, shareUrl)
+      .replace(/{referral_code}/g, ibaReferralCode)
+      .replace(/{faq_url}/g, faqUrl);
     
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');

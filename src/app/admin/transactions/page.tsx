@@ -58,15 +58,33 @@ const getStatusBadgeVariant = (status: string) => {
     }
 }
 
-const getTypeIcon = (type: string, amount: number) => {
-    const isOutflow = (type || "").toLowerCase().includes("withdrawal") || 
-                     (type || "").toLowerCase().includes("purchase") || 
-                     amount < 0;
+const getAdminTransactionStyle = (tx: Transaction) => {
+    const typeLower = (tx.type || "").toLowerCase();
+    const descLower = (tx.description || "").toLowerCase();
     
-    if (isOutflow) {
-        return <ArrowUpRight className="w-4 h-4 text-red-500" />;
+    const isCredit = typeLower === 'purchase' || (typeLower === 'deposit' && descLower.includes('revenue'));
+    const isDebit = typeLower === 'withdrawal' || descLower.includes('commission');
+    
+    if (isCredit) {
+        return {
+            icon: <ArrowDownLeft className="w-4 h-4 text-green-500" />,
+            colorClass: "text-green-600 font-semibold",
+            prefix: "+"
+        };
     }
-    return <ArrowDownLeft className="w-4 h-4 text-green-500" />;
+    if (isDebit) {
+        return {
+            icon: <ArrowUpRight className="w-4 h-4 text-red-500" />,
+            colorClass: "text-red-600 font-semibold",
+            prefix: "-"
+        };
+    }
+    // Student Fund Deposit
+    return {
+        icon: <ArrowDownLeft className="w-4 h-4 text-blue-500" />,
+        colorClass: "text-blue-600",
+        prefix: ""
+    };
 }
 
 export default function TransactionsPage() {
@@ -77,7 +95,7 @@ export default function TransactionsPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'rejected'>('all');
-  const [typeFilter, setTypeFilter] = useState<'all' | 'deposit' | 'withdrawal'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'credit' | 'debit' | 'student_deposit'>('all');
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [utrDialogOpen, setUtrDialogOpen] = useState(false);
@@ -225,7 +243,20 @@ export default function TransactionsPage() {
                                  description.toLowerCase().includes(searchTerm.toLowerCase());
           
           const statusMatch = statusFilter === 'all' || (tx.status || "").toLowerCase() === statusFilter;
-          const typeMatch = typeFilter === 'all' || (typeFilter === 'deposit' && tx.amount >= 0) || (typeFilter === 'withdrawal' && tx.amount < 0);
+          
+          let typeMatch = false;
+          const typeLower = (tx.type || "").toLowerCase();
+          const descLower = (tx.description || "").toLowerCase();
+
+          if (typeFilter === 'all') {
+              typeMatch = true;
+          } else if (typeFilter === 'credit') {
+              typeMatch = typeLower === 'purchase' || (typeLower === 'deposit' && descLower.includes('revenue'));
+          } else if (typeFilter === 'debit') {
+              typeMatch = typeLower === 'withdrawal' || descLower.includes('commission');
+          } else if (typeFilter === 'student_deposit') {
+              typeMatch = typeLower === 'deposit' && !descLower.includes('revenue') && !descLower.includes('commission');
+          }
           
           const txDate = new Date(tx.date);
           const dateMatch = (!startDate || txDate >= startOfDay(startDate)) && (!endDate || txDate <= endOfDay(endDate));
@@ -238,8 +269,13 @@ export default function TransactionsPage() {
   const filteredTotals = useMemo(() => {
     return filteredTransactions.reduce((acc, tx) => {
         if (tx.status === 'Completed') {
-            if (tx.amount >= 0) acc.deposits += tx.amount;
-            else acc.withdrawals += Math.abs(tx.amount);
+            const typeLower = (tx.type || "").toLowerCase();
+
+            if (typeLower === 'purchase') {
+                acc.deposits += Math.abs(tx.amount);
+            } else if (typeLower === 'withdrawal') {
+                acc.withdrawals += Math.abs(tx.amount);
+            }
         }
         return acc;
     }, { deposits: 0, withdrawals: 0 });
@@ -354,11 +390,12 @@ export default function TransactionsPage() {
                 </div>
                 <div className="flex flex-wrap gap-2">
                     <Select value={typeFilter} onValueChange={(value) => setTypeFilter(value as any)}>
-                        <SelectTrigger className="w-[140px]"><SelectValue placeholder="Type" /></SelectTrigger>
+                        <SelectTrigger className="w-[180px]"><SelectValue placeholder="Filter by Flow" /></SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">All Types</SelectItem>
-                            <SelectItem value="deposit">Deposits</SelectItem>
-                            <SelectItem value="withdrawal">Withdrawals</SelectItem>
+                            <SelectItem value="all">All Transactions</SelectItem>
+                            <SelectItem value="credit">Admin Credits (Revenue)</SelectItem>
+                            <SelectItem value="debit">Admin Debits (Withdrawals)</SelectItem>
+                            <SelectItem value="student_deposit">Student Fund Deposits</SelectItem>
                         </SelectContent>
                     </Select>
                     <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as any)}>
@@ -424,50 +461,55 @@ export default function TransactionsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredTransactions.map((tx) => (
-                <TableRow key={tx.id} className="even:bg-muted/40 transition-colors group">
-                  <TableCell className="font-medium text-xs font-mono">{tx.user?.substring(0, 8) || 'System'}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                        {getTypeIcon(tx.type, tx.amount)}
-                        <span className="text-xs max-w-[150px] truncate">{tx.description}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-[10px] text-muted-foreground font-mono">
-                    {String(tx.id).substring(0, 6)}...
-                  </TableCell>
-                  <TableCell className="text-xs">{format(new Date(tx.date), 'P')}</TableCell>
-                  <TableCell>
-                    <Badge variant={getStatusBadgeVariant(tx.status)} className="text-[9px] py-0 h-5">
-                      {tx.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right font-medium text-xs">₹{Math.abs(tx.amount).toFixed(2)}</TableCell>
-                  <TableCell className="text-center">
-                    {tx.status === "Pending" && (
-                        <div className="flex gap-1 justify-center">
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 text-green-600 hover:text-green-700 px-2 text-[10px]"
-                                onClick={() => {
-                                    if (tx.type === "withdrawal") {
-                                        setSelectedTxForUtr(String(tx.id));
-                                        setUtrNumber("");
-                                        setUtrDialogOpen(true);
-                                    } else {
-                                        handleTransactionStatus(String(tx.id), "Completed");
-                                    }
-                                }}
-                            >
-                                Approve
-                            </Button>
-                            <Button variant="ghost" size="sm" className="h-7 text-red-600 hover:text-red-700 px-2 text-[10px]" onClick={() => handleTransactionStatus(String(tx.id), "Rejected")}>Reject</Button>
-                        </div>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
+              {filteredTransactions.map((tx) => {
+                const style = getAdminTransactionStyle(tx);
+                return (
+                  <TableRow key={tx.id} className="even:bg-muted/40 transition-colors group">
+                    <TableCell className="font-medium text-xs font-mono">{tx.user?.substring(0, 8) || 'System'}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                          {style.icon}
+                          <span className="text-xs max-w-[150px] truncate">{tx.description}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-[10px] text-muted-foreground font-mono">
+                      {String(tx.id).substring(0, 6)}...
+                    </TableCell>
+                    <TableCell className="text-xs">{format(new Date(tx.date), 'P')}</TableCell>
+                    <TableCell>
+                      <Badge variant={getStatusBadgeVariant(tx.status)} className="text-[9px] py-0 h-5">
+                        {tx.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className={cn("text-right font-medium text-xs", style.colorClass)}>
+                      {style.prefix} ₹{Math.abs(tx.amount).toFixed(2)}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {tx.status === "Pending" && (
+                          <div className="flex gap-1 justify-center">
+                              <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 text-green-600 hover:text-green-700 px-2 text-[10px]"
+                                  onClick={() => {
+                                      if (tx.type === "withdrawal") {
+                                          setSelectedTxForUtr(String(tx.id));
+                                          setUtrNumber("");
+                                          setUtrDialogOpen(true);
+                                      } else {
+                                          handleTransactionStatus(String(tx.id), "Completed");
+                                      }
+                                  }}
+                              >
+                                  Approve
+                              </Button>
+                              <Button variant="ghost" size="sm" className="h-7 text-red-600 hover:text-red-700 px-2 text-[10px]" onClick={() => handleTransactionStatus(String(tx.id), "Rejected")}>Reject</Button>
+                          </div>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
               {filteredTransactions.length === 0 && (
                 <TableRow>
                     <TableCell colSpan={7} className="text-center text-muted-foreground h-24">No transactions match your current filters.</TableCell>

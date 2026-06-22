@@ -8,9 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
-import { PlusCircle, Trash2, Zap, BookOpen, GraduationCap, Percent, Loader2, IndianRupee, RefreshCcw, Landmark, ShieldCheck, FileText } from "lucide-react";
+import { PlusCircle, Trash2, Zap, BookOpen, GraduationCap, Percent, Loader2, IndianRupee, RefreshCcw, Landmark, ShieldCheck, FileText, Share2 } from "lucide-react";
 import { type StoreConfig, type MockTestPackage, type ReferboltSubscription, type ReferboltSettings, type RecommendationSettings, defaultStoreConfig } from "@/lib/store-config";
 import { type AcademicConfig, defaultAcademicConfig } from "@/lib/academic-config";
+import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useDb, useAuth } from "@/firebase";
 import { doc, onSnapshot, setDoc } from "firebase/firestore";
@@ -465,6 +466,50 @@ export default function AdminStoreSettingsPage() {
                   placeholder="e.g. Mumbai, Maharashtra, India"
                 />
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Share2 size={20} className="text-primary"/> Promotional & Sharing Messages
+            </CardTitle>
+            <CardDescription>Configure the sharing messages sent when users promote Vidya EduCare.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="promo-message-main" className="font-bold">Main Sharing Message (Home Page)</Label>
+              <Textarea 
+                id="promo-message-main" 
+                rows={6}
+                value={storeConfig.promotionalMessage ?? ''} 
+                onChange={(e) => setStoreConfig(prev => prev ? ({...prev, promotionalMessage: e.target.value}) : null)} 
+                placeholder="Write your home page promotional message..."
+              />
+              <p className="text-[10px] text-muted-foreground italic">Use placeholder <strong>{`{share_url}`}</strong> for signup link and <strong>{`{faq_url}`}</strong> for FAQ anchor.</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="promo-message-referral" className="font-bold">Referral Sharing Message (Refer & Earn Page)</Label>
+              <Textarea 
+                id="promo-message-referral" 
+                rows={6}
+                value={storeConfig.referralShareMessage ?? ''} 
+                onChange={(e) => setStoreConfig(prev => prev ? ({...prev, referralShareMessage: e.target.value}) : null)} 
+                placeholder="Write your referral promotional message..."
+              />
+              <p className="text-[10px] text-muted-foreground italic">Use variables: <strong>{`{referral_code}`}</strong>, <strong>{`{share_url}`}</strong>, <strong>{`{bonus_amount}`}</strong>, and <strong>{`{faq_url}`}</strong>.</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="promo-message-iba" className="font-bold">IBA Sharing Message (IBA Dashboard)</Label>
+              <Textarea 
+                id="promo-message-iba" 
+                rows={6}
+                value={storeConfig.ibaShareMessage ?? ''} 
+                onChange={(e) => setStoreConfig(prev => prev ? ({...prev, ibaShareMessage: e.target.value}) : null)} 
+                placeholder="Write your IBA dashboard promotional message..."
+              />
+              <p className="text-[10px] text-muted-foreground italic">Use variables: <strong>{`{referral_code}`}</strong>, <strong>{`{share_url}`}</strong>, and <strong>{`{faq_url}`}</strong>.</p>
             </div>
           </CardContent>
         </Card>

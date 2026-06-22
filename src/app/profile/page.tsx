@@ -24,6 +24,8 @@ import UserLayout from "@/components/UserLayout";
 import { cn } from "@/lib/utils";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
+import { Checkbox } from "@/components/ui/checkbox";
+import { type AcademicConfig, defaultAcademicConfig } from "@/lib/academic-config";
 
 const BADGE_COLORS = {
     'Platinum': 'text-slate-400 fill-slate-100',
@@ -52,6 +54,13 @@ function ProfilePageContent() {
     const [selectedStudentForTest, setSelectedStudentForTest] = useState<StudentProfile | null>(null);
     const [availableTests, setAvailableTests] = useState<ScheduledTest[]>([]);
     const [isLoadingTests, setIsLoadingTests] = useState(false);
+
+    const [academicConfig, setAcademicConfig] = useState<AcademicConfig>(defaultAcademicConfig);
+    const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
+    const [selectedSubjectsForNewStudent, setSelectedSubjectsForNewStudent] = useState<string[]>([]);
+    const [isManageSubjectsOpen, setIsManageSubjectsOpen] = useState(false);
+    const [selectedStudentForManageSubjects, setSelectedStudentForManageSubjects] = useState<StudentProfile | null>(null);
+    const [selectedSubjectsForManage, setSelectedSubjectsForManage] = useState<string[]>([]);
 
     useEffect(() => {
         if (!isResolved || !db || !user) {
@@ -88,6 +97,18 @@ function ProfilePageContent() {
              setValidCodes([]);
              setIsLoading(false);
         });
+
+        const academicDocRef = doc(db, "configs", "academic");
+        const unsubAcademic = onSnapshot(academicDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                setAcademicConfig(docSnap.data() as AcademicConfig);
+            } else {
+                setAcademicConfig(defaultAcademicConfig);
+            }
+        }, async (error) => {
+            console.warn("Academic config fetch error, falling back:", error);
+            setAcademicConfig(defaultAcademicConfig);
+        });
         
         const timeout = setTimeout(() => setIsLoading(false), 3000);
 
@@ -95,6 +116,7 @@ function ProfilePageContent() {
             unsubParent();
             unsubStudents();
             unsubCodes();
+            unsubAcademic();
             clearTimeout(timeout);
         };
     }, [user, db, isResolved]);
@@ -132,7 +154,7 @@ function ProfilePageContent() {
                 stream: formData.get('stream') as string,
                 language: 'English',
                 academicYear: '2024-2025',
-                subjects: ['Maths', 'Science', 'English', 'History', 'General Knowledge'],
+                subjects: selectedSubjectsForNewStudent.length > 0 ? selectedSubjectsForNewStudent : ['Maths', 'Science', 'English', 'History', 'General Knowledge'],
             },
             stats: {
                 totalEarnings: 0,
@@ -154,6 +176,7 @@ function ProfilePageContent() {
                 setIsAddStudentOpen(false);
                 setActivationCode("");
                 setIsCodeVerified(false);
+                setSelectedSubjectsForNewStudent([]);
             })
             .catch(async (e) => {
                 const permissionError = new FirestorePermissionError({
@@ -164,6 +187,31 @@ function ProfilePageContent() {
                 errorEmitter.emit('permission-error', permissionError);
             });
     }
+
+    const handleUpdateSubjects = async (studentId: string, updatedSubjects: string[]) => {
+        if (!db) return;
+        const studentRef = doc(db, "students", studentId);
+        updateDoc(studentRef, {
+            "academic.subjects": updatedSubjects
+        })
+        .then(() => {
+            toast({ title: "Subjects Updated", description: "The student's subjects have been saved." });
+            setIsManageSubjectsOpen(false);
+        })
+        .catch(async (e) => {
+            const permissionError = new FirestorePermissionError({
+                path: studentRef.path,
+                operation: 'update',
+            } satisfies SecurityRuleContext);
+            errorEmitter.emit('permission-error', permissionError);
+        });
+    };
+
+    const openManageSubjectsDialog = (student: StudentProfile) => {
+        setSelectedStudentForManageSubjects(student);
+        setSelectedSubjectsForManage(student.academic.subjects || []);
+        setIsManageSubjectsOpen(true);
+    };
     
     const handleDeleteStudent = async (studentId: string) => {
         if (!db) return;
@@ -414,6 +462,27 @@ function ProfilePageContent() {
                                     </Select>
                                 </div>
                            </div>
+                            <div className="space-y-2">
+                                <Label>Subjects Enrolled</Label>
+                                <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto border p-3 rounded-xl bg-background">
+                                    {academicConfig.subjects.map((subj) => (
+                                        <div key={subj} className="flex items-center space-x-2">
+                                            <Checkbox 
+                                                id={`add-subj-${subj}`}
+                                                checked={selectedSubjectsForNewStudent.includes(subj)}
+                                                onCheckedChange={(checked) => {
+                                                    if (checked) {
+                                                        setSelectedSubjectsForNewStudent(prev => [...prev, subj]);
+                                                    } else {
+                                                        setSelectedSubjectsForNewStudent(prev => prev.filter(s => s !== subj));
+                                                    }
+                                                }}
+                                            />
+                                            <Label htmlFor={`add-subj-${subj}`} className="text-sm font-medium cursor-pointer">{subj}</Label>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                            <DialogFooter>
                                <Button type="submit" className="w-full sm:w-auto font-black">ACTIVATE STUDENT WORKSPACE</Button>
                            </DialogFooter>
@@ -547,9 +616,12 @@ function ProfilePageContent() {
                 </CardContent>
 
                 <CardFooter className="p-8 bg-primary/[0.03] border-t gap-4">
-                    <Button className="flex-1 py-8 text-xl font-black shadow-2xl hover:scale-[1.02] transition-transform" onClick={() => openTestDialog(student)}>
+                    <Button className="flex-grow py-8 text-xl font-black shadow-2xl hover:scale-[1.02] transition-transform" onClick={() => openTestDialog(student)}>
                         <BookOpen className="mr-3 h-6 w-6"/>
                         OPEN MOCKARENA HUB
+                    </Button>
+                    <Button variant="outline" className="py-8 font-black uppercase tracking-tight border-2 hover:bg-muted text-xs px-6" onClick={() => openManageSubjectsDialog(student)}>
+                        Manage Subjects
                     </Button>
                 </CardFooter>
             </Card>
@@ -579,7 +651,12 @@ function ProfilePageContent() {
         )}
        </div>
        
-       <Dialog open={isTestDialogOpen} onOpenChange={setIsTestDialogOpen}>
+       <Dialog open={isTestDialogOpen} onOpenChange={(isOpen) => {
+            setIsTestDialogOpen(isOpen);
+            if (!isOpen) {
+                setSelectedSubject(null);
+            }
+       }}>
             <DialogContent className="max-w-md">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
@@ -595,51 +672,144 @@ function ProfilePageContent() {
                             <Loader2 className="animate-spin text-primary" size={32} />
                             <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Syncing Question Bank...</p>
                         </div>
-                    ) : availableTests.length > 0 ? (
-                        availableTests.map(test => {
-                            const now = new Date();
-                            const testDate = new Date(test.dateTime);
-                            const duration = test.duration || 30;
-                            const expiryDate = addMinutes(testDate, duration);
-                            
-                            const isUpcoming = isBefore(now, testDate);
-                            const isLive = isAfter(now, testDate) && isBefore(now, expiryDate);
-                            const isBackdated = isAfter(now, expiryDate);
-
-                            return (
-                                <div key={test.id} className={cn(
-                                    "flex items-center justify-between p-4 rounded-2xl border bg-card transition-all group",
-                                    isLive ? "border-primary/50 shadow-md ring-1 ring-primary/20" : "hover:border-primary/30"
-                                )}>
-                                    <div className="space-y-1">
-                                        <p className="font-black text-sm leading-none text-primary">{test.testSetName}</p>
-                                        <div className="flex items-center gap-2">
-                                            <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">{format(testDate, "PPP p")}</p>
-                                            {isLive && <Badge className="h-4 px-1 text-[8px] animate-pulse bg-red-500 hover:bg-red-500 border-none">LIVE REWARDS</Badge>}
+                    ) : selectedSubject === null ? (
+                        <div className="space-y-3">
+                            {(selectedStudentForTest?.academic?.subjects || []).map(subject => {
+                                const tests = availableTests.filter(test => test.subject === subject);
+                                const now = new Date();
+                                const hasLive = tests.some(test => {
+                                    const testDate = new Date(test.dateTime);
+                                    const duration = test.duration || 30;
+                                    const expiryDate = addMinutes(testDate, duration);
+                                    return isAfter(now, testDate) && isBefore(now, expiryDate);
+                                });
+                                
+                                return (
+                                    <Button
+                                        key={subject}
+                                        variant="outline"
+                                        className="w-full justify-between items-center h-16 p-4 rounded-2xl hover:border-primary/50 group transition-all"
+                                        onClick={() => setSelectedSubject(subject)}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-primary/10 rounded-lg text-primary group-hover:scale-105 transition-transform"><BookOpen size={16}/></div>
+                                            <span className="font-bold text-sm text-foreground">{subject}</span>
                                         </div>
-                                    </div>
-                                    <div className="flex flex-col items-end gap-2">
-                                        <Badge variant={isLive ? "default" : isUpcoming ? "outline" : "secondary"} className="text-[9px] font-black uppercase tracking-tighter px-2 h-5">
-                                            {isLive ? "Live Arena" : isUpcoming ? "Upcoming" : "Practice Only"}
-                                        </Badge>
-                                        <Button 
-                                            size="sm" 
-                                            className={cn("font-bold px-4 h-8", isUpcoming && "opacity-50")} 
-                                            disabled={isUpcoming}
-                                            onClick={() => handleStartTest(test)}
-                                        >
-                                            {isUpcoming ? <Clock size={14}/> : "START"}
-                                        </Button>
-                                    </div>
+                                        <div className="flex items-center gap-2">
+                                            {hasLive && <Badge className="bg-red-500 text-white animate-pulse text-[8px] h-4">LIVE</Badge>}
+                                            <Badge variant="secondary" className="text-[10px]">{tests.length} {tests.length === 1 ? 'Session' : 'Sessions'}</Badge>
+                                        </div>
+                                    </Button>
+                                );
+                            })}
+                            {(!selectedStudentForTest?.academic?.subjects || selectedStudentForTest.academic.subjects.length === 0) && (
+                                <div className="text-center py-8 text-muted-foreground italic text-sm">
+                                    No subjects selected. Click "Manage Subjects" on your profile to select subjects.
                                 </div>
-                            )
-                        })
+                            )}
+                        </div>
                     ) : (
-                        <div className="text-center py-12 space-y-4">
-                            <div className="p-4 bg-muted/50 rounded-2xl inline-block"><BookOpen className="w-10 h-10 text-muted-foreground opacity-20" /></div>
-                            <p className="text-sm text-muted-foreground font-black uppercase tracking-widest">No MockArena sessions scheduled.</p>
+                        <div className="space-y-4">
+                            <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="text-xs font-bold text-primary mb-2 pl-0 hover:bg-transparent"
+                                onClick={() => setSelectedSubject(null)}
+                            >
+                                ← Back to Subjects
+                            </Button>
+                            <div className="space-y-3">
+                                {availableTests.filter(test => test.subject === selectedSubject).length > 0 ? (
+                                    availableTests.filter(test => test.subject === selectedSubject).map(test => {
+                                        const now = new Date();
+                                        const testDate = new Date(test.dateTime);
+                                        const duration = test.duration || 30;
+                                        const expiryDate = addMinutes(testDate, duration);
+                                        
+                                        const isUpcoming = isBefore(now, testDate);
+                                        const isLive = isAfter(now, testDate) && isBefore(now, expiryDate);
+                                        
+                                        return (
+                                            <div key={test.id} className={cn(
+                                                "flex items-center justify-between p-4 rounded-2xl border bg-card transition-all group",
+                                                isLive ? "border-primary/50 shadow-md ring-1 ring-primary/20" : "hover:border-primary/30"
+                                            )}>
+                                                <div className="space-y-1">
+                                                    <p className="font-black text-sm leading-none text-primary">{test.testSetName}</p>
+                                                    <div className="flex items-center gap-2">
+                                                        <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">{format(testDate, "PPP p")}</p>
+                                                        {isLive && <Badge className="h-4 px-1 text-[8px] animate-pulse bg-red-500 hover:bg-red-500 border-none">LIVE REWARDS</Badge>}
+                                                    </div>
+                                                </div>
+                                                <div className="flex flex-col items-end gap-2">
+                                                    <Badge variant={isLive ? "default" : isUpcoming ? "outline" : "secondary"} className="text-[9px] font-black uppercase tracking-tighter px-2 h-5">
+                                                        {isLive ? "Live Arena" : isUpcoming ? "Upcoming" : "Practice Only"}
+                                                    </Badge>
+                                                    <Button 
+                                                        size="sm" 
+                                                        className={cn("font-bold px-4 h-8", isUpcoming && "opacity-50")} 
+                                                        disabled={isUpcoming}
+                                                        onClick={() => handleStartTest(test)}
+                                                    >
+                                                        {isUpcoming ? <Clock size={14}/> : "START"}
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })
+                                ) : (
+                                    <div className="text-center py-12 space-y-2 text-muted-foreground text-sm">
+                                        <p className="font-bold">No MockArena sessions scheduled.</p>
+                                        <p className="text-xs opacity-75">Check back later for scheduled tests for {selectedSubject}.</p>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     )}
+                </div>
+            </DialogContent>
+       </Dialog>
+
+       {/* Manage Subjects Dialog */}
+       <Dialog open={isManageSubjectsOpen} onOpenChange={setIsManageSubjectsOpen}>
+            <DialogContent className="max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Manage Subjects: {selectedStudentForManageSubjects?.name}</DialogTitle>
+                    <DialogDescription>
+                        Select the final subjects enrolled for this student profile.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 pt-4">
+                    <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto border p-3 rounded-lg bg-background">
+                        {academicConfig.subjects.map((subj) => (
+                            <div key={subj} className="flex items-center space-x-2">
+                                <Checkbox 
+                                    id={`manage-subj-${subj}`}
+                                    checked={selectedSubjectsForManage.includes(subj)}
+                                    onCheckedChange={(checked) => {
+                                        if (checked) {
+                                            setSelectedSubjectsForManage(prev => [...prev, subj]);
+                                        } else {
+                                            setSelectedSubjectsForManage(prev => prev.filter(s => s !== subj));
+                                        }
+                                    }}
+                                />
+                                <Label htmlFor={`manage-subj-${subj}`} className="text-sm font-medium cursor-pointer">{subj}</Label>
+                            </div>
+                        ))}
+                    </div>
+                    <DialogFooter>
+                        <Button 
+                            className="w-full font-black"
+                            onClick={() => {
+                                if (selectedStudentForManageSubjects) {
+                                    handleUpdateSubjects(selectedStudentForManageSubjects.id, selectedSubjectsForManage);
+                                }
+                            }}
+                        >
+                            SAVE SUBJECTS
+                        </Button>
+                    </DialogFooter>
                 </div>
             </DialogContent>
        </Dialog>

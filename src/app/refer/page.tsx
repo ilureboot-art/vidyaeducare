@@ -11,6 +11,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import UserLayout from "@/components/UserLayout";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
+import { defaultStoreConfig } from "@/lib/store-config";
 
 function ReferAndEarnPageContent() {
     const { toast } = useToast();
@@ -19,6 +20,7 @@ function ReferAndEarnPageContent() {
     
     const [referralBonus, setReferralBonus] = useState<number | null>(null);
     const [referralCode, setReferralCode] = useState<string | null>(null);
+    const [referralShareMessage, setReferralShareMessage] = useState<string | null>(null);
     
     useEffect(() => {
         const fetchConfig = async () => {
@@ -33,6 +35,7 @@ function ReferAndEarnPageContent() {
                 });
                 if(storeConfigDoc.exists()) {
                     setReferralBonus(storeConfigDoc.data().referralBonus);
+                    setReferralShareMessage(storeConfigDoc.data().referralShareMessage || null);
                 }
             } catch (e) {
                 console.warn("Bonus config sync issue.");
@@ -75,22 +78,12 @@ function ReferAndEarnPageContent() {
     const faqUrl = `${window.location.origin}#faq`;
     const bonusAmount = referralBonus;
     
-    const message = `🎁 Claim your Win-Win Bonus on Vidya EduCare! 🎁
-
-I'm preparing for my exams and winning rewards with Vidya EduCare! Join me using my link and we BOTH get an instant ₹${bonusAmount} wallet bonus!
-
-🚀 Excellence Tools for Students:
-🏆 MockArena: Get paid for scoring! Top 5 scorers with 80%+ accuracy win cash.
-🏁 Quiz Clash: Live tournaments with shared prize pools.
-🤖 Vidya AI Doubt Solver: 24/7 personal bilingual tutor.
-📝 QuickNotes: Instant structured summaries.
-
-🔑 My Referral Code: ${referralCode}
-🔗 Join & Get Bonus: ${url}
-
-Learn more in our FAQ: ${faqUrl}
-
-Let's succeed and earn together! 🎓✨`;
+    const template = referralShareMessage || defaultStoreConfig.referralShareMessage || "";
+    const message = template
+      .replace(/{share_url}/g, url)
+      .replace(/{referral_code}/g, referralCode)
+      .replace(/{bonus_amount}/g, String(bonusAmount))
+      .replace(/{faq_url}/g, faqUrl);
 
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;

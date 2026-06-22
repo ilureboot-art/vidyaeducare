@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth, useDb } from "@/firebase";
 import { collection, getDocs, doc, getDoc } from "firebase/firestore";
 import { Badge } from "@/components/ui/badge";
+import { defaultStoreConfig } from "@/lib/store-config";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Coins, Star, Calendar as CalendarIcon } from "lucide-react";
@@ -48,6 +49,23 @@ export default function HomePage() {
   const [topStudents, setTopStudents] = useState<any[]>([]);
   const [topIbas, setTopIbas] = useState<any[]>([]);
   const [loadingHallOfFame, setLoadingHallOfFame] = useState(true);
+  const [promotionalMessage, setPromotionalMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchPromoMessage = async () => {
+      if (!db) return;
+      try {
+        const storeRef = doc(db, "configs", "store");
+        const docSnap = await getDoc(storeRef);
+        if (docSnap.exists()) {
+          setPromotionalMessage(docSnap.data().promotionalMessage || null);
+        }
+      } catch (err) {
+        console.warn("Failed to load promotional message config.");
+      }
+    };
+    fetchPromoMessage();
+  }, [db]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -145,26 +163,10 @@ export default function HomePage() {
   const handleShare = async () => {
     const url = window.location.origin;
     const faqUrl = `${url}#faq`;
-    const message = `🚀 Ace your academic goals & Earn with Vidya EduCare! 📚
-
-I'm using this elite platform to prepare for success. Here's why you should join:
-
-🏆 MockArena & Quiz Clash: Win REAL cash prizes in live tests!
-- MockArena Rewards: Get paid for excellence! Top 5 scorers with 80%+ accuracy win real cash.
-- Quiz Clash: Compete in live high-stakes tournaments for rewards.
-
-🤖 Vidya AI Doubt Solver: Your 24/7 personal bilingual tutor for instant clarity.
-📝 QuickNotes: Transform textbook chapters into study notes instantly.
-
-💰 Diverse Earning Opportunities:
-🤝 IBA Program: Start your zero-investment business earning 10% lifetime commissions!
-⚡ ReferBolt System: Unlock powerful passive income cycles.
-🎁 Refer & Earn: Every referral gets an instant ₹5 wallet bonus!
-
-Start your journey here: ${url}
-Learn more in our FAQ: ${faqUrl}
-
-#VidyaEduCare #AcademicExcellence #IBA #PassiveIncome`;
+    const template = promotionalMessage || defaultStoreConfig.promotionalMessage || "";
+    const message = template
+      .replace(/{share_url}/g, url)
+      .replace(/{faq_url}/g, faqUrl);
     
     try {
         if (navigator.share) {

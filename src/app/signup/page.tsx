@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Gamepad2, Loader2, Eye, EyeOff } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { doc, getDoc, runTransaction, collection, query, where, getDocs, serverTimestamp, arrayUnion } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { useAuthService, useDb } from "@/firebase";
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -85,244 +85,58 @@ function SignupForm() {
     const password = (form.elements.namedItem('password') as HTMLInputElement).value;
 
     try {
-      let welcomeBonus = 0;
-      let referrerId: string | null = null;
-      
       const cleanRefCode = referralCode.trim().toUpperCase();
       if (cleanRefCode) {
-        const walletsColRef = collection(db, "wallets");
-        const q = query(walletsColRef, where("referralCode", "==", cleanRefCode));
-        const querySnapshot = await getDocs(q).catch((e) => {
-            console.error("Referral validation error:", e);
-            throw new Error("Could not verify referral code. Please check your internet connection.");
-        });
-        
-        if (!querySnapshot.empty) {
-          const referrerDoc = querySnapshot.docs[0];
-          referrerId = referrerDoc.id;
-          welcomeBonus = referralBonus || 5;
-        } else if (cleanRefCode !== "") {
-            toast({ variant: 'destructive', title: "Invalid Referral Code", description: "The code you entered was not found." });
-            setIsLoading(false);
-            return;
+        const verifyRes = await fetch(`/api/referral/verify?code=${encodeURIComponent(cleanRefCode)}`);
+        if (!verifyRes.ok) {
+          throw new Error("Could not verify referral code. Please check your internet connection.");
+        }
+        const verifyData = await verifyRes.json();
+        if (!verifyData.valid) {
+          toast({ variant: 'destructive', title: "Invalid Referral Code", description: "The code you entered was not found." });
+          setIsLoading(false);
+          return;
         }
       }
 
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       
-      // Query Head Admin UID for routing ReferBolt subscription renewal revenue
-      let adminUid: string | null = null;
       try {
-        const adminsColRef = collection(db, "admins");
-        const adminQuery = query(adminsColRef, where("role", "==", "Head Admin"));
-        const adminSnap = await getDocs(adminQuery);
-        if (!adminSnap.empty) {
-          adminUid = adminSnap.docs[0].id;
-        } else {
-          // Fallback: search users collection by email
-          const usersColRef = collection(db, "users");
-          const userAdminQuery = query(usersColRef, where("email", "==", "admin@vidyaeducare.com"));
-          const userAdminSnap = await getDocs(userAdminQuery);
-          if (!userAdminSnap.empty) {
-            adminUid = userAdminSnap.docs[0].id;
-          }
+        const token = await user.getIdToken();
+        const registerRes = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            name,
+            email,
+            phone,
+            referralCode: cleanRefCode
+          })
+        });
+
+        if (!registerRes.ok) {
+          const errData = await registerRes.json().catch(() => ({}));
+          throw new Error(errData.error || 'Failed to complete registration profile.');
         }
-      } catch (e) {
-        console.warn("Failed to retrieve admin UID for auto-renewal routing:", e);
+
+        const calculatedBonus = referralBonus || 5;
+        toast({
+            title: "Account Created Successfully!",
+            description: `Welcome to Vidya EduCare! ${cleanRefCode ? `Your ₹${calculatedBonus} bonus has been applied.` : ''} Redirecting...`,
+        });
+        router.push("/login");
+      } catch (regError: any) {
+        console.error("Registration profile setup failed, rolling back auth user:", regError);
+        // Delete the newly created Firebase Auth user to keep DB & Auth in sync
+        await user.delete().catch((delErr) => {
+          console.error("Failed to delete auth user during signup rollback:", delErr);
+        });
+        throw regError;
       }
-      
-      await runTransaction(db, async (transaction) => {
-        const newUserRef = doc(db, "users", user.uid);
-        const newWalletRef = doc(db, "wallets", user.uid);
-        const newReferboltRef = doc(db, "referbolt", user.uid);
-
-        transaction.set(newUserRef, {
-            id: user.uid,
-            name: name,
-            email: email,
-            phone: phone,
-            joinDate: new Date().toISOString(),
-            status: "Active",
-            referredBy: referrerId || null,
-            createdAt: serverTimestamp(),
-        });
-
-        const myReferralCode = `REF${user.uid.slice(0, 6).toUpperCase()}`;
-
-        transaction.set(newWalletRef, {
-            balance: welcomeBonus,
-            coins: 50, 
-            referralCode: myReferralCode,
-        });
-
-        transaction.set(newReferboltRef, {
-            isSubscribed: false,
-            referralCode: myReferralCode,
-            totalCommissions: 0,
-            totalReferrals: 0,
-            cycleProgress: 0,
-            cycleGoal: 3,
-            autoRenew: false,
-            referralHistory: []
-        });
-
-        if (referrerId && (referralBonus || 5) > 0) {
-            const bonus = referralBonus || 5;
-            const referrerWalletRef = doc(db, "wallets", referrerId);
-            const referrerWalletDoc = await transaction.get(referrerWalletRef);
-            if (referrerWalletDoc.exists()) {
-                const referrerBalance = referrerWalletDoc.data().balance || 0;
-                transaction.update(referrerWalletRef, { balance: referrerBalance + bonus });
-
-                const referrerTxRef = doc(collection(db, "transactions"));
-                transaction.set(referrerTxRef, { 
-                    user: referrerId, 
-                    amount: bonus, 
-                    date: serverTimestamp(), 
-                    description: `Referral bonus for ${name}`, 
-                    status: "Completed", 
-                    type: "Referral Bonus" 
-                });
-                
-                if (welcomeBonus > 0) {
-                    const newUserTxRef = doc(collection(db, "transactions"));
-                    transaction.set(newUserTxRef, { 
-                        user: user.uid, 
-                        amount: welcomeBonus, 
-                        date: serverTimestamp(), 
-                        description: "Welcome bonus from referral", 
-                        status: "Completed", 
-                        type: "Welcome Bonus" 
-                    });
-                }
-
-                // Update ReferBolt cycle progress and history if the referrer is subscribed
-                const referrerReferboltRef = doc(db, "referbolt", referrerId);
-                const referrerReferboltDoc = await transaction.get(referrerReferboltRef);
-                if (referrerReferboltDoc.exists()) {
-                    const rData = referrerReferboltDoc.data();
-                    if (rData.isSubscribed === true) {
-                        const currentProgress = rData.cycleProgress || 0;
-                        const goal = rData.cycleGoal || 3;
-                        const newProgress = currentProgress + 1;
-
-                        const updatedReferbolt: any = {
-                            totalReferrals: (rData.totalReferrals || 0) + 1,
-                            referralHistory: arrayUnion({
-                                id: user.uid,
-                                name: name,
-                                date: new Date().toISOString(),
-                                commission: bonus
-                            })
-                        };
-
-                        if (newProgress >= goal) {
-                            // Cycle completed! Reset progress and increment completed cycles
-                            updatedReferbolt.cycleProgress = 0;
-                            updatedReferbolt.cyclesCompleted = (rData.cyclesCompleted || 0) + 1;
-
-                            // Fetch store configurations to retrieve the ReferBolt cycle bonus amount
-                            const storeConfigRef = doc(db, "configs", "store");
-                            const storeConfigDoc = await transaction.get(storeConfigRef);
-                            const ibaBonus = storeConfigDoc.exists()
-                                ? (storeConfigDoc.data().referboltSettings?.ibaBonusCommission || 5)
-                                : 5;
-
-                            updatedReferbolt.totalCommissions = (rData.totalCommissions || 0) + ibaBonus;
-
-                            if (rData.autoRenew === true) {
-                                // Auto-renew enabled: deduct subscription/rejoining fee from commission
-                                const referboltSub = storeConfigDoc.exists() && storeConfigDoc.data().referboltSubscription
-                                    ? storeConfigDoc.data().referboltSubscription
-                                    : { price: 100, gstRate: 18 };
-                                const subPrice = referboltSub.price || 100;
-                                const subGstRate = referboltSub.gstRate || 0;
-                                const rejoiningFee = subPrice + (subPrice * (subGstRate / 100));
-
-                                // Credit cycle bonus & deduct rejoining fee
-                                transaction.update(referrerWalletRef, { balance: referrerBalance + bonus + ibaBonus - rejoiningFee });
-
-                                // Keep subscribed
-                                updatedReferbolt.isSubscribed = true;
-
-                                // User transaction logs: Credit for cycle bonus, Debit for auto-renewal fee
-                                const cycleTxRef = doc(collection(db, "transactions"));
-                                transaction.set(cycleTxRef, {
-                                    user: referrerId,
-                                    amount: ibaBonus,
-                                    date: serverTimestamp(),
-                                    description: "ReferBolt Success Cycle Bonus",
-                                    status: "Completed",
-                                    type: "Commission"
-                                });
-
-                                const renewTxRef = doc(collection(db, "transactions"));
-                                transaction.set(renewTxRef, {
-                                    user: referrerId,
-                                    amount: -rejoiningFee,
-                                    date: serverTimestamp(),
-                                    description: "ReferBolt Auto-Renewal Subscription Fee",
-                                    status: "Completed",
-                                    type: "Purchase"
-                                });
-
-                                // Route rejoining fee to Head Admin wallet
-                                if (adminUid) {
-                                    const adminWalletRef = doc(db, "wallets", adminUid);
-                                    const adminWalletDoc = await transaction.get(adminWalletRef);
-                                    const adminCurrentBalance = adminWalletDoc.exists() ? (adminWalletDoc.data().balance || 0) : 0;
-
-                                    transaction.set(adminWalletRef, {
-                                        balance: adminCurrentBalance + rejoiningFee,
-                                        coins: adminWalletDoc.exists() ? (adminWalletDoc.data().coins || 0) : 0,
-                                        referralCode: adminWalletDoc.exists() ? (adminWalletDoc.data().referralCode || 'HEADADMIN') : 'HEADADMIN'
-                                    }, { merge: true });
-
-                                    const adminRevenueTxRef = doc(collection(db, "transactions"));
-                                    transaction.set(adminRevenueTxRef, {
-                                        user: adminUid,
-                                        amount: rejoiningFee,
-                                        date: serverTimestamp(),
-                                        description: `Revenue: ReferBolt Auto-Renewal for user ${referrerId}`,
-                                        status: 'Completed',
-                                        type: 'deposit'
-                                    });
-                                }
-                            } else {
-                                // Auto-renew disabled: unsubscribe the user since cycle has completed
-                                updatedReferbolt.isSubscribed = false;
-
-                                // Credit cycle bonus only
-                                transaction.update(referrerWalletRef, { balance: referrerBalance + bonus + ibaBonus });
-
-                                // User transaction logs: Credit for cycle bonus
-                                const cycleTxRef = doc(collection(db, "transactions"));
-                                transaction.set(cycleTxRef, {
-                                    user: referrerId,
-                                    amount: ibaBonus,
-                                    date: serverTimestamp(),
-                                    description: "ReferBolt Success Cycle Bonus",
-                                    status: "Completed",
-                                    type: "Commission"
-                                });
-                            }
-                        } else {
-                            updatedReferbolt.cycleProgress = newProgress;
-                        }
-
-                        transaction.update(referrerReferboltRef, updatedReferbolt);
-                    }
-                }
-            }
-        }
-      });
-      
-      toast({
-          title: "Account Created Successfully!",
-          description: `Welcome to Vidya EduCare! ${welcomeBonus > 0 ? `Your ₹${welcomeBonus} bonus has been applied.` : ''} Redirecting...`,
-      });
-      router.push("/login");
 
     } catch (error: any) {
       console.error("Signup Error:", error);

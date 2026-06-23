@@ -66,12 +66,19 @@ export const generateStudyNotesFlow = ai.defineFlow(
   }
 );
 
-export async function generateStudyNotes(input: GenerateNotesInput): Promise<GenerateNotesOutput> {
+export async function generateStudyNotes(input: GenerateNotesInput): Promise<GenerateNotesOutput & { error?: string }> {
   try {
+    if (!process.env.GEMINI_API_KEY && !process.env.GOOGLE_GENAI_API_KEY && !process.env.GOOGLE_API_KEY) {
+      return {
+        error: "GEMINI_API_KEY is not defined in the Firebase App Hosting environment. Please configure it in Secret Manager."
+      } as any;
+    }
     return await generateStudyNotesFlow(input);
-  } catch (error) {
+  } catch (error: any) {
     console.error("❌ Error in generateStudyNotes Server Action:", error);
-    throw error;
+    return {
+      error: error.message || "An unexpected error occurred in the AI Notes Generator."
+    } as any;
   }
 }
 

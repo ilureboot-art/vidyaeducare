@@ -112,11 +112,18 @@ Student's Doubt: ${input.userDoubt}\n`;
   }
 );
 
-export async function solveDoubt(input: SolveDoubtInput): Promise<SolveDoubtOutput> {
+export async function solveDoubt(input: SolveDoubtInput): Promise<SolveDoubtOutput & { error?: string }> {
   try {
+    if (!process.env.GEMINI_API_KEY && !process.env.GOOGLE_GENAI_API_KEY && !process.env.GOOGLE_API_KEY) {
+      return {
+        error: "GEMINI_API_KEY is not defined in the Firebase App Hosting environment. Please configure it in Secret Manager."
+      } as any;
+    }
     return await solveDoubtFlow(input);
-  } catch (error) {
+  } catch (error: any) {
     console.error("❌ Error in solveDoubt Server Action:", error);
-    throw error;
+    return {
+      error: error.message || "An unexpected error occurred in the AI Doubt Solver."
+    } as any;
   }
 }

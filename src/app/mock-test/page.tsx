@@ -341,7 +341,12 @@ function MockTestContent() {
                     board: scheduledTest.board
                 }
             });
-            setAiExplanation(explanation);
+            if (explanation && 'error' in explanation) {
+                toast({ variant: 'destructive', title: "AI Doubt Solver Failed", description: explanation.error as string });
+                setIsAiDialogOpen(false);
+            } else {
+                setAiExplanation(explanation);
+            }
         } catch (error) {
             toast({ variant: 'destructive', title: "AI Offline", description: "The Vidya AI Doubt Solver is currently busy. Please try again later." });
             setIsAiDialogOpen(false);
@@ -370,7 +375,12 @@ function MockTestContent() {
                 performanceContext: score < 100 ? `The student struggled with these specific concepts: ${incorrectTopics}` : "The student performed well, generate advanced summary notes.",
                 topics: [scheduledTest.testSetName]
             });
-            setAiNotes(notes);
+            if (notes && 'error' in notes) {
+                toast({ variant: 'destructive', title: "Notes Generation Failed", description: notes.error as string });
+                setIsNotesDialogOpen(false);
+            } else {
+                setAiNotes(notes);
+            }
         } catch (error) {
             toast({ variant: 'destructive', title: "Generation Failed", description: "AI Study notes could not be generated at this time." });
             setIsNotesDialogOpen(false);

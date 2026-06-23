@@ -68,12 +68,19 @@ const generateQuestionsFlow = ai.defineFlow(
   }
 );
 
-export async function generateQuestions(input: GenerateQuestionsInput): Promise<GenerateQuestionsOutput> {
+export async function generateQuestions(input: GenerateQuestionsInput): Promise<GenerateQuestionsOutput & { error?: string }> {
   try {
+    if (!process.env.GEMINI_API_KEY && !process.env.GOOGLE_GENAI_API_KEY && !process.env.GOOGLE_API_KEY) {
+      return {
+        error: "GEMINI_API_KEY is not defined in the Firebase App Hosting environment. Please configure it in Secret Manager."
+      } as any;
+    }
     return await generateQuestionsFlow(input);
-  } catch (error) {
+  } catch (error: any) {
     console.error("❌ Error in generateQuestions Server Action:", error);
-    throw error;
+    return {
+      error: error.message || "An unexpected error occurred in the AI Questions Generator."
+    } as any;
   }
 }
 

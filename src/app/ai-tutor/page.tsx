@@ -188,12 +188,16 @@ function AiTutorPageContent() {
                 context: context,
                 image: undefined
             });
-            setResult(response);
+            if (response && 'error' in response) {
+                toast({ variant: 'destructive', title: "Doubt Solver Error", description: response.error as string });
+            } else {
+                setResult(response);
 
-            if (!user) {
-                const newCount = trialCount + 1;
-                setTrialCount(newCount);
-                localStorage.setItem('trial_ai_tutor_count', newCount.toString());
+                if (!user) {
+                    const newCount = trialCount + 1;
+                    setTrialCount(newCount);
+                    localStorage.setItem('trial_ai_tutor_count', newCount.toString());
+                }
             }
         } catch (error) {
             toast({ variant: 'destructive', title: "Doubt Solver Error", description: "Vidya AI could not process your question right now." });

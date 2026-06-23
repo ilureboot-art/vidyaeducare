@@ -283,6 +283,10 @@ const handleAiGenerate = async (e: React.FormEvent) => {
 
     try {
         const result = await generateQuestions(aiInput);
+        if (result && 'error' in result) {
+            toast({ variant: 'destructive', title: "AI Generation Failed", description: result.error as string });
+            return;
+        }
         const testSetName = `${aiInput.subject} - ${aiInput.topic}`;
         setEditingTestSet({
             id: `NEW-${Date.now()}`,

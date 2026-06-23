@@ -23,4 +23,6 @@ export type StudentProfile = {
     recentActivity: { name: string; score: number }[];
   },
   badges: ('Platinum' | 'Gold' | 'Silver' | 'Bronze')[];
+  createdAt?: string;
+  mockTestSubscribed?: boolean;
 };

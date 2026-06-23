@@ -14,15 +14,18 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, MoreHorizontal, Loader2, Users as UsersIcon, GraduationCap, RefreshCcw, Info, FilterX } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Search, MoreHorizontal, Loader2, Users as UsersIcon, GraduationCap, RefreshCcw, Info, FilterX, ShieldCheck } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { format } from 'date-fns';
 import { useDb, useAuth } from "@/firebase";
-import { collection, doc, updateDoc, getDocs, getDoc, query, where, orderBy, limit, onSnapshot } from "firebase/firestore";
+import { collection, doc, updateDoc, getDocs, getDoc, query, where, orderBy, limit, onSnapshot, deleteField, addDoc } from "firebase/firestore";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import type { StudentProfile } from "@/lib/student-data";
+import { type StoreConfig } from "@/lib/store-config";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
@@ -44,7 +47,7 @@ const getStatusBadgeVariant = (status: string) => {
 
 export default function UserManagementPage() {
   const db = useDb();
-  const { isAdmin, isResolved } = useAuth();
+  const { user, isAdmin, isResolved } = useAuth();
   const { toast } = useToast();
   
   const [users, setUsers] = useState<UserSummary[] | null>(null);
@@ -57,6 +60,20 @@ export default function UserManagementPage() {
   const [parentWallet, setParentWallet] = useState<number | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+
+  const [parentUserData, setParentUserData] = useState<any>(null);
+  const [storeConfig, setStoreConfig] = useState<StoreConfig | null>(null);
+
+  const [isOverrideMockLimit, setIsOverrideMockLimit] = useState(false);
+  const [mockLimitVal, setMockLimitVal] = useState(3);
+
+  const [isOverrideCommission, setIsOverrideCommission] = useState(false);
+  const [commissionVal, setCommissionVal] = useState(10);
+
+  const [isOverrideDiscount, setIsOverrideDiscount] = useState(false);
+  const [discountVal, setDiscountVal] = useState(10);
+
+  const [isSavingBenefits, setIsSavingBenefits] = useState(false);
   
   useEffect(() => {
     // CRITICAL: Ensure we only establish the listener once the admin role is verified
@@ -89,19 +106,30 @@ export default function UserManagementPage() {
     return () => unsubscribe();
   }, [db, isResolved, isAdmin]);
 
+  useEffect(() => {
+    if (!db || !isResolved || !isAdmin) return;
+    getDoc(doc(db, "configs", "store")).then((snap) => {
+      if (snap.exists()) {
+        setStoreConfig(snap.data() as StoreConfig);
+      }
+    }).catch(err => console.error("Error loading store config for defaults:", err));
+  }, [db, isResolved, isAdmin]);
+
   const viewUserDetails = async (parent: UserSummary) => {
       if (!db) return;
       setSelectedParent(parent);
       setParentStudents(null);
       setParentWallet(null);
+      setParentUserData(null);
       setIsLoadingDetails(true);
       setIsDetailsOpen(true);
 
       try {
           const studentsQuery = query(collection(db, "students"), where("parentId", "==", parent.id));
           const walletRef = doc(db, "wallets", parent.id);
+          const userDocRef = doc(db, "users", parent.id);
           
-          const [studentsSnap, walletSnap] = await Promise.all([
+          const [studentsSnap, walletSnap, userSnap] = await Promise.all([
               getDocs(studentsQuery).catch(async (e) => {
                    const permissionError = new FirestorePermissionError({
                         path: 'students',
@@ -117,18 +145,118 @@ export default function UserManagementPage() {
                     } satisfies SecurityRuleContext);
                     errorEmitter.emit('permission-error', permissionError);
                     throw e;
+              }),
+              getDoc(userDocRef).catch(async (e) => {
+                   const permissionError = new FirestorePermissionError({
+                        path: userDocRef.path,
+                        operation: 'get',
+                    } satisfies SecurityRuleContext);
+                    errorEmitter.emit('permission-error', permissionError);
+                    throw e;
               })
           ]);
 
           const students = studentsSnap.docs.map(d => ({ id: d.id, ...d.data() } as StudentProfile));
           const walletBalance = walletSnap.exists() ? walletSnap.data().balance : 0;
+          const parentData = userSnap.exists() ? userSnap.data() : null;
 
           setParentStudents(students);
           setParentWallet(walletBalance);
+          setParentUserData(parentData);
+
+          if (parentData) {
+              if (typeof parentData.mock_test_limit === 'number') {
+                  setIsOverrideMockLimit(true);
+                  setMockLimitVal(parentData.mock_test_limit);
+              } else {
+                  setIsOverrideMockLimit(false);
+                  setMockLimitVal(storeConfig?.defaultMockTestLimit ?? 3);
+              }
+              
+              if (typeof parentData.commission_rate === 'number') {
+                  setIsOverrideCommission(true);
+                  setCommissionVal(parentData.commission_rate);
+              } else {
+                  setIsOverrideCommission(false);
+                  setCommissionVal(parentData.purchasedMockTest === true ? (storeConfig?.ibaCommissionRate ?? 10) : (storeConfig?.freeIbaCommissionRate ?? 5));
+              }
+              
+              if (typeof parentData.discount_rate === 'number') {
+                  setIsOverrideDiscount(true);
+                  setDiscountVal(parentData.discount_rate);
+              } else {
+                  setIsOverrideDiscount(false);
+                  setDiscountVal(10);
+              }
+          }
       } catch (e) {
           console.error("View Details Error:", e);
       } finally {
           setIsLoadingDetails(false);
+      }
+  };
+
+  const handleSaveBenefits = async () => {
+      if (!db || !selectedParent || !user) return;
+      setIsSavingBenefits(true);
+      
+      const userDocRef = doc(db, "users", selectedParent.id);
+      
+      // Validation limits: rates cannot exceed 100%
+      const finalMockLimit = isOverrideMockLimit ? Math.max(0, Math.floor(Number(mockLimitVal))) : null;
+      const finalCommission = isOverrideCommission ? Math.min(100, Math.max(0, Number(commissionVal))) : null;
+      const finalDiscount = isOverrideDiscount ? Math.min(100, Math.max(0, Number(discountVal))) : null;
+
+      const updateData: any = {};
+      updateData.mock_test_limit = isOverrideMockLimit ? finalMockLimit : deleteField();
+      updateData.commission_rate = isOverrideCommission ? finalCommission : deleteField();
+      updateData.discount_rate = isOverrideDiscount ? finalDiscount : deleteField();
+
+      try {
+          await updateDoc(userDocRef, updateData).catch(async (e) => {
+              const permissionError = new FirestorePermissionError({
+                  path: userDocRef.path,
+                  operation: 'update',
+                  requestResourceData: updateData,
+              } satisfies SecurityRuleContext);
+              errorEmitter.emit('permission-error', permissionError);
+              throw e;
+          });
+
+          // Write audit log with timestamp & admin ID
+          const auditLogRef = collection(db, "auditLogs");
+          await addDoc(auditLogRef, {
+              adminId: user.uid,
+              adminEmail: user.email || "",
+              targetUserId: selectedParent.id,
+              targetUserName: selectedParent.name,
+              action: "UPDATE_USER_BENEFITS",
+              timestamp: new Date().toISOString(),
+              changes: {
+                  mock_test_limit: isOverrideMockLimit ? finalMockLimit : "Default",
+                  commission_rate: isOverrideCommission ? finalCommission : "Default",
+                  discount_rate: isOverrideDiscount ? finalDiscount : "Default"
+              }
+          });
+
+          toast({ title: "Privileges Saved!", description: "User specific benefits have been updated and logged." });
+          
+          setParentUserData((prev: any) => {
+              if (!prev) return null;
+              const next = { ...prev };
+              if (isOverrideMockLimit) next.mock_test_limit = finalMockLimit;
+              else delete next.mock_test_limit;
+              if (isOverrideCommission) next.commission_rate = finalCommission;
+              else delete next.commission_rate;
+              if (isOverrideDiscount) next.discount_rate = finalDiscount;
+              else delete next.discount_rate;
+              return next;
+          });
+      } catch (err) {
+          console.error("Save privileges error:", err);
+          toast({ variant: 'destructive', title: "Save Failed", description: "Could not save user privileges." });
+      } finally {
+          setIsSavingBenefits(false);
       }
   };
 
@@ -320,6 +448,114 @@ export default function UserManagementPage() {
                                   <p className="text-sm text-muted-foreground font-medium">No students enrolled yet.</p>
                               </div>
                           )}
+                      </div>
+
+                      <div className="space-y-4 border-t pt-6">
+                          <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                              <ShieldCheck size={14} className="text-primary"/> User-Specific Benefits & Privileges
+                          </h3>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              {/* Mock Test Limit Override */}
+                              <Card className="p-4 space-y-4 border shadow-sm">
+                                  <div className="flex items-center justify-between">
+                                      <Label className="font-bold text-xs uppercase text-muted-foreground">Mock Test Limit</Label>
+                                      <Switch 
+                                        id="override-mock-limit"
+                                        checked={isOverrideMockLimit} 
+                                        onCheckedChange={(checked) => {
+                                            setIsOverrideMockLimit(checked);
+                                            if (checked && !mockLimitVal) {
+                                                setMockLimitVal(3);
+                                            }
+                                        }} 
+                                      />
+                                  </div>
+                                  <div className="space-y-2">
+                                      <Label htmlFor="mock-limit-input" className="text-[10px] font-bold text-primary uppercase">Free Tests Count</Label>
+                                      <Input 
+                                        id="mock-limit-input"
+                                        type="number" 
+                                        disabled={!isOverrideMockLimit}
+                                        value={isOverrideMockLimit ? mockLimitVal : (storeConfig?.defaultMockTestLimit ?? 3)}
+                                        onChange={(e) => setMockLimitVal(Math.max(0, parseInt(e.target.value) || 0))}
+                                      />
+                                      <p className="text-[9px] text-muted-foreground italic">
+                                          {isOverrideMockLimit ? "Overriding global default count" : `Default: ${storeConfig?.defaultMockTestLimit ?? 3} tests`}
+                                      </p>
+                                  </div>
+                              </Card>
+
+                              {/* Commission Rate Override */}
+                              <Card className="p-4 space-y-4 border shadow-sm">
+                                  <div className="flex items-center justify-between">
+                                      <Label className="font-bold text-xs uppercase text-muted-foreground">Commission Rate</Label>
+                                      <Switch 
+                                        id="override-commission-rate"
+                                        checked={isOverrideCommission} 
+                                        onCheckedChange={(checked) => {
+                                            setIsOverrideCommission(checked);
+                                            if (checked && !commissionVal) {
+                                                setCommissionVal(parentUserData?.purchasedMockTest === true ? 10 : 5);
+                                            }
+                                        }} 
+                                      />
+                                  </div>
+                                  <div className="space-y-2">
+                                      <Label htmlFor="commission-rate-input" className="text-[10px] font-bold text-primary uppercase">Commission (%)</Label>
+                                      <Input 
+                                        id="commission-rate-input"
+                                        type="number" 
+                                        disabled={!isOverrideCommission}
+                                        value={isOverrideCommission ? commissionVal : (parentUserData?.purchasedMockTest === true ? (storeConfig?.ibaCommissionRate ?? 10) : (storeConfig?.freeIbaCommissionRate ?? 5))}
+                                        onChange={(e) => setCommissionVal(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
+                                      />
+                                      <p className="text-[9px] text-muted-foreground italic">
+                                          {isOverrideCommission ? "Overriding global default rate" : `Default: ${parentUserData?.purchasedMockTest === true ? (storeConfig?.ibaCommissionRate ?? 10) : (storeConfig?.freeIbaCommissionRate ?? 5)}%`}
+                                      </p>
+                                  </div>
+                              </Card>
+
+                              {/* Discount Rate Override */}
+                              <Card className="p-4 space-y-4 border shadow-sm">
+                                  <div className="flex items-center justify-between">
+                                      <Label className="font-bold text-xs uppercase text-muted-foreground">Discount Rate</Label>
+                                      <Switch 
+                                        id="override-discount-rate"
+                                        checked={isOverrideDiscount} 
+                                        onCheckedChange={(checked) => {
+                                            setIsOverrideDiscount(checked);
+                                            if (checked && !discountVal) {
+                                                setDiscountVal(10);
+                                            }
+                                        }} 
+                                      />
+                                  </div>
+                                  <div className="space-y-2">
+                                      <Label htmlFor="discount-rate-input" className="text-[10px] font-bold text-primary uppercase">Special Discount (%)</Label>
+                                      <Input 
+                                        id="discount-rate-input"
+                                        type="number" 
+                                        disabled={!isOverrideDiscount}
+                                        value={isOverrideDiscount ? discountVal : 0}
+                                        onChange={(e) => setDiscountVal(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
+                                      />
+                                      <p className="text-[9px] text-muted-foreground italic">
+                                          {isOverrideDiscount ? "Overriding default package rate" : "Default: Package Special Discount"}
+                                      </p>
+                                  </div>
+                              </Card>
+                          </div>
+                          
+                          <div className="flex justify-end pt-2">
+                              <Button 
+                                onClick={handleSaveBenefits} 
+                                disabled={isSavingBenefits}
+                                className="font-black bg-primary text-white"
+                              >
+                                  {isSavingBenefits ? <Loader2 className="animate-spin mr-2 h-4 w-4"/> : null}
+                                  Save Benefits & Privileges
+                              </Button>
+                          </div>
                       </div>
                   </div>
               )}

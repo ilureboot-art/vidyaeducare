@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import { Checkbox } from "@/components/ui/checkbox";
 import { type AcademicConfig, defaultAcademicConfig } from "@/lib/academic-config";
+import { type StoreConfig, defaultStoreConfig } from "@/lib/store-config";
 
 const BADGE_COLORS = {
     'Platinum': 'text-slate-400 fill-slate-100',
@@ -34,9 +35,36 @@ const BADGE_COLORS = {
     'Bronze': 'text-amber-600 fill-amber-100',
 };
 
+const checkMockTestAccess = (student: StudentProfile, freeTrialDays = 30, parentProfile?: any) => {
+    if (student.mockTestSubscribed) {
+        return { hasAccess: true, isTrial: false, daysLeft: 9999, limitReached: false };
+    }
+    
+    // Check count-based limit if mock_test_limit is configured on the parent
+    const mockTestLimit = parentProfile?.mock_test_limit;
+    const testsTaken = student.stats?.testsTaken || 0;
+    if (typeof mockTestLimit === 'number') {
+        if (testsTaken >= mockTestLimit) {
+            return { hasAccess: false, isTrial: true, daysLeft: 0, limitReached: true };
+        }
+    }
+
+    const created = student.createdAt ? new Date(student.createdAt) : new Date();
+    const expiryDate = new Date(created.getTime() + freeTrialDays * 24 * 60 * 60 * 1000);
+    const now = new Date();
+    const daysLeft = Math.max(0, Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+    return {
+        hasAccess: now < expiryDate,
+        isTrial: true,
+        daysLeft,
+        limitReached: false
+    };
+};
+
 function ProfilePageContent() {
     const { toast } = useToast();
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { user, isResolved } = useAuth();
     const db = useDb();
     
@@ -49,6 +77,7 @@ function ProfilePageContent() {
     const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
     const [activationCode, setActivationCode] = useState("");
     const [isCodeVerified, setIsCodeVerified] = useState(false);
+    const [isTrialSignup, setIsTrialSignup] = useState(false);
     
     const [isTestDialogOpen, setIsTestDialogOpen] = useState(false);
     const [selectedStudentForTest, setSelectedStudentForTest] = useState<StudentProfile | null>(null);
@@ -56,11 +85,17 @@ function ProfilePageContent() {
     const [isLoadingTests, setIsLoadingTests] = useState(false);
 
     const [academicConfig, setAcademicConfig] = useState<AcademicConfig>(defaultAcademicConfig);
+    const [storeConfig, setStoreConfig] = useState<StoreConfig | null>(null);
     const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
     const [selectedSubjectsForNewStudent, setSelectedSubjectsForNewStudent] = useState<string[]>([]);
     const [isManageSubjectsOpen, setIsManageSubjectsOpen] = useState(false);
     const [selectedStudentForManageSubjects, setSelectedStudentForManageSubjects] = useState<StudentProfile | null>(null);
     const [selectedSubjectsForManage, setSelectedSubjectsForManage] = useState<string[]>([]);
+
+    const [isActivateDialogOpen, setIsActivateDialogOpen] = useState(false);
+    const [studentToActivate, setStudentToActivate] = useState<StudentProfile | null>(null);
+    const [activationCodeForExisting, setActivationCodeForExisting] = useState("");
+    const [isPurchasePopupOpen, setIsPurchasePopupOpen] = useState(false);
 
     useEffect(() => {
         if (!isResolved || !db || !user) {
@@ -109,6 +144,18 @@ function ProfilePageContent() {
             console.warn("Academic config fetch error, falling back:", error);
             setAcademicConfig(defaultAcademicConfig);
         });
+
+        const storeDocRef = doc(db, "configs", "store");
+        const unsubStore = onSnapshot(storeDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                setStoreConfig(docSnap.data() as StoreConfig);
+            } else {
+                setStoreConfig(defaultStoreConfig);
+            }
+        }, async (error) => {
+            console.warn("Store config fetch error, falling back:", error);
+            setStoreConfig(defaultStoreConfig);
+        });
         
         const timeout = setTimeout(() => setIsLoading(false), 3000);
 
@@ -117,9 +164,37 @@ function ProfilePageContent() {
             unsubStudents();
             unsubCodes();
             unsubAcademic();
+            unsubStore();
             clearTimeout(timeout);
         };
     }, [user, db, isResolved]);
+
+    useEffect(() => {
+        const expiredStudentId = searchParams?.get('expiredStudentId');
+        if (expiredStudentId && students.length > 0) {
+            const student = students.find(s => s.id === expiredStudentId);
+            if (student) {
+                setStudentToActivate(student);
+                setIsPurchasePopupOpen(true);
+                router.replace('/profile');
+            }
+        }
+    }, [searchParams, students, router]);
+
+    useEffect(() => {
+        if (!db || !user || !parentProfile) return;
+        if (parentProfile.purchasedMockTest === true) return;
+
+        const hasUnusedCodes = validCodes.length > 0;
+        const hasSubscribedStudents = students.some(s => s.mockTestSubscribed === true);
+
+        if (hasUnusedCodes || hasSubscribedStudents) {
+            const parentDocRef = doc(db, "users", user.uid);
+            updateDoc(parentDocRef, { purchasedMockTest: true }).catch(err => {
+                console.error("Auto-migration of purchasedMockTest failed:", err);
+            });
+        }
+    }, [parentProfile, students, validCodes, user, db]);
 
     const filteredStudents = useMemo(() => {
         return students.filter(s => s.name.toLowerCase().includes(studentSearchTerm.toLowerCase()));
@@ -131,6 +206,33 @@ function ProfilePageContent() {
             toast({ title: "Code Verified!", description: "You can now add the student's details." });
         } else {
             toast({ variant: 'destructive', title: "Invalid Code", description: "The activation code is incorrect or has already been used." });
+        }
+    };
+
+    const handleActivateStudent = async () => {
+        if (!studentToActivate || !db || !user) return;
+        
+        if (validCodes.includes(activationCodeForExisting)) {
+            try {
+                const studentRef = doc(db, "students", studentToActivate.id);
+                await updateDoc(studentRef, {
+                    mockTestSubscribed: true
+                });
+                
+                const updatedCodes = validCodes.filter(c => c !== activationCodeForExisting);
+                const codesDocRef = doc(db, "activationCodes", user.uid);
+                await updateDoc(codesDocRef, { codes: updatedCodes });
+                
+                toast({ title: "Student Activated!", description: `${studentToActivate.name} now has unlimited access to MockArena.` });
+                setIsActivateDialogOpen(false);
+                setIsPurchasePopupOpen(false);
+                setActivationCodeForExisting("");
+                setStudentToActivate(null);
+            } catch (e) {
+                toast({ variant: 'destructive', title: "Activation Failed", description: "Failed to update subscription status. Please try again." });
+            }
+        } else {
+            toast({ variant: 'destructive', title: "Invalid Code", description: "The activation code you entered is invalid or has already been used." });
         }
     };
     
@@ -164,18 +266,23 @@ function ProfilePageContent() {
                 recentActivity: [],
             },
             badges: [],
+            createdAt: new Date().toISOString(),
+            mockTestSubscribed: !isTrialSignup
         };
         
         const studentDocRef = doc(db, "students", newStudentId);
         setDoc(studentDocRef, newStudent)
             .then(async () => {
-                const updatedCodes = validCodes.filter(c => c !== activationCode);
-                const codesDocRef = doc(db, "activationCodes", user.uid);
-                await updateDoc(codesDocRef, { codes: updatedCodes });
-                toast({ title: "Student Added!", description: `${newStudent.name}'s profile has been created.`});
+                if (!isTrialSignup) {
+                    const updatedCodes = validCodes.filter(c => c !== activationCode);
+                    const codesDocRef = doc(db, "activationCodes", user.uid);
+                    await updateDoc(codesDocRef, { codes: updatedCodes });
+                }
+                toast({ title: isTrialSignup ? "Trial Workspace Created!" : "Student Added!", description: `${newStudent.name}'s profile has been created.`});
                 setIsAddStudentOpen(false);
                 setActivationCode("");
                 setIsCodeVerified(false);
+                setIsTrialSignup(false);
                 setSelectedSubjectsForNewStudent([]);
             })
             .catch(async (e) => {
@@ -260,6 +367,14 @@ function ProfilePageContent() {
     
     const handleStartTest = (test: ScheduledTest) => {
         if (!selectedStudentForTest) return;
+        
+        const access = checkMockTestAccess(selectedStudentForTest, storeConfig?.freeTrialDays || 30, parentProfile);
+        if (!access.hasAccess) {
+            setStudentToActivate(selectedStudentForTest);
+            setIsPurchasePopupOpen(true);
+            return;
+        }
+
         const now = new Date();
         const testDate = new Date(test.dateTime);
         const duration = test.duration || 30;
@@ -428,8 +543,21 @@ function ProfilePageContent() {
                                 </div>
                             )}
 
-                            <Button className="w-full font-bold" onClick={handleVerifyCode} disabled={!activationCode.trim()}>Verify Product Code</Button>
-                        </div>
+                             <Button className="w-full font-bold" onClick={handleVerifyCode} disabled={!activationCode.trim()}>Verify Product Code</Button>
+                             <div className="flex items-center justify-center pt-2">
+                                 <Button 
+                                     type="button" 
+                                     variant="link" 
+                                     className="text-xs font-black text-accent hover:text-accent/80" 
+                                     onClick={() => {
+                                         setIsTrialSignup(true);
+                                         setIsCodeVerified(true);
+                                     }}
+                                 >
+                                     Skip & Start {storeConfig?.freeTrialDays ?? 30}-Day Free Trial
+                                 </Button>
+                             </div>
+                         </div>
                     ) : (
                        <form className="space-y-4" onSubmit={handleAddStudent}>
                            <div className="space-y-2">
@@ -506,7 +634,60 @@ function ProfilePageContent() {
                                 <CardTitle className="text-3xl font-black text-primary tracking-tighter uppercase italic">
                                     {student.name}
                                 </CardTitle>
-                                <Badge variant="outline" className="bg-white/50 text-[10px] font-black uppercase tracking-widest">{student.academic.board}</Badge>
+                                 <Badge variant="outline" className="bg-white/50 text-[10px] font-black uppercase tracking-widest">{student.academic.board}</Badge>
+                                 {(() => {
+                                     const status = checkMockTestAccess(student, storeConfig?.freeTrialDays || 30, parentProfile);
+                                     if (student.mockTestSubscribed) {
+                                         return <Badge className="bg-green-100 hover:bg-green-100 text-green-700 border-green-200 text-[10px] font-bold">MockArena Active</Badge>;
+                                     } else if (status.hasAccess) {
+                                         const mockTestLimit = parentProfile?.mock_test_limit;
+                                         const testsTaken = student.stats?.testsTaken || 0;
+                                         const badgeText = typeof mockTestLimit === 'number'
+                                             ? `Free Trial: ${testsTaken}/${mockTestLimit} Tests Taken`
+                                             : `Free Trial: ${status.daysLeft}d left`;
+                                         return (
+                                             <div className="flex items-center gap-1.5">
+                                                 <Badge className="bg-blue-100 hover:bg-blue-100 text-blue-700 border-blue-200 text-[10px] font-bold">{badgeText}</Badge>
+                                                 <Button 
+                                                     variant="outline" 
+                                                     size="sm" 
+                                                     type="button"
+                                                     className="h-5 px-1.5 text-[9px] font-bold text-accent border-accent/20 bg-accent/5 hover:bg-accent/10"
+                                                     onClick={(e) => {
+                                                         e.stopPropagation();
+                                                         setStudentToActivate(student);
+                                                         setIsActivateDialogOpen(true);
+                                                     }}
+                                                 >
+                                                     Activate
+                                                 </Button>
+                                             </div>
+                                         );
+                                     } else {
+                                         const mockTestLimit = parentProfile?.mock_test_limit;
+                                         const testsTaken = student.stats?.testsTaken || 0;
+                                         const limitReached = typeof mockTestLimit === 'number' && testsTaken >= mockTestLimit;
+                                         const badgeText = limitReached ? "Limit Reached" : "Trial Expired";
+                                         return (
+                                             <div className="flex items-center gap-1.5">
+                                                 <Badge variant="destructive" className="bg-red-100 hover:bg-red-100 text-red-700 border-red-200 text-[10px] font-bold">{badgeText}</Badge>
+                                                 <Button 
+                                                     variant="outline" 
+                                                     size="sm" 
+                                                     type="button"
+                                                     className="h-5 px-1.5 text-[9px] font-black text-accent border-accent/20 bg-accent/5 hover:bg-accent/10"
+                                                     onClick={(e) => {
+                                                         e.stopPropagation();
+                                                         setStudentToActivate(student);
+                                                         setIsActivateDialogOpen(true);
+                                                     }}
+                                                 >
+                                                     ACTIVATE
+                                                 </Button>
+                                             </div>
+                                         );
+                                     }
+                                 })()}
                             </div>
                             <div className="flex items-center gap-4 mt-1">
                                 <p className="text-sm font-bold text-muted-foreground flex items-center gap-1.5">
@@ -813,6 +994,97 @@ function ProfilePageContent() {
                 </div>
             </DialogContent>
        </Dialog>
+
+        {/* Activate Student Dialog */}
+        <Dialog open={isActivateDialogOpen} onOpenChange={(isOpen) => {
+            setIsActivateDialogOpen(isOpen);
+            if (!isOpen) {
+                setActivationCodeForExisting("");
+            }
+        }}>
+            <DialogContent className="max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Activate Student Workspace: {studentToActivate?.name}</DialogTitle>
+                    <DialogDescription>
+                        Enter a product activation code to unlock unlimited mock tests.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 pt-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="existingActivationCode">Product Activation Code</Label>
+                        <Input 
+                            id="existingActivationCode" 
+                            value={activationCodeForExisting} 
+                            onChange={(e) => setActivationCodeForExisting(e.target.value)}
+                            placeholder="e.g., PROD-123456"
+                            className="font-mono text-center text-lg tracking-widest"
+                        />
+                        <p className="text-[10px] text-center text-muted-foreground">Apply any unused activation code from your account.</p>
+                    </div>
+
+                    {validCodes.length > 0 && (
+                        <div className="p-4 bg-muted/50 rounded-2xl border border-dashed border-primary/20 space-y-2">
+                            <p className="text-[10px] font-black text-primary uppercase tracking-widest">Your Purchased Unused Activation Codes:</p>
+                            <div className="flex flex-wrap gap-2">
+                                {validCodes.map(code => (
+                                    <Button 
+                                        key={code}
+                                        type="button"
+                                        variant="outline" 
+                                        size="sm" 
+                                        className="font-mono text-xs font-bold bg-background hover:bg-primary/10 hover:border-primary/30"
+                                        onClick={() => setActivationCodeForExisting(code)}
+                                    >
+                                        {code}
+                                    </Button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    <Button className="w-full font-bold" onClick={handleActivateStudent} disabled={!activationCodeForExisting.trim()}>Activate Workspace</Button>
+                    
+                    <div className="text-center pt-2">
+                        <p className="text-xs text-muted-foreground">Don't have a code? <Link href="/store" className="text-primary font-bold hover:underline">Visit the Store</Link> to buy one.</p>
+                    </div>
+                </div>
+            </DialogContent>
+        </Dialog>
+
+        {/* Purchase Mock Test Package Dialog */}
+        <Dialog open={isPurchasePopupOpen} onOpenChange={setIsPurchasePopupOpen}>
+            <DialogContent className="max-w-md">
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2 text-primary font-black uppercase italic tracking-tight">
+                        <AlertCircle className="text-destructive w-6 h-6 animate-bounce" /> Mock Test Access Locked
+                    </DialogTitle>
+                    <DialogDescription className="text-sm font-semibold">
+                        Your free trial access for <span className="text-foreground font-black uppercase italic">{studentToActivate?.name}</span> has expired.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-6 pt-4 text-center">
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                        To continue taking mock tests, participate in live tourneys, win prizes, and utilize our bilingual AI suite, please purchase a subscription from our store or activate this profile using an unused product code.
+                    </p>
+                    
+                    <div className="grid gap-3">
+                        <Button className="w-full py-6 text-md font-black shadow-lg" onClick={() => router.push('/store')}>
+                            VISIT THE STORE
+                        </Button>
+                        <Button 
+                            variant="outline" 
+                            className="w-full py-6 font-bold"
+                            onClick={() => {
+                                setIsPurchasePopupOpen(false);
+                                setIsActivateDialogOpen(true);
+                            }}
+                        >
+                            ACTIVATE WITH PRODUCT CODE
+                        </Button>
+                    </div>
+                </div>
+            </DialogContent>
+        </Dialog>
     </div>
   );
 }

@@ -134,6 +134,11 @@ export async function POST(request: NextRequest) {
       ibaUid2: string | null;
     };
 
+    // Fetch buyer user document for custom discount override
+    const buyerUserRef = adminDb.collection('users').doc(uid);
+    const buyerUserDoc = await buyerUserRef.get();
+    const buyerData = buyerUserDoc.exists ? buyerUserDoc.data() : null;
+
     if (productType === 'mock') {
       const mockItem = selectedProduct as MockTestPackage;
       const baseDiscount = (mockItem.baseDiscount || 0) / 100;
@@ -162,7 +167,12 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      const specialDiscount = (mockItem.specialDiscount || 0) / 100;
+      // Check user-specific discount override
+      let specialDiscount = (mockItem.specialDiscount || 0) / 100;
+      if (buyerData && typeof buyerData.discount_rate === 'number') {
+        specialDiscount = buyerData.discount_rate / 100;
+      }
+
       const totalDiscountFactor = baseDiscount + referralDiscount + specialDiscount + recommendationDiscount;
       
       // Formula: (Base + GST) = Total, Total - Discounts = Final Price
@@ -255,6 +265,7 @@ export async function POST(request: NextRequest) {
     }
 
     await adminDb.runTransaction(async (transaction) => {
+      // 1. All Reads First
       const walletDoc = await transaction.get(studentWalletRef);
       if (!walletDoc.exists) {
         throw new Error('Wallet not found.');
@@ -262,7 +273,30 @@ export async function POST(request: NextRequest) {
       
       const aiAccessRef = adminDb.collection('aiAccess').doc(uid);
       const aiAccessDoc = await transaction.get(aiAccessRef);
-      
+
+      const buyerUserRef = adminDb.collection('users').doc(uid);
+      const buyerUserDocTrans = await transaction.get(buyerUserRef);
+
+      let adminWalletDoc = null;
+      if (adminUid) {
+        adminWalletDoc = await transaction.get(adminDb.collection('wallets').doc(adminUid));
+      }
+
+      let ibaWalletDoc = null;
+      let ibaUserDoc = null;
+      if (priceDetails.ibaUid) {
+        ibaWalletDoc = await transaction.get(adminDb.collection('wallets').doc(priceDetails.ibaUid));
+        ibaUserDoc = await transaction.get(adminDb.collection('users').doc(priceDetails.ibaUid));
+      }
+
+      let ibaWalletDoc2 = null;
+      let ibaUserDoc2 = null;
+      if (priceDetails.ibaUid2) {
+        ibaWalletDoc2 = await transaction.get(adminDb.collection('wallets').doc(priceDetails.ibaUid2));
+        ibaUserDoc2 = await transaction.get(adminDb.collection('users').doc(priceDetails.ibaUid2));
+      }
+
+      // 2. Business Logic and Writes
       const currentBalance = walletDoc.data()?.balance || 0;
       if (currentBalance < priceDetails.finalPrice) {
         throw new Error('Insufficient wallet balance. Please add funds.');
@@ -270,16 +304,20 @@ export async function POST(request: NextRequest) {
 
       transaction.update(studentWalletRef, { balance: currentBalance - priceDetails.finalPrice });
 
+      // Mark user as having purchased a mock test
+      if (productType === 'mock') {
+        transaction.set(buyerUserRef, { purchasedMockTest: true }, { merge: true });
+      }
+
       // Credit purchase revenue to Head Admin wallet
       if (adminUid) {
         const adminWalletRef = adminDb.collection('wallets').doc(adminUid);
-        const adminWalletDoc = await transaction.get(adminWalletRef);
-        const adminCurrentBalance = adminWalletDoc.exists ? (adminWalletDoc.data()?.balance || 0) : 0;
+        const adminCurrentBalance = adminWalletDoc && adminWalletDoc.exists ? (adminWalletDoc.data()?.balance || 0) : 0;
         
         transaction.set(adminWalletRef, { 
           balance: adminCurrentBalance + priceDetails.finalPrice,
-          coins: adminWalletDoc.exists ? (adminWalletDoc.data()?.coins || 0) : 0,
-          referralCode: adminWalletDoc.exists ? (adminWalletDoc.data()?.referralCode || 'HEADADMIN') : 'HEADADMIN'
+          coins: adminWalletDoc && adminWalletDoc.exists ? (adminWalletDoc.data()?.coins || 0) : 0,
+          referralCode: adminWalletDoc && adminWalletDoc.exists ? (adminWalletDoc.data()?.referralCode || 'HEADADMIN') : 'HEADADMIN'
         }, { merge: true });
 
         const adminRevenueTxRef = adminDb.collection('transactions').doc();
@@ -292,7 +330,6 @@ export async function POST(request: NextRequest) {
           type: 'deposit'
         });
       }
-
 
       const purchaseTxRef = adminDb.collection('transactions').doc();
       transaction.set(purchaseTxRef, {
@@ -318,20 +355,27 @@ export async function POST(request: NextRequest) {
 
       // Handle IBA Commissions
       if (priceDetails.ibaUid || priceDetails.ibaUid2) {
-        const baseCommissionRate = (storeConfig.ibaCommissionRate || 10) / 100;
-        const totalCommissionAmount = priceDetails.basePrice * baseCommissionRate;
+        const paidCommissionRate = storeConfig.ibaCommissionRate ?? 10;
+        const freeCommissionRate = storeConfig.freeIbaCommissionRate ?? 5;
 
         // If both are present, split 50%-50%. Otherwise, the active one gets 100% of the commission.
         const isSplit = !!(priceDetails.ibaUid && priceDetails.ibaUid2);
         const splitFactor = isSplit ? 0.5 : 1.0;
 
-        if (priceDetails.ibaUid) {
+        if (priceDetails.ibaUid && ibaWalletDoc) {
           const ibaWalletRef = adminDb.collection('wallets').doc(priceDetails.ibaUid);
-          const ibaWalletDoc = await transaction.get(ibaWalletRef);
-          
           if (ibaWalletDoc.exists) {
             const ibaCurrentBalance = ibaWalletDoc.data()?.balance || 0;
-            const amountForIba = totalCommissionAmount * splitFactor;
+            const ibaData = ibaUserDoc?.data();
+            const isIbaPaid = ibaUserDoc && ibaUserDoc.exists && ibaData?.purchasedMockTest === true;
+            let rate = isIbaPaid ? paidCommissionRate : freeCommissionRate;
+            let isCustomRate = false;
+            if (ibaUserDoc && ibaUserDoc.exists && ibaData && typeof ibaData.commission_rate === 'number') {
+              rate = ibaData.commission_rate;
+              isCustomRate = true;
+            }
+            const amountForIba = priceDetails.basePrice * (rate / 100) * splitFactor;
+            
             transaction.update(ibaWalletRef, { balance: ibaCurrentBalance + amountForIba });
             
             const ibaTxRef = adminDb.collection('transactions').doc();
@@ -339,20 +383,27 @@ export async function POST(request: NextRequest) {
               user: priceDetails.ibaUid,
               amount: amountForIba,
               date: FieldValue.serverTimestamp(),
-              description: `Commission from student purchase${isSplit ? " (50% Primary IBA Split)" : ""}`,
+              description: `Commission from student purchase${isSplit ? " (50% Primary IBA Split)" : ""}${isCustomRate ? " [Custom rate: " + rate + "%]" : isIbaPaid ? " [Paid rate: " + paidCommissionRate + "%]" : " [Free rate: " + freeCommissionRate + "%]"}`,
               status: 'Completed',
               type: 'deposit'
             });
           }
         }
 
-        if (priceDetails.ibaUid2) {
+        if (priceDetails.ibaUid2 && ibaWalletDoc2) {
           const ibaWalletRef2 = adminDb.collection('wallets').doc(priceDetails.ibaUid2);
-          const ibaWalletDoc2 = await transaction.get(ibaWalletRef2);
-          
           if (ibaWalletDoc2.exists) {
             const ibaCurrentBalance2 = ibaWalletDoc2.data()?.balance || 0;
-            const amountForIba2 = totalCommissionAmount * splitFactor;
+            const ibaData2 = ibaUserDoc2?.data();
+            const isIbaPaid2 = ibaUserDoc2 && ibaUserDoc2.exists && ibaData2?.purchasedMockTest === true;
+            let rate2 = isIbaPaid2 ? paidCommissionRate : freeCommissionRate;
+            let isCustomRate2 = false;
+            if (ibaUserDoc2 && ibaUserDoc2.exists && ibaData2 && typeof ibaData2.commission_rate === 'number') {
+              rate2 = ibaData2.commission_rate;
+              isCustomRate2 = true;
+            }
+            const amountForIba2 = priceDetails.basePrice * (rate2 / 100) * splitFactor;
+            
             transaction.update(ibaWalletRef2, { balance: ibaCurrentBalance2 + amountForIba2 });
             
             const ibaTxRef2 = adminDb.collection('transactions').doc();
@@ -360,7 +411,7 @@ export async function POST(request: NextRequest) {
               user: priceDetails.ibaUid2,
               amount: amountForIba2,
               date: FieldValue.serverTimestamp(),
-              description: `Commission from student purchase${isSplit ? " (50% Secondary IBA Split)" : ""}`,
+              description: `Commission from student purchase${isSplit ? " (50% Secondary IBA Split)" : ""}${isCustomRate2 ? " [Custom rate: " + rate2 + "%]" : isIbaPaid2 ? " [Paid rate: " + paidCommissionRate + "%]" : " [Free rate: " + freeCommissionRate + "%]"}`,
               status: 'Completed',
               type: 'deposit'
             });

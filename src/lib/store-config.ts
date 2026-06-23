@@ -52,9 +52,12 @@ export type StoreConfig = {
     recommendationSettings: RecommendationSettings;
     autoApproveDeposits: boolean;
     ibaCommissionRate: number;
+    freeIbaCommissionRate?: number;
     aiDoubtSolverPrice: number;
     aiNotesGeneratorPrice: number;
     grantFreeAiToolsWithMockArena: boolean;
+    freeTrialDays?: number;
+    defaultMockTestLimit?: number;
     companyName?: string;
     companyGstin?: string;
     companyAddress?: string;
@@ -66,6 +69,8 @@ export type StoreConfig = {
 
 export const defaultStoreConfig: StoreConfig = {
     packages: [],
+    freeTrialDays: 30,
+    defaultMockTestLimit: 3,
     
     mockTestPackages: [
         { 
@@ -127,6 +132,7 @@ export const defaultStoreConfig: StoreConfig = {
 
     autoApproveDeposits: false,
     ibaCommissionRate: 10, // Fixed at 10% as requested
+    freeIbaCommissionRate: 5,
     aiDoubtSolverPrice: 750,
     aiNotesGeneratorPrice: 750,
     grantFreeAiToolsWithMockArena: false,

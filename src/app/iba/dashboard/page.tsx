@@ -23,9 +23,11 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useAuth, useDb } from "@/firebase";
-import { doc, getDoc, collection, query, where, getDocs, Timestamp, type Firestore } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, getDocs, Timestamp, type Firestore, updateDoc } from "firebase/firestore";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import { defaultStoreConfig } from "@/lib/store-config";
+import { defaultStoreConfig, type StoreConfig } from "@/lib/store-config";
 import UserLayout from "@/components/UserLayout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -68,6 +70,9 @@ function IBADashboardPageContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [ibaShareMessage, setIbaShareMessage] = useState<string | null>(null);
+  const [parentProfile, setParentProfile] = useState<any>(null);
+  const [storeConfig, setStoreConfig] = useState<StoreConfig | null>(null);
+  const [isUpgradePopupOpen, setIsUpgradePopupOpen] = useState(false);
   
   useEffect(() => {
     if (user && db) {
@@ -75,6 +80,53 @@ function IBADashboardPageContent() {
             setIsLoading(true);
             setError(null);
             try {
+                // Fetch parent user profile
+                const parentDocRef = doc(db, 'users', user.uid);
+                const parentSnap = await getDoc(parentDocRef);
+                let currentProfileData = parentSnap.exists() ? parentSnap.data() : null;
+
+                // Load store config
+                const storeRef = doc(db, "configs", "store");
+                const storeSnap = await getDoc(storeRef).catch(() => null);
+                let currentStoreConfig = defaultStoreConfig;
+                if (storeSnap && storeSnap.exists()) {
+                    currentStoreConfig = storeSnap.data() as StoreConfig;
+                }
+                setStoreConfig(currentStoreConfig);
+                setIbaShareMessage(currentStoreConfig.ibaShareMessage || null);
+
+                // Run migration check if not marked as paid mock test
+                let isPaid = currentProfileData?.purchasedMockTest === true;
+                if (!isPaid) {
+                    // Check activation codes
+                    const codesDocRef = doc(db, "activationCodes", user.uid);
+                    const codesSnap = await getDoc(codesDocRef).catch(() => null);
+                    const hasCodes = codesSnap && codesSnap.exists() && (codesSnap.data()?.codes?.length > 0);
+
+                    // Check students
+                    let hasStudents = false;
+                    if (!hasCodes) {
+                        const studentsColRef = collection(db, "students");
+                        const qStudents = query(studentsColRef, where("parentId", "==", user.uid));
+                        const studentsSnap = await getDocs(qStudents).catch(() => null);
+                        if (studentsSnap && !studentsSnap.empty) {
+                            hasStudents = studentsSnap.docs.some(s => s.data()?.mockTestSubscribed === true);
+                        }
+                    }
+
+                    if (hasCodes || hasStudents) {
+                        await updateDoc(parentDocRef, { purchasedMockTest: true }).catch(() => null);
+                        isPaid = true;
+                        currentProfileData = { ...currentProfileData, purchasedMockTest: true };
+                    }
+                }
+                setParentProfile(currentProfileData);
+
+                // Show upgrade popup modal if Free IBA, no custom override active, and user hasn't dismissed it in session
+                if (!isPaid && currentProfileData?.commission_rate === undefined && !sessionStorage.getItem('iba_upgrade_popup_dismissed')) {
+                    setIsUpgradePopupOpen(true);
+                }
+
                 const userWalletDocRef = doc(db, 'wallets', user.uid);
                 const userWalletSnap = await getDoc(userWalletDocRef).catch(async (serverError) => {
                     if (serverError.code === 'permission-denied') {
@@ -91,12 +143,6 @@ function IBADashboardPageContent() {
                     setIbaReferralCode(userWalletSnap.data().referralCode);
                 } else {
                     setIbaReferralCode(`REF${user.uid.slice(0, 6).toUpperCase()}`);
-                }
-
-                const storeRef = doc(db, "configs", "store");
-                const storeSnap = await getDoc(storeRef).catch(() => null);
-                if (storeSnap && storeSnap.exists()) {
-                    setIbaShareMessage(storeSnap.data().ibaShareMessage || null);
                 }
 
                 const txColRef = collection(db, "transactions");
@@ -202,8 +248,34 @@ function IBADashboardPageContent() {
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-6">
-        <h1 className="text-3xl font-bold flex items-center gap-2"><ShieldCheck/> IBA Dashboard</h1>
-        <p className="text-muted-foreground">Your hub for tracking referrals, sales, and commissions.</p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+                <h1 className="text-3xl font-bold flex items-center gap-2"><ShieldCheck/> IBA Dashboard</h1>
+                <p className="text-muted-foreground">Your hub for tracking referrals, sales, and commissions.</p>
+            </div>
+            {parentProfile && (
+                parentProfile.commission_rate !== undefined ? (
+                    <Badge className="bg-primary text-white font-bold uppercase text-[10px] tracking-wider px-3 py-1.5 border-none h-fit w-fit">CUSTOM COMMISSION PROFILE ACTIVE</Badge>
+                ) : parentProfile.purchasedMockTest === true ? (
+                    <Badge className="bg-green-500 text-white font-bold uppercase text-[10px] tracking-wider px-3 py-1.5 border-none h-fit w-fit">PAID IBA ACTIVE</Badge>
+                ) : (
+                    <Badge variant="outline" className="text-amber-600 border-amber-500/30 bg-amber-500/5 font-bold uppercase text-[10px] tracking-wider px-3 py-1.5 h-fit w-fit">FREE IBA PLAN</Badge>
+                )
+            )}
+        </div>
+
+        {parentProfile && parentProfile.commission_rate === undefined && parentProfile.purchasedMockTest !== true && (
+            <Alert className="bg-amber-500/10 border-amber-500/30 text-amber-800 dark:text-amber-300">
+                <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                <AlertTitle className="font-bold flex items-center gap-2 text-amber-700 dark:text-amber-200">Free IBA Commission Plan</AlertTitle>
+                <AlertDescription className="text-sm mt-1 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <span>You are currently earning 5% commission. Upgrade to Paid IBA status to double your commission rate to 10%!</span>
+                    <Button asChild size="sm" className="font-bold bg-amber-600 hover:bg-amber-700 text-white shrink-0 self-start sm:self-auto shadow-md">
+                        <Link href="/profile">Purchase Mock Test Package</Link>
+                    </Button>
+                </AlertDescription>
+            </Alert>
+        )}
           
           <div className="text-center p-4 bg-muted rounded-lg border">
             <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Your Unique IBA Code</h3>
@@ -255,17 +327,37 @@ function IBADashboardPageContent() {
             </Card>
 
             <Card>
-                <CardHeader>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="flex items-center gap-2 text-lg"><Percent size={18}/> Commission Structure</CardTitle>
+                    {parentProfile?.commission_rate !== undefined && (
+                        <Badge className="bg-primary text-white border-none font-bold uppercase text-[9px] tracking-wider px-2 py-0.5">
+                            CUSTOM COMMISSION PROFILE ACTIVE
+                        </Badge>
+                    )}
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="p-4 bg-muted/50 rounded-lg flex justify-between items-center border">
                         <div>
                             <h4 className="font-bold">MockArena Subscriptions</h4>
-                            <p className="text-xs text-muted-foreground">Standard Referral Rate</p>
+                            <p className="text-xs text-muted-foreground">Your Active Commission Rate</p>
                         </div>
-                        <p className="text-2xl font-black text-primary">10%</p>
+                        <p className="text-2xl font-black text-primary animate-pulse">
+                            {parentProfile?.commission_rate !== undefined
+                                ? `${parentProfile.commission_rate}%`
+                                : parentProfile?.purchasedMockTest === true 
+                                    ? `${storeConfig?.ibaCommissionRate ?? 10}%` 
+                                    : `${storeConfig?.freeIbaCommissionRate ?? 5}%`
+                            }
+                        </p>
                     </div>
+                    {parentProfile?.commission_rate === undefined && parentProfile?.purchasedMockTest !== true && (
+                        <div className="p-3 bg-amber-500/5 border border-amber-500/20 rounded-lg flex items-center justify-between gap-3 text-sm">
+                            <span className="text-muted-foreground font-medium">Upgrade to Paid IBA to increase commission rate to 10%.</span>
+                            <Button asChild size="sm" variant="link" className="font-black text-amber-600 hover:text-amber-700 h-auto p-0 flex items-center gap-1">
+                                <Link href="/profile">Upgrade now <ChevronRight size={14}/></Link>
+                            </Button>
+                        </div>
+                    )}
                      <div className="p-4 bg-primary/10 rounded-lg border border-primary/20 flex justify-between items-center">
                         <div>
                             <h4 className="font-bold flex items-center gap-2"><Zap className="text-primary" size={14}/> ReferBolt Bonus</h4>
@@ -277,6 +369,41 @@ function IBADashboardPageContent() {
                     </div>
                 </CardContent>
             </Card>
+
+            <Dialog open={isUpgradePopupOpen} onOpenChange={(open) => {
+                setIsUpgradePopupOpen(open);
+                if (!open) {
+                    sessionStorage.setItem('iba_upgrade_popup_dismissed', 'true');
+                }
+            }}>
+                <DialogContent className="sm:max-w-md border-primary/20 bg-background">
+                    <DialogHeader>
+                        <DialogTitle className="text-2xl font-black text-primary flex items-center gap-2">
+                            <Zap className="text-yellow-500 fill-yellow-500/20" /> Double Your Commissions!
+                        </DialogTitle>
+                        <DialogDescription className="text-base pt-2 text-foreground/80 leading-relaxed">
+                            You are currently on the <strong className="text-amber-600">Free IBA Plan</strong> earning <strong className="text-lg text-primary">{storeConfig?.freeIbaCommissionRate ?? 5}%</strong> commission on student mock test purchases.
+                            <br/><br/>
+                            Purchase any <strong>Mock Arena package</strong> from your profile workspace to instantly upgrade to <strong className="text-green-600">Paid IBA status</strong> and earn <strong className="text-lg text-green-600">{storeConfig?.ibaCommissionRate ?? 10}%</strong> commissions on all sales!
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="flex sm:justify-between items-center gap-3 pt-4 border-t mt-4">
+                        <Button 
+                          variant="ghost" 
+                          onClick={() => {
+                            setIsUpgradePopupOpen(false);
+                            sessionStorage.setItem('iba_upgrade_popup_dismissed', 'true');
+                          }}
+                          className="font-semibold text-muted-foreground hover:text-foreground"
+                        >
+                            Dismiss
+                        </Button>
+                        <Button asChild className="font-black bg-primary text-white shadow-lg shadow-primary/10">
+                            <Link href="/profile" onClick={() => setIsUpgradePopupOpen(false)}>Upgrade Workspace</Link>
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             <Card>
                 <CardHeader>

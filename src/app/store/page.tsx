@@ -33,6 +33,7 @@ function StorePageContent() {
   const [isCheckingEligibility, setIsCheckingEligibility] = useState(true);
   const [isEligibleForRecDiscount, setIsEligibleForRecDiscount] = useState(false);
   const [recommendationCount, setRecommendationCount] = useState(0);
+  const [userData, setUserData] = useState<any>(null);
   
   const [referralCode1, setReferralCode1] = useState("");
   const [referralCode2, setReferralCode2] = useState("");
@@ -122,15 +123,18 @@ function StorePageContent() {
         const fetchData = async () => {
             const walletDocRef = doc(db, "wallets", user.uid);
             const storeConfigRef = doc(db, "configs", "store");
+            const userDocRef = doc(db, "users", user.uid);
             
             try {
                 const results = await Promise.allSettled([
                     getDoc(walletDocRef),
-                    getDoc(storeConfigRef)
+                    getDoc(storeConfigRef),
+                    getDoc(userDocRef)
                 ]);
 
                 const walletRes = results[0];
                 const configRes = results[1];
+                const userRes = results[2];
 
                 if (walletRes.status === 'fulfilled' && walletRes.value.exists()) {
                     setWalletData(walletRes.value.data() as WalletData);
@@ -141,6 +145,12 @@ function StorePageContent() {
                     setWalletData({ balance: 0, coins: 0, referralCode: `REF${user.uid.slice(0, 6).toUpperCase()}` } as WalletData);
                 }
                 
+                if (userRes.status === 'fulfilled' && userRes.value.exists()) {
+                    setUserData(userRes.value.data());
+                } else {
+                    setUserData(null);
+                }
+
                 if (configRes.status === 'fulfilled' && configRes.value.exists()) {
                     const config = configRes.value.data() as StoreConfig;
                     setStoreConfig(config);
@@ -149,7 +159,6 @@ function StorePageContent() {
                     if (configRes.status === 'rejected' && configRes.reason?.code === 'permission-denied') {
                         errorEmitter.emit('permission-error', new FirestorePermissionError({ path: storeConfigRef.path, operation: 'get' }));
                     }
-                    // FALLBACK: Use defaults to prevent spinning error
                     setStoreConfig(defaultStoreConfig);
                     setIsCheckingEligibility(false);
                 }
@@ -189,7 +198,12 @@ function StorePageContent() {
         const mockItem = item as MockTestPackage;
         const baseDiscount = (mockItem.baseDiscount || 0) / 100;
         const referralDiscount = referralCode1.trim() !== "" ? (mockItem.referralDiscount || 0) / 100 : 0;
-        const specialDiscount = (mockItem.specialDiscount || 0) / 100;
+        
+        let specialDiscount = (mockItem.specialDiscount || 0) / 100;
+        if (userData && typeof userData.discount_rate === 'number') {
+            specialDiscount = userData.discount_rate / 100;
+        }
+
         const recommendationDiscount = isEligibleForRecDiscount ? (storeConfig.recommendationSettings?.additionalDiscount || 0) / 100 : 0;
         
         const totalDiscountFactor = baseDiscount + referralDiscount + specialDiscount + recommendationDiscount;
@@ -413,7 +427,12 @@ function StorePageContent() {
                 {storeConfig.mockTestPackages.map((product, index) => {
                     const baseDisc = (product.baseDiscount || 0) / 100;
                     const referralDisc = (referralCode1.trim() !== "" || referralCode2.trim() !== "") ? (product.referralDiscount || 0) / 100 : 0;
-                    const specialDisc = (product.specialDiscount || 0) / 100;
+                    
+                    let specialDisc = (product.specialDiscount || 0) / 100;
+                    if (userData && typeof userData.discount_rate === 'number') {
+                        specialDisc = userData.discount_rate / 100;
+                    }
+
                     const recommendationDisc = isEligibleForRecDiscount ? (storeConfig.recommendationSettings?.additionalDiscount || 0) / 100 : 0;
                     
                     const totalDiscount = baseDisc + referralDisc + specialDisc + recommendationDisc;
@@ -512,7 +531,7 @@ function StorePageContent() {
                                         )}
                                         {specialDisc > 0 && (
                                             <div className="flex justify-between text-[11px] text-green-600">
-                                                <span>• Package Special Discount ({product.specialDiscount}%):</span>
+                                                <span>{userData?.discount_rate !== undefined ? `• Custom User Discount (${userData.discount_rate}%):` : `• Package Special Discount (${product.specialDiscount}%):`}</span>
                                                 <span>-₹{(originalTotal * specialDisc).toFixed(2)}</span>
                                             </div>
                                         )}

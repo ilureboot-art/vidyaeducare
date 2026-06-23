@@ -232,6 +232,13 @@ export default function AdminLeaderboardPage() {
 
         const parentIdStr = parentId;
 
+        const parentUserDoc = await getDoc(doc(db, "users", parentIdStr));
+        const purchasedMockTest = parentUserDoc.exists() && parentUserDoc.data()?.purchasedMockTest === true;
+        if (!purchasedMockTest) {
+          logs.push(`Rank ${ranker.rank} (${ranker.name}): Skipped (Parent has not purchased mock test; free trial users not eligible for cash rewards)`);
+          continue;
+        }
+
         await runTransaction(db, async (transaction) => {
           // 1. Get/Update Wallet
           const walletRef = doc(db, "wallets", parentIdStr);
@@ -290,7 +297,7 @@ export default function AdminLeaderboardPage() {
       for (let i = 0; i < top5.length; i++) {
         const ranker = top5[i];
         const isRank1 = ranker.rank === 1;
-        const prizeAmount = isRank1 ? cashReward : 0;
+        let prizeAmount = isRank1 ? cashReward : 0;
         
         let parentId = ranker.parentId;
         if (!parentId) {
@@ -306,6 +313,15 @@ export default function AdminLeaderboardPage() {
         }
 
         const parentIdStr = parentId;
+
+        if (prizeAmount > 0) {
+          const parentUserDoc = await getDoc(doc(db, "users", parentIdStr));
+          const purchasedMockTest = parentUserDoc.exists() && parentUserDoc.data()?.purchasedMockTest === true;
+          if (!purchasedMockTest) {
+            prizeAmount = 0;
+            logs.push(`Rank ${ranker.rank} (${ranker.name}): Monthly cash reward skipped (Parent has not purchased mock test; free trial user), only AI access granted.`);
+          }
+        }
 
         await runTransaction(db, async (transaction) => {
           // 1. Get and update AI Access

@@ -18,6 +18,7 @@ import type { StudentProfile } from "@/lib/student-data";
 import type { Question, TestSet } from "@/lib/question-bank";
 import type { ScheduledTest } from "@/lib/test-schedule";
 import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import type { StoreConfig } from "@/lib/store-config";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useDb } from "@/firebase";
 import UserLayout from "@/components/UserLayout";
@@ -80,7 +81,66 @@ function MockTestContent() {
                 });
 
                 if (studentDoc.exists()) {
-                    setStudentProfile(studentDoc.data() as StudentProfile);
+                    const studentData = studentDoc.data() as StudentProfile;
+                    
+                    // Fetch parent profile doc
+                    let parentProfile: any = null;
+                    if (studentData.parentId) {
+                        const parentDocRef = doc(db, 'users', studentData.parentId);
+                        const parentDoc = await getDoc(parentDocRef).catch(() => null);
+                        if (parentDoc && parentDoc.exists()) {
+                            parentProfile = parentDoc.data();
+                        }
+                    }
+
+                    const storeDocRef = doc(db, 'configs', 'store');
+                    const storeDoc = await getDoc(storeDocRef).catch(() => null);
+                    const storeData = storeDoc && storeDoc.exists() ? (storeDoc.data() as StoreConfig) : null;
+                    const freeTrialDays = storeData?.freeTrialDays ?? 30;
+
+                    let hasAccess = false;
+                    let limitReached = false;
+                    if (studentData.mockTestSubscribed) {
+                        hasAccess = true;
+                    } else {
+                        // Check parent mock test limit override
+                        const mockTestLimit = parentProfile?.mock_test_limit;
+                        const testsTaken = studentData.stats?.testsTaken || 0;
+                        if (typeof mockTestLimit === 'number') {
+                            if (testsTaken >= mockTestLimit) {
+                                limitReached = true;
+                            }
+                        }
+
+                        if (!limitReached) {
+                            const created = studentData.createdAt ? new Date(studentData.createdAt) : new Date();
+                            const expiryDate = new Date(created.getTime() + freeTrialDays * 24 * 60 * 60 * 1000);
+                            const now = new Date();
+                            hasAccess = now < expiryDate;
+                        }
+                    }
+
+                    if (limitReached) {
+                        toast({ 
+                            variant: 'destructive', 
+                            title: 'Mock Test Limit Reached', 
+                            description: 'You have reached the maximum number of free mock tests allowed for your trial. Please purchase a package to continue.' 
+                        });
+                        router.push(`/profile?expiredStudentId=${studentId}`);
+                        return;
+                    }
+
+                    if (!hasAccess) {
+                        toast({ 
+                            variant: 'destructive', 
+                            title: 'Mock Test Locked', 
+                            description: 'Your free trial access has ended. Please purchase a package to continue.' 
+                        });
+                        router.push(`/profile?expiredStudentId=${studentId}`);
+                        return;
+                    }
+
+                    setStudentProfile(studentData);
                 } else {
                     throw new Error("Student profile not found");
                 }
@@ -206,8 +266,8 @@ function MockTestContent() {
                 throw e;
             });
 
-            // CRITICAL: Only save to leaderboard if the session is LIVE
-            if (isLiveTest) {
+            // CRITICAL: Only save to leaderboard if the session is LIVE and student is subscribed
+            if (isLiveTest && studentProfile.mockTestSubscribed) {
                 const leaderboardDocRef = doc(db, "leaderboard", resultId);
                 const leaderboardData = {
                     name: studentProfile.name,
@@ -461,7 +521,12 @@ function MockTestContent() {
                     <p className="text-4xl font-bold">Accuracy: {score.toFixed(0)}%</p>
                     
                     {isLiveTest ? (
-                        score < 80 ? (
+                        !studentProfile.mockTestSubscribed ? (
+                            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-3 text-amber-800 text-sm font-medium">
+                                <Info size={18}/>
+                                <span>Free Trial Account: Purchase a Mock Test package to be eligible for cash rewards.</span>
+                            </div>
+                        ) : score < 80 ? (
                             <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-3 text-amber-800 text-sm font-medium">
                                 <Info size={18}/>
                                 <span>Score 80%+ required for reward eligibility.</span>

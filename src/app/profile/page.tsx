@@ -92,6 +92,58 @@ function ProfilePageContent() {
     const [selectedStudentForManageSubjects, setSelectedStudentForManageSubjects] = useState<StudentProfile | null>(null);
     const [selectedSubjectsForManage, setSelectedSubjectsForManage] = useState<string[]>([]);
 
+    const [newStudentStandard, setNewStudentStandard] = useState<string>("");
+    const [subjectsByStandard, setSubjectsByStandard] = useState<Record<string, string[]>>({});
+
+    useEffect(() => {
+        if (!db) return;
+        const fetchAdminSubjects = async () => {
+            try {
+                const mapping: Record<string, Set<string>> = {};
+                
+                // Query test sets
+                const testSetsCol = collection(db, "testSets");
+                const testSetsSnap = await getDocs(testSetsCol).catch(() => null);
+                if (testSetsSnap) {
+                    testSetsSnap.docs.forEach(docSnap => {
+                        const data = docSnap.data();
+                        if (data.standard && data.subject) {
+                            if (!mapping[data.standard]) {
+                                mapping[data.standard] = new Set();
+                            }
+                            mapping[data.standard].add(data.subject);
+                        }
+                    });
+                }
+
+                // Query scheduled tests
+                const scheduledCol = collection(db, "scheduledTests");
+                const scheduledSnap = await getDocs(scheduledCol).catch(() => null);
+                if (scheduledSnap) {
+                    scheduledSnap.docs.forEach(docSnap => {
+                        const data = docSnap.data();
+                        if (data.standard && data.subject) {
+                            if (!mapping[data.standard]) {
+                                mapping[data.standard] = new Set();
+                            }
+                            mapping[data.standard].add(data.subject);
+                        }
+                    });
+                }
+
+                // Convert Sets to arrays
+                const finalMapping: Record<string, string[]> = {};
+                for (const std in mapping) {
+                    finalMapping[std] = Array.from(mapping[std]);
+                }
+                setSubjectsByStandard(finalMapping);
+            } catch (e) {
+                console.error("Error building standard-to-subject map:", e);
+            }
+        };
+        fetchAdminSubjects();
+    }, [db]);
+
     const [isActivateDialogOpen, setIsActivateDialogOpen] = useState(false);
     const [studentToActivate, setStudentToActivate] = useState<StudentProfile | null>(null);
     const [activationCodeForExisting, setActivationCodeForExisting] = useState("");
@@ -284,6 +336,7 @@ function ProfilePageContent() {
                 setIsCodeVerified(false);
                 setIsTrialSignup(false);
                 setSelectedSubjectsForNewStudent([]);
+                setNewStudentStandard("");
             })
             .catch(async (e) => {
                 const permissionError = new FirestorePermissionError({
@@ -493,6 +546,8 @@ function ProfilePageContent() {
                  if (!isOpen) {
                      setActivationCode("");
                      setIsCodeVerified(false);
+                     setNewStudentStandard("");
+                     setSelectedSubjectsForNewStudent([]);
                  }
              }}>
                 <DialogTrigger asChild>
@@ -571,10 +626,15 @@ function ProfilePageContent() {
                            <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="standard">Standard</Label>
-                                    <Select name="standard" required>
+                                    <Select name="standard" value={newStudentStandard} onValueChange={(val) => {
+                                         setNewStudentStandard(val);
+                                         setSelectedSubjectsForNewStudent([]); // Reset selected subjects when standard changes
+                                     }} required>
                                         <SelectTrigger><SelectValue placeholder="Select..."/></SelectTrigger>
                                         <SelectContent>
-                                            {[...Array(12)].map((_,i) => <SelectItem key={i+1} value={`${i+1}th`}>{i+1}th</SelectItem>)}
+                                            {academicConfig.standards.map((s) => (
+                                                 <SelectItem key={s} value={s}>{s}</SelectItem>
+                                             ))}
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -593,7 +653,10 @@ function ProfilePageContent() {
                             <div className="space-y-2">
                                 <Label>Subjects Enrolled</Label>
                                 <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto border p-3 rounded-xl bg-background">
-                                    {academicConfig.subjects.map((subj) => (
+                                    {(subjectsByStandard[newStudentStandard] && subjectsByStandard[newStudentStandard].length > 0
+                                         ? subjectsByStandard[newStudentStandard]
+                                         : academicConfig.subjects
+                                     ).map((subj) => (
                                         <div key={subj} className="flex items-center space-x-2">
                                             <Checkbox 
                                                 id={`add-subj-${subj}`}
@@ -962,7 +1025,10 @@ function ProfilePageContent() {
                 </DialogHeader>
                 <div className="space-y-4 pt-4">
                     <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto border p-3 rounded-lg bg-background">
-                        {academicConfig.subjects.map((subj) => (
+                        {(selectedStudentForManageSubjects && subjectsByStandard[selectedStudentForManageSubjects.academic.standard] && subjectsByStandard[selectedStudentForManageSubjects.academic.standard].length > 0
+                            ? subjectsByStandard[selectedStudentForManageSubjects.academic.standard]
+                            : academicConfig.subjects
+                        ).map((subj) => (
                             <div key={subj} className="flex items-center space-x-2">
                                 <Checkbox 
                                     id={`manage-subj-${subj}`}

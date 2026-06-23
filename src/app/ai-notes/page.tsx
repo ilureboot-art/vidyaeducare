@@ -188,15 +188,18 @@ function AiNotesPageContent() {
                 standard: academic.standard,
                 board: academic.board,
             });
-            setResult(response);
             
-            if (!user) {
-                const newCount = trialCount + 1;
-                setTrialCount(newCount);
-                localStorage.setItem('trial_ai_notes_count', newCount.toString());
+            if (response && 'error' in response) {
+                toast({ variant: 'destructive', title: "QuickNotes Error", description: response.error as string });
+            } else {
+                setResult(response);
+                if (!user) {
+                    const newCount = trialCount + 1;
+                    setTrialCount(newCount);
+                    localStorage.setItem('trial_ai_notes_count', newCount.toString());
+                }
+                toast({ title: "QuickNotes Ready!", description: "Your bilingual study summary is ready." });
             }
-
-            toast({ title: "QuickNotes Ready!", description: "Your bilingual study summary is ready." });
         } catch (error) {
             console.error(error);
             toast({ variant: 'destructive', title: "QuickNotes Error", description: "The AI was unable to process this material right now." });

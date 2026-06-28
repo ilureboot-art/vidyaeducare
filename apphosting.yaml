@@ -5,9 +5,10 @@ runConfig:
   # Increase this value if you'd like to automatically spin up
   # more instances in response to increased traffic.
   maxInstances: 1
-  # Defines backend environment variables.
-  # For sensitive data, it's recommended to use secrets.
-  # See https://firebase.google.com/docs/app-hosting/configure#secrets
-  env:
-    - variable: GEMINI_API_KEY
-      secret: GEMINI_API_KEY
+
+# Defines backend environment variables.
+# For sensitive data, it's recommended to use secrets.
+# See https://firebase.google.com/docs/app-hosting/configure#secrets
+env:
+  - variable: GEMINI_API_KEY
+    secret: GEMINI_API_KEY

@@ -158,40 +158,33 @@ export async function POST(request: NextRequest) {
               if (newProgress >= goal) {
                 // Cycle completed! Reset progress and increment completed cycles
                 updatedReferbolt.cycleProgress = 0;
-                updatedReferbolt.cyclesCompleted = (rData.cyclesCompleted || 0) + 1;
+                const completedCycles = (rData.cyclesCompleted || 0) + 1;
+                updatedReferbolt.cyclesCompleted = completedCycles;
 
-                const ibaBonus = storeConfig.referboltSettings?.ibaBonusCommission || 5;
+                const isNoCommissionRound = completedCycles % 4 === 0;
+                const ibaBonus = isNoCommissionRound ? 0 : (storeConfig.referboltSettings?.ibaBonusCommission || 5);
                 updatedReferbolt.totalCommissions = (rData.totalCommissions || 0) + ibaBonus;
 
-                if (rData.autoRenew === true) {
-                  const referboltSub = storeConfig.referboltSubscription || { price: 100, gstRate: 18 };
-                  const subPrice = referboltSub.price || 100;
-                  const subGstRate = referboltSub.gstRate || 0;
-                  const rejoiningFee = subPrice + (subPrice * (subGstRate / 100));
+                const referboltSub = storeConfig.referboltSubscription || { price: 100, gstRate: 18 };
+                const subPrice = referboltSub.price || 100;
+                const subGstRate = referboltSub.gstRate || 0;
+                const rejoiningFee = subPrice + (subPrice * (subGstRate / 100));
 
-                  // Credit cycle bonus & deduct rejoining fee
-                  transaction.update(referrerWalletRef, { balance: referrerBalance + referralBonus + ibaBonus - rejoiningFee });
+                if (isNoCommissionRound) {
+                  // Rule 2: User must purchase the ticket for every 4th round (rejoining fee for 5th/next round paid from wallet)
+                  // Even if autoRenew is false, they are forced to purchase and pay from wallet.
+                  transaction.update(referrerWalletRef, { balance: referrerBalance + referralBonus - rejoiningFee });
 
-                  // Keep subscribed
+                  // Keep subscribed for the next round
                   updatedReferbolt.isSubscribed = true;
 
-                  // User transaction logs: Credit for cycle bonus, Debit for auto-renewal fee
-                  const cycleTxRef = adminDb.collection('transactions').doc();
-                  transaction.set(cycleTxRef, {
-                    user: referrerId,
-                    amount: ibaBonus,
-                    date: FieldValue.serverTimestamp(),
-                    description: "ReferBolt Success Cycle Bonus",
-                    status: "Completed",
-                    type: "Commission"
-                  });
-
+                  // User transaction logs: Debit for auto-renewal fee (ticket fee)
                   const renewTxRef = adminDb.collection('transactions').doc();
                   transaction.set(renewTxRef, {
                     user: referrerId,
                     amount: -rejoiningFee,
                     date: FieldValue.serverTimestamp(),
-                    description: "ReferBolt Auto-Renewal Subscription Fee",
+                    description: `ReferBolt Ticket Purchase for Round ${completedCycles + 1}`,
                     status: "Completed",
                     type: "Purchase"
                   });
@@ -213,28 +206,81 @@ export async function POST(request: NextRequest) {
                       user: adminUid,
                       amount: rejoiningFee,
                       date: FieldValue.serverTimestamp(),
-                      description: `Revenue: ReferBolt Auto-Renewal for user ${referrerId}`,
+                      description: `Revenue: ReferBolt Ticket Purchase for user ${referrerId} (Round ${completedCycles + 1})`,
                       status: 'Completed',
                       type: 'deposit'
                     });
                   }
                 } else {
-                  // Auto-renew disabled: unsubscribe the user since cycle has completed
-                  updatedReferbolt.isSubscribed = false;
+                  // Standard round (1, 2, 3, 5, 6, 7...)
+                  if (rData.autoRenew === true) {
+                    // Credit cycle bonus & deduct rejoining fee
+                    transaction.update(referrerWalletRef, { balance: referrerBalance + referralBonus + ibaBonus - rejoiningFee });
 
-                  // Credit cycle bonus only
-                  transaction.update(referrerWalletRef, { balance: referrerBalance + referralBonus + ibaBonus });
+                    // Keep subscribed
+                    updatedReferbolt.isSubscribed = true;
 
-                  // User transaction logs: Credit for cycle bonus
-                  const cycleTxRef = adminDb.collection('transactions').doc();
-                  transaction.set(cycleTxRef, {
-                    user: referrerId,
-                    amount: ibaBonus,
-                    date: FieldValue.serverTimestamp(),
-                    description: "ReferBolt Success Cycle Bonus",
-                    status: "Completed",
-                    type: "Commission"
-                  });
+                    // User transaction logs: Credit for cycle bonus, Debit for auto-renewal fee
+                    const cycleTxRef = adminDb.collection('transactions').doc();
+                    transaction.set(cycleTxRef, {
+                      user: referrerId,
+                      amount: ibaBonus,
+                      date: FieldValue.serverTimestamp(),
+                      description: "ReferBolt Success Cycle Bonus",
+                      status: "Completed",
+                      type: "Commission"
+                    });
+
+                    const renewTxRef = adminDb.collection('transactions').doc();
+                    transaction.set(renewTxRef, {
+                      user: referrerId,
+                      amount: -rejoiningFee,
+                      date: FieldValue.serverTimestamp(),
+                      description: "ReferBolt Auto-Renewal Subscription Fee",
+                      status: "Completed",
+                      type: "Purchase"
+                    });
+
+                    // Route rejoining fee to Head Admin wallet
+                    if (adminUid) {
+                      const adminWalletRef = adminDb.collection('wallets').doc(adminUid);
+                      const adminWalletDoc = await transaction.get(adminWalletRef);
+                      const adminCurrentBalance = adminWalletDoc.exists ? (adminWalletDoc.data()?.balance || 0) : 0;
+
+                      transaction.set(adminWalletRef, {
+                        balance: adminCurrentBalance + rejoiningFee,
+                        coins: adminWalletDoc.exists ? (adminWalletDoc.data()?.coins || 0) : 0,
+                        referralCode: adminWalletDoc.exists ? (adminWalletDoc.data()?.referralCode || 'HEADADMIN') : 'HEADADMIN'
+                      }, { merge: true });
+
+                      const adminRevenueTxRef = adminDb.collection('transactions').doc();
+                      transaction.set(adminRevenueTxRef, {
+                        user: adminUid,
+                        amount: rejoiningFee,
+                        date: FieldValue.serverTimestamp(),
+                        description: `Revenue: ReferBolt Auto-Renewal for user ${referrerId}`,
+                        status: 'Completed',
+                        type: 'deposit'
+                      });
+                    }
+                  } else {
+                    // Auto-renew disabled: unsubscribe the user since cycle has completed
+                    updatedReferbolt.isSubscribed = false;
+
+                    // Credit cycle bonus only
+                    transaction.update(referrerWalletRef, { balance: referrerBalance + referralBonus + ibaBonus });
+
+                    // User transaction logs: Credit for cycle bonus
+                    const cycleTxRef = adminDb.collection('transactions').doc();
+                    transaction.set(cycleTxRef, {
+                      user: referrerId,
+                      amount: ibaBonus,
+                      date: FieldValue.serverTimestamp(),
+                      description: "ReferBolt Success Cycle Bonus",
+                      status: "Completed",
+                      type: "Commission"
+                    });
+                  }
                 }
               } else {
                 updatedReferbolt.cycleProgress = newProgress;

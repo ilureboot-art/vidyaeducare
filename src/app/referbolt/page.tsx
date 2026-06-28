@@ -27,14 +27,15 @@ type ReferBoltState = {
     autoRenew?: boolean;
     cycleProgress?: number;
     cycleGoal?: number;
+    cyclesCompleted?: number;
     referralHistory?: any[];
 };
 
 const benefits = [
     { text: "Earn continuous commissions from a multi-level referral network." },
     { text: "Complete cycles of just 3 referrals for massive bonuses." },
-    { text: "Unlock earnings from both direct & indirect referral activity." },
-    { text: "Unlimited potential through automatic cycle renewal." },
+    { text: "Earning commission for 3 cycles, with ticket purchase (rejoining fee) on every 4th cycle (no commission on 4th)." },
+    { text: "Auto-renew or manual renew to keep earning across infinite cycles." },
     { text: "FREE access included with any MockArena pack purchase." },
 ];
 
@@ -218,7 +219,7 @@ Let's build a profitable community! 💸🚀`;
             </div>
         </CardHeader>
         <CardContent className="space-y-8 p-8">
-            <div className="grid gap-6 md:grid-cols-2">
+            <div className="grid gap-6 md:grid-cols-3">
                 <Card className="border-primary/10 bg-primary/[0.02]">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Network Commissions</CardTitle>
@@ -239,13 +240,23 @@ Let's build a profitable community! 💸🚀`;
                         <p className="text-[10px] font-bold text-accent mt-1">REFERRAL NETWORK SIZE</p>
                     </CardContent>
                 </Card>
+                <Card className="border-muted-foreground/10 bg-muted/[0.02]">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Rounds Completed</CardTitle>
+                        <Repeat className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-4xl font-black text-muted-foreground tracking-tighter">{data.cyclesCompleted || 0}</div>
+                        <p className="text-[10px] font-bold text-muted-foreground mt-1">SUCCESS CYCLES</p>
+                    </CardContent>
+                </Card>
             </div>
 
             <Card className="border-primary/20 shadow-inner rounded-[2rem] overflow-hidden">
                 <CardHeader className="pb-4">
                     <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                         <CardTitle className="text-lg font-black uppercase italic text-primary flex items-center gap-2">
-                            <TrendingUp size={20}/> Current Success Cycle
+                            <TrendingUp size={20}/> Current Success Cycle (Round {(data.cyclesCompleted || 0) + 1})
                         </CardTitle>
                          <div className="flex items-center space-x-2 bg-background px-4 py-2 rounded-full border shadow-sm">
                             <Switch id="auto-renew" checked={data.autoRenew || false} onCheckedChange={handleAutoRenewToggle} />
@@ -259,7 +270,7 @@ Let's build a profitable community! 💸🚀`;
                             <Progress value={((data.cycleProgress || 0) / (data.cycleGoal || 3)) * 100} className="h-4 rounded-full" />
                             <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                                 <span>Cycle Start</span>
-                                <span>{data.cycleGoal || 3} Referrals to Bonus</span>
+                                <span>{data.cycleGoal || 3} Referrals to Complete Round</span>
                             </div>
                         </div>
                         <div className="text-center p-4 bg-primary text-white rounded-2xl shadow-xl min-w-[100px]">
@@ -267,9 +278,15 @@ Let's build a profitable community! 💸🚀`;
                             <p className="text-[8px] font-black uppercase">ACTIVE</p>
                         </div>
                     </div>
-                    <p className="text-center text-sm font-bold text-muted-foreground bg-muted/50 p-4 rounded-xl border-dashed border">
-                        Complete this cycle by referring just 3 friends to unlock your next massive bonus credit!
-                    </p>
+                    {((data.cyclesCompleted || 0) + 1) % 4 === 0 ? (
+                        <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-200 text-center text-sm font-bold">
+                            ⚠️ Note: You are currently on Round {(data.cyclesCompleted || 0) + 1} (every 4th round). No commission is earned for this round, and a ticket purchase fee will be automatically paid from your wallet to activate Round {(data.cyclesCompleted || 0) + 2}.
+                        </div>
+                    ) : (
+                        <p className="text-center text-sm font-bold text-muted-foreground bg-muted/50 p-4 rounded-xl border-dashed border">
+                            Complete this round by referring just 3 friends to unlock your next massive bonus credit!
+                        </p>
+                    )}
                 </CardContent>
             </Card>
 

@@ -30,6 +30,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import { cn } from "@/lib/utils";
+import { defaultAcademicConfig } from "@/lib/academic-config";
+import { Progress } from "@/components/ui/progress";
 
 type UserStatus = "Active" | "Banned" | "Inactive";
 type UserSummary = {
@@ -54,6 +56,10 @@ export default function UserManagementPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const [students, setStudents] = useState<StudentProfile[] | null>(null);
+  const [isLoadingStudents, setIsLoadingStudents] = useState(false);
+  const [showAllStandards, setShowAllStandards] = useState(false);
   
   const [selectedParent, setSelectedParent] = useState<UserSummary | null>(null);
   const [parentStudents, setParentStudents] = useState<StudentProfile[] | null>(null);
@@ -105,6 +111,71 @@ export default function UserManagementPage() {
 
     return () => unsubscribe();
   }, [db, isResolved, isAdmin]);
+
+  useEffect(() => {
+    if (!db || !isResolved || !isAdmin) return;
+
+    setIsLoadingStudents(true);
+    const studentsCollection = collection(db, "students");
+    
+    const unsubscribe = onSnapshot(studentsCollection, (snapshot) => {
+        const studentList = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        } as StudentProfile));
+        setStudents(studentList);
+        setIsLoadingStudents(false);
+    }, (error) => {
+        console.error("Error fetching students:", error);
+        if (error.code === 'permission-denied') {
+            const permissionError = new FirestorePermissionError({
+                path: studentsCollection.path,
+                operation: 'list',
+            } satisfies SecurityRuleContext);
+            errorEmitter.emit('permission-error', permissionError);
+        }
+        setStudents([]);
+        setIsLoadingStudents(false);
+    });
+
+    return () => unsubscribe();
+  }, [db, isResolved, isAdmin]);
+
+  const studentStats = useMemo(() => {
+    if (!students) return null;
+    
+    const stats: Record<string, { total: number; mockTestCount: number }> = {};
+    
+    defaultAcademicConfig.standards.forEach((std) => {
+      stats[std] = { total: 0, mockTestCount: 0 };
+    });
+
+    let grandTotal = 0;
+    let grandMockTestCount = 0;
+
+    students.forEach((s) => {
+      const std = s.academic?.standard;
+      if (std) {
+        if (!stats[std]) {
+          stats[std] = { total: 0, mockTestCount: 0 };
+        }
+        stats[std].total += 1;
+        grandTotal += 1;
+        
+        if (s.mockTestSubscribed) {
+          stats[std].mockTestCount += 1;
+          grandMockTestCount += 1;
+        }
+      }
+    });
+
+    return {
+      byStandard: stats,
+      totalStudents: grandTotal,
+      totalMockTestSubscribed: grandMockTestCount,
+      conversionRate: grandTotal > 0 ? Math.round((grandMockTestCount / grandTotal) * 100) : 0
+    };
+  }, [students]);
 
   useEffect(() => {
     if (!db || !isResolved || !isAdmin) return;
@@ -307,6 +378,104 @@ export default function UserManagementPage() {
             Refresh List
         </Button>
       </div>
+
+      {/* Student Mock Test Registration Stats Card */}
+      <Card className="border-primary/10 overflow-hidden shadow-sm">
+        <CardHeader className="bg-primary/[0.02] border-b pb-4 flex flex-row items-center justify-between flex-wrap gap-4">
+          <div>
+            <CardTitle className="text-xl font-bold flex items-center gap-2">
+              <GraduationCap className="text-primary h-5 w-5" />
+              Standard-wise Mock Test Registrations
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Live statistics of registered students and mock test subscriptions by standard.
+            </CardDescription>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="show-all-standards"
+                checked={showAllStandards}
+                onCheckedChange={setShowAllStandards}
+              />
+              <Label htmlFor="show-all-standards" className="text-xs cursor-pointer select-none">
+                Show Empty Standards
+              </Label>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-6">
+          {isLoadingStudents ? (
+            <div className="flex flex-col items-center justify-center py-6 space-y-2">
+              <Loader2 className="animate-spin text-primary h-6 w-6" />
+              <p className="text-xs text-muted-foreground">Aggregating enrollment statistics...</p>
+            </div>
+          ) : studentStats ? (
+            <div className="space-y-6">
+              {/* High-level metrics row */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-muted/40 p-4 rounded-xl">
+                <div className="text-center sm:text-left">
+                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">Total Enrolled Students</p>
+                  <p className="text-2xl font-black text-foreground mt-0.5">{studentStats.totalStudents}</p>
+                </div>
+                <div className="text-center sm:text-left border-y sm:border-y-0 sm:border-x py-2 sm:py-0 sm:px-4">
+                  <p className="text-[10px] font-black text-primary uppercase tracking-wider">Mock Test Subscribers</p>
+                  <p className="text-2xl font-black text-primary mt-0.5">{studentStats.totalMockTestSubscribed}</p>
+                </div>
+                <div className="text-center sm:text-left">
+                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">Overall Subscription Rate</p>
+                  <p className="text-2xl font-black text-accent mt-0.5">{studentStats.conversionRate}%</p>
+                </div>
+              </div>
+
+              {/* Standard-wise Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {Object.entries(studentStats.byStandard)
+                  .filter(([_, data]) => showAllStandards || data.total > 0)
+                  .map(([std, data]) => {
+                    const percentage = data.total > 0 ? Math.round((data.mockTestCount / data.total) * 100) : 0;
+                    return (
+                      <Card key={std} className="hover:shadow-md transition-all duration-300 border border-primary/5 hover:border-primary/20 bg-card">
+                        <CardContent className="p-4 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-sm text-foreground">{std} Standard</span>
+                            <Badge variant={data.mockTestCount > 0 ? "default" : "secondary"} className="text-[10px] px-2 py-0.5">
+                              {percentage}% Subscribed
+                            </Badge>
+                          </div>
+                          <div className="space-y-1.5">
+                            <div className="flex justify-between text-xs text-muted-foreground">
+                              <span>Subscribed: <strong>{data.mockTestCount}</strong></span>
+                              <span>Total: <strong>{data.total}</strong></span>
+                            </div>
+                            <Progress value={percentage} className="h-2 bg-muted-foreground/10" />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                {Object.values(studentStats.byStandard).filter(data => data.total > 0).length === 0 && !showAllStandards && (
+                  <div className="col-span-full py-8 text-center border-2 border-dashed border-muted rounded-xl bg-muted/10">
+                    <p className="text-sm text-muted-foreground font-medium">No active student enrollments found.</p>
+                    <Button 
+                      variant="link" 
+                      size="sm" 
+                      onClick={() => setShowAllStandards(true)} 
+                      className="text-xs text-primary font-bold mt-1"
+                    >
+                      Show all empty standards
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-6 text-xs text-muted-foreground">
+              Unable to compute student statistics.
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

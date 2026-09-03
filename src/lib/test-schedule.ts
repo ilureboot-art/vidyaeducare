@@ -9,4 +9,9 @@ export type ScheduledTest = {
     standard: string;
     subject: string;
     duration: number; // Duration in minutes
+    
+    // NEW: Optional audit metadata fields (backward compatible)
+    createdAt?: string;          // ISO timestamp when test was first scheduled
+    updatedAt?: string;          // ISO timestamp when test was last modified
+    lastModifiedBy?: string;     // Admin UID who last modified the test
 };

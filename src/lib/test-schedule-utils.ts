@@ -1,7 +1,5 @@
-'use client';
-
 import { type ScheduledTest } from './test-schedule';
-import { addMinutes, isAfter, isBefore } from 'date-fns';
+import { addMinutes, isAfter, isBefore, isEqual, isValid } from 'date-fns';
 
 /**
  * Validates if a scheduled test edit is valid
@@ -14,6 +12,13 @@ export function validateScheduleEdit(
     const now = new Date();
     
     // Cannot schedule tests in the past
+    if (!isValid(newDateTime)) {
+        return {
+            valid: false,
+            error: "Please select a valid date and time."
+        };
+    }
+
     if (isBefore(newDateTime, now)) {
         return { 
             valid: false, 
@@ -22,7 +27,7 @@ export function validateScheduleEdit(
     }
     
     // Duration must be within reasonable bounds
-    if (!duration || duration < 1) {
+    if (!Number.isInteger(duration) || duration < 1) {
         return { 
             valid: false, 
             error: "Duration must be at least 1 minute." 
@@ -52,12 +57,12 @@ export function calculateTestStatus(
     const expiryDate = addMinutes(testDate, durationMins);
     
     // Test has ended - available for practice
-    if (isAfter(now, expiryDate)) {
+    if (isAfter(now, expiryDate) || isEqual(now, expiryDate)) {
         return 'Practice Only';
     }
     
     // Test is currently live
-    if (isAfter(now, testDate)) {
+    if (isAfter(now, testDate) || isEqual(now, testDate)) {
         return 'Live';
     }
     
@@ -102,15 +107,11 @@ export function formatDuration(minutes: number): string {
  * Parses time string (HH:MM) and returns hours and minutes
  */
 export function parseTimeString(timeString: string): { hours: number; minutes: number } | null {
-    try {
-        const [hours, minutes] = timeString.split(':').map(Number);
-        if (isNaN(hours) || isNaN(minutes)) {
-            return null;
-        }
-        return { hours, minutes };
-    } catch (e) {
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(timeString)) {
         return null;
     }
+    const [hours, minutes] = timeString.split(':').map(Number);
+    return { hours, minutes };
 }
 
 /**

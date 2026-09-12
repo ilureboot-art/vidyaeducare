@@ -4,10 +4,10 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar as CalendarIcon, FilePlus, Loader2, AlertCircle, RefreshCcw, Clock, Search, FilterX } from "lucide-react";
+import { Calendar as CalendarIcon, FilePlus, Loader2, AlertCircle, RefreshCcw, Clock, Search, FilterX, Edit } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format, addMinutes, isAfter, isBefore } from "date-fns";
+import { format } from "date-fns";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -23,11 +23,13 @@ import { Badge } from '@/components/ui/badge';
 import { type TestSet } from "@/lib/question-bank";
 import { type ScheduledTest } from "@/lib/test-schedule";
 import { type AcademicConfig, defaultAcademicConfig } from "@/lib/academic-config";
-import { collection, getDocs, doc, setDoc, getDoc, deleteDoc } from "firebase/firestore";
-import { useDb } from '@/firebase';
+import { collection, getDocs, doc, setDoc, getDoc, deleteDoc, updateDoc, serverTimestamp, Timestamp } from "firebase/firestore";
+import { useDb, useAuth } from '@/firebase';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
+import { EditScheduledTestDialog } from '@/components/admin/EditScheduledTestDialog';
+import { calculateTestStatus, combineDateAndTime, validateScheduleEdit } from '@/lib/test-schedule-utils';
 
 type TestStatus = 'Live' | 'Upcoming' | 'Practice Only';
 
@@ -36,6 +38,7 @@ type ScheduledTestWithStatus = ScheduledTest & { status: TestStatus };
 export default function TestSchedulePage() {
     const { toast } = useToast();
     const db = useDb();
+    const { user } = useAuth();
 
     const [allSchedules, setAllSchedules] = useState<ScheduledTestWithStatus[]>([]);
     const [testSets, setTestSets] = useState<TestSet[]>([]);
@@ -49,6 +52,8 @@ export default function TestSchedulePage() {
     const [time, setTime] = useState('10:00'); 
     const [duration, setDuration] = useState('30');
     const [selectedTestSetId, setSelectedTestSetId] = useState('');
+    const [editingSchedule, setEditingSchedule] = useState<ScheduledTestWithStatus | null>(null);
+    const [isEditSaving, setIsEditSaving] = useState(false);
 
     // Filter States
     const [searchTerm, setSearchTerm] = useState("");
@@ -97,22 +102,10 @@ export default function TestSchedulePage() {
                 setAcademicConfig(configSnap.data() as AcademicConfig);
             }
             
-            const now = new Date();
             const updatedSchedules = scheduleList
                 .sort((a,b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime())
                 .map(test => {
-                    const testDate = new Date(test.dateTime);
-                    const durationMins = test.duration || 30;
-                    const expiryDate = addMinutes(testDate, durationMins);
-                    
-                    let status: TestStatus = 'Upcoming';
-                    if (isAfter(now, expiryDate)) {
-                        status = 'Practice Only';
-                    } else if (isAfter(now, testDate)) {
-                        status = 'Live';
-                    }
-                    
-                    return { ...test, status };
+                    return { ...test, status: calculateTestStatus(test) };
                 });
 
             setAllSchedules(updatedSchedules);
@@ -129,6 +122,8 @@ export default function TestSchedulePage() {
     useEffect(() => {
         if(db) fetchPageData();
         setDate(new Date());
+        const requestedTestSetId = new URLSearchParams(window.location.search).get('testSetId');
+        if (requestedTestSetId) setSelectedTestSetId(requestedTestSetId);
     }, [db, fetchPageData]);
 
     const filteredSchedules = useMemo(() => {
@@ -166,9 +161,17 @@ export default function TestSchedulePage() {
              return;
         }
 
-        const [hours, minutes] = time.split(':').map(Number);
-        const combinedDateTime = new Date(date);
-        combinedDateTime.setHours(hours, minutes, 0, 0);
+        const combinedDateTime = combineDateAndTime(date, time);
+        const durationMinutes = Number(duration);
+        if (!combinedDateTime) {
+            toast({ variant: 'destructive', title: "Invalid Time", description: "Please enter a valid test time." });
+            return;
+        }
+        const validation = validateScheduleEdit(combinedDateTime, durationMinutes);
+        if (!validation.valid) {
+            toast({ variant: 'destructive', title: "Invalid Schedule", description: validation.error });
+            return;
+        }
 
         const newTestId = `SCHED-${Date.now()}`;
         const newTest: ScheduledTest = {
@@ -176,10 +179,12 @@ export default function TestSchedulePage() {
             testSetId: testSet.id,
             testSetName: testSet.name,
             dateTime: combinedDateTime.toISOString(),
+            startsAt: Timestamp.fromDate(combinedDateTime),
             board: testSet.board,
             standard: testSet.standard,
             subject: testSet.subject,
-            duration: parseInt(duration) || 30,
+            duration: durationMinutes,
+            createdAt: new Date().toISOString(),
         };
 
         const docRef = doc(db, "scheduledTests", newTestId);
@@ -203,6 +208,35 @@ export default function TestSchedulePage() {
                 } satisfies SecurityRuleContext);
                 errorEmitter.emit('permission-error', permissionError);
             });
+    };
+
+    const handleUpdateTest = async (changes: Pick<ScheduledTest, 'dateTime' | 'duration'>) => {
+        if (!db || !editingSchedule) return;
+        setIsEditSaving(true);
+        const docRef = doc(db, "scheduledTests", editingSchedule.id);
+        const updateData = {
+            ...changes,
+            startsAt: Timestamp.fromDate(new Date(changes.dateTime)),
+            updatedAt: serverTimestamp(),
+            lastModifiedBy: user?.uid || 'unknown-admin',
+        };
+        try {
+            await updateDoc(docRef, updateData);
+            await fetchPageData(true);
+            toast({ title: "Test Rescheduled", description: `Date, time and duration for "${editingSchedule.testSetName}" were updated.` });
+            setEditingSchedule(null);
+        } catch (e: any) {
+            if (e.code === 'permission-denied') {
+                errorEmitter.emit('permission-error', new FirestorePermissionError({
+                    path: docRef.path,
+                    operation: 'update',
+                    requestResourceData: updateData,
+                } satisfies SecurityRuleContext));
+            }
+            throw e;
+        } finally {
+            setIsEditSaving(false);
+        }
     };
 
     const handleDeleteTest = async (id: string) => {
@@ -406,7 +440,8 @@ export default function TestSchedulePage() {
                                             {test.status}
                                         </Badge>
                                     </TableCell>
-                                    <TableCell className="text-right">
+                                    <TableCell className="text-right space-x-1">
+                                        <Button variant="ghost" size="sm" onClick={() => setEditingSchedule(test)}><Edit className="mr-1 h-3.5 w-3.5"/>Edit</Button>
                                         <Button variant="ghost" size="sm" onClick={() => handleDeleteTest(test.id)} className="text-destructive hover:bg-destructive/10">Delete</Button>
                                     </TableCell>
                                 </TableRow>
@@ -421,6 +456,13 @@ export default function TestSchedulePage() {
                     </Table>
                 </CardContent>
             </Card>
+            <EditScheduledTestDialog
+                isOpen={Boolean(editingSchedule)}
+                test={editingSchedule}
+                onClose={() => setEditingSchedule(null)}
+                onSave={handleUpdateTest}
+                isSaving={isEditSaving}
+            />
         </div>
     );
 }

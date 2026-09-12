@@ -27,6 +27,7 @@ import { generateStudyNotes, type GenerateNotesOutput } from "@/ai/flows/generat
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
+import { addMinutes } from 'date-fns';
 
 type TestState = "loading" | "in_progress" | "completed" | "review";
 
@@ -61,9 +62,6 @@ function MockTestContent() {
 
         const studentId = searchParams.get('studentId');
         const testId = searchParams.get('testId');
-        const live = searchParams.get('isLive') === 'true';
-        setIsLiveTest(live);
-        
         if (!studentId || !testId) {
             toast({ variant: 'destructive', title: 'Error', description: 'Missing student or test ID.' });
             router.push('/profile');
@@ -155,6 +153,15 @@ function MockTestContent() {
 
                 if (scheduledTestDoc.exists()) {
                     const scheduledTestData = scheduledTestDoc.data() as ScheduledTest;
+                    const now = new Date();
+                    const startsAt = new Date(scheduledTestData.dateTime);
+                    const endsAt = addMinutes(startsAt, scheduledTestData.duration || 30);
+                    if (now < startsAt) {
+                        toast({ variant: 'destructive', title: 'Test Not Started', description: 'This test is upcoming. Please return when the scheduled session begins.' });
+                        router.push('/profile');
+                        return;
+                    }
+                    setIsLiveTest(now >= startsAt && now < endsAt);
                     setScheduledTest(scheduledTestData);
                     
                     const durationInSeconds = (scheduledTestData.duration || 30) * 60;

@@ -24,6 +24,20 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == uid;
     }
 
+    function ownsStudent(studentId) {
+      return signedIn() &&
+        get(/databases/$(database)/documents/students/$(studentId)).data.parentId == request.auth.uid;
+    }
+
+    function isScheduledTestLive(testId) {
+      let scheduledTest = get(/databases/$(database)/documents/scheduledTests/$(testId)).data;
+      return !('startsAt' in scheduledTest) ||
+        (scheduledTest.startsAt is timestamp &&
+          scheduledTest.duration is int &&
+          scheduledTest.startsAt <= request.time &&
+          request.time < scheduledTest.startsAt + duration.value(scheduledTest.duration * 60, 's'));
+    }
+
     // --- GLOBAL CONFIGURATIONS ---
     // Public for system consistency (Pricing, Bank Details, Academic Rules)
     match /configs/{document=**} {
@@ -99,12 +113,21 @@ service cloud.firestore {
     }
 
     match /testResults/{id} {
-      allow read, list, create: if signedIn();
+      allow read, list: if signedIn();
+      allow create: if signedIn() &&
+        ownsStudent(request.resource.data.studentId) &&
+        request.resource.data.testId is string &&
+        request.resource.data.isLive is bool &&
+        (!request.resource.data.isLive || isScheduledTestLive(request.resource.data.testId));
     }
 
     match /leaderboard/{id} {
       allow read, list: if true;
-      allow create: if signedIn();
+      allow create: if signedIn() &&
+        ownsStudent(request.resource.data.studentId) &&
+        request.resource.data.testId is string &&
+        isScheduledTestLive(request.resource.data.testId) &&
+        get(/databases/$(database)/documents/testResults/$(id)).data.isLive == true;
       allow update, delete: if isAdmin();
     }
 

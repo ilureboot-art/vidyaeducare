@@ -29,7 +29,7 @@ interface EditScheduledTestDialogProps {
   isOpen: boolean;
   test: ScheduledTest | null;
   onClose: () => void;
-  onSave: (updatedTest: ScheduledTest) => Promise<void>;
+  onSave: (changes: Pick<ScheduledTest, 'dateTime' | 'duration'>) => Promise<void>;
   isSaving?: boolean;
 }
 
@@ -64,9 +64,9 @@ export function EditScheduledTestDialog({
     }
 
     // Validate duration
-    const durationNum = parseInt(editDuration);
-    if (isNaN(durationNum)) {
-      setValidationError("Duration must be a valid number.");
+    const durationNum = Number(editDuration);
+    if (!Number.isInteger(durationNum)) {
+      setValidationError("Duration must be a whole number of minutes.");
       return;
     }
 
@@ -88,14 +88,12 @@ export function EditScheduledTestDialog({
     setIsInternalSaving(true);
 
     try {
-      const updatedTest: ScheduledTest = {
-        ...test,
+      const changes = {
         dateTime: updatedDateTime.toISOString(),
         duration: durationNum,
-        updatedAt: new Date().toISOString(),
       };
 
-      await onSave(updatedTest);
+      await onSave(changes);
       onClose();
     } catch (error) {
       setValidationError(
@@ -181,12 +179,7 @@ export function EditScheduledTestDialog({
                   selected={editDate} 
                   onSelect={setEditDate}
                   initialFocus
-                  disabled={(date) => {
-                    // Disable past dates
-                    const yesterday = new Date();
-                    yesterday.setDate(yesterday.getDate() - 1);
-                    return date < yesterday;
-                  }}
+                  disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                 />
               </PopoverContent>
             </Popover>
@@ -224,7 +217,7 @@ export function EditScheduledTestDialog({
                 className="font-mono"
               />
               <span className="text-sm text-muted-foreground whitespace-nowrap">
-                {editDuration ? `(${formatDuration(parseInt(editDuration))})` : ''}
+                {editDuration && Number.isInteger(Number(editDuration)) ? `(${formatDuration(Number(editDuration))})` : ''}
               </span>
             </div>
             <p className="text-xs text-muted-foreground">

@@ -12,7 +12,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Trash2, Edit, BookCopy, FilePlus, ScrollText, ArrowRight, Save, Loader2, Upload, Wand2, Download, Search, FilterX, AlertCircle, RefreshCcw } from "lucide-react";
+import { MoreHorizontal, Trash2, Edit, BookCopy, FilePlus, ScrollText, ArrowRight, Save, Loader2, Upload, Wand2, Download, Search, FilterX, AlertCircle, RefreshCcw, CalendarClock } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -38,6 +38,8 @@ import { generateQuestions, type GenerateQuestionsInput } from "@/ai/flows/gener
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
+import { useRouter } from 'next/navigation';
+import { query, where, writeBatch, serverTimestamp } from 'firebase/firestore';
 
 const initialQuestionState: Omit<Question, 'id'> = {
   text: { en: '', mr: '' },
@@ -71,6 +73,7 @@ const sanitizeData = (obj: any): any => {
 export default function TestSetManagementPage() {
   const { toast } = useToast();
   const db = useDb();
+  const router = useRouter();
   const [testSets, setTestSets] = useState<TestSet[]>([]);
   const [academicConfig, setAcademicConfig] = useState<AcademicConfig>(defaultAcademicConfig);
   const [isLoading, setIsLoading] = useState(true);
@@ -250,7 +253,26 @@ export default function TestSetManagementPage() {
     });
     
     setDoc(docRef, finalTestSetData)
-        .then(() => {
+        .then(async () => {
+            if (isEditing) {
+                const schedulesQuery = query(collection(db, 'scheduledTests'), where('testSetId', '==', docId));
+                const schedulesSnapshot = await getDocs(schedulesQuery);
+                const batches = [];
+                for (let offset = 0; offset < schedulesSnapshot.docs.length; offset += 450) {
+                    const batch = writeBatch(db);
+                    schedulesSnapshot.docs.slice(offset, offset + 450).forEach(scheduleDoc => {
+                        batch.update(scheduleDoc.ref, {
+                            testSetName: finalTestSetData.name,
+                            board: finalTestSetData.board,
+                            standard: finalTestSetData.standard,
+                            subject: finalTestSetData.subject,
+                            updatedAt: serverTimestamp(),
+                        });
+                    });
+                    batches.push(batch.commit());
+                }
+                await Promise.all(batches);
+            }
             fetchPageData(true);
             toast({ title: isEditing ? 'Test Set Updated!' : 'Test Set Created!', description: `"${finalTestSetData.name}" has been saved.` });
             setIsManualCreateOpen(false);
@@ -649,6 +671,9 @@ const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuItem onClick={() => handleOpenEditDialog(ts)}>
                             <Edit className="mr-2 h-4 w-4"/> View/Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => router.push(`/admin/test-schedule?testSetId=${encodeURIComponent(ts.id)}`)}>
+                            <CalendarClock className="mr-2 h-4 w-4"/> Schedule Test
                         </DropdownMenuItem>
                         <DropdownMenuItem className="text-red-600 focus:text-red-500 focus:bg-red-950/50" onClick={() => handleDelete(ts.id)}>
                             <Trash2 className="mr-2 h-4 w-4"/> Delete

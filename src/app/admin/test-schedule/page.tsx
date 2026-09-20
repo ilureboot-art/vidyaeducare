@@ -29,6 +29,9 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import { EditScheduledTestDialog } from '@/components/admin/EditScheduledTestDialog';
+import { BulkTestSchedule } from '@/components/admin/BulkTestSchedule';
+import { Checkbox } from '@/components/ui/checkbox';
+import { query, where, writeBatch } from 'firebase/firestore';
 import { calculateTestStatus, combineDateAndTime, validateScheduleEdit } from '@/lib/test-schedule-utils';
 
 type TestStatus = 'Live' | 'Upcoming' | 'Practice Only';
@@ -54,6 +57,7 @@ export default function TestSchedulePage() {
     const [selectedTestSetId, setSelectedTestSetId] = useState('');
     const [editingSchedule, setEditingSchedule] = useState<ScheduledTestWithStatus | null>(null);
     const [isEditSaving, setIsEditSaving] = useState(false);
+    const [selectedSchedules, setSelectedSchedules] = useState<string[]>([]);
 
     // Filter States
     const [searchTerm, setSearchTerm] = useState("");
@@ -173,7 +177,7 @@ export default function TestSchedulePage() {
             return;
         }
 
-        const newTestId = `SCHED-${Date.now()}`;
+        const newTestId = doc(collection(db, 'scheduledTests')).id;
         const newTest: ScheduledTest = {
             id: newTestId,
             testSetId: testSet.id,
@@ -239,24 +243,30 @@ export default function TestSchedulePage() {
         }
     };
 
-    const handleDeleteTest = async (id: string) => {
-        if (!db) return;
-        if (!confirm("Are you sure you want to remove this scheduled test?")) return;
-
-        const docRef = doc(db, "scheduledTests", id);
-        deleteDoc(docRef)
-            .then(() => {
-                fetchPageData(true);
-                toast({ title: "Test Deleted", description: "The scheduled test has been removed." });
-            })
-            .catch(async (e) => {
-                const permissionError = new FirestorePermissionError({
-                    path: docRef.path,
-                    operation: 'delete',
-                } satisfies SecurityRuleContext);
-                errorEmitter.emit('permission-error', permissionError);
-            });
-    }
+    const deleteSelectedSchedules = async (ids: string[]) => {
+        if (!db || !ids.length || !confirm(`Delete ${ids.length} selected scheduled sessions? Sessions with results will be kept.`)) return;
+        try {
+            const deletable: string[] = [];
+            const blocked: string[] = [];
+            for (const id of ids) {
+                const results = await getDocs(query(collection(db, 'testResults'), where('testId', '==', id)));
+                const leaderboard = await getDocs(query(collection(db, 'leaderboard'), where('testId', '==', id)));
+                if (results.empty && leaderboard.empty) deletable.push(id);
+                else blocked.push(id);
+            }
+            for (let offset = 0; offset < deletable.length; offset += 200) {
+                const batch = writeBatch(db);
+                deletable.slice(offset, offset + 200).forEach(id => batch.delete(doc(db, 'scheduledTests', id)));
+                await batch.commit();
+            }
+            setSelectedSchedules(blocked);
+            await fetchPageData(true);
+            toast({ title: `${deletable.length} sessions deleted`, description: `${blocked.length} kept because results exist.` });
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Bulk delete failed', description: error instanceof Error ? error.message : 'Refresh and try again.' });
+            await fetchPageData(true);
+        }
+    };
     
     if (isLoading) {
         return (
@@ -358,6 +368,8 @@ export default function TestSchedulePage() {
                 </CardContent>
             </Card>
 
+            {db && <Card><CardHeader><CardTitle>Bulk Schedule</CardTitle><CardDescription>Auto schedule existing MCQ sets, or download, fill and upload a CSV to schedule or reschedule sessions.</CardDescription></CardHeader><CardContent><BulkTestSchedule db={db} uid={user?.uid} sets={testSets} schedules={allSchedules} onComplete={() => fetchPageData(true)} /></CardContent></Card>}
+
             <Card>
                 <CardHeader>
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -365,9 +377,9 @@ export default function TestSchedulePage() {
                             <CardTitle>Upcoming & Past Sessions</CardTitle>
                             <CardDescription>Filter and search through the academic calendar.</CardDescription>
                         </div>
-                        <Button variant="ghost" size="sm" onClick={resetFilters} className="text-muted-foreground">
+                        <div className="flex gap-2"><Button variant="destructive" size="sm" disabled={!selectedSchedules.length} onClick={() => deleteSelectedSchedules(selectedSchedules)}>Delete Selected ({selectedSchedules.length})</Button><Button variant="ghost" size="sm" onClick={resetFilters} className="text-muted-foreground">
                             <FilterX className="mr-2 h-4 w-4"/> Clear All Filters
-                        </Button>
+                        </Button></div>
                     </div>
                     <div className="pt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
                         <div className="relative">
@@ -415,6 +427,7 @@ export default function TestSchedulePage() {
                     <Table>
                         <TableHeader>
                             <TableRow>
+                                <TableHead><Checkbox aria-label="Select displayed sessions" checked={filteredSchedules.length > 0 && filteredSchedules.every(test => selectedSchedules.includes(test.id))} onCheckedChange={checked => setSelectedSchedules(previous => checked ? [...new Set([...previous, ...filteredSchedules.map(test => test.id)])] : previous.filter(id => !filteredSchedules.some(test => test.id === id)))} /></TableHead>
                                 <TableHead>Date & Time</TableHead>
                                 <TableHead>Test Name</TableHead>
                                 <TableHead>Details</TableHead>
@@ -426,8 +439,9 @@ export default function TestSchedulePage() {
                         <TableBody>
                             {filteredSchedules.length > 0 ? filteredSchedules.map(test => (
                                 <TableRow key={test.id} className="even:bg-muted/40 transition-colors group">
+                                    <TableCell><Checkbox aria-label={`Select ${test.id}`} checked={selectedSchedules.includes(test.id)} onCheckedChange={checked => setSelectedSchedules(previous => checked ? [...previous, test.id] : previous.filter(id => id !== test.id))} /></TableCell>
                                     <TableCell>{format(new Date(test.dateTime), "PPP p")}</TableCell>
-                                    <TableCell className="font-medium">{test.testSetName}</TableCell>
+                                    <TableCell className="font-medium">{test.testSetName}<span className="block text-xs font-mono text-muted-foreground">Schedule ID: {test.id}</span></TableCell>
                                     <TableCell className="text-sm text-muted-foreground">{`${test.board} / ${test.standard} / ${test.subject}`}</TableCell>
                                     <TableCell>
                                         <div className="flex items-center gap-1.5 text-xs">
@@ -442,12 +456,12 @@ export default function TestSchedulePage() {
                                     </TableCell>
                                     <TableCell className="text-right space-x-1">
                                         <Button variant="ghost" size="sm" onClick={() => setEditingSchedule(test)}><Edit className="mr-1 h-3.5 w-3.5"/>Edit</Button>
-                                        <Button variant="ghost" size="sm" onClick={() => handleDeleteTest(test.id)} className="text-destructive hover:bg-destructive/10">Delete</Button>
+                                        <Button variant="ghost" size="sm" onClick={() => deleteSelectedSchedules([test.id])} className="text-destructive hover:bg-destructive/10">Delete</Button>
                                     </TableCell>
                                 </TableRow>
                             )) : (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
+                                    <TableCell colSpan={7} className="text-center h-24 text-muted-foreground">
                                         {allSchedules.length > 0 ? "No tests match your filters." : "No tests scheduled yet."}
                                     </TableCell>
                                 </TableRow>

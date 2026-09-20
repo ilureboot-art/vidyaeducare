@@ -40,6 +40,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import { useRouter } from 'next/navigation';
 import { query, where, writeBatch, serverTimestamp } from 'firebase/firestore';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const initialQuestionState: Omit<Question, 'id'> = {
   text: { en: '', mr: '' },
@@ -79,6 +80,7 @@ export default function TestSetManagementPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [selectedSets, setSelectedSets] = useState<string[]>([]);
   const [syncError, setSyncError] = useState<string | null>(null);
 
   const [isManualCreateOpen, setIsManualCreateOpen] = useState(false);
@@ -168,22 +170,29 @@ export default function TestSetManagementPage() {
     setIsManualCreateOpen(true);
   };
 
-  const handleDelete = async (testSetId: string) => {
-    if (!db) return;
-    const docRef = doc(db, "testSets", testSetId);
-    deleteDoc(docRef)
-        .then(() => {
-            fetchPageData(true);
-            toast({ title: "Test Set Deleted", description: "The test set has been removed from the bank."});
-        })
-        .catch(async (e) => {
-            const permissionError = new FirestorePermissionError({
-                path: docRef.path,
-                operation: 'delete',
-            } satisfies SecurityRuleContext);
-            errorEmitter.emit('permission-error', permissionError);
-        });
-  }
+  const deleteSets = async (ids: string[]) => {
+    if (!db || !ids.length || !confirm(`Delete ${ids.length} selected MCQ test sets? Sets with scheduled sessions will be kept.`)) return;
+    try {
+      const deletable: string[] = [];
+      const blocked: string[] = [];
+      for (const id of ids) {
+        const sessions = await getDocs(query(collection(db, 'scheduledTests'), where('testSetId', '==', id)));
+        if (!sessions.empty) blocked.push(id);
+        else deletable.push(id);
+      }
+      for (let offset = 0; offset < deletable.length; offset += 200) {
+        const batch = writeBatch(db);
+        deletable.slice(offset, offset + 200).forEach(id => batch.delete(doc(db, 'testSets', id)));
+        await batch.commit();
+      }
+      setSelectedSets(blocked);
+      await fetchPageData(true);
+      toast({ title: `${deletable.length} test sets deleted`, description: `${blocked.length} kept because they have scheduled sessions.` });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Bulk delete failed', description: error instanceof Error ? error.message : 'Refresh and try again.' });
+      await fetchPageData(true);
+    }
+  };
   
   const handleSetDetailChange = (field: keyof Omit<TestSet, 'id'|'questions'>, value: string) => {
       if (!editingTestSet) return;
@@ -243,7 +252,7 @@ export default function TestSetManagementPage() {
     }
     
     const isEditing = !editingTestSet.id.startsWith("NEW-");
-    const docId = isEditing ? editingTestSet.id : `SET-${Date.now()}`;
+    const docId = isEditing ? editingTestSet.id : doc(collection(db, 'testSets')).id;
     const docRef = doc(db, "testSets", docId);
 
     const finalTestSetData = sanitizeData({
@@ -428,6 +437,8 @@ const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
                 </CardDescription>
               </div>
               <div className="flex flex-wrap gap-2">
+                 <Button variant="destructive" disabled={!selectedSets.length} onClick={() => deleteSets(selectedSets)}>Delete Selected ({selectedSets.length})</Button>
+                 <Button variant="outline" disabled={!selectedSets.length} onClick={() => router.push(`/admin/test-schedule?testSetIds=${encodeURIComponent(selectedSets.join(','))}`)}>Bulk Schedule Selected ({selectedSets.length})</Button>
                  <Dialog open={isManualCreateOpen} onOpenChange={(isOpen) => {
                       if (!isOpen) resetManualForm();
                       setIsManualCreateOpen(isOpen);
@@ -643,6 +654,7 @@ const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead><Checkbox aria-label="Select displayed test sets" checked={filteredTestSets.length > 0 && filteredTestSets.every(ts => selectedSets.includes(ts.id))} onCheckedChange={checked => setSelectedSets(previous => checked ? [...new Set([...previous, ...filteredTestSets.map(ts => ts.id)])] : previous.filter(id => !filteredTestSets.some(ts => ts.id === id)))} /></TableHead>
                 <TableHead className="w-[40%]">Test Set Name</TableHead>
                 <TableHead>Subject</TableHead>
                 <TableHead>Standard</TableHead>
@@ -654,7 +666,8 @@ const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
             <TableBody>
               {filteredTestSets.length > 0 ? filteredTestSets.map((ts) => (
                 <TableRow key={ts.id} className="even:bg-muted/40 transition-colors group">
-                  <TableCell className="font-medium">{ts.name}</TableCell>
+                  <TableCell><Checkbox aria-label={`Select ${ts.id}`} checked={selectedSets.includes(ts.id)} onCheckedChange={checked => setSelectedSets(previous => checked ? [...previous, ts.id] : previous.filter(id => id !== ts.id))} /></TableCell>
+                  <TableCell className="font-medium">{ts.name}<span className="block text-xs text-muted-foreground font-mono">ID: {ts.id}</span></TableCell>
                   <TableCell>{ts.subject}</TableCell>
                   <TableCell>{ts.standard}</TableCell>
                   <TableCell>{ts.board}</TableCell>
@@ -675,7 +688,7 @@ const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
                         <DropdownMenuItem onClick={() => router.push(`/admin/test-schedule?testSetId=${encodeURIComponent(ts.id)}`)}>
                             <CalendarClock className="mr-2 h-4 w-4"/> Schedule Test
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="text-red-600 focus:text-red-500 focus:bg-red-950/50" onClick={() => handleDelete(ts.id)}>
+                        <DropdownMenuItem className="text-red-600 focus:text-red-500 focus:bg-red-950/50" onClick={() => deleteSets([ts.id])}>
                             <Trash2 className="mr-2 h-4 w-4"/> Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -684,7 +697,7 @@ const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
                 </TableRow>
               )) : (
                 <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground h-24">
+                    <TableCell colSpan={7} className="text-center text-muted-foreground h-24">
                       {searchTerm || boardFilter !== "all" ? "No matches found for your filters." : "No test sets uploaded yet."}
                     </TableCell>
                 </TableRow>

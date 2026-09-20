@@ -26,6 +26,11 @@ export default function StorytellerPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => { fetch("/api/storyteller/config").then(r => r.json()).then(d => { if (d.config) { setConfig(d.config); setForm((f:any) => ({ ...f, language: d.config.languages[0], duration: d.config.durations[0], voiceStyle: d.config.voiceStyles[0], music: d.config.musicCategories[0], template: d.config.templates[0], voice: d.config.voices[0]?.id || "" })); } }); }, []);
+  useEffect(() => {
+    if (config.demoEnabled && config.demoAssetPath && window.location.hash === "#storyteller-demo") {
+      document.getElementById("storyteller-demo")?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [config.demoEnabled, config.demoAssetPath]);
   useEffect(() => { if (!user) return; loadProjects(); const timer=setInterval(loadProjects,5000); return()=>clearInterval(timer); }, [user]);
 
   async function authorized(path: string, init?: RequestInit) {
@@ -53,7 +58,7 @@ export default function StorytellerPage() {
 
   return <main className="mx-auto max-w-6xl p-4 md:p-8 space-y-8">
     <section className="text-center space-y-3"><Badge>ALL USER REELS ARE PAID</Badge><h1 className="text-4xl md:text-6xl font-black text-primary"><Mic2 className="inline mr-3" />{config.productName}</h1><p className="text-xl text-muted-foreground">{config.tagline}</p><p className="font-black text-2xl">₹{config.reelPrice} / Reel</p>{config.enabled && <div className="flex justify-center"><PromotionShare title={`Vidya Educare – ${config.productName}`} description="Create your own AI voice reel. Login and payment are required before generation. View the current price and demo online." path="/storyteller" /></div>}</section>
-    {config.demoEnabled && config.demoAssetPath && <Card><CardHeader><CardTitle>{config.demoTitle}</CardTitle><CardDescription>{config.demoDescription}</CardDescription></CardHeader><CardContent><video className="w-full max-h-[70vh] rounded-xl bg-black" controls poster={config.demoThumbnail || undefined} src={config.demoAssetPath} /></CardContent></Card>}
+    {config.demoEnabled && config.demoAssetPath && <Card id="storyteller-demo"><CardHeader><CardTitle>{config.demoTitle}</CardTitle><CardDescription>{config.demoDescription}</CardDescription></CardHeader><CardContent className="space-y-4"><video className="w-full max-h-[70vh] rounded-xl bg-black" controls poster={config.demoThumbnail || undefined} src={config.demoAssetPath} /><PromotionShare title="Vidya Educare StoryTeller AI demo" description="Watch the free demo to see how AI voice reels work. Creating your own reel requires login and payment; check the current price online." path="/storyteller#storyteller-demo" /></CardContent></Card>}
     {!user ? <Card className="text-center"><CardHeader><CardTitle>Login to create your Reel</CardTitle><CardDescription>Watch the demo for free. Your own Reel requires wallet payment before generation.</CardDescription></CardHeader><CardContent><Button asChild size="lg"><Link href="/login?returnTo=/storyteller">Create Your Reel – ₹{config.reelPrice}</Link></Button></CardContent></Card> : <>
       <Card><CardHeader><CardTitle>Create Your AI Voice Reel</CardTitle><CardDescription>Configure first. No paid AI API is called until wallet payment succeeds.</CardDescription></CardHeader><CardContent className="space-y-5">
         <div className="grid md:grid-cols-2 gap-4"><Field label="Story title"><Input value={form.title} maxLength={120} onChange={e => setForm({...form,title:e.target.value})}/></Field><Field label="Language"><Picker value={form.language} values={config.languages} onChange={v=>setForm({...form,language:v})}/></Field></div>

@@ -29,6 +29,15 @@ export function PromotionShare({ title, description, path }: Props) {
     }
   }
 
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(url);
+      toast({ title: "Promotion link copied" });
+    } catch {
+      toast({ variant: "destructive", title: "Copy failed", description: "Please allow clipboard access and try again." });
+    }
+  }
+
   if (!url) return null;
 
   return (
@@ -45,6 +54,9 @@ export function PromotionShare({ title, description, path }: Props) {
       </Button>
       <Button size="sm" variant="outline" onClick={copyForInstagram} aria-label={`Copy ${title} caption for Instagram`}>
         Copy for Instagram
+      </Button>
+      <Button size="sm" variant="outline" onClick={copyLink} aria-label={`Copy ${title} link`}>
+        Copy link
       </Button>
     </div>
   );

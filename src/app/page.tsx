@@ -51,6 +51,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { PromotionShare } from "@/components/PromotionShare";
 
 const features = [
   {
@@ -86,7 +87,7 @@ export default function HomePage() {
     null,
   );
   const [storyteller, setStoryteller] = useState<any>({
-    enabled: true,
+    enabled: false,
     reelPrice: 19,
     tagline: "Turn Your Story into an AI Voice Reel",
     demoEnabled: false,
@@ -503,7 +504,7 @@ export default function HomePage() {
             </h2>
             <p className="text-primary-foreground/90 text-xl font-medium leading-relaxed">
               Experience the thrill of a real time-bound exam environment. Take
-              a 5-question quick test and see your instant global ranking.
+              a 5-question quick test and see your score instantly.
             </p>
             <div className="flex justify-center pt-4">
               <Button
@@ -526,9 +527,12 @@ export default function HomePage() {
             <div className="flex items-center justify-center gap-4 text-white/50 text-[10px] font-black uppercase tracking-widest pt-4">
               <span>• NO SIGNUP NEEDED</span>
               <span className="w-1 h-1 bg-white/20 rounded-full" />
-              <span>• REAL-TIME RESULTS</span>
+              <span>• INSTANT SCORE</span>
               <span className="w-1 h-1 bg-white/20 rounded-full" />
-              <span>• GLOBAL RANKING</span>
+              <span>• NO TRIAL REWARDS</span>
+            </div>
+            <div className="flex justify-center rounded-xl bg-white/90 p-3">
+              <PromotionShare title="Vidya Educare MockArena free practice demo" description="Try a 5-question timed MCQ test and see your score instantly. No signup needed. Trial scores do not qualify for rewards or live rankings." path="/trial-mock-test" />
             </div>
           </div>
         </section>
@@ -718,7 +722,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        {storyteller.enabled && (
+        {(storyteller.enabled || (storyteller.demoEnabled && storyteller.demoAssetPath)) && (
           <section className="rounded-[2rem] bg-gradient-to-br from-primary/10 via-background to-accent/10 border p-6 md:p-10 grid md:grid-cols-2 gap-8 items-center">
             <div className="space-y-4">
               <Badge>ALL USER-GENERATED REELS PAID</Badge>
@@ -732,19 +736,16 @@ export default function HomePage() {
               <p className="text-3xl font-black text-primary">
                 ₹{storyteller.reelPrice} / Reel
               </p>
+              {!storyteller.enabled && <p className="text-sm text-muted-foreground">Demo available to watch. Paid reel generation is currently unavailable.</p>}
               <div className="flex flex-wrap gap-3">
                 {storyteller.demoEnabled && storyteller.demoAssetPath && (
                   <Button variant="outline" asChild>
-                    <a
-                      href={storyteller.demoAssetPath}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
+                    <Link href="/storyteller#storyteller-demo">
                       <Play /> Watch Demo
-                    </a>
+                    </Link>
                   </Button>
                 )}
-                <Button asChild>
+                {storyteller.enabled && <Button asChild>
                   <Link
                     href={
                       user ? "/storyteller" : "/login?returnTo=/storyteller"
@@ -752,8 +753,11 @@ export default function HomePage() {
                   >
                     Create Your Reel – ₹{storyteller.reelPrice}
                   </Link>
-                </Button>
+                </Button>}
               </div>
+              {storyteller.demoEnabled && storyteller.demoAssetPath && (
+                <PromotionShare title="Vidya Educare StoryTeller AI demo" description="Watch the free demo to see how AI voice reels work. Creating your own reel requires login and payment; check the current price online." path="/storyteller#storyteller-demo" />
+              )}
             </div>
             <div className="rounded-2xl border bg-card p-6">
               <p className="font-black mb-3">PAY FIRST → GENERATE</p>

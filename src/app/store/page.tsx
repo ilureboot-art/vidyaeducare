@@ -311,6 +311,7 @@ function StorePageContent() {
                 'Authorization': `Bearer ${idToken}`
             },
             body: JSON.stringify({
+                purchaseRequestId: invoiceNum,
                 productId: item.name === 'AI Doubt Solver' ? 'ai_doubt' : (item.name === 'AI Notes Generator' ? 'ai_notes' : item.name),
                 productType: type,
                 referralCode: referralCode1.trim(),

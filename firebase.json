@@ -5,6 +5,7 @@
       "rules": "firestore.rules"
     }
   ],
+  "storage": { "rules": "storage.rules" },
   "apphosting": {
     "backendId": "studio",
     "rootDir": "./",

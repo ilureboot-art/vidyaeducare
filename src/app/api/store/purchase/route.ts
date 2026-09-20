@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminDb, adminAuth } from '@/firebase/admin-init';
 import { FieldValue } from 'firebase-admin/firestore';
 import { defaultStoreConfig, StoreConfig, MockTestPackage, ReferboltSubscription } from '@/lib/store-config';
+import { IbaRemunerationPolicy, getIndiaWeekRange } from '@/lib/iba-remuneration';
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,7 +25,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized: Invalid authentication' }, { status: 401 });
     }
 
-    const { productId, productType, referralCode, referralCode2 } = await request.json();
+    const { productId, productType, referralCode, referralCode2, purchaseRequestId } = await request.json();
+
+    if (purchaseRequestId && !/^[A-Za-z0-9_-]{8,100}$/.test(purchaseRequestId)) {
+      return NextResponse.json({ error: 'Invalid purchase request identifier.' }, { status: 400 });
+    }
 
     // Fetch Store Config from Firestore
     const storeConfigRef = adminDb.collection('configs').doc('store');
@@ -32,6 +37,20 @@ export async function POST(request: NextRequest) {
     const storeConfig: StoreConfig = storeConfigDoc.exists 
       ? (storeConfigDoc.data() as StoreConfig) 
       : defaultStoreConfig;
+
+    // A published policy activates the reviewed weekly-ledger workflow. With no
+    // applicable policy, the existing instant commission behaviour is preserved.
+    const purchaseTime = new Date();
+    const activePolicySnapshot = await adminDb.collection('ibaRemunerationPolicies')
+      .where('active', '==', true)
+      .where('status', '==', 'PUBLISHED')
+      .get();
+    const activePolicyDoc = activePolicySnapshot.docs
+      .filter(doc => new Date(String(doc.data().effectiveFrom || 'invalid')) <= purchaseTime)
+      .sort((a, b) => Number(b.data().version || 0) - Number(a.data().version || 0))[0];
+    const activePolicy = activePolicyDoc
+      ? ({ id: activePolicyDoc.id, ...activePolicyDoc.data() } as IbaRemunerationPolicy)
+      : null;
 
     let selectedProduct: MockTestPackage | ReferboltSubscription | null = null;
 
@@ -266,6 +285,9 @@ export async function POST(request: NextRequest) {
 
     await adminDb.runTransaction(async (transaction) => {
       // 1. All Reads First
+      const requestRef = purchaseRequestId ? adminDb.collection('purchaseRequests').doc(`${uid}_${purchaseRequestId}`) : null;
+      const requestDoc = requestRef ? await transaction.get(requestRef) : null;
+      if (requestDoc?.exists) throw new Error('This purchase request has already been processed. Refresh your transaction history before retrying.');
       const walletDoc = await transaction.get(studentWalletRef);
       if (!walletDoc.exists) {
         throw new Error('Wallet not found.');
@@ -306,7 +328,19 @@ export async function POST(request: NextRequest) {
 
       // Mark user as having purchased a mock test
       if (productType === 'mock') {
-        transaction.set(buyerUserRef, { purchasedMockTest: true }, { merge: true });
+        const mockItem = selectedProduct as MockTestPackage;
+        const subscriptionExpiresAt = new Date(purchaseTime);
+        subscriptionExpiresAt.setUTCMonth(subscriptionExpiresAt.getUTCMonth() + mockItem.months);
+        transaction.set(buyerUserRef, {
+          purchasedMockTest: true,
+          mockTestSubscription: {
+            productId: mockItem.months === 12 ? 'mock-arena-annual' : `mock-arena-${mockItem.months}-month`,
+            productName: mockItem.name,
+            purchasedAt: FieldValue.serverTimestamp(),
+            expiresAt: subscriptionExpiresAt,
+            status: 'ACTIVE',
+          },
+        }, { merge: true });
       }
 
       // Credit purchase revenue to Head Admin wallet
@@ -367,26 +401,25 @@ export async function POST(request: NextRequest) {
           if (ibaWalletDoc.exists) {
             const ibaCurrentBalance = ibaWalletDoc.data()?.balance || 0;
             const ibaData = ibaUserDoc?.data();
-            const isIbaPaid = ibaUserDoc && ibaUserDoc.exists && ibaData?.purchasedMockTest === true;
+            const isIbaPaid = Boolean(ibaUserDoc?.exists && ibaData?.purchasedMockTest === true);
             let rate = isIbaPaid ? paidCommissionRate : freeCommissionRate;
             let isCustomRate = false;
             if (ibaUserDoc && ibaUserDoc.exists && ibaData && typeof ibaData.commission_rate === 'number') {
               rate = ibaData.commission_rate;
               isCustomRate = true;
             }
-            const amountForIba = priceDetails.basePrice * (rate / 100) * splitFactor;
-            
-            transaction.update(ibaWalletRef, { balance: ibaCurrentBalance + amountForIba });
-            
-            const ibaTxRef = adminDb.collection('transactions').doc();
-            transaction.set(ibaTxRef, {
-              user: priceDetails.ibaUid,
-              amount: amountForIba,
-              date: FieldValue.serverTimestamp(),
-              description: `Commission from student purchase${isSplit ? " (50% Primary IBA Split)" : ""}${isCustomRate ? " [Custom rate: " + rate + "%]" : isIbaPaid ? " [Paid rate: " + paidCommissionRate + "%]" : " [Free rate: " + freeCommissionRate + "%]"}`,
-              status: 'Completed',
-              type: 'deposit'
-            });
+            if (activePolicy) {
+              createPolicySale(transaction, purchaseTxRef.id, priceDetails.ibaUid, 'PRIMARY', uid, selectedProduct.name, priceDetails.basePrice, priceDetails.finalPrice, splitFactor, isIbaPaid, activePolicy, purchaseTime);
+            } else {
+              const amountForIba = priceDetails.basePrice * (rate / 100) * splitFactor;
+              transaction.update(ibaWalletRef, { balance: ibaCurrentBalance + amountForIba });
+              const ibaTxRef = adminDb.collection('transactions').doc();
+              transaction.set(ibaTxRef, {
+                user: priceDetails.ibaUid, amount: amountForIba, date: FieldValue.serverTimestamp(),
+                description: `Commission from student purchase${isSplit ? " (50% Primary IBA Split)" : ""}${isCustomRate ? " [Custom rate: " + rate + "%]" : isIbaPaid ? " [Paid rate: " + paidCommissionRate + "%]" : " [Free rate: " + freeCommissionRate + "%]"}`,
+                status: 'Completed', type: 'deposit'
+              });
+            }
           }
         }
 
@@ -395,26 +428,25 @@ export async function POST(request: NextRequest) {
           if (ibaWalletDoc2.exists) {
             const ibaCurrentBalance2 = ibaWalletDoc2.data()?.balance || 0;
             const ibaData2 = ibaUserDoc2?.data();
-            const isIbaPaid2 = ibaUserDoc2 && ibaUserDoc2.exists && ibaData2?.purchasedMockTest === true;
+            const isIbaPaid2 = Boolean(ibaUserDoc2?.exists && ibaData2?.purchasedMockTest === true);
             let rate2 = isIbaPaid2 ? paidCommissionRate : freeCommissionRate;
             let isCustomRate2 = false;
             if (ibaUserDoc2 && ibaUserDoc2.exists && ibaData2 && typeof ibaData2.commission_rate === 'number') {
               rate2 = ibaData2.commission_rate;
               isCustomRate2 = true;
             }
-            const amountForIba2 = priceDetails.basePrice * (rate2 / 100) * splitFactor;
-            
-            transaction.update(ibaWalletRef2, { balance: ibaCurrentBalance2 + amountForIba2 });
-            
-            const ibaTxRef2 = adminDb.collection('transactions').doc();
-            transaction.set(ibaTxRef2, {
-              user: priceDetails.ibaUid2,
-              amount: amountForIba2,
-              date: FieldValue.serverTimestamp(),
-              description: `Commission from student purchase${isSplit ? " (50% Secondary IBA Split)" : ""}${isCustomRate2 ? " [Custom rate: " + rate2 + "%]" : isIbaPaid2 ? " [Paid rate: " + paidCommissionRate + "%]" : " [Free rate: " + freeCommissionRate + "%]"}`,
-              status: 'Completed',
-              type: 'deposit'
-            });
+            if (activePolicy) {
+              createPolicySale(transaction, purchaseTxRef.id, priceDetails.ibaUid2, 'SECONDARY', uid, selectedProduct.name, priceDetails.basePrice, priceDetails.finalPrice, splitFactor, isIbaPaid2, activePolicy, purchaseTime);
+            } else {
+              const amountForIba2 = priceDetails.basePrice * (rate2 / 100) * splitFactor;
+              transaction.update(ibaWalletRef2, { balance: ibaCurrentBalance2 + amountForIba2 });
+              const ibaTxRef2 = adminDb.collection('transactions').doc();
+              transaction.set(ibaTxRef2, {
+                user: priceDetails.ibaUid2, amount: amountForIba2, date: FieldValue.serverTimestamp(),
+                description: `Commission from student purchase${isSplit ? " (50% Secondary IBA Split)" : ""}${isCustomRate2 ? " [Custom rate: " + rate2 + "%]" : isIbaPaid2 ? " [Paid rate: " + paidCommissionRate + "%]" : " [Free rate: " + freeCommissionRate + "%]"}`,
+                status: 'Completed', type: 'deposit'
+              });
+            }
           }
         }
       }
@@ -513,6 +545,13 @@ export async function POST(request: NextRequest) {
           transaction.set(aiAccessRef, { notesGeneratorExpiresAt: newExpiry }, { merge: true });
         }
       }
+
+      if (requestRef) {
+        transaction.create(requestRef, {
+          uid, purchaseTransactionId: purchaseTxRef.id, invoiceNumber: invoiceNum,
+          createdAt: FieldValue.serverTimestamp(), status: 'COMPLETED'
+        });
+      }
     });
 
     return NextResponse.json({ 
@@ -524,4 +563,40 @@ export async function POST(request: NextRequest) {
     console.error('Purchase processing failed:', error);
     return NextResponse.json({ error: error.message || 'Purchase processing failed.' }, { status: 500 });
   }
+}
+
+function createPolicySale(
+  transaction: FirebaseFirestore.Transaction,
+  purchaseTransactionId: string,
+  ibaUid: string,
+  referralPosition: 'PRIMARY' | 'SECONDARY',
+  buyerUid: string,
+  productName: string,
+  baseAmount: number,
+  paidAmount: number,
+  splitFactor: number,
+  paidActive: boolean,
+  policy: IbaRemunerationPolicy,
+  soldAt: Date,
+) {
+  const week = getIndiaWeekRange(soldAt);
+  const eligible = !policy.paidActiveIbaRequired || paidActive;
+  const saleRef = adminDb.collection('ibaSales').doc(`${purchaseTransactionId}_${referralPosition.toLowerCase()}`);
+  transaction.create(saleRef, {
+    purchaseTransactionId, ibaUid, buyerUid, referralPosition, productName,
+    baseAmount, paidAmount, splitFactor, soldAt: FieldValue.serverTimestamp(),
+    weekStart: week.start, weekEndExclusive: week.endExclusive,
+    status: 'COMPLETED', duplicate: false, eligible,
+    ineligibilityReason: eligible ? null : 'PAID_ACTIVE_IBA_REQUIRED',
+    policyId: policy.id, policyVersion: policy.version,
+    policySnapshot: {
+      weeklySalesTarget: policy.weeklySalesTarget,
+      minimumAchievementPercentage: policy.minimumAchievementPercentage,
+      standardCommissionPercentage: policy.standardCommissionPercentage,
+      reducedCommissionPercentage: policy.reducedCommissionPercentage,
+      payoutFrequency: policy.payoutFrequency,
+    },
+    calculationStatus: 'PENDING_WEEKLY_REVIEW',
+    createdAt: FieldValue.serverTimestamp(),
+  });
 }

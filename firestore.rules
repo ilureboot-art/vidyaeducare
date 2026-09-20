@@ -50,7 +50,12 @@ service cloud.firestore {
       allow list: if isAdmin();
       allow get: if isOwner(uid) || isAdmin();
       allow create: if true;
-      allow update, delete: if isOwner(uid) || isAdmin();
+      allow update: if isAdmin() || (isOwner(uid) &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          'purchasedMockTest', 'commission_rate', 'accountStatus', 'subscriptionStatus',
+          'remunerationEligibilityStatus', 'managementApprovalStatus'
+        ]));
+      allow delete: if isAdmin();
     }
 
     match /aiAccess/{uid} {
@@ -147,8 +152,113 @@ service cloud.firestore {
     }
     
     match /clients/{id} {
-      allow read, list: if signedIn();
-      allow write: if true;
+      allow read, list: if isAdmin() || (signedIn() && resource.data.referrerId == request.auth.uid);
+      allow write: if isAdmin();
+    }
+
+    // Remuneration policy and financial source-of-truth records are written only
+    // through authenticated server APIs (Admin SDK bypasses client rules).
+    match /ibaRemunerationPolicies/{id} {
+      allow get: if isAdmin() || (resource.data.active == true && resource.data.status == 'PUBLISHED');
+      allow list: if isAdmin();
+      allow write: if false;
+    }
+
+    match /ibaPolicyHistory/{id} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /ibaSales/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.ibaUid == request.auth.uid);
+      allow write: if false;
+    }
+
+    match /ibaPerformance/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.ibaUid == request.auth.uid);
+      allow write: if false;
+    }
+
+    match /ibaEligibility/{uid} {
+      allow read: if isAdmin() || isOwner(uid);
+      allow write: if false;
+    }
+
+    match /ibaPayouts/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.ibaUid == request.auth.uid);
+      allow write: if false;
+    }
+
+    match /ibaPayoutHistory/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.ibaUid == request.auth.uid);
+      allow write: if false;
+    }
+
+    match /ibaFixedRemunerationClaims/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.ibaUid == request.auth.uid);
+      allow write: if false;
+    }
+
+    match /purchaseRequests/{id} {
+      allow read, write: if false;
+    }
+
+    // StoryTeller financial, entitlement, generation and audit records are
+    // server-authoritative. Users can only read their own projects/orders.
+    match /storytellerProjects/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid);
+      allow write: if false;
+    }
+    match /storytellerOrders/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid);
+      allow write: if false;
+    }
+    match /storytellerJobs/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid);
+      allow write: if false;
+    }
+    match /storytellerPurchaseRequests/{id} { allow read, write: if false; }
+    match /storytellerConfigHistory/{id} { allow read: if isAdmin(); allow write: if false; }
+
+    // Life & Relationship Consultancy: all mutations go through server APIs.
+    // Matching is also server mediated so protected profile fields are never
+    // downloaded and merely hidden by the UI.
+    match /consultancyProfileFields/{id} { allow read: if true; allow write: if false; }
+    match /matrimonialProfiles/{uid} { allow read: if isAdmin() || isOwner(uid); allow write: if false; }
+    match /consultancyVerifications/{uid} { allow read: if isAdmin() || isOwner(uid); allow write: if false; }
+    match /matrimonialInterests/{id} { allow read: if isAdmin() || (signedIn() && (resource.data.fromUserId == request.auth.uid || resource.data.toUserId == request.auth.uid)); allow write: if false; }
+    match /matrimonialMutualInterests/{id} { allow read: if isAdmin() || (signedIn() && request.auth.uid in resource.data.participantIds); allow write: if false; }
+    match /matrimonialMeetings/{id} { allow read: if isAdmin() || (signedIn() && request.auth.uid in resource.data.participantIds); allow write: if false; }
+    match /meetingParticipantPayments/{id} { allow read: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid); allow write: if false; }
+    match /marriageMatches/{id} { allow read: if isAdmin() || (signedIn() && request.auth.uid in resource.data.participantIds); allow write: if false; }
+    match /successFeeObligations/{id} { allow read: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid); allow write: if false; }
+    match /consultancyEntitlements/{id} { allow read: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid); allow write: if false; }
+    match /consultancyOrders/{id} { allow read: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid); allow write: if false; }
+    match /counsellingServices/{id} { allow read: if true; allow write: if false; }
+    match /counsellingAvailability/{id} { allow read: if true; allow write: if false; }
+    match /counsellingBookings/{id} { allow read: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid); allow write: if false; }
+    match /counsellingSlots/{id} { allow read: if isAdmin(); allow write: if false; }
+    match /counsellingDayCounters/{id} { allow read: if isAdmin(); allow write: if false; }
+    match /consultancyDocumentVersions/{id} { allow read: if isAdmin() || resource.data.status == 'PUBLISHED'; allow write: if false; }
+    match /consultancyAcceptances/{id} { allow read: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid); allow write: if false; }
+    match /consultancyComplaints/{id} { allow read: if isAdmin() || (signedIn() && resource.data.reportedBy == request.auth.uid); allow write: if false; }
+    match /consultancyAuditLogs/{id} { allow read: if isAdmin(); allow write: if false; }
+    match /consultancyConfigHistory/{id} { allow read: if isAdmin(); allow write: if false; }
+    match /consultancyPaymentRequests/{id} { allow read, write: if false; }
+    match /consultancyActionRequests/{id} { allow read, write: if false; }
+    match /ibaMatrimonialCommissionPolicies/{id} {
+      allow read: if isAdmin() || (resource.data.status == 'PUBLISHED' && resource.data.active == true);
+      allow write: if false;
+    }
+    match /ibaMatrimonialReferrals/{customerId} {
+      allow read: if isAdmin() || isOwner(customerId) ||
+        (signedIn() && resource.data.ibaUid == request.auth.uid);
+      allow write: if false;
+    }
+    match /ibaMatrimonialCommissions/{id} {
+      allow read: if isAdmin() ||
+        (signedIn() && resource.data.ibaUid == request.auth.uid);
+      allow write: if false;
     }
 
     // --- MASTER OVERRIDE ---

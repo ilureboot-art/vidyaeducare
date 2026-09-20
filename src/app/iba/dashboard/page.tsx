@@ -2,9 +2,30 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Share2, Copy, Users, IndianRupee, Goal, Percent, ShieldCheck, ChevronRight, BarChart3, HelpCircle, Zap, Loader2, AlertCircle } from "lucide-react";
+import {
+  Share2,
+  Copy,
+  Users,
+  IndianRupee,
+  Goal,
+  Percent,
+  ShieldCheck,
+  ChevronRight,
+  BarChart3,
+  HelpCircle,
+  Zap,
+  Loader2,
+  AlertCircle,
+} from "lucide-react";
 import {
   Table,
   TableBody,
@@ -15,7 +36,14 @@ import {
 } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
+import {
+  Bar,
+  BarChart,
+  ResponsiveContainer,
+  XAxis,
+  YAxis,
+  Tooltip,
+} from "recharts";
 import {
   Tooltip as ShadTooltip,
   TooltipContent,
@@ -23,42 +51,66 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useAuth, useDb } from "@/firebase";
-import { doc, getDoc, collection, query, where, getDocs, Timestamp, type Firestore, updateDoc } from "firebase/firestore";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+  doc,
+  getDoc,
+  collection,
+  query,
+  where,
+  getDocs,
+  Timestamp,
+  type Firestore,
+  updateDoc,
+} from "firebase/firestore";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { defaultStoreConfig, type StoreConfig } from "@/lib/store-config";
 import UserLayout from "@/components/UserLayout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
-
+import { errorEmitter } from "@/firebase/error-emitter";
+import {
+  FirestorePermissionError,
+  type SecurityRuleContext,
+} from "@/firebase/errors";
 
 const dailyTarget = 5;
 const monthlyTarget = 150;
 
 const bonusTiers = [
-    { target: 60, bonus: 1 },
-    { target: 70, bonus: 2 },
-    { target: 80, bonus: 3 },
-    { target: 90, bonus: 4 },
-    { target: 100, bonus: 5 },
+  { target: 60, bonus: 1 },
+  { target: 70, bonus: 2 },
+  { target: 80, bonus: 3 },
+  { target: 90, bonus: 4 },
+  { target: 100, bonus: 5 },
 ];
 
 const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-    }).format(amount);
+  return new Intl.NumberFormat("en-IN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
 };
 
 interface ReferralData {
-    totalCommission: number;
-    totalReferrals: number;
-    dailySales: number;
-    monthlySales: number;
-    salesHistory: { month: string; sales: number }[];
-    recentReferrals: { id: string; name: string; date: string; commission: number }[];
+  totalCommission: number;
+  totalReferrals: number;
+  dailySales: number;
+  monthlySales: number;
+  salesHistory: { month: string; sales: number }[];
+  recentReferrals: {
+    id: string;
+    name: string;
+    date: string;
+    commission: number;
+  }[];
 }
 
 function IBADashboardPageContent() {
@@ -73,127 +125,182 @@ function IBADashboardPageContent() {
   const [parentProfile, setParentProfile] = useState<any>(null);
   const [storeConfig, setStoreConfig] = useState<StoreConfig | null>(null);
   const [isUpgradePopupOpen, setIsUpgradePopupOpen] = useState(false);
-  
+  const [matrimonial, setMatrimonial] = useState<any>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    user
+      .getIdToken()
+      .then((token) =>
+        fetch("/api/iba/dashboard", {
+          headers: { authorization: `Bearer ${token}` },
+        }),
+      )
+      .then((response) => (response.ok ? response.json() : null))
+      .then((value) => setMatrimonial(value?.matrimonialReferrals || null))
+      .catch(() => undefined);
+  }, [user]);
+
   useEffect(() => {
     if (user && db) {
-        const fetchIbaData = async (db: Firestore) => {
-            setIsLoading(true);
-            setError(null);
-            try {
-                // Fetch parent user profile
-                const parentDocRef = doc(db, 'users', user.uid);
-                const parentSnap = await getDoc(parentDocRef);
-                let currentProfileData = parentSnap.exists() ? parentSnap.data() : null;
+      const fetchIbaData = async (db: Firestore) => {
+        setIsLoading(true);
+        setError(null);
+        try {
+          // Fetch parent user profile
+          const parentDocRef = doc(db, "users", user.uid);
+          const parentSnap = await getDoc(parentDocRef);
+          let currentProfileData = parentSnap.exists()
+            ? parentSnap.data()
+            : null;
 
-                // Load store config
-                const storeRef = doc(db, "configs", "store");
-                const storeSnap = await getDoc(storeRef).catch(() => null);
-                let currentStoreConfig = defaultStoreConfig;
-                if (storeSnap && storeSnap.exists()) {
-                    currentStoreConfig = storeSnap.data() as StoreConfig;
-                }
-                setStoreConfig(currentStoreConfig);
-                setIbaShareMessage(currentStoreConfig.ibaShareMessage || null);
+          // Load store config
+          const storeRef = doc(db, "configs", "store");
+          const storeSnap = await getDoc(storeRef).catch(() => null);
+          let currentStoreConfig = defaultStoreConfig;
+          if (storeSnap && storeSnap.exists()) {
+            currentStoreConfig = storeSnap.data() as StoreConfig;
+          }
+          setStoreConfig(currentStoreConfig);
+          setIbaShareMessage(currentStoreConfig.ibaShareMessage || null);
 
-                // Run migration check if not marked as paid mock test
-                let isPaid = currentProfileData?.purchasedMockTest === true;
-                if (!isPaid) {
-                    // Check activation codes
-                    const codesDocRef = doc(db, "activationCodes", user.uid);
-                    const codesSnap = await getDoc(codesDocRef).catch(() => null);
-                    const hasCodes = codesSnap && codesSnap.exists() && (codesSnap.data()?.codes?.length > 0);
+          // Run migration check if not marked as paid mock test
+          let isPaid = currentProfileData?.purchasedMockTest === true;
+          if (!isPaid) {
+            // Check activation codes
+            const codesDocRef = doc(db, "activationCodes", user.uid);
+            const codesSnap = await getDoc(codesDocRef).catch(() => null);
+            const hasCodes =
+              codesSnap &&
+              codesSnap.exists() &&
+              codesSnap.data()?.codes?.length > 0;
 
-                    // Check students
-                    let hasStudents = false;
-                    if (!hasCodes) {
-                        const studentsColRef = collection(db, "students");
-                        const qStudents = query(studentsColRef, where("parentId", "==", user.uid));
-                        const studentsSnap = await getDocs(qStudents).catch(() => null);
-                        if (studentsSnap && !studentsSnap.empty) {
-                            hasStudents = studentsSnap.docs.some(s => s.data()?.mockTestSubscribed === true);
-                        }
-                    }
-
-                    if (hasCodes || hasStudents) {
-                        await updateDoc(parentDocRef, { purchasedMockTest: true }).catch(() => null);
-                        isPaid = true;
-                        currentProfileData = { ...currentProfileData, purchasedMockTest: true };
-                    }
-                }
-                setParentProfile(currentProfileData);
-
-                // Show upgrade popup modal if Free IBA, no custom override active, and user hasn't dismissed it in session
-                if (!isPaid && currentProfileData?.commission_rate === undefined && !sessionStorage.getItem('iba_upgrade_popup_dismissed')) {
-                    setIsUpgradePopupOpen(true);
-                }
-
-                const userWalletDocRef = doc(db, 'wallets', user.uid);
-                const userWalletSnap = await getDoc(userWalletDocRef).catch(async (serverError) => {
-                    if (serverError.code === 'permission-denied') {
-                        const permissionError = new FirestorePermissionError({
-                            path: userWalletDocRef.path,
-                            operation: 'get',
-                        } satisfies SecurityRuleContext);
-                        errorEmitter.emit('permission-error', permissionError);
-                    }
-                    throw serverError;
-                });
-
-                if (userWalletSnap.exists()) {
-                    setIbaReferralCode(userWalletSnap.data().referralCode);
-                } else {
-                    setIbaReferralCode(`REF${user.uid.slice(0, 6).toUpperCase()}`);
-                }
-
-                const txColRef = collection(db, "transactions");
-                const q = query(txColRef, where("user", "==", user.uid), where("type", "in", ["Commission", "Referral Bonus"]));
-                const querySnapshot = await getDocs(q).catch(async (serverError) => {
-                    if (serverError.code === 'permission-denied') {
-                        const permissionError = new FirestorePermissionError({
-                            path: txColRef.path,
-                            operation: 'list',
-                        } satisfies SecurityRuleContext);
-                        errorEmitter.emit('permission-error', permissionError);
-                    }
-                    throw serverError;
-                });
-
-                const recentReferrals = querySnapshot.docs.map(d => {
-                    const data = d.data();
-                    const date = data.date instanceof Timestamp ? data.date.toDate().toISOString() : data.date;
-                    return {
-                        id: d.id,
-                        name: data.description.split(' from ')[1] || data.description.split(' for ')[1] || 'Commission Received',
-                        date: date,
-                        commission: data.amount,
-                    };
-                });
-
-                const totalCommission = recentReferrals.reduce((acc, ref) => acc + ref.commission, 0);
-
-                const salesHistory = [
-                    { month: 'Jan', sales: 0 }, { month: 'Feb', sales: 0 }, { month: 'Mar', sales: 0 }, 
-                    { month: 'Apr', sales: 0 }, { month: 'May', sales: 0 }, { month: 'Jun', sales: recentReferrals.length }
-                ];
-
-                setReferralData({
-                    totalCommission,
-                    totalReferrals: recentReferrals.length,
-                    dailySales: 0,
-                    monthlySales: recentReferrals.length,
-                    salesHistory,
-                    recentReferrals,
-                });
-            } catch (err: any) {
-                console.error("Error fetching IBA data:", err);
-                if (err.code !== 'permission-denied') {
-                    setError("Could not load IBA dashboard statistics. Please check your connection.");
-                }
-            } finally {
-                setIsLoading(false);
+            // Check students
+            let hasStudents = false;
+            if (!hasCodes) {
+              const studentsColRef = collection(db, "students");
+              const qStudents = query(
+                studentsColRef,
+                where("parentId", "==", user.uid),
+              );
+              const studentsSnap = await getDocs(qStudents).catch(() => null);
+              if (studentsSnap && !studentsSnap.empty) {
+                hasStudents = studentsSnap.docs.some(
+                  (s) => s.data()?.mockTestSubscribed === true,
+                );
+              }
             }
-        };
-        fetchIbaData(db);
+
+            if (hasCodes || hasStudents) {
+              await updateDoc(parentDocRef, { purchasedMockTest: true }).catch(
+                () => null,
+              );
+              isPaid = true;
+              currentProfileData = {
+                ...currentProfileData,
+                purchasedMockTest: true,
+              };
+            }
+          }
+          setParentProfile(currentProfileData);
+
+          // Show upgrade popup modal if Free IBA, no custom override active, and user hasn't dismissed it in session
+          if (
+            !isPaid &&
+            currentProfileData?.commission_rate === undefined &&
+            !sessionStorage.getItem("iba_upgrade_popup_dismissed")
+          ) {
+            setIsUpgradePopupOpen(true);
+          }
+
+          const userWalletDocRef = doc(db, "wallets", user.uid);
+          const userWalletSnap = await getDoc(userWalletDocRef).catch(
+            async (serverError) => {
+              if (serverError.code === "permission-denied") {
+                const permissionError = new FirestorePermissionError({
+                  path: userWalletDocRef.path,
+                  operation: "get",
+                } satisfies SecurityRuleContext);
+                errorEmitter.emit("permission-error", permissionError);
+              }
+              throw serverError;
+            },
+          );
+
+          if (userWalletSnap.exists()) {
+            setIbaReferralCode(userWalletSnap.data().referralCode);
+          } else {
+            setIbaReferralCode(`REF${user.uid.slice(0, 6).toUpperCase()}`);
+          }
+
+          const txColRef = collection(db, "transactions");
+          const q = query(
+            txColRef,
+            where("user", "==", user.uid),
+            where("type", "in", ["Commission", "Referral Bonus"]),
+          );
+          const querySnapshot = await getDocs(q).catch(async (serverError) => {
+            if (serverError.code === "permission-denied") {
+              const permissionError = new FirestorePermissionError({
+                path: txColRef.path,
+                operation: "list",
+              } satisfies SecurityRuleContext);
+              errorEmitter.emit("permission-error", permissionError);
+            }
+            throw serverError;
+          });
+
+          const recentReferrals = querySnapshot.docs.map((d) => {
+            const data = d.data();
+            const date =
+              data.date instanceof Timestamp
+                ? data.date.toDate().toISOString()
+                : data.date;
+            return {
+              id: d.id,
+              name:
+                data.description.split(" from ")[1] ||
+                data.description.split(" for ")[1] ||
+                "Commission Received",
+              date: date,
+              commission: data.amount,
+            };
+          });
+
+          const totalCommission = recentReferrals.reduce(
+            (acc, ref) => acc + ref.commission,
+            0,
+          );
+
+          const salesHistory = [
+            { month: "Jan", sales: 0 },
+            { month: "Feb", sales: 0 },
+            { month: "Mar", sales: 0 },
+            { month: "Apr", sales: 0 },
+            { month: "May", sales: 0 },
+            { month: "Jun", sales: recentReferrals.length },
+          ];
+
+          setReferralData({
+            totalCommission,
+            totalReferrals: recentReferrals.length,
+            dailySales: 0,
+            monthlySales: recentReferrals.length,
+            salesHistory,
+            recentReferrals,
+          });
+        } catch (err: any) {
+          console.error("Error fetching IBA data:", err);
+          if (err.code !== "permission-denied") {
+            setError(
+              "Could not load IBA dashboard statistics. Please check your connection.",
+            );
+          }
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      fetchIbaData(db);
     }
   }, [user, db]);
 
@@ -210,270 +317,487 @@ function IBADashboardPageContent() {
     if (!ibaReferralCode) return;
     const shareUrl = `${window.location.origin}/signup?ref=${ibaReferralCode}`;
     const faqUrl = `${window.location.origin}#faq`;
-    
-    const template = ibaShareMessage || defaultStoreConfig.ibaShareMessage || "";
+
+    const template =
+      ibaShareMessage || defaultStoreConfig.ibaShareMessage || "";
     const message = template
       .replace(/{share_url}/g, shareUrl)
       .replace(/{referral_code}/g, ibaReferralCode)
       .replace(/{faq_url}/g, faqUrl);
-    
+
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, '_blank');
+    window.open(whatsappUrl, "_blank");
   };
-  
+
   if (isLoading) {
     return (
       <div className="w-full max-w-4xl mx-auto flex flex-col items-center justify-center h-96 gap-4">
         <Loader2 className="animate-spin text-primary" size={32} />
-        <p className="text-sm text-muted-foreground animate-pulse font-medium">Syncing IBA Performance...</p>
+        <p className="text-sm text-muted-foreground animate-pulse font-medium">
+          Syncing IBA Performance...
+        </p>
       </div>
     );
   }
 
   if (error) {
-      return (
-          <div className="w-full max-w-4xl mx-auto p-4">
-              <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Synchronization Error</AlertTitle>
-                  <AlertDescription>{error}</AlertDescription>
-              </Alert>
-              <Button className="mt-4" onClick={() => window.location.reload()}>Retry Sync</Button>
-          </div>
-      )
+    return (
+      <div className="w-full max-w-4xl mx-auto p-4">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Synchronization Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+        <Button className="mt-4" onClick={() => window.location.reload()}>
+          Retry Sync
+        </Button>
+      </div>
+    );
   }
 
-  const dailyProgress = referralData!.dailySales > 0 ? (referralData!.dailySales / dailyTarget) * 100 : 0;
-  const monthlyProgress = referralData!.monthlySales > 0 ? (referralData!.monthlySales / monthlyTarget) * 100 : 0;
+  const dailyProgress =
+    referralData!.dailySales > 0
+      ? (referralData!.dailySales / dailyTarget) * 100
+      : 0;
+  const monthlyProgress =
+    referralData!.monthlySales > 0
+      ? (referralData!.monthlySales / monthlyTarget) * 100
+      : 0;
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-                <h1 className="text-3xl font-bold flex items-center gap-2"><ShieldCheck/> IBA Dashboard</h1>
-                <p className="text-muted-foreground">Your hub for tracking referrals, sales, and commissions.</p>
-            </div>
-            {parentProfile && (
-                parentProfile.commission_rate !== undefined ? (
-                    <Badge className="bg-primary text-white font-bold uppercase text-[10px] tracking-wider px-3 py-1.5 border-none h-fit w-fit">CUSTOM COMMISSION PROFILE ACTIVE</Badge>
-                ) : parentProfile.purchasedMockTest === true ? (
-                    <Badge className="bg-green-500 text-white font-bold uppercase text-[10px] tracking-wider px-3 py-1.5 border-none h-fit w-fit">PAID IBA ACTIVE</Badge>
-                ) : (
-                    <Badge variant="outline" className="text-amber-600 border-amber-500/30 bg-amber-500/5 font-bold uppercase text-[10px] tracking-wider px-3 py-1.5 h-fit w-fit">FREE IBA PLAN</Badge>
-                )
-            )}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold flex items-center gap-2">
+            <ShieldCheck /> IBA Dashboard
+          </h1>
+          <p className="text-muted-foreground">
+            Your hub for tracking referrals, sales, and commissions.
+          </p>
         </div>
+        {parentProfile &&
+          (parentProfile.commission_rate !== undefined ? (
+            <Badge className="bg-primary text-white font-bold uppercase text-[10px] tracking-wider px-3 py-1.5 border-none h-fit w-fit">
+              CUSTOM COMMISSION PROFILE ACTIVE
+            </Badge>
+          ) : parentProfile.purchasedMockTest === true ? (
+            <Badge className="bg-green-500 text-white font-bold uppercase text-[10px] tracking-wider px-3 py-1.5 border-none h-fit w-fit">
+              PAID IBA ACTIVE
+            </Badge>
+          ) : (
+            <Badge
+              variant="outline"
+              className="text-amber-600 border-amber-500/30 bg-amber-500/5 font-bold uppercase text-[10px] tracking-wider px-3 py-1.5 h-fit w-fit"
+            >
+              FREE IBA PLAN
+            </Badge>
+          ))}
+      </div>
 
-        {parentProfile && parentProfile.commission_rate === undefined && parentProfile.purchasedMockTest !== true && (
-            <Alert className="bg-amber-500/10 border-amber-500/30 text-amber-800 dark:text-amber-300">
-                <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-                <AlertTitle className="font-bold flex items-center gap-2 text-amber-700 dark:text-amber-200">Free IBA Commission Plan</AlertTitle>
-                <AlertDescription className="text-sm mt-1 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <span>You are currently earning 5% commission. Upgrade to Paid IBA status to double your commission rate to 10%!</span>
-                    <Button asChild size="sm" className="font-bold bg-amber-600 hover:bg-amber-700 text-white shrink-0 self-start sm:self-auto shadow-md">
-                        <Link href="/profile">Purchase Mock Test Package</Link>
-                    </Button>
-                </AlertDescription>
-            </Alert>
+      {parentProfile &&
+        parentProfile.commission_rate === undefined &&
+        parentProfile.purchasedMockTest !== true && (
+          <Alert className="bg-amber-500/10 border-amber-500/30 text-amber-800 dark:text-amber-300">
+            <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+            <AlertTitle className="font-bold flex items-center gap-2 text-amber-700 dark:text-amber-200">
+              Free IBA Commission Plan
+            </AlertTitle>
+            <AlertDescription className="text-sm mt-1 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <span>
+                You are currently earning 5% commission. Upgrade to Paid IBA
+                status to double your commission rate to 10%!
+              </span>
+              <Button
+                asChild
+                size="sm"
+                className="font-bold bg-amber-600 hover:bg-amber-700 text-white shrink-0 self-start sm:self-auto shadow-md"
+              >
+                <Link href="/profile">Purchase Mock Test Package</Link>
+              </Button>
+            </AlertDescription>
+          </Alert>
         )}
-          
-          <div className="text-center p-4 bg-muted rounded-lg border">
-            <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Your Unique IBA Code</h3>
-            <div className="flex items-center gap-2 mt-2">
-              <p className="text-2xl font-mono p-3 bg-background rounded-md w-full max-w-xs text-center tracking-widest border border-dashed">{ibaReferralCode}</p>
+
+      <div className="text-center p-4 bg-muted rounded-lg border">
+        <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
+          Your Unique IBA Code
+        </h3>
+        <div className="flex items-center gap-2 mt-2">
+          <p className="text-2xl font-mono p-3 bg-background rounded-md w-full max-w-xs text-center tracking-widest border border-dashed">
+            {ibaReferralCode}
+          </p>
+        </div>
+      </div>
+      <div className="flex flex-col sm:flex-row items-center gap-4">
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={handleCopyToClipboard}
+        >
+          <Copy className="mr-2 h-4 w-4" /> Copy Code
+        </Button>
+        <Button className="w-full" onClick={handleShare}>
+          <Share2 className="mr-2 h-4 w-4" /> Share & Promote
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 text-center">
+        <Card className="bg-primary/[0.02]">
+          <CardHeader className="py-4">
+            <CardTitle className="text-xl md:text-2xl flex items-center justify-center gap-2 text-primary">
+              <IndianRupee size={20} />
+              {formatCurrency(referralData?.totalCommission || 0)}
+            </CardTitle>
+            <CardDescription className="text-[10px] font-bold uppercase">
+              Total Commission
+            </CardDescription>
+          </CardHeader>
+        </Card>
+        <Card className="bg-primary/[0.02]">
+          <CardHeader className="py-4">
+            <CardTitle className="text-xl md:text-2xl flex items-center justify-center gap-2">
+              <Users size={20} />
+              {referralData?.totalReferrals}
+            </CardTitle>
+            <CardDescription className="text-[10px] font-bold uppercase">
+              Total Referrals
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+
+      {matrimonial && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Matrimonial Referrals</CardTitle>
+            <CardDescription>
+              Referral-only earnings. Customer contact, verification and
+              counselling information are never shown here.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
+              <Metric
+                label="Referred Customers"
+                value={matrimonial.totalCustomers}
+              />
+              <Metric
+                label="Paid Meetings"
+                value={matrimonial.qualifyingMeetings}
+              />
+              <Metric
+                label="Marriage Fixed"
+                value={matrimonial.marriageFixedCount}
+              />
+              <Metric
+                label="Paid Commission"
+                value={`₹${formatCurrency(matrimonial.paidCommission)}`}
+              />
             </div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Event</TableHead>
+                  <TableHead>Commission</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(matrimonial.history || []).map((row: any) => (
+                  <TableRow key={row.id}>
+                    <TableCell>
+                      {row.date
+                        ? new Date(row.date).toLocaleDateString("en-IN")
+                        : "—"}
+                    </TableCell>
+                    <TableCell>{row.customerReference}</TableCell>
+                    <TableCell>{row.event}</TableCell>
+                    <TableCell>
+                      ₹{formatCurrency(row.commissionAmount)}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{row.status}</Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <BarChart3 size={18} /> Sales Analytics
+          </CardTitle>
+          <CardDescription>
+            Visualizing your recent performance.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="h-[300px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={referralData!.salesHistory}>
+              <XAxis
+                dataKey="month"
+                fontSize={12}
+                tickLine={false}
+                axisLine={false}
+              />
+              <YAxis fontSize={12} tickLine={false} axisLine={false} />
+              <Tooltip
+                contentStyle={{
+                  background: "hsl(var(--background))",
+                  border: "1px solid hsl(var(--border))",
+                  borderRadius: "var(--radius)",
+                }}
+              />
+              <Bar
+                dataKey="sales"
+                name="Referrals"
+                fill="hsl(var(--primary))"
+                radius={[4, 4, 0, 0]}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Percent size={18} /> Commission Structure
+          </CardTitle>
+          {parentProfile?.commission_rate !== undefined && (
+            <Badge className="bg-primary text-white border-none font-bold uppercase text-[9px] tracking-wider px-2 py-0.5">
+              CUSTOM COMMISSION PROFILE ACTIVE
+            </Badge>
+          )}
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="p-4 bg-muted/50 rounded-lg flex justify-between items-center border">
+            <div>
+              <h4 className="font-bold">MockArena Subscriptions</h4>
+              <p className="text-xs text-muted-foreground">
+                Your Active Commission Rate
+              </p>
+            </div>
+            <p className="text-2xl font-black text-primary animate-pulse">
+              {parentProfile?.commission_rate !== undefined
+                ? `${parentProfile.commission_rate}%`
+                : parentProfile?.purchasedMockTest === true
+                  ? `${storeConfig?.ibaCommissionRate ?? 10}%`
+                  : `${storeConfig?.freeIbaCommissionRate ?? 5}%`}
+            </p>
           </div>
-           <div className="flex flex-col sm:flex-row items-center gap-4">
-              <Button variant="outline" className="w-full" onClick={handleCopyToClipboard}><Copy className="mr-2 h-4 w-4" /> Copy Code</Button>
-              <Button className="w-full" onClick={handleShare}><Share2 className="mr-2 h-4 w-4" /> Share & Promote</Button>
+          {parentProfile?.commission_rate === undefined &&
+            parentProfile?.purchasedMockTest !== true && (
+              <div className="p-3 bg-amber-500/5 border border-amber-500/20 rounded-lg flex items-center justify-between gap-3 text-sm">
+                <span className="text-muted-foreground font-medium">
+                  Upgrade to Paid IBA to increase commission rate to 10%.
+                </span>
+                <Button
+                  asChild
+                  size="sm"
+                  variant="link"
+                  className="font-black text-amber-600 hover:text-amber-700 h-auto p-0 flex items-center gap-1"
+                >
+                  <Link href="/profile">
+                    Upgrade now <ChevronRight size={14} />
+                  </Link>
+                </Button>
+              </div>
+            )}
+          <div className="p-4 bg-primary/10 rounded-lg border border-primary/20 flex justify-between items-center">
+            <div>
+              <h4 className="font-bold flex items-center gap-2">
+                <Zap className="text-primary" size={14} /> ReferBolt Bonus
+              </h4>
+              <p className="text-xs text-muted-foreground">
+                Extra commission for ReferBolt subscribers.
+              </p>
             </div>
-            
-            <div className="grid grid-cols-2 gap-4 text-center">
-                <Card className="bg-primary/[0.02]">
-                    <CardHeader className="py-4">
-                        <CardTitle className="text-xl md:text-2xl flex items-center justify-center gap-2 text-primary"><IndianRupee size={20}/>{formatCurrency(referralData?.totalCommission || 0)}</CardTitle>
-                        <CardDescription className="text-[10px] font-bold uppercase">Total Commission</CardDescription>
-                    </CardHeader>
-                </Card>
-                <Card className="bg-primary/[0.02]">
-                    <CardHeader className="py-4">
-                        <CardTitle className="text-xl md:text-2xl flex items-center justify-center gap-2"><Users size={20}/>{referralData?.totalReferrals}</CardTitle>
-                        <CardDescription className="text-[10px] font-bold uppercase">Total Referrals</CardDescription>
-                    </CardHeader>
-                </Card>
+            <Button
+              asChild
+              size="sm"
+              variant="secondary"
+              className="font-bold text-[10px]"
+            >
+              <Link href="/referbolt">VIEW BONUS</Link>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Dialog
+        open={isUpgradePopupOpen}
+        onOpenChange={(open) => {
+          setIsUpgradePopupOpen(open);
+          if (!open) {
+            sessionStorage.setItem("iba_upgrade_popup_dismissed", "true");
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md border-primary/20 bg-background">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black text-primary flex items-center gap-2">
+              <Zap className="text-yellow-500 fill-yellow-500/20" /> Double Your
+              Commissions!
+            </DialogTitle>
+            <DialogDescription className="text-base pt-2 text-foreground/80 leading-relaxed">
+              You are currently on the{" "}
+              <strong className="text-amber-600">Free IBA Plan</strong> earning{" "}
+              <strong className="text-lg text-primary">
+                {storeConfig?.freeIbaCommissionRate ?? 5}%
+              </strong>{" "}
+              commission on student mock test purchases.
+              <br />
+              <br />
+              Purchase any <strong>Mock Arena package</strong> from your profile
+              workspace to instantly upgrade to{" "}
+              <strong className="text-green-600">Paid IBA status</strong> and
+              earn{" "}
+              <strong className="text-lg text-green-600">
+                {storeConfig?.ibaCommissionRate ?? 10}%
+              </strong>{" "}
+              commissions on all sales!
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex sm:justify-between items-center gap-3 pt-4 border-t mt-4">
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setIsUpgradePopupOpen(false);
+                sessionStorage.setItem("iba_upgrade_popup_dismissed", "true");
+              }}
+              className="font-semibold text-muted-foreground hover:text-foreground"
+            >
+              Dismiss
+            </Button>
+            <Button
+              asChild
+              className="font-black bg-primary text-white shadow-lg shadow-primary/10"
+            >
+              <Link
+                href="/profile"
+                onClick={() => setIsUpgradePopupOpen(false)}
+              >
+                Upgrade Workspace
+              </Link>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold flex items-center gap-2">
+            <Goal size={18} /> Target Progress
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-1">
+            <div className="flex justify-between text-xs font-bold uppercase text-muted-foreground">
+              <span>Daily Target</span>
+              <span>
+                {referralData!.dailySales} / {dailyTarget}
+              </span>
             </div>
+            <Progress value={dailyProgress} className="h-2" />
+          </div>
+          <div className="space-y-1">
+            <div className="flex justify-between text-xs font-bold uppercase text-muted-foreground">
+              <span>Monthly Target</span>
+              <span>
+                {referralData!.monthlySales} / {monthlyTarget}
+              </span>
+            </div>
+            <Progress value={monthlyProgress} className="h-2" />
+          </div>
+        </CardContent>
+      </Card>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-lg"><BarChart3 size={18}/> Sales Analytics</CardTitle>
-                    <CardDescription>Visualizing your recent performance.</CardDescription>
-                </CardHeader>
-                <CardContent className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={referralData!.salesHistory}>
-                            <XAxis dataKey="month" fontSize={12} tickLine={false} axisLine={false}/>
-                            <YAxis fontSize={12} tickLine={false} axisLine={false} />
-                            <Tooltip
-                              contentStyle={{
-                                background: "hsl(var(--background))",
-                                border: "1px solid hsl(var(--border))",
-                                borderRadius: "var(--radius)",
-                              }}
-                            />
-                            <Bar dataKey="sales" name="Referrals" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                        </BarChart>
-                    </ResponsiveContainer>
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="flex items-center gap-2 text-lg"><Percent size={18}/> Commission Structure</CardTitle>
-                    {parentProfile?.commission_rate !== undefined && (
-                        <Badge className="bg-primary text-white border-none font-bold uppercase text-[9px] tracking-wider px-2 py-0.5">
-                            CUSTOM COMMISSION PROFILE ACTIVE
-                        </Badge>
-                    )}
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="p-4 bg-muted/50 rounded-lg flex justify-between items-center border">
-                        <div>
-                            <h4 className="font-bold">MockArena Subscriptions</h4>
-                            <p className="text-xs text-muted-foreground">Your Active Commission Rate</p>
-                        </div>
-                        <p className="text-2xl font-black text-primary animate-pulse">
-                            {parentProfile?.commission_rate !== undefined
-                                ? `${parentProfile.commission_rate}%`
-                                : parentProfile?.purchasedMockTest === true 
-                                    ? `${storeConfig?.ibaCommissionRate ?? 10}%` 
-                                    : `${storeConfig?.freeIbaCommissionRate ?? 5}%`
-                            }
-                        </p>
-                    </div>
-                    {parentProfile?.commission_rate === undefined && parentProfile?.purchasedMockTest !== true && (
-                        <div className="p-3 bg-amber-500/5 border border-amber-500/20 rounded-lg flex items-center justify-between gap-3 text-sm">
-                            <span className="text-muted-foreground font-medium">Upgrade to Paid IBA to increase commission rate to 10%.</span>
-                            <Button asChild size="sm" variant="link" className="font-black text-amber-600 hover:text-amber-700 h-auto p-0 flex items-center gap-1">
-                                <Link href="/profile">Upgrade now <ChevronRight size={14}/></Link>
-                            </Button>
-                        </div>
-                    )}
-                     <div className="p-4 bg-primary/10 rounded-lg border border-primary/20 flex justify-between items-center">
-                        <div>
-                            <h4 className="font-bold flex items-center gap-2"><Zap className="text-primary" size={14}/> ReferBolt Bonus</h4>
-                            <p className="text-xs text-muted-foreground">Extra commission for ReferBolt subscribers.</p>
-                        </div>
-                        <Button asChild size="sm" variant="secondary" className="font-bold text-[10px]">
-                            <Link href="/referbolt">VIEW BONUS</Link>
-                        </Button>
-                    </div>
-                </CardContent>
-            </Card>
-
-            <Dialog open={isUpgradePopupOpen} onOpenChange={(open) => {
-                setIsUpgradePopupOpen(open);
-                if (!open) {
-                    sessionStorage.setItem('iba_upgrade_popup_dismissed', 'true');
-                }
-            }}>
-                <DialogContent className="sm:max-w-md border-primary/20 bg-background">
-                    <DialogHeader>
-                        <DialogTitle className="text-2xl font-black text-primary flex items-center gap-2">
-                            <Zap className="text-yellow-500 fill-yellow-500/20" /> Double Your Commissions!
-                        </DialogTitle>
-                        <DialogDescription className="text-base pt-2 text-foreground/80 leading-relaxed">
-                            You are currently on the <strong className="text-amber-600">Free IBA Plan</strong> earning <strong className="text-lg text-primary">{storeConfig?.freeIbaCommissionRate ?? 5}%</strong> commission on student mock test purchases.
-                            <br/><br/>
-                            Purchase any <strong>Mock Arena package</strong> from your profile workspace to instantly upgrade to <strong className="text-green-600">Paid IBA status</strong> and earn <strong className="text-lg text-green-600">{storeConfig?.ibaCommissionRate ?? 10}%</strong> commissions on all sales!
-                        </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter className="flex sm:justify-between items-center gap-3 pt-4 border-t mt-4">
-                        <Button 
-                          variant="ghost" 
-                          onClick={() => {
-                            setIsUpgradePopupOpen(false);
-                            sessionStorage.setItem('iba_upgrade_popup_dismissed', 'true');
-                          }}
-                          className="font-semibold text-muted-foreground hover:text-foreground"
-                        >
-                            Dismiss
-                        </Button>
-                        <Button asChild className="font-black bg-primary text-white shadow-lg shadow-primary/10">
-                            <Link href="/profile" onClick={() => setIsUpgradePopupOpen(false)}>Upgrade Workspace</Link>
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-lg font-semibold flex items-center gap-2"><Goal size={18}/> Target Progress</CardTitle>
-                </CardHeader>
-              <CardContent className="space-y-4">
-                 <div className="space-y-1">
-                    <div className="flex justify-between text-xs font-bold uppercase text-muted-foreground">
-                      <span>Daily Target</span>
-                      <span>{referralData!.dailySales} / {dailyTarget}</span>
-                    </div>
-                    <Progress value={dailyProgress} className="h-2" />
-                 </div>
-                 <div className="space-y-1">
-                    <div className="flex justify-between text-xs font-bold uppercase text-muted-foreground">
-                      <span>Monthly Target</span>
-                      <span>{referralData!.monthlySales} / {monthlyTarget}</span>
-                    </div>
-                    <Progress value={monthlyProgress} className="h-2" />
-                 </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-lg font-semibold">Recent Transactions</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Source</TableHead>
-                                <TableHead>Date</TableHead>
-                                <TableHead className="text-right">Commission</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {referralData!.recentReferrals.length > 0 ? referralData!.recentReferrals.map((ref) => (
-                                <TableRow key={ref.id} className="even:bg-muted/40 transition-colors hover:bg-muted/50 transition-colors">
-                                    <TableCell className="font-medium text-sm">{ref.name}</TableCell>
-                                    <TableCell className="text-xs">{new Date(ref.date).toLocaleDateString()}</TableCell>
-                                    <TableCell className="text-right text-green-600 font-bold text-sm">+ ₹{formatCurrency(ref.commission)}</TableCell>
-                                </TableRow>
-                            )) : (
-                                <TableRow>
-                                    <TableCell colSpan={3} className="text-center text-muted-foreground h-24 text-xs font-medium">No recent referral commissions found.</TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-                <CardFooter>
-                     <Button variant="ghost" className="w-full text-xs text-muted-foreground" asChild>
-                        <Link href="/refer/students">View Full Client List <ChevronRight className="ml-1 h-3 w-3"/></Link>
-                    </Button>
-                </CardFooter>
-            </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold">
+            Recent Transactions
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Source</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead className="text-right">Commission</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {referralData!.recentReferrals.length > 0 ? (
+                referralData!.recentReferrals.map((ref) => (
+                  <TableRow
+                    key={ref.id}
+                    className="even:bg-muted/40 transition-colors hover:bg-muted/50 transition-colors"
+                  >
+                    <TableCell className="font-medium text-sm">
+                      {ref.name}
+                    </TableCell>
+                    <TableCell className="text-xs">
+                      {new Date(ref.date).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="text-right text-green-600 font-bold text-sm">
+                      + ₹{formatCurrency(ref.commission)}
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={3}
+                    className="text-center text-muted-foreground h-24 text-xs font-medium"
+                  >
+                    No recent referral commissions found.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+        <CardFooter>
+          <Button
+            variant="ghost"
+            className="w-full text-xs text-muted-foreground"
+            asChild
+          >
+            <Link href="/refer/students">
+              View Full Client List <ChevronRight className="ml-1 h-3 w-3" />
+            </Link>
+          </Button>
+        </CardFooter>
+      </Card>
     </div>
   );
 }
 
+function Metric({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="rounded-lg border bg-muted/30 p-3">
+      <p className="text-lg font-bold">{value}</p>
+      <p className="text-[10px] uppercase text-muted-foreground">{label}</p>
+    </div>
+  );
+}
 
 export default function IBADashboardPage() {
   return (
-      <ProtectedRoute>
-          <UserLayout>
-              <TooltipProvider>
-                  <IBADashboardPageContent />
-              </TooltipProvider>
-          </UserLayout>
-      </ProtectedRoute>
-  )
+    <ProtectedRoute>
+      <UserLayout>
+        <TooltipProvider>
+          <IBADashboardPageContent />
+        </TooltipProvider>
+      </UserLayout>
+    </ProtectedRoute>
+  );
 }

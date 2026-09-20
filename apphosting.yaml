@@ -12,3 +12,7 @@ runConfig:
 env:
   - variable: GEMINI_API_KEY
     secret: GEMINI_API_KEY
+  - variable: STORYTELLER_RENDERER_URL
+    secret: STORYTELLER_RENDERER_URL
+  - variable: STORYTELLER_RENDERER_SECRET
+    secret: STORYTELLER_RENDERER_SECRET

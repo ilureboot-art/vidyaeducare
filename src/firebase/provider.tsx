@@ -154,7 +154,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     const { user, isAdmin } = authState;
     const cleanPath = pathname === '/' ? '/' : pathname.replace(/\/$/, '');
     
-    const isPublicRoute = ['/', '/how-to-play', '/admin/setup', '/check-head-admin', '/forgot-password', '/ai-tutor', '/ai-notes', '/trial-mock-test'].includes(cleanPath);
+    const isPublicRoute = ['/', '/how-to-play', '/admin/setup', '/check-head-admin', '/forgot-password', '/ai-tutor', '/ai-notes', '/trial-mock-test', '/storyteller'].includes(cleanPath);
     const isAuthRoute = ['/login', '/signup', '/admin/login'].includes(cleanPath);
     const isAdminArea = cleanPath.startsWith('/admin');
     
@@ -166,7 +166,11 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
           targetPath = '/admin/analytics';
         }
       } else {
-        if (isAdminArea || isAuthRoute || cleanPath === '/') {
+        if (isAuthRoute) {
+          const requested = typeof window !== 'undefined' ? sessionStorage.getItem('postLoginPath') : null;
+          targetPath = requested?.startsWith('/') && !requested.startsWith('//') ? requested : '/profile';
+          if (typeof window !== 'undefined') sessionStorage.removeItem('postLoginPath');
+        } else if (isAdminArea || cleanPath === '/') {
           if (!isPublicRoute) targetPath = '/profile';
         }
       }
@@ -185,7 +189,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   }, [authState, pathname, router, services]);
 
   const cleanPath = pathname === '/' ? '/' : pathname.replace(/\/$/, '');
-  const isPublicRoute = ['/', '/how-to-play', '/admin/setup', '/check-head-admin', '/forgot-password', '/ai-tutor', '/ai-notes', '/trial-mock-test', '/signup', '/login', '/admin/login'].includes(cleanPath);
+  const isPublicRoute = ['/', '/how-to-play', '/admin/setup', '/check-head-admin', '/forgot-password', '/ai-tutor', '/ai-notes', '/trial-mock-test', '/storyteller', '/signup', '/login', '/admin/login'].includes(cleanPath);
   
   // NO SPINNER for public or auth routes!
   const shouldShowLoading = !isPublicRoute && (authState.loading || (!authState.isResolved && authState.user));

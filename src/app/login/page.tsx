@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +23,10 @@ export default function LoginPage() {
   const { toast } = useToast();
   const authService = useAuthService();
   const { loading: authLoading } = useAuth();
+  useEffect(() => {
+    const returnTo = new URLSearchParams(window.location.search).get("returnTo");
+    if (returnTo?.startsWith("/") && !returnTo.startsWith("//")) sessionStorage.setItem("postLoginPath", returnTo);
+  }, []);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

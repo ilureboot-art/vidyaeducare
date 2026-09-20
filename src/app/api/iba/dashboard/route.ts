@@ -116,6 +116,7 @@ export async function GET(request: NextRequest) {
         trainingCompleted: now >= training.endExclusive,
         trainingAchievementPercentage: trainingAchievement,
         managementStatus: eligibility.managementStatus,
+        policyActive: eligibility.policyActive === true && Boolean(policyDoc),
       },
       policy,
     );
@@ -136,6 +137,7 @@ export async function GET(request: NextRequest) {
           trainingCompleted: now >= training.endExclusive,
           status,
           managementStatus: eligibility.managementStatus || "PENDING",
+          // policyActive is an admin-only decision; never overwrite it on dashboard reads.
           policyId: policy.id || null,
           policyVersion: policy.version,
           updatedAt: Timestamp.now(),
@@ -162,6 +164,7 @@ export async function GET(request: NextRequest) {
       policy: policyDoc ? { ...policy, id: policyDoc.id } : null,
       status,
       paidActive,
+      policyActive: eligibility.policyActive === true && Boolean(policyDoc),
       subscriptionActive,
       training: {
         start: training.start,

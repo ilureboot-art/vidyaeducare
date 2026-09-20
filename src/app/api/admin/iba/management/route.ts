@@ -5,6 +5,7 @@ import {
   calculateAchievement,
   calculateCommission,
   commissionRateForAchievement,
+  getTrainingPeriod,
   IbaRemunerationPolicy,
 } from "@/lib/iba-remuneration";
 import { RequestAuthError, verifyRequester } from "@/lib/server-auth";
@@ -96,6 +97,60 @@ export async function POST(request: NextRequest) {
   try {
     const admin = await verifyRequester(request, true);
     const body = await request.json();
+    if (body.action === "SET_POLICY_ACTIVE") {
+      if (typeof body.ibaUid !== "string" || !body.ibaUid || typeof body.active !== "boolean")
+        return NextResponse.json({ error: "Valid IBA and activation state are required." }, { status: 400 });
+      const ref = adminDb.collection("ibaEligibility").doc(body.ibaUid);
+      const now = new Date();
+      const [old, userDoc, publishedPolicies] = await Promise.all([
+        ref.get(), adminDb.collection("users").doc(body.ibaUid).get(),
+        adminDb.collection("ibaRemunerationPolicies").where("active", "==", true).where("status", "==", "PUBLISHED").get(),
+      ]);
+      if (!userDoc.exists) return NextResponse.json({ error: "IBA user not found." }, { status: 404 });
+      const policyDoc = publishedPolicies.docs
+        .filter((doc) => new Date(String(doc.data().effectiveFrom || "invalid")) <= now)
+        .sort((a, b) => Number(b.data().version || 0) - Number(a.data().version || 0))[0];
+      if (body.active) {
+        if (!policyDoc) return NextResponse.json({ error: "Publish an effective remuneration policy first." }, { status: 409 });
+        const policy = policyDoc.data() as IbaRemunerationPolicy;
+        const user = userDoc.data()!;
+        const record = old.data() ?? {};
+        const expiry = toDate(user.mockTestSubscription?.expiresAt);
+        const subscriptionActive = user.mockTestSubscription
+          ? user.mockTestSubscription.status === "ACTIVE" && user.mockTestSubscription.productId === policy.requiredProductId && Boolean(expiry && expiry > now)
+          : user.purchasedMockTest === true;
+        const joined = toDate(record.trainingStartDate) || toDate(user.joinDate) || toDate(user.createdAt);
+        if (!joined) return NextResponse.json({ error: "IBA joining/training date is missing." }, { status: 409 });
+        const training = getTrainingPeriod(joined, policy.trainingPeriodMonths);
+        const saleDocs = await adminDb.collection("ibaSales").where("ibaUid", "==", body.ibaUid).get();
+        const validSales = saleDocs.docs.filter((doc) => {
+          const sale = doc.data(); const soldAt = toDate(sale.soldAt);
+          return soldAt && soldAt >= training.start && soldAt < training.endExclusive && sale.status === "COMPLETED" && sale.eligible === true && sale.duplicate !== true;
+        }).length;
+        if (record.managementStatus !== "APPROVED" || user.purchasedMockTest !== true || !subscriptionActive || ["SUSPENDED", "INACTIVE"].includes(user.accountStatus) || now < training.endExclusive || calculateAchievement(validSales, policy.monthlyTrainingTarget) < policy.minimumAchievementPercentage) {
+          return NextResponse.json({ error: "Management approval, completed training, target achievement, active account and annual subscription are required." }, { status: 409 });
+        }
+      }
+      const previous = old.data()?.policyActive === true;
+      if (previous === body.active) return NextResponse.json({ success: true });
+      const batch = adminDb.batch();
+      batch.set(ref, {
+        policyActive: body.active, status: body.active ? "APPROVED" : "ELIGIBLE_PENDING_APPROVAL",
+        policyActivationRemarks: String(body.remarks || "").slice(0, 1000),
+        policyActivatedBy: admin.uid, policyActivatedAt: FieldValue.serverTimestamp(),
+        policyId: body.active ? policyDoc?.id : old.data()?.policyId || null,
+        policyVersion: body.active ? policyDoc?.data()?.version : old.data()?.policyVersion || null,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+      batch.create(adminDb.collection("ibaPayoutHistory").doc(), {
+        ibaUid: body.ibaUid, recordType: "POLICY_ACTIVATION", previousValue: previous,
+        newValue: body.active, remarks: String(body.remarks || "").slice(0, 1000),
+        changedBy: admin.uid, changedAt: FieldValue.serverTimestamp(),
+        policyId: policyDoc?.id || null, policyVersion: policyDoc?.data()?.version || null,
+      });
+      await batch.commit();
+      return NextResponse.json({ success: true });
+    }
     if (body.action === "SET_ELIGIBILITY") {
       if (
         !body.ibaUid ||
@@ -133,7 +188,8 @@ export async function POST(request: NextRequest) {
       batch.set(
         ref,
         {
-          status: body.status,
+          status: body.status === "APPROVED" && old.data()?.policyActive !== true ? "ELIGIBLE_PENDING_APPROVAL" : body.status,
+          ...(body.status === "SUSPENDED" || body.status === "NOT_ELIGIBLE" ? { policyActive: false } : {}),
           managementStatus:
             body.status === "APPROVED"
               ? "APPROVED"
@@ -288,13 +344,22 @@ export async function POST(request: NextRequest) {
         adminDb.collection("ibaEligibility").doc(body.ibaUid).get(),
       ]);
       if (fixed > 0) {
-        if (eligibilityDocument.data()?.status !== "APPROVED")
+        if (eligibilityDocument.data()?.status !== "APPROVED" || eligibilityDocument.data()?.policyActive !== true)
           return NextResponse.json(
             {
               error: "Fixed Monthly Remuneration requires management approval.",
             },
             { status: 403 },
           );
+        const activatedAt = toDate(eligibilityDocument.data()?.policyActivatedAt);
+        if (!activatedAt || activatedAt >= end)
+          return NextResponse.json({ error: "The IBA policy was not active during this payout period." }, { status: 403 });
+        const ibaUser = await adminDb.collection("users").doc(body.ibaUid).get();
+        const ibaAccount = ibaUser.data() ?? {};
+        const expiry = toDate(ibaAccount.mockTestSubscription?.expiresAt);
+        if (ibaAccount.purchasedMockTest !== true || ["SUSPENDED", "INACTIVE"].includes(ibaAccount.accountStatus) ||
+          (ibaAccount.mockTestSubscription && (ibaAccount.mockTestSubscription.status !== "ACTIVE" || ibaAccount.mockTestSubscription.productId !== policyDocument.data()?.requiredProductId || !expiry || expiry <= new Date())))
+          return NextResponse.json({ error: "The IBA subscription and account must still be active." }, { status: 403 });
         const approvedMaximum = Number(
           policyDocument.data()?.fixedMonthlyRemuneration || 0,
         );

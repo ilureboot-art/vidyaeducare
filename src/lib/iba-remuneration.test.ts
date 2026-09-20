@@ -51,7 +51,9 @@ describe("IBA remuneration calculations", () => {
   it("requires management approval after numerical eligibility", () => {
     const base = { paidActive: true, subscriptionActive: true, accountActive: true, trainingCompleted: true, trainingAchievementPercentage: 80 };
     expect(determinePreliminaryEligibility(base, policy)).toBe("ELIGIBLE_PENDING_APPROVAL");
-    expect(determinePreliminaryEligibility({ ...base, managementStatus: "APPROVED" }, policy)).toBe("APPROVED");
+    expect(determinePreliminaryEligibility({ ...base, managementStatus: "APPROVED" }, policy)).toBe("ELIGIBLE_PENDING_APPROVAL");
+    expect(determinePreliminaryEligibility({ ...base, managementStatus: "APPROVED", policyActive: true }, policy)).toBe("APPROVED");
+    expect(determinePreliminaryEligibility({ ...base, managementStatus: "APPROVED", policyActive: true, subscriptionActive: false }, policy)).toBe("NOT_ELIGIBLE");
     expect(determinePreliminaryEligibility({ ...base, subscriptionActive: false }, policy)).toBe("NOT_ELIGIBLE");
     expect(determinePreliminaryEligibility({ ...base, managementStatus: "SUSPENDED" }, policy)).toBe("SUSPENDED");
   });

@@ -163,13 +163,14 @@ export function determinePreliminaryEligibility(input: {
   trainingCompleted: boolean;
   trainingAchievementPercentage: number;
   managementStatus?: "PENDING" | "APPROVED" | "REJECTED" | "SUSPENDED";
+  policyActive?: boolean;
 }, policy: IbaRemunerationPolicy): IbaEligibilityStatus {
   if (input.managementStatus === "SUSPENDED" || !input.accountActive) return "SUSPENDED";
   if (!input.trainingCompleted) return "TRAINING";
   if ((policy.paidActiveIbaRequired && !input.paidActive) || !input.subscriptionActive || input.trainingAchievementPercentage < policy.minimumAchievementPercentage) return "NOT_ELIGIBLE";
-  if (input.managementStatus === "APPROVED") return "APPROVED";
+  if (input.managementStatus === "APPROVED") return input.policyActive === true ? "APPROVED" : "ELIGIBLE_PENDING_APPROVAL";
   if (input.managementStatus === "REJECTED") return "NOT_ELIGIBLE";
-  return policy.managementApprovalRequired ? "ELIGIBLE_PENDING_APPROVAL" : "APPROVED";
+  return "ELIGIBLE_PENDING_APPROVAL";
 }
 
 export function resolveEffectivePolicy(policies: IbaRemunerationPolicy[], at: Date): IbaRemunerationPolicy | null {

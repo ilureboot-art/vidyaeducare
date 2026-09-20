@@ -1,6 +1,6 @@
 # StoryTeller AI deployment
 
-StoryTeller is intentionally disabled at the generation boundary until its Cloud Run renderer URL and shared secret are configured. Deploy the renderer before enabling purchases in Admin.
+StoryTeller defaults to disabled until its Cloud Run renderer URL and shared secret are configured. Deploy the renderer before enabling purchases in Admin.
 
 ## Required APIs
 
@@ -35,6 +35,10 @@ firebase apphosting:secrets:set STORYTELLER_RENDERER_URL
 firebase apphosting:secrets:set STORYTELLER_RENDERER_SECRET
 firebase deploy --only firestore:rules,storage --project YOUR_FIREBASE_PROJECT_ID
 ```
+
+After setting both App Hosting secrets, bind `STORYTELLER_RENDERER_URL` and
+`STORYTELLER_RENDERER_SECRET` in `apphosting.yaml` and deploy a new rollout.
+Do not bind absent secrets in the initial application rollout.
 
 Configure the same `STORYTELLER_RENDERER_SECRET` on Cloud Run and App Hosting. Configure `STORYTELLER_RENDERER_URL` with the Cloud Run service URL. Grant the App Hosting runtime service account `roles/run.invoker`; the application sends a Google-signed ID token with every dispatch.
 

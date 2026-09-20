@@ -35,7 +35,7 @@ export interface StorytellerConfig {
 }
 
 export const defaultStorytellerConfig: StorytellerConfig = {
-  enabled: true,
+  enabled: false,
   loginRequired: true,
   productName: "StoryTeller AI",
   tagline: "Turn Your Story into an AI Voice Reel",

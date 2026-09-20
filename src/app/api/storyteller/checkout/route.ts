@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { adminDb } from "@/firebase/admin-init";
 import { RequestAuthError, verifyRequester } from "@/lib/server-auth";
-import { defaultStorytellerConfig, STORYTELLER_CONFIG_ID, StorytellerConfig, StorytellerInput, validateStorytellerInput } from "@/lib/storyteller";
+import { defaultStorytellerConfig, SANJAY_CUSTOM_VOICE_ID, STORYTELLER_CONFIG_ID, StorytellerConfig, StorytellerInput, validateStorytellerInput } from "@/lib/storyteller";
 import { dispatchStorytellerRenderer } from "@/lib/storyteller-renderer";
 
 export async function POST(request: NextRequest) {
@@ -19,6 +19,9 @@ export async function POST(request: NextRequest) {
     const input: StorytellerInput = { title: body.title, story: body.story, language: body.language, voice: body.voice, voiceStyle: body.voiceStyle, duration: autoDuration && config.allowAutoDuration ? config.maxDuration : Number(body.duration), music: body.music, template: body.template };
     const errors = validateStorytellerInput(input, config);
     if (errors.length) return NextResponse.json({ error: errors.join(" ") }, { status: 400 });
+    if (input.voice === SANJAY_CUSTOM_VOICE_ID && process.env.STORYTELLER_CUSTOM_VOICE_READY !== "true") {
+      return NextResponse.json({ error: "Sanjay custom voice is not ready for this language. No payment was deducted." }, { status: 503 });
+    }
 
     const requestRef = adminDb.collection("storytellerPurchaseRequests").doc(`${user.uid}_${body.idempotencyKey}`);
     const adminUid = await resolveHeadAdminUid();

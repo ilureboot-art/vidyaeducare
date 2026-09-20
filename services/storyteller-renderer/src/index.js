@@ -12,6 +12,9 @@ admin.initializeApp({ storageBucket: process.env.FIREBASE_STORAGE_BUCKET });
 const db = getFirestore(admin.app(), process.env.FIRESTORE_DATABASE || "vidyaeducaredatabase");
 const bucket = admin.storage().bucket();
 const tts = new textToSpeech.TextToSpeechClient();
+const customTts = new textToSpeech.v1beta1.TextToSpeechClient();
+const SANJAY_VOICE_ID = "SANJAY_VOICE";
+const CUSTOM_VOICE_KEYS = {Marathi:"STORYTELLER_CUSTOM_VOICE_MR_IN",Hindi:"STORYTELLER_CUSTOM_VOICE_HI_IN",English:"STORYTELLER_CUSTOM_VOICE_EN_IN"};
 const tasks = new CloudTasksClient();
 const app = express(); app.use(express.json({ limit: "1mb" }));
 
@@ -44,9 +47,14 @@ async function render(projectId) {
     await ref.set({generationStage:"PREPARING_STORY"},{merge:true});
     const script=await processStory(project.story,project.language,project.voiceStyle,project.duration);
     await ref.set({generationStage:"SCRIPT_READY"},{merge:true});
-    const audio=path.join(temp,"voice.mp3"), subtitles=path.join(temp,"subtitles.srt"), output=path.join(temp,"reel.mp4"), musicFile=path.join(temp,"music.mp3");
+    const isCustom=project.voice===SANJAY_VOICE_ID;
+    const audio=path.join(temp,isCustom?"voice.wav":"voice.mp3"), subtitles=path.join(temp,"subtitles.srt"), output=path.join(temp,"reel.mp4"), musicFile=path.join(temp,"music.mp3");
     const languageCode={Marathi:"mr-IN",Hindi:"hi-IN",English:"en-IN"}[project.language]||"en-IN";
-    const [voice]=await tts.synthesizeSpeech({input:{text:script},voice:{languageCode,name:project.voice||undefined},audioConfig:{audioEncoding:"MP3",speakingRate:1}});
+    const cloningKey=isCustom&&process.env[CUSTOM_VOICE_KEYS[project.language]];
+    if(isCustom&&!cloningKey)throw new Error("Custom voice is not provisioned for the selected language");
+    const [voice]=isCustom
+      ? await customTts.synthesizeSpeech({input:{text:script},voice:{languageCode,voiceClone:{voiceCloningKey:cloningKey}},audioConfig:{audioEncoding:"LINEAR16",sampleRateHertz:24000}})
+      : await tts.synthesizeSpeech({input:{text:script},voice:{languageCode,name:project.voice||undefined},audioConfig:{audioEncoding:"MP3",speakingRate:1}});
     await fs.writeFile(audio,voice.audioContent);
     await ref.set({generationStage:"VOICE_READY"},{merge:true});
     await fs.writeFile(subtitles,buildSrt(script,project.duration));

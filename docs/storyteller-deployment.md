@@ -52,3 +52,19 @@ Configure the same `STORYTELLER_RENDERER_SECRET` on Cloud Run and App Hosting. C
 6. Enable StoryTeller in Admin only after the end-to-end test passes.
 
 Rollback: disable StoryTeller in Admin immediately. This blocks new checkouts without changing or deleting paid orders. Keep the renderer available until existing paid jobs are completed or refunded.
+
+## Sanjay custom narration voice (optional)
+
+The attached `sanjay voice.mp3` is a private 15-second reference recording. Do not commit this recording, a voice-cloning key, or consent recordings to the public repository or demo assets. The stock Google Text-to-Speech voice cannot copy a person's voice from this file.
+
+Chirp 3 Instant Custom Voice requires Google allow-list access and **separate** reference and prescribed consent recordings for each target locale (`mr-IN`, `hi-IN`, `en-IN`). The reference and consent recordings must be mono, at most 10 seconds each, and recorded in the same environment; a 15-second reference must be trimmed and checked first. A single key is not documented to transfer among these three locales. See Google's Instant Custom Voice documentation for the exact prescribed consent scripts and key-generation flow. Obtain the speaker's consent before provisioning. Do not send keys to the browser.
+
+After successfully generating and testing the three language-specific cloning keys, set Cloud Run *secrets* `STORYTELLER_CUSTOM_VOICE_MR_IN`, `STORYTELLER_CUSTOM_VOICE_HI_IN`, and `STORYTELLER_CUSTOM_VOICE_EN_IN` on the renderer service. Set `STORYTELLER_CUSTOM_VOICE_READY=true` on the App Hosting backend **only after** all three work in staging. In Admin > StoryTeller > Voices, add three entries with the same ID and distinct languages:
+
+```
+SANJAY_VOICE|Sanjay Voice|Marathi|MALE
+SANJAY_VOICE|Sanjay Voice|Hindi|MALE
+SANJAY_VOICE|Sanjay Voice|English|MALE
+```
+
+Until the readiness flag is set, this voice stays hidden in the public config and the checkout rejects direct requests before wallet deduction. The renderer fails rather than silently replacing a custom voice with another voice if a key is missing. Existing Google voices and paid download flows continue to work. Validate native pronunciation and render/download in all three languages in staging before enabling purchases. Remove the three Admin voice entries and unset readiness to stop new custom-voice checkouts; retain the renderer until paid jobs finish or are refunded.

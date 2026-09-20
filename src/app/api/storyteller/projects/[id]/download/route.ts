@@ -9,7 +9,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     const data = snap.data();
     if (!snap.exists || data?.userId !== user.uid) return NextResponse.json({ error: "Reel not found." }, { status: 404 });
     if (data?.paymentStatus !== "PAID" || data?.generationStatus !== "READY" || !data?.finalAssetPath) return NextResponse.json({ error: "Reel is not ready for download." }, { status: 409 });
-    const [url] = await adminStorage.bucket().file(data.finalAssetPath).getSignedUrl({ action: "read", expires: Date.now() + 5 * 60 * 1000 });
+    const safeFileId = params.id.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 100);
+    const [url] = await adminStorage.bucket().file(data.finalAssetPath).getSignedUrl({ action: "read", expires: Date.now() + 5 * 60 * 1000, ...(request.nextUrl.searchParams.get("download") === "1" ? { responseDisposition: `attachment; filename="vidya-storyteller-${safeFileId}.mp4"` } : {}) });
     return NextResponse.json({ url, expiresInSeconds: 300 });
   } catch (error) {
     const status = error instanceof RequestAuthError ? error.status : 500;

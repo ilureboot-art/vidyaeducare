@@ -1,4 +1,5 @@
 export const STORYTELLER_CONFIG_ID = "storyteller";
+export const SANJAY_CUSTOM_VOICE_ID = "SANJAY_VOICE";
 
 export type StorytellerFailurePolicy = "RETRY_THEN_REFUND" | "RETRY_ONLY" | "REFUND";
 export type StorytellerStatus = "PAYMENT_PENDING" | "PAID" | "QUEUED" | "GENERATING" | "READY" | "FAILED" | "REFUNDED";
@@ -96,6 +97,7 @@ export function validateStorytellerInput(input: StorytellerInput, config: Storyt
   if (!config.templates.includes(input.template)) errors.push("Template is not enabled.");
   if (!config.musicCategories.includes(input.music)) errors.push("Music category is not enabled.");
   if (config.voices.length && !config.voices.some(v => v.id === input.voice && v.language === input.language)) errors.push("Voice is not enabled for this language.");
+  if (input.voice === SANJAY_CUSTOM_VOICE_ID && !config.voices.some(v => v.id === SANJAY_CUSTOM_VOICE_ID && v.language === input.language)) errors.push("Sanjay custom voice is not enabled for this language.");
   return errors;
 }
 

@@ -722,8 +722,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        {(storyteller.enabled || (storyteller.demoEnabled && storyteller.demoAssetPath)) && (
-          <section className="rounded-[2rem] bg-gradient-to-br from-primary/10 via-background to-accent/10 border p-6 md:p-10 grid md:grid-cols-2 gap-8 items-center">
+        <section className="rounded-[2rem] bg-gradient-to-br from-primary/10 via-background to-accent/10 border p-6 md:p-10 grid md:grid-cols-2 gap-8 items-center">
             <div className="space-y-4">
               <Badge>ALL USER-GENERATED REELS PAID</Badge>
               <h2 className="text-4xl font-black flex items-center gap-3">
@@ -755,23 +754,47 @@ export default function HomePage() {
                   </Link>
                 </Button>}
               </div>
-              {storyteller.demoEnabled && storyteller.demoAssetPath && (
-                <PromotionShare title="Vidya Educare StoryTeller AI demo" description="Watch the free demo to see how AI voice reels work. Creating your own reel requires login and payment; check the current price online." path="/storyteller#storyteller-demo" />
-              )}
+              <PromotionShare
+                title="Vidya Educare StoryTeller AI demo"
+                description="See how a story becomes a voice reel with narration, subtitles and animated visuals. Creating your own reel requires login and payment."
+                path={storyteller.demoEnabled && storyteller.demoAssetPath ? "/storyteller#storyteller-demo" : "/storyteller"}
+              />
             </div>
             <div className="rounded-2xl border bg-card p-6">
-              <p className="font-black mb-3">PAY FIRST → GENERATE</p>
-              <p className="text-muted-foreground">
-                Story → AI voice → synchronized subtitles → animated typography
-                → private MP4 download.
-              </p>
-              <p className="text-sm mt-4">
-                The fixed demo is free to watch. Your own Reel is generated only
-                after wallet payment.
-              </p>
+              {storyteller.demoEnabled && storyteller.demoAssetPath ? (
+                <div className="space-y-4">
+                  <p className="font-black">{storyteller.demoTitle || "StoryTeller AI Demo"}</p>
+                  <video
+                    className="w-full max-h-[28rem] rounded-xl bg-black"
+                    controls
+                    controlsList="nodownload"
+                    disablePictureInPicture
+                    poster={storyteller.demoThumbnail || undefined}
+                    src={storyteller.demoAssetPath}
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    {storyteller.demoDescription || "Watch how a story becomes a narrated voice reel."}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="font-black">STORY → VOICE → REEL</p>
+                  <p className="text-muted-foreground">
+                    Story → natural voice → synchronized subtitles → animated
+                    typography → private MP4 download.
+                  </p>
+                  <Button variant="outline" asChild>
+                    <Link href="/storyteller">
+                      <Play /> Explore StoryTeller
+                    </Link>
+                  </Button>
+                  <p className="text-sm text-muted-foreground">
+                    The fixed demo will appear here automatically when Admin publishes it.
+                  </p>
+                </div>
+              )}
             </div>
           </section>
-        )}
 
         {/* Standard Features grid */}
         <section className="space-y-12">

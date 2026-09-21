@@ -532,7 +532,7 @@ export default function HomePage() {
               <span>• NO TRIAL REWARDS</span>
             </div>
             <div className="flex justify-center rounded-xl bg-white/90 p-3">
-              <PromotionShare title="Vidya Educare MockArena free practice demo" description="Try a 5-question timed MCQ test and see your score instantly. No signup needed. Trial scores do not qualify for rewards or live rankings." path="/trial-mock-test" />
+              <PromotionShare title="Vidya Educare MockArena free practice demo" description="Try a 5-question timed MCQ test and see your score instantly. No signup needed. Trial scores do not qualify for rewards or live rankings." path="/trial-mock-test" imagePath="/promotions/mockarena.webp" />
             </div>
           </div>
         </section>
@@ -758,6 +758,7 @@ export default function HomePage() {
                 title="Vidya Educare StoryTeller AI demo"
                 description="See how a story becomes a voice reel with narration, subtitles and animated visuals. Creating your own reel requires login and payment."
                 path={storyteller.demoEnabled && storyteller.demoAssetPath ? "/storyteller#storyteller-demo" : "/storyteller"}
+                imagePath="/promotions/storyteller-ai.webp"
               />
             </div>
             <div className="rounded-2xl border bg-card p-6">

@@ -25,6 +25,7 @@ export interface StorytellerConfig {
   voiceProviderEnabled: boolean;
   voiceModel: string;
   voices: Array<{ id: string; label: string; language: string; gender: "MALE" | "FEMALE" }>;
+  voiceSamples: Array<{ label: string; language: string; assetPath: string }>;
   voiceStyles: string[];
   templates: string[];
   musicCategories: string[];
@@ -56,6 +57,11 @@ export const defaultStorytellerConfig: StorytellerConfig = {
   voiceProviderEnabled: true,
   voiceModel: "standard",
   voices: [],
+  voiceSamples: [
+    { label: "Marathi male voice", language: "Marathi", assetPath: "/storyteller/voices/marathi-male.mp3" },
+    { label: "Hindi male voice", language: "Hindi", assetPath: "/storyteller/voices/hindi-male.mp3" },
+    { label: "English male voice", language: "English", assetPath: "/storyteller/voices/english-male.mp3" },
+  ],
   voiceStyles: ["Natural", "Storytelling", "Motivational", "Emotional", "Professional"],
   templates: ["Minimal", "Motivational", "Storytelling"],
   musicCategories: ["None", "Calm", "Motivational", "Emotional", "Cinematic", "Storytelling"],
@@ -82,6 +88,7 @@ export function validateStorytellerConfig(value: StorytellerConfig): string[] {
   if (value.currency !== "INR") errors.push("Only INR is currently supported by the wallet.");
   if (!Number.isInteger(value.maxDuration) || value.maxDuration < 15 || value.maxDuration > 300) errors.push("Maximum duration must be between 15 and 300 seconds.");
   if (!value.languages.length) errors.push("At least one language is required.");
+  if (value.voiceSamples.some(sample => !value.languages.includes(sample.language) || !sample.label.trim() || !sample.assetPath.startsWith("/storyteller/voices/"))) errors.push("Voice samples must use an enabled language and a valid StoryTeller voice asset.");
   if (!value.durations.length || value.durations.some(d => !Number.isInteger(d) || d <= 0 || d > value.maxDuration)) errors.push("Allowed durations are invalid.");
   if (value.automaticRetryCount < 0 || value.automaticRetryCount > 3) errors.push("Automatic retry count must be between 0 and 3.");
   return errors;

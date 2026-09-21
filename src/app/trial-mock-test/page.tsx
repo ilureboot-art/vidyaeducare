@@ -140,9 +140,10 @@ export default function TrialMockTestPage() {
                 </div>
 
                 <PromotionShare
-                    title="Vidya Educare MockArena free practice demo"
-                    description="Try a 5-question timed MCQ test and see your score instantly. No signup needed. Trial scores do not qualify for rewards or live rankings."
-                    path="/trial-mock-test"
+                  title="Vidya Educare MockArena free practice demo"
+                  description="Try a 5-question timed MCQ test and see your score instantly. No signup needed. Trial scores do not qualify for rewards or live rankings."
+                  path="/trial-mock-test"
+                  imagePath="/promotions/mockarena.webp"
                 />
 
                 <Progress value={progress} className="h-3" />

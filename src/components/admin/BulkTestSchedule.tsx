@@ -53,10 +53,21 @@ export function BulkTestSchedule({ db, uid, sets, schedules, onComplete }: Props
 
   const downloadTemplate = () => {
     const rows = mode === 'schedule'
-      ? (selected.length ? sets.filter(set => selected.includes(set.id)) : sets).map(set => ({ test_set_id: set.id, date: '', time: '', duration_minutes: '30' }))
+      ? (selected.length ? sets.filter(set => selected.includes(set.id)) : sets).map(set => ({
+        test_set_id: set.id, test_set_name: set.name, standard: set.standard,
+        subject_name: set.subject, date: '', time: '', duration_minutes: '30',
+      }))
       : schedules.filter(schedule => selected.includes(schedule.id)).map(schedule => {
         const current = istParts(new Date(schedule.dateTime));
-        return { schedule_id: schedule.id, test_set_id: schedule.testSetId, current_date: current.date, current_time: current.time, new_date: '', new_time: '', new_duration_minutes: String(schedule.duration) };
+        const set = sets.find(item => item.id === schedule.testSetId);
+        return {
+          schedule_id: schedule.id, test_set_id: schedule.testSetId,
+          test_set_name: set?.name || schedule.testSetName,
+          standard: set?.standard || schedule.standard || '',
+          subject_name: set?.subject || schedule.subject || '',
+          current_date: current.date, current_time: current.time,
+          date: '', time: '', duration_minutes: String(schedule.duration),
+        };
       });
     downloadCsv(`mcq-${mode}-template.csv`, rows, mode === 'schedule' ? SCHEDULE_HEADERS : RESCHEDULE_HEADERS);
   };
@@ -88,7 +99,12 @@ export function BulkTestSchedule({ db, uid, sets, schedules, onComplete }: Props
     if (!first) { toast({ variant: 'destructive', title: 'Invalid start date or time' }); return; }
     const rows = selected.map((id, index) => {
       const next = istParts(new Date(new Date(first).getTime() + index * minutes * 60_000));
-      return { test_set_id: id, date: next.date, time: next.time, duration_minutes: duration };
+      const set = sets.find(item => item.id === id)!;
+      return {
+        test_set_id: id, test_set_name: set.name, standard: set.standard,
+        subject_name: set.subject, date: next.date, time: next.time,
+        duration_minutes: duration,
+      };
     });
     parseRows(rows, 'schedule');
   };
@@ -138,7 +154,7 @@ export function BulkTestSchedule({ db, uid, sets, schedules, onComplete }: Props
 
   return <div className="space-y-4">
     <div className="flex flex-wrap gap-2"><Button variant={mode === 'schedule' ? 'default' : 'outline'} onClick={() => switchMode('schedule')}>New schedules</Button><Button variant={mode === 'reschedule' ? 'default' : 'outline'} onClick={() => switchMode('reschedule')}>Reschedule existing</Button></div>
-    <p className="text-sm text-muted-foreground">Times in CSV use Asia/Kolkata (IST), YYYY-MM-DD and 24-hour HH:mm. Select sessions for the reschedule template.</p>
+    <p className="text-sm text-muted-foreground">CSV includes Test Set ID, Test Set Name, Std, Subject Name, Date, Time and Duration. Times use Asia/Kolkata (IST), YYYY-MM-DD and 24-hour HH:mm. Select sessions for the reschedule template.</p>
     <div className="max-h-40 overflow-y-auto rounded-md border p-2 space-y-1">
       {options.map(option => <label key={option.id} className="flex items-center gap-2 text-sm p-1"><Checkbox checked={selected.includes(option.id)} onCheckedChange={() => toggle(option.id)} />{option.label}</label>)}
     </div>

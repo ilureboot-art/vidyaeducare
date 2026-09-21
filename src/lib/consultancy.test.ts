@@ -18,7 +18,7 @@ describe("Life & Relationship Consultancy rules", () => {
     ).toBe(100);
     expect(
       calculateFee(defaultConsultancyConfig.meetingFee).payableAmount,
-    ).toBe(95);
+    ).toBe(50);
     expect(
       calculateFee(defaultConsultancyConfig.successFee).payableAmount,
     ).toBe(5000);

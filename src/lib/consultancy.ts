@@ -90,7 +90,7 @@ export const defaultConsultancyConfig: ConsultancyConfig = {
   counsellingEnabled: true,
   title: "Life & Relationship Consultancy",
   registrationFee: fee(200, 50, "Matrimonial registration"),
-  meetingFee: fee(100, 5, "Profile meeting fee per customer per meeting"),
+  meetingFee: fee(100, 50, "Profile meeting fee per customer per meeting"),
   successFee: fee(10000, 50, "Marriage success fee per matched customer"),
   counsellingAdvancePercentage: 50,
   bookingLeadHours: 24,

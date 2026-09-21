@@ -15,16 +15,16 @@ describe('bulk MCQ schedule validation', () => {
   });
 
   it('accepts an existing test set without uploading questions', () => {
-    const rows = validateScheduleRows([{ test_set_id: 'set-a', date: '2030-03-02', time: '10:00', duration_minutes: '30' }], 'schedule', sets, schedules, now);
+    const rows = validateScheduleRows([{ test_set_id: 'set-a', test_set_name: 'Science', standard: '10', subject_name: 'Science', date: '2030-03-02', time: '10:00', duration_minutes: '30' }], 'schedule', sets, schedules, now);
     expect(rows[0].errors).toEqual([]);
     expect(rows[0].dateTime).toBe('2030-03-02T04:30:00.000Z');
   });
 
   it('rejects duplicate, unknown, expired, and invalid rows', () => {
     const rows = validateScheduleRows([
-      { test_set_id: 'set-a', date: '2030-03-02', time: '10:00', duration_minutes: '30' },
-      { test_set_id: 'set-a', date: '2030-03-02', time: '10:00', duration_minutes: '0' },
-      { test_set_id: 'missing', date: '2020-01-01', time: '10:00', duration_minutes: '301' },
+      { test_set_id: 'set-a', test_set_name: 'Science', standard: '10', subject_name: 'Science', date: '2030-03-02', time: '10:00', duration_minutes: '30' },
+      { test_set_id: 'set-a', test_set_name: 'Science', standard: '10', subject_name: 'Science', date: '2030-03-02', time: '10:00', duration_minutes: '0' },
+      { test_set_id: 'missing', test_set_name: 'Missing', standard: '10', subject_name: 'Science', date: '2020-01-01', time: '10:00', duration_minutes: '301' },
     ], 'schedule', sets, schedules, now);
     expect(rows[1].errors).toContain('Duplicate or missing schedule identity');
     expect(rows[1].errors).toContain('Duration must be an integer from 1 to 300');
@@ -33,8 +33,16 @@ describe('bulk MCQ schedule validation', () => {
   });
 
   it('matches a particular session and rejects stale reschedule exports', () => {
-    const row = { schedule_id: 'session-1', test_set_id: 'set-a', current_date: '2030-03-01', current_time: '10:00', new_date: '2030-03-03', new_time: '09:30', new_duration_minutes: '45' };
+    const row = { schedule_id: 'session-1', test_set_id: 'set-a', test_set_name: 'Science', standard: '10', subject_name: 'Science', current_date: '2030-03-01', current_time: '10:00', date: '2030-03-03', time: '09:30', duration_minutes: '45' };
     expect(validateScheduleRows([row], 'reschedule', sets, schedules, now)[0].errors).toEqual([]);
     expect(validateScheduleRows([{ ...row, current_time: '11:00' }], 'reschedule', sets, schedules, now)[0].errors).toContain('Schedule changed after CSV download; download a fresh CSV');
+  });
+
+  it('rejects descriptive CSV values that do not match the unique test set ID', () => {
+    const row = { test_set_id: 'set-a', test_set_name: 'Wrong name', standard: '9', subject_name: 'Maths', date: '2030-03-02', time: '10:00', duration_minutes: '30' };
+    const errors = validateScheduleRows([row], 'schedule', sets, schedules, now)[0].errors;
+    expect(errors).toContain('Test set name does not match test_set_id');
+    expect(errors).toContain('Standard does not match test_set_id');
+    expect(errors).toContain('Subject name does not match test_set_id');
   });
 });

@@ -1,8 +1,8 @@
 import type { ScheduledTest } from './test-schedule';
 import type { TestSet } from './question-bank';
 
-export const SCHEDULE_HEADERS = ['test_set_id', 'date', 'time', 'duration_minutes'] as const;
-export const RESCHEDULE_HEADERS = ['schedule_id', 'test_set_id', 'current_date', 'current_time', 'new_date', 'new_time', 'new_duration_minutes'] as const;
+export const SCHEDULE_HEADERS = ['test_set_id', 'test_set_name', 'standard', 'subject_name', 'date', 'time', 'duration_minutes'] as const;
+export const RESCHEDULE_HEADERS = ['schedule_id', 'test_set_id', 'test_set_name', 'standard', 'subject_name', 'current_date', 'current_time', 'date', 'time', 'duration_minutes'] as const;
 export const SCHEDULE_TIME_ZONE = 'Asia/Kolkata';
 
 export type ScheduleDraft = {
@@ -45,6 +45,11 @@ export function validateScheduleRows(
       ? `${row.test_set_id?.trim()}|${row.date?.trim()}|${row.time?.trim()}`
       : row.schedule_id?.trim();
     if (!testSet) errors.push('Unknown test_set_id');
+    else {
+      if (row.test_set_name?.trim() !== testSet.name) errors.push('Test set name does not match test_set_id');
+      if (row.standard?.trim() !== testSet.standard) errors.push('Standard does not match test_set_id');
+      if (row.subject_name?.trim() !== testSet.subject) errors.push('Subject name does not match test_set_id');
+    }
     if (!identity || seen.has(identity)) errors.push('Duplicate or missing schedule identity');
     seen.add(identity);
     if (mode === 'reschedule') {
@@ -57,12 +62,12 @@ export function validateScheduleRows(
       }
     }
     const dateTime = parseIstDateTime(
-      (mode === 'schedule' ? row.date : row.new_date)?.trim() || '',
-      (mode === 'schedule' ? row.time : row.new_time)?.trim() || '',
+      (row.date || (mode === 'reschedule' ? row.new_date : ''))?.trim() || '',
+      (row.time || (mode === 'reschedule' ? row.new_time : ''))?.trim() || '',
     );
     if (!dateTime) errors.push('Invalid date/time; use YYYY-MM-DD and HH:mm (Asia/Kolkata)');
     else if (new Date(dateTime).getTime() <= now.getTime()) errors.push('Time must be in the future');
-    const value = (mode === 'schedule' ? row.duration_minutes : row.new_duration_minutes)?.trim();
+    const value = (row.duration_minutes || (mode === 'reschedule' ? row.new_duration_minutes : ''))?.trim();
     const duration = Number(value);
     if (!value || !/^\d+$/.test(value) || duration < 1 || duration > 300) errors.push('Duration must be an integer from 1 to 300');
     if (mode === 'schedule' && dateTime && schedules.some(existing => existing.testSetId === testSet?.id && existing.dateTime === dateTime)) errors.push('This test set is already scheduled at this time');

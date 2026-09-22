@@ -774,12 +774,12 @@ export default function HomePage() {
                     src={storyteller.demoAssetPath}
                   />
                   <p className="text-sm text-muted-foreground">
-                    {storyteller.demoDescription || "Watch how a story becomes a narrated voice reel."}
+                    {storyteller.demoDescription || "Listen to a story transformed into an immersive audio reel."}
                   </p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <p className="font-black">STORY → VOICE → REEL</p>
+                  <p className="font-black">STORY → SOUND DESIGN → AUDIO REEL</p>
                   <p className="text-muted-foreground">
                     Story → natural voice → synchronized subtitles → animated
                     typography → private MP4 download.

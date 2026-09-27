@@ -18,7 +18,6 @@ import type { StudentProfile } from "@/lib/student-data";
 import type { Question, TestSet } from "@/lib/question-bank";
 import type { ScheduledTest } from "@/lib/test-schedule";
 import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
-import type { StoreConfig } from "@/lib/store-config";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useDb } from "@/firebase";
 import UserLayout from "@/components/UserLayout";
@@ -28,6 +27,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import { addMinutes } from 'date-fns';
+import { getMockTestAccess } from '@/lib/mock-test-access';
 
 type TestState = "loading" | "in_progress" | "completed" | "review";
 
@@ -78,66 +78,9 @@ function MockTestContent() {
                     throw e;
                 });
 
+                let studentData: StudentProfile;
                 if (studentDoc.exists()) {
-                    const studentData = studentDoc.data() as StudentProfile;
-                    
-                    // Fetch parent profile doc
-                    let parentProfile: any = null;
-                    if (studentData.parentId) {
-                        const parentDocRef = doc(db, 'users', studentData.parentId);
-                        const parentDoc = await getDoc(parentDocRef).catch(() => null);
-                        if (parentDoc && parentDoc.exists()) {
-                            parentProfile = parentDoc.data();
-                        }
-                    }
-
-                    const storeDocRef = doc(db, 'configs', 'store');
-                    const storeDoc = await getDoc(storeDocRef).catch(() => null);
-                    const storeData = storeDoc && storeDoc.exists() ? (storeDoc.data() as StoreConfig) : null;
-                    const freeTrialDays = storeData?.freeTrialDays ?? 30;
-
-                    let hasAccess = false;
-                    let limitReached = false;
-                    if (studentData.mockTestSubscribed) {
-                        hasAccess = true;
-                    } else {
-                        // Check parent mock test limit override
-                        const mockTestLimit = parentProfile?.mock_test_limit;
-                        const testsTaken = studentData.stats?.testsTaken || 0;
-                        if (typeof mockTestLimit === 'number') {
-                            if (testsTaken >= mockTestLimit) {
-                                limitReached = true;
-                            }
-                        }
-
-                        if (!limitReached) {
-                            const created = studentData.createdAt ? new Date(studentData.createdAt) : new Date();
-                            const expiryDate = new Date(created.getTime() + freeTrialDays * 24 * 60 * 60 * 1000);
-                            const now = new Date();
-                            hasAccess = now < expiryDate;
-                        }
-                    }
-
-                    if (limitReached) {
-                        toast({ 
-                            variant: 'destructive', 
-                            title: 'Mock Test Limit Reached', 
-                            description: 'You have reached the maximum number of free mock tests allowed for your trial. Please purchase a package to continue.' 
-                        });
-                        router.push(`/profile?expiredStudentId=${studentId}`);
-                        return;
-                    }
-
-                    if (!hasAccess) {
-                        toast({ 
-                            variant: 'destructive', 
-                            title: 'Mock Test Locked', 
-                            description: 'Your free trial access has ended. Please purchase a package to continue.' 
-                        });
-                        router.push(`/profile?expiredStudentId=${studentId}`);
-                        return;
-                    }
-
+                    studentData = studentDoc.data() as StudentProfile;
                     setStudentProfile(studentData);
                 } else {
                     throw new Error("Student profile not found");
@@ -153,6 +96,17 @@ function MockTestContent() {
 
                 if (scheduledTestDoc.exists()) {
                     const scheduledTestData = scheduledTestDoc.data() as ScheduledTest;
+                    const access = getMockTestAccess(studentData.mockTestSubscribed, scheduledTestData);
+                    if (!access.hasAccess) {
+                        toast({
+                            variant: 'destructive',
+                            title: 'Purchase Required',
+                            description: 'Only June MCQ mock tests are free. Purchase MockArena access for tests scheduled in other months.',
+                        });
+                        router.push(`/profile?expiredStudentId=${studentId}`);
+                        return;
+                    }
+
                     const now = new Date();
                     const startsAt = new Date(scheduledTestData.dateTime);
                     const endsAt = addMinutes(startsAt, scheduledTestData.duration || 30);
@@ -541,7 +495,7 @@ function MockTestContent() {
                         !studentProfile.mockTestSubscribed ? (
                             <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-3 text-amber-800 text-sm font-medium">
                                 <Info size={18}/>
-                                <span>Free Trial Account: Purchase a Mock Test package to be eligible for cash rewards.</span>
+                                <span>June Free Access: Purchase a Mock Test package to be eligible for cash rewards.</span>
                             </div>
                         ) : score < 80 ? (
                             <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-3 text-amber-800 text-sm font-medium">

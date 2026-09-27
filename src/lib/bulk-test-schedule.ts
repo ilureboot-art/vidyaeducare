@@ -32,6 +32,18 @@ export function parseIstDateTime(day: string, time: string): string | null {
   return parts.date === day && parts.time === time ? parsed.toISOString() : null;
 }
 
+export function parseDurationMinutes(value: string | undefined): number | null {
+  const normalized = (value || '')
+    .trim()
+    .replace(/[०-९]/g, digit => String('०१२३४५६७८९'.indexOf(digit)));
+
+  // Spreadsheet programs commonly serialize a whole number as 30.0 or 30.00.
+  if (!/^\d+(?:\.0+)?$/.test(normalized)) return null;
+
+  const duration = Number(normalized);
+  return Number.isInteger(duration) && duration >= 1 && duration <= 300 ? duration : null;
+}
+
 export function validateScheduleRows(
   rows: Record<string, string>[], mode: 'schedule' | 'reschedule',
   sets: TestSet[], schedules: ScheduledTest[], now = new Date(),
@@ -67,9 +79,10 @@ export function validateScheduleRows(
     );
     if (!dateTime) errors.push('Invalid date/time; use YYYY-MM-DD and HH:mm (Asia/Kolkata)');
     else if (mode === 'reschedule' && new Date(dateTime).getTime() <= now.getTime()) errors.push('Rescheduled time must be in the future');
-    const value = (row.duration_minutes || (mode === 'reschedule' ? row.new_duration_minutes : ''))?.trim();
-    const duration = Number(value);
-    if (!value || !/^\d+$/.test(value) || duration < 1 || duration > 300) errors.push('Duration must be an integer from 1 to 300');
+    const value = row.duration_minutes || (mode === 'reschedule' ? row.new_duration_minutes : '');
+    const parsedDuration = parseDurationMinutes(value);
+    const duration = parsedDuration ?? Number.NaN;
+    if (parsedDuration === null) errors.push('Duration must be an integer from 1 to 300');
     if (mode === 'schedule' && dateTime && schedules.some(existing => existing.testSetId === testSet?.id && existing.dateTime === dateTime)) errors.push('This test set is already scheduled at this time');
     return { row: index + 2, testSet: testSet as TestSet, schedule, dateTime: dateTime || '', duration, errors };
   });

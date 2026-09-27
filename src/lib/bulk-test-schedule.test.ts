@@ -20,7 +20,7 @@ describe('bulk MCQ schedule validation', () => {
     expect(rows[0].dateTime).toBe('2030-03-02T04:30:00.000Z');
   });
 
-  it('rejects duplicate, unknown, expired, and invalid rows', () => {
+  it('accepts backdated schedules but rejects duplicate, unknown, and invalid rows', () => {
     const rows = validateScheduleRows([
       { test_set_id: 'set-a', test_set_name: 'Science', standard: '10', subject_name: 'Science', date: '2030-03-02', time: '10:00', duration_minutes: '30' },
       { test_set_id: 'set-a', test_set_name: 'Science', standard: '10', subject_name: 'Science', date: '2030-03-02', time: '10:00', duration_minutes: '0' },
@@ -29,7 +29,12 @@ describe('bulk MCQ schedule validation', () => {
     expect(rows[1].errors).toContain('Duplicate or missing schedule identity');
     expect(rows[1].errors).toContain('Duration must be an integer from 1 to 300');
     expect(rows[2].errors).toContain('Unknown test_set_id');
-    expect(rows[2].errors).toContain('Time must be in the future');
+    expect(rows[2].errors).not.toContain('Time must be in the future');
+  });
+
+  it('allows a valid backdated test to be imported as a practice schedule', () => {
+    const row = { test_set_id: 'set-a', test_set_name: 'Science', standard: '10', subject_name: 'Science', date: '2020-01-01', time: '10:00', duration_minutes: '30' };
+    expect(validateScheduleRows([row], 'schedule', sets, schedules, now)[0].errors).toEqual([]);
   });
 
   it('matches a particular session and rejects stale reschedule exports', () => {

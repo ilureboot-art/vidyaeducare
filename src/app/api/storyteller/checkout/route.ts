@@ -13,14 +13,14 @@ export async function POST(request: NextRequest) {
     const configSnap = await adminDb.collection("configs").doc(STORYTELLER_CONFIG_ID).get();
     const config = configSnap.exists ? { ...defaultStorytellerConfig, ...configSnap.data() } as StorytellerConfig : defaultStorytellerConfig;
     if (!config.enabled) return NextResponse.json({ error: "StoryTeller AI is currently unavailable." }, { status: 503 });
-    if (!config.voiceProviderEnabled) return NextResponse.json({ error: "AI voice generation is currently unavailable." }, { status: 503 });
+    if (!config.voiceProviderEnabled) return NextResponse.json({ error: "Audio-reel narration is currently unavailable." }, { status: 503 });
     if (!process.env.STORYTELLER_RENDERER_URL || !process.env.STORYTELLER_RENDERER_SECRET) return NextResponse.json({ error: "StoryTeller rendering is not configured. No payment was deducted." }, { status: 503 });
     const autoDuration = String(body.duration) === "AUTO";
     const input: StorytellerInput = { title: body.title, story: body.story, language: body.language, voice: body.voice, voiceStyle: body.voiceStyle, duration: autoDuration && config.allowAutoDuration ? config.maxDuration : Number(body.duration), music: body.music, template: body.template };
     const errors = validateStorytellerInput(input, config);
     if (errors.length) return NextResponse.json({ error: errors.join(" ") }, { status: 400 });
     if (input.voice === SANJAY_CUSTOM_VOICE_ID && process.env.STORYTELLER_CUSTOM_VOICE_READY !== "true") {
-      return NextResponse.json({ error: "Sanjay custom voice is not ready for this language. No payment was deducted." }, { status: 503 });
+      return NextResponse.json({ error: "The selected custom narrator is not ready for this language. No payment was deducted." }, { status: 503 });
     }
 
     const requestRef = adminDb.collection("storytellerPurchaseRequests").doc(`${user.uid}_${body.idempotencyKey}`);

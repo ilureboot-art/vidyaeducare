@@ -89,7 +89,7 @@ export default function HomePage() {
   const [storyteller, setStoryteller] = useState<any>({
     enabled: false,
     reelPrice: 19,
-    tagline: "Turn Your Story into an AI Voice Reel",
+    tagline: "Turn Your Story into an AI Audio Reel",
     demoEnabled: false,
     demoAssetPath: "",
   });
@@ -756,7 +756,7 @@ export default function HomePage() {
               </div>
               <PromotionShare
                 title="Vidya Educare StoryTeller AI demo"
-                description="See how a story becomes a voice reel with narration, subtitles and animated visuals. Creating your own reel requires login and payment."
+                description="See how a story becomes an audio reel with narration, story-aware sound design and a fixed cover. Creating your own reel requires login and payment."
                 path={storyteller.demoEnabled && storyteller.demoAssetPath ? "/storyteller#storyteller-demo" : "/storyteller"}
                 imagePath="/promotions/storyteller-ai.webp"
               />
@@ -774,12 +774,12 @@ export default function HomePage() {
                     src={storyteller.demoAssetPath}
                   />
                   <p className="text-sm text-muted-foreground">
-                    {storyteller.demoDescription || "Watch how a story becomes a narrated voice reel."}
+                    {storyteller.demoDescription || "Listen to a story transformed into an immersive audio reel."}
                   </p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <p className="font-black">STORY → VOICE → REEL</p>
+                  <p className="font-black">STORY → SOUND DESIGN → AUDIO REEL</p>
                   <p className="text-muted-foreground">
                     Story → natural voice → synchronized subtitles → animated
                     typography → private MP4 download.

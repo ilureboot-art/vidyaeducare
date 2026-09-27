@@ -66,7 +66,7 @@ export function validateScheduleRows(
       (row.time || (mode === 'reschedule' ? row.new_time : ''))?.trim() || '',
     );
     if (!dateTime) errors.push('Invalid date/time; use YYYY-MM-DD and HH:mm (Asia/Kolkata)');
-    else if (new Date(dateTime).getTime() <= now.getTime()) errors.push('Time must be in the future');
+    else if (mode === 'reschedule' && new Date(dateTime).getTime() <= now.getTime()) errors.push('Rescheduled time must be in the future');
     const value = (row.duration_minutes || (mode === 'reschedule' ? row.new_duration_minutes : ''))?.trim();
     const duration = Number(value);
     if (!value || !/^\d+$/.test(value) || duration < 1 || duration > 300) errors.push('Duration must be an integer from 1 to 300');

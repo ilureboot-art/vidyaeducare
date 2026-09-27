@@ -9,7 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import type { TestSet } from '@/lib/question-bank';
 import type { ScheduledTest } from '@/lib/test-schedule';
-import { istParts, parseIstDateTime, RESCHEDULE_HEADERS, SCHEDULE_HEADERS, validateConfirmableDrafts, validateScheduleRows, type ScheduleDraft } from '@/lib/bulk-test-schedule';
+import { buildScheduleReuseRows, istParts, parseIstDateTime, RESCHEDULE_HEADERS, SCHEDULE_HEADERS, validateConfirmableDrafts, validateScheduleRows, type ScheduleDraft } from '@/lib/bulk-test-schedule';
 
 type Mode = 'schedule' | 'reschedule';
 type Props = { db: Firestore; uid?: string; sets: TestSet[]; schedules: ScheduledTest[]; onComplete: () => Promise<void> | void };
@@ -70,6 +70,19 @@ export function BulkTestSchedule({ db, uid, sets, schedules, onComplete }: Props
         };
       });
     downloadCsv(`mcq-${mode}-template.csv`, rows, mode === 'schedule' ? SCHEDULE_HEADERS : RESCHEDULE_HEADERS);
+  };
+
+  const downloadScheduledForReuse = () => {
+    const { rows, skippedScheduleIds } = buildScheduleReuseRows(schedules, sets);
+    if (!rows.length) {
+      toast({ variant: 'destructive', title: 'No reusable scheduled tests found' });
+      return;
+    }
+    downloadCsv('mcq-scheduled-tests-for-next-schedule.csv', rows, SCHEDULE_HEADERS);
+    toast({
+      title: 'Scheduled tests downloaded',
+      description: `${rows.length} rows ready for date/time editing and new scheduling.${skippedScheduleIds.length ? ` ${skippedScheduleIds.length} rows skipped because their test set no longer exists.` : ''}`,
+    });
   };
 
   const upload = (file?: File) => {
@@ -160,7 +173,13 @@ export function BulkTestSchedule({ db, uid, sets, schedules, onComplete }: Props
       {options.map(option => <label key={option.id} className="flex items-center gap-2 text-sm p-1"><Checkbox checked={selected.includes(option.id)} onCheckedChange={() => toggle(option.id)} />{option.label}</label>)}
     </div>
     {mode === 'schedule' && <div className="grid grid-cols-2 md:grid-cols-4 gap-2"><Input aria-label="Start date" type="date" value={startDate} onChange={event => setStartDate(event.target.value)} /><Input aria-label="Start time" type="time" value={startTime} onChange={event => setStartTime(event.target.value)} /><Input aria-label="Interval minutes" type="number" min="1" value={interval} onChange={event => setInterval(event.target.value)} placeholder="Interval (minutes)" /><Input aria-label="Duration minutes" type="number" min="1" max="300" value={duration} onChange={event => setDuration(event.target.value)} placeholder="Duration (minutes)" /></div>}
-    <div className="flex flex-wrap gap-2">{mode === 'schedule' && <Button variant="secondary" onClick={autoSchedule}>Bulk Auto Schedule → Preview</Button>}<Button variant="outline" onClick={downloadTemplate} disabled={mode === 'reschedule' && !selected.length}>Download CSV Template</Button><Input aria-label="Upload schedule CSV" className="max-w-xs" type="file" accept=".csv,text/csv" onChange={event => { upload(event.target.files?.[0]); event.target.value = ''; }} /></div>
+    <div className="flex flex-wrap gap-2">
+      {mode === 'schedule' && <Button variant="secondary" onClick={autoSchedule}>Bulk Auto Schedule → Preview</Button>}
+      <Button variant="outline" onClick={downloadTemplate} disabled={mode === 'reschedule' && !selected.length}>Download CSV Template</Button>
+      {mode === 'schedule' && <Button variant="outline" onClick={downloadScheduledForReuse} disabled={!schedules.length}>Download Scheduled Tests for Reuse</Button>}
+      <Input aria-label="Upload schedule CSV" className="max-w-xs" type="file" accept=".csv,text/csv" onChange={event => { upload(event.target.files?.[0]); event.target.value = ''; }} />
+    </div>
+    {mode === 'schedule' && <p className="text-xs text-muted-foreground">Reuse download contains existing dates and times. Edit them before upload; unchanged rows are rejected as duplicate schedules.</p>}
     {drafts.length > 0 && <div className="space-y-2"><p className="font-medium">Preview: {drafts.length} rows, {drafts.filter(item => item.errors.length).length} errors</p><div className="max-h-60 overflow-auto border rounded-md text-sm">{drafts.map(item => <div className="border-b p-2" key={item.row}>Row {item.row}: {item.testSet?.name || 'Unknown set'} · {item.schedule?.id || 'New session'} · {item.dateTime || 'Invalid time'} · {item.duration} min {item.errors.length ? <span className="text-destructive">— {item.errors.join('; ')}</span> : null}</div>)}</div><Button disabled={busy || !uid || drafts.some(item => item.errors.length)} onClick={confirm}>{busy ? 'Saving…' : `Confirm ${mode} (${drafts.length})`}</Button></div>}
   </div>;
 }

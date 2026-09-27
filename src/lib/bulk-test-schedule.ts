@@ -44,6 +44,17 @@ export function parseDurationMinutes(value: string | undefined): number | null {
   return Number.isInteger(duration) && duration >= 1 && duration <= 300 ? duration : null;
 }
 
+export function validateConfirmableDrafts(
+  drafts: ScheduleDraft[],
+  mode: 'schedule' | 'reschedule',
+  now = new Date(),
+): string | null {
+  if (mode === 'reschedule' && drafts.some(draft => new Date(draft.dateTime).getTime() <= now.getTime())) {
+    return 'A proposed reschedule time has passed; upload a fresh CSV.';
+  }
+  return null;
+}
+
 export function validateScheduleRows(
   rows: Record<string, string>[], mode: 'schedule' | 'reschedule',
   sets: TestSet[], schedules: ScheduledTest[], now = new Date(),
@@ -58,9 +69,9 @@ export function validateScheduleRows(
       : row.schedule_id?.trim();
     if (!testSet) errors.push('Unknown test_set_id');
     else {
-      if (row.test_set_name?.trim() !== testSet.name) errors.push('Test set name does not match test_set_id');
-      if (row.standard?.trim() !== testSet.standard) errors.push('Standard does not match test_set_id');
-      if (row.subject_name?.trim() !== testSet.subject) errors.push('Subject name does not match test_set_id');
+      if (row.test_set_name?.trim() !== testSet.name.trim()) errors.push('Test set name does not match test_set_id');
+      if (row.standard?.trim() !== testSet.standard.trim()) errors.push('Standard does not match test_set_id');
+      if (row.subject_name?.trim() !== testSet.subject.trim()) errors.push('Subject name does not match test_set_id');
     }
     if (!identity || seen.has(identity)) errors.push('Duplicate or missing schedule identity');
     seen.add(identity);

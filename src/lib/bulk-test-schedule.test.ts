@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { istParts, parseDurationMinutes, parseIstDateTime, validateScheduleRows } from './bulk-test-schedule';
+import { istParts, parseDurationMinutes, parseIstDateTime, validateConfirmableDrafts, validateScheduleRows } from './bulk-test-schedule';
 import type { TestSet } from './question-bank';
 import type { ScheduledTest } from './test-schedule';
 
@@ -43,9 +43,18 @@ describe('bulk MCQ schedule validation', () => {
     expect(rows[2].errors).not.toContain('Time must be in the future');
   });
 
-  it('allows a valid backdated test to be imported as a practice schedule', () => {
+  it('allows a valid backdated test to be imported and confirmed as a practice schedule', () => {
     const row = { test_set_id: 'set-a', test_set_name: 'Science', standard: '10', subject_name: 'Science', date: '2020-01-01', time: '10:00', duration_minutes: '30' };
-    expect(validateScheduleRows([row], 'schedule', sets, schedules, now)[0].errors).toEqual([]);
+    const drafts = validateScheduleRows([row], 'schedule', sets, schedules, now);
+    expect(drafts[0].errors).toEqual([]);
+    expect(validateConfirmableDrafts(drafts, 'schedule', now)).toBeNull();
+    expect(validateConfirmableDrafts(drafts, 'reschedule', now)).toContain('reschedule time has passed');
+  });
+
+  it('ignores harmless surrounding whitespace in test set metadata', () => {
+    const spacedSets = [{ ...sets[0], name: 'Science ', standard: '10 ', subject: 'Science ' }] as TestSet[];
+    const row = { test_set_id: 'set-a', test_set_name: 'Science', standard: '10', subject_name: 'Science', date: '2030-03-02', time: '10:00', duration_minutes: '30' };
+    expect(validateScheduleRows([row], 'schedule', spacedSets, schedules, now)[0].errors).toEqual([]);
   });
 
   it('matches a particular session and rejects stale reschedule exports', () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { istParts, parseIstDateTime, validateScheduleRows } from './bulk-test-schedule';
+import { istParts, parseDurationMinutes, parseIstDateTime, validateScheduleRows } from './bulk-test-schedule';
 import type { TestSet } from './question-bank';
 import type { ScheduledTest } from './test-schedule';
 
@@ -12,6 +12,17 @@ describe('bulk MCQ schedule validation', () => {
     expect(parseIstDateTime('2030-03-01', '00:15')).toBe('2030-02-28T18:45:00.000Z');
     expect(istParts(new Date('2030-02-28T18:45:00.000Z'))).toEqual({ date: '2030-03-01', time: '00:15' });
     expect(parseIstDateTime('2030-02-30', '10:00')).toBeNull();
+  });
+
+  it('accepts spreadsheet whole-number duration formats', () => {
+    expect(parseDurationMinutes('30')).toBe(30);
+    expect(parseDurationMinutes('30.0')).toBe(30);
+    expect(parseDurationMinutes('30.00')).toBe(30);
+    expect(parseDurationMinutes(' ३० ')).toBe(30);
+    expect(parseDurationMinutes('30.5')).toBeNull();
+    expect(parseDurationMinutes('0')).toBeNull();
+    expect(parseDurationMinutes('301')).toBeNull();
+    expect(parseDurationMinutes('30 minutes')).toBeNull();
   });
 
   it('accepts an existing test set without uploading questions', () => {

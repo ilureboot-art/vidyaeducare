@@ -44,6 +44,34 @@ export function parseDurationMinutes(value: string | undefined): number | null {
   return Number.isInteger(duration) && duration >= 1 && duration <= 300 ? duration : null;
 }
 
+export function buildScheduleReuseRows(
+  schedules: ScheduledTest[],
+  sets: TestSet[],
+): { rows: Record<string, string>[]; skippedScheduleIds: string[] } {
+  const rows: Record<string, string>[] = [];
+  const skippedScheduleIds: string[] = [];
+
+  for (const schedule of schedules) {
+    const testSet = sets.find(item => item.id === schedule.testSetId);
+    if (!testSet) {
+      skippedScheduleIds.push(schedule.id);
+      continue;
+    }
+    const current = istParts(new Date(schedule.dateTime));
+    rows.push({
+      test_set_id: testSet.id,
+      test_set_name: testSet.name,
+      standard: testSet.standard,
+      subject_name: testSet.subject,
+      date: current.date,
+      time: current.time,
+      duration_minutes: String(schedule.duration),
+    });
+  }
+
+  return { rows, skippedScheduleIds };
+}
+
 export function validateConfirmableDrafts(
   drafts: ScheduleDraft[],
   mode: 'schedule' | 'reschedule',

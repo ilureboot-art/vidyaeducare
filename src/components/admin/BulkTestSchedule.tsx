@@ -9,7 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import type { TestSet } from '@/lib/question-bank';
 import type { ScheduledTest } from '@/lib/test-schedule';
-import { istParts, parseIstDateTime, RESCHEDULE_HEADERS, SCHEDULE_HEADERS, validateScheduleRows, type ScheduleDraft } from '@/lib/bulk-test-schedule';
+import { istParts, parseIstDateTime, RESCHEDULE_HEADERS, SCHEDULE_HEADERS, validateConfirmableDrafts, validateScheduleRows, type ScheduleDraft } from '@/lib/bulk-test-schedule';
 
 type Mode = 'schedule' | 'reschedule';
 type Props = { db: Firestore; uid?: string; sets: TestSet[]; schedules: ScheduledTest[]; onComplete: () => Promise<void> | void };
@@ -118,7 +118,8 @@ export function BulkTestSchedule({ db, uid, sets, schedules, onComplete }: Props
       // Recheck the schedule version before each batch so stale downloads cannot overwrite newer edits.
       for (let offset = 0; offset < drafts.length; offset += 200) {
         const part = drafts.slice(offset, offset + 200);
-        if (part.some(draft => new Date(draft.dateTime) <= new Date())) throw new Error('A proposed time has passed; upload a fresh CSV.');
+        const confirmError = validateConfirmableDrafts(part, mode);
+        if (confirmError) throw new Error(confirmError);
         if (mode === 'reschedule') {
           await runTransaction(db, async transaction => {
             const latest = await Promise.all(part.map(draft => transaction.get(doc(db, 'scheduledTests', draft.schedule!.id))));

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { istParts, parseDurationMinutes, parseIstDateTime, validateConfirmableDrafts, validateScheduleRows } from './bulk-test-schedule';
+import { buildScheduleReuseRows, istParts, parseDurationMinutes, parseIstDateTime, validateConfirmableDrafts, validateScheduleRows } from './bulk-test-schedule';
 import type { TestSet } from './question-bank';
 import type { ScheduledTest } from './test-schedule';
 
@@ -12,6 +12,24 @@ describe('bulk MCQ schedule validation', () => {
     expect(parseIstDateTime('2030-03-01', '00:15')).toBe('2030-02-28T18:45:00.000Z');
     expect(istParts(new Date('2030-02-28T18:45:00.000Z'))).toEqual({ date: '2030-03-01', time: '00:15' });
     expect(parseIstDateTime('2030-02-30', '10:00')).toBeNull();
+  });
+
+  it('exports scheduled tests in the new-schedule CSV format for reuse', () => {
+    const result = buildScheduleReuseRows(schedules, sets);
+    expect(result.skippedScheduleIds).toEqual([]);
+    expect(result.rows).toEqual([{
+      test_set_id: 'set-a',
+      test_set_name: 'Science',
+      standard: '10',
+      subject_name: 'Science',
+      date: '2030-03-01',
+      time: '10:00',
+      duration_minutes: '30',
+    }]);
+
+    const missing = buildScheduleReuseRows(schedules, []);
+    expect(missing.rows).toEqual([]);
+    expect(missing.skippedScheduleIds).toEqual(['session-1']);
   });
 
   it('accepts spreadsheet whole-number duration formats', () => {

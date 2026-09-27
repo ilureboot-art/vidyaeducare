@@ -27,38 +27,13 @@ import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/e
 import { Checkbox } from "@/components/ui/checkbox";
 import { type AcademicConfig, defaultAcademicConfig } from "@/lib/academic-config";
 import { type StoreConfig, defaultStoreConfig } from "@/lib/store-config";
+import { getMockTestAccess, isFreeMonthMockTest } from "@/lib/mock-test-access";
 
 const BADGE_COLORS = {
     'Platinum': 'text-slate-400 fill-slate-100',
     'Gold': 'text-yellow-500 fill-yellow-100',
     'Silver': 'text-gray-400 fill-gray-100',
     'Bronze': 'text-amber-600 fill-amber-100',
-};
-
-const checkMockTestAccess = (student: StudentProfile, freeTrialDays = 30, parentProfile?: any) => {
-    if (student.mockTestSubscribed) {
-        return { hasAccess: true, isTrial: false, daysLeft: 9999, limitReached: false };
-    }
-    
-    // Check count-based limit if mock_test_limit is configured on the parent
-    const mockTestLimit = parentProfile?.mock_test_limit;
-    const testsTaken = student.stats?.testsTaken || 0;
-    if (typeof mockTestLimit === 'number') {
-        if (testsTaken >= mockTestLimit) {
-            return { hasAccess: false, isTrial: true, daysLeft: 0, limitReached: true };
-        }
-    }
-
-    const created = student.createdAt ? new Date(student.createdAt) : new Date();
-    const expiryDate = new Date(created.getTime() + freeTrialDays * 24 * 60 * 60 * 1000);
-    const now = new Date();
-    const daysLeft = Math.max(0, Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
-    return {
-        hasAccess: now < expiryDate,
-        isTrial: true,
-        daysLeft,
-        limitReached: false
-    };
 };
 
 function ProfilePageContent() {
@@ -421,7 +396,7 @@ function ProfilePageContent() {
     const handleStartTest = (test: ScheduledTest) => {
         if (!selectedStudentForTest) return;
         
-        const access = checkMockTestAccess(selectedStudentForTest, storeConfig?.freeTrialDays || 30, parentProfile);
+        const access = getMockTestAccess(selectedStudentForTest.mockTestSubscribed, test);
         if (!access.hasAccess) {
             setStudentToActivate(selectedStudentForTest);
             setIsPurchasePopupOpen(true);
@@ -698,59 +673,26 @@ function ProfilePageContent() {
                                     {student.name}
                                 </CardTitle>
                                  <Badge variant="outline" className="bg-white/50 text-[10px] font-black uppercase tracking-widest">{student.academic.board}</Badge>
-                                 {(() => {
-                                     const status = checkMockTestAccess(student, storeConfig?.freeTrialDays || 30, parentProfile);
-                                     if (student.mockTestSubscribed) {
-                                         return <Badge className="bg-green-100 hover:bg-green-100 text-green-700 border-green-200 text-[10px] font-bold">MockArena Active</Badge>;
-                                     } else if (status.hasAccess) {
-                                         const mockTestLimit = parentProfile?.mock_test_limit;
-                                         const testsTaken = student.stats?.testsTaken || 0;
-                                         const badgeText = typeof mockTestLimit === 'number'
-                                             ? `Free Trial: ${testsTaken}/${mockTestLimit} Tests Taken`
-                                             : `Free Trial: ${status.daysLeft}d left`;
-                                         return (
-                                             <div className="flex items-center gap-1.5">
-                                                 <Badge className="bg-blue-100 hover:bg-blue-100 text-blue-700 border-blue-200 text-[10px] font-bold">{badgeText}</Badge>
-                                                 <Button 
-                                                     variant="outline" 
-                                                     size="sm" 
-                                                     type="button"
-                                                     className="h-5 px-1.5 text-[9px] font-bold text-accent border-accent/20 bg-accent/5 hover:bg-accent/10"
-                                                     onClick={(e) => {
-                                                         e.stopPropagation();
-                                                         setStudentToActivate(student);
-                                                         setIsActivateDialogOpen(true);
-                                                     }}
-                                                 >
-                                                     Activate
-                                                 </Button>
-                                             </div>
-                                         );
-                                     } else {
-                                         const mockTestLimit = parentProfile?.mock_test_limit;
-                                         const testsTaken = student.stats?.testsTaken || 0;
-                                         const limitReached = typeof mockTestLimit === 'number' && testsTaken >= mockTestLimit;
-                                         const badgeText = limitReached ? "Limit Reached" : "Trial Expired";
-                                         return (
-                                             <div className="flex items-center gap-1.5">
-                                                 <Badge variant="destructive" className="bg-red-100 hover:bg-red-100 text-red-700 border-red-200 text-[10px] font-bold">{badgeText}</Badge>
-                                                 <Button 
-                                                     variant="outline" 
-                                                     size="sm" 
-                                                     type="button"
-                                                     className="h-5 px-1.5 text-[9px] font-black text-accent border-accent/20 bg-accent/5 hover:bg-accent/10"
-                                                     onClick={(e) => {
-                                                         e.stopPropagation();
-                                                         setStudentToActivate(student);
-                                                         setIsActivateDialogOpen(true);
-                                                     }}
-                                                 >
-                                                     ACTIVATE
-                                                 </Button>
-                                             </div>
-                                         );
-                                     }
-                                 })()}
+                                 {student.mockTestSubscribed ? (
+                                     <Badge className="bg-green-100 hover:bg-green-100 text-green-700 border-green-200 text-[10px] font-bold">MockArena Active</Badge>
+                                 ) : (
+                                     <div className="flex items-center gap-1.5">
+                                         <Badge className="bg-blue-100 hover:bg-blue-100 text-blue-700 border-blue-200 text-[10px] font-bold">June Tests Free</Badge>
+                                         <Button
+                                             variant="outline"
+                                             size="sm"
+                                             type="button"
+                                             className="h-5 px-1.5 text-[9px] font-black text-accent border-accent/20 bg-accent/5 hover:bg-accent/10"
+                                             onClick={(e) => {
+                                                 e.stopPropagation();
+                                                 setStudentToActivate(student);
+                                                 setIsActivateDialogOpen(true);
+                                             }}
+                                         >
+                                             ACTIVATE
+                                         </Button>
+                                     </div>
+                                 )}
                             </div>
                             <div className="flex items-center gap-4 mt-1">
                                 <p className="text-sm font-bold text-muted-foreground flex items-center gap-1.5">
@@ -989,6 +931,11 @@ function ProfilePageContent() {
                                                     <Badge variant={isLive ? "default" : isUpcoming ? "outline" : "secondary"} className="text-[9px] font-black uppercase tracking-tighter px-2 h-5">
                                                         {isLive ? "Live Arena" : isUpcoming ? "Upcoming" : "Practice Only"}
                                                     </Badge>
+                                                    {!selectedStudentForTest?.mockTestSubscribed && (
+                                                        <Badge variant={isFreeMonthMockTest(test) ? "secondary" : "destructive"} className="text-[8px] font-bold uppercase">
+                                                            {isFreeMonthMockTest(test) ? "June Free" : "Purchase Required"}
+                                                        </Badge>
+                                                    )}
                                                     <Button 
                                                         size="sm" 
                                                         className={cn("font-bold px-4 h-8", isUpcoming && "opacity-50")} 

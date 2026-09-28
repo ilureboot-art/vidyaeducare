@@ -218,6 +218,7 @@ service cloud.firestore {
       allow write: if false;
     }
     match /storytellerPurchaseRequests/{id} { allow read, write: if false; }
+    match /storytellerVoiceReferences/{id} { allow read, write: if false; }
     match /storytellerConfigHistory/{id} { allow read: if isAdmin(); allow write: if false; }
 
     // Life & Relationship Consultancy: all mutations go through server APIs.

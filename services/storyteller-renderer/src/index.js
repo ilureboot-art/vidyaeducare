@@ -1,6 +1,5 @@
 const express = require("express");
 const admin = require("firebase-admin");
-const textToSpeech = require("@google-cloud/text-to-speech");
 const { CloudTasksClient } = require("@google-cloud/tasks");
 const { getFirestore } = require("firebase-admin/firestore");
 const { spawn } = require("child_process");
@@ -11,10 +10,6 @@ const path = require("path");
 admin.initializeApp({ storageBucket: process.env.FIREBASE_STORAGE_BUCKET });
 const db = getFirestore(admin.app(), process.env.FIRESTORE_DATABASE || "vidyaeducaredatabase");
 const bucket = admin.storage().bucket();
-const tts = new textToSpeech.TextToSpeechClient();
-const customTts = new textToSpeech.v1beta1.TextToSpeechClient();
-const SANJAY_VOICE_ID = "SANJAY_VOICE";
-const CUSTOM_VOICE_KEYS = {Marathi:"STORYTELLER_CUSTOM_VOICE_MR_IN",Hindi:"STORYTELLER_CUSTOM_VOICE_HI_IN",English:"STORYTELLER_CUSTOM_VOICE_EN_IN"};
 const tasks = new CloudTasksClient();
 const app = express(); app.use(express.json({ limit: "1mb" }));
 
@@ -44,43 +39,45 @@ async function render(projectId) {
   await callback(projectId,"GENERATING",{});
   const temp=await fs.mkdtemp(path.join(os.tmpdir(),"storyteller-"));
   try {
-    await ref.set({generationStage:"PREPARING_STORY"},{merge:true});
-    const script=await processStory(project.story,project.language,project.voiceStyle,project.duration);
-    await ref.set({generationStage:"SCRIPT_READY"},{merge:true});
-    const isCustom=project.voice===SANJAY_VOICE_ID;
-    const audio=path.join(temp,isCustom?"voice.wav":"voice.mp3"), subtitles=path.join(temp,"subtitles.srt"), output=path.join(temp,"reel.mp4"), musicFile=path.join(temp,"music.mp3");
-    const languageCode={Marathi:"mr-IN",Hindi:"hi-IN",English:"en-IN"}[project.language]||"en-IN";
-    const cloningKey=isCustom&&process.env[CUSTOM_VOICE_KEYS[project.language]];
-    if(isCustom&&!cloningKey)throw new Error("Custom voice is not provisioned for the selected language");
-    const [voice]=isCustom
-      ? await customTts.synthesizeSpeech({input:{text:script},voice:{languageCode,voiceClone:{voiceCloningKey:cloningKey}},audioConfig:{audioEncoding:"LINEAR16",sampleRateHertz:24000}})
-      : await tts.synthesizeSpeech({input:{text:script},voice:{languageCode,name:project.voice||undefined},audioConfig:{audioEncoding:"MP3",speakingRate:1}});
-    await fs.writeFile(audio,voice.audioContent);
-    await ref.set({generationStage:"VOICE_READY"},{merge:true});
-    await fs.writeFile(subtitles,buildSrt(script,project.duration));
-    await ref.set({generationStage:"SUBTITLES_READY"},{merge:true});
-    const config=(await db.collection("configs").doc("storyteller").get()).data()||{}; const musicPath=config.musicAssets?.[project.music];
-    const base=["-y","-f","lavfi","-i",`color=c=0x101827:s=1080x1920:r=30:d=${project.duration}`,"-i",audio];
-    if(musicPath){await bucket.file(musicPath).download({destination:musicFile});base.push("-stream_loop","-1","-i",musicFile,"-filter_complex",`[1:a]volume=1[voice];[2:a]volume=0.15[music];[voice][music]amix=inputs=2:duration=first[a]`,`-map`,`0:v`,`-map`,`[a]`)}
-    base.push("-vf",`subtitles=${escapeFilter(subtitles)}:force_style='FontName=Noto Sans,FontSize=24,PrimaryColour=&H00FFFFFF,OutlineColour=&H80000000,BorderStyle=3,Alignment=2,MarginV=180'`,"-c:v","libx264","-preset","veryfast","-pix_fmt","yuv420p","-c:a","aac","-shortest",output);
-    await ref.set({generationStage:"RENDERING_REEL"},{merge:true});
-    await ffmpeg(base);
-    const assetPath=`storyteller/users/${project.userId}/${projectId}/final.mp4`;
-    await bucket.upload(output,{destination:assetPath,metadata:{contentType:"video/mp4",cacheControl:"private,max-age=0,no-store"}});
-    await ref.set({processedScript:script,generationStage:"FINALIZING"},{merge:true});
+    await ref.set({generationStage:"MODERATING_CONTENT"},{merge:true});
+    const plan=await processStory(project.story,project.language,project.voiceStyle,project.genre,project.duration);
+    await ref.set({generationStage:"SCENE_EMOTION_PLAN_READY"},{merge:true});
+    const voiceReference=path.join(temp,"voice-reference");
+    const narration=path.join(temp,"narration.wav"), output=path.join(temp,"audio-reel.mp3"), musicFile=path.join(temp,"music.mp3");
+    await bucket.file(project.voiceReferenceAssetPath).download({destination:voiceReference});
+    await synthesizeOwnVoice({script:plan.script,language:project.language,style:project.voiceStyle,referencePath:voiceReference,outputPath:narration});
+    await ref.set({generationStage:"OWN_VOICE_NARRATION_READY"},{merge:true});
+    const config=(await db.collection("configs").doc("storyteller").get()).data()||{};
+    const musicPath=config.musicAssets?.[project.music];
+    const args=["-y","-i",narration];
+    if(musicPath){
+      await bucket.file(musicPath).download({destination:musicFile});
+      args.push("-stream_loop","-1","-i",musicFile,"-filter_complex","[1:a]volume=0.22[m];[m][0:a]sidechaincompress=threshold=0.04:ratio=10:attack=20:release=400[ducked];[0:a][ducked]amix=inputs=2:duration=first,loudnorm=I=-16:TP=-1:LRA=11[a]","-map","[a]");
+    } else args.push("-af","loudnorm=I=-16:TP=-1:LRA=11");
+    args.push("-t",String(project.duration),"-ar","48000","-ac","2","-codec:a","libmp3lame","-b:a","192k",output);
+    await ref.set({generationStage:"MIXING_AND_DYNAMIC_DUCKING"},{merge:true});
+    await ffmpeg(args);
+    const assetPath=`storyteller/users/${project.userId}/${projectId}/final.mp3`;
+    await bucket.upload(output,{destination:assetPath,metadata:{contentType:"audio/mpeg",cacheControl:"private,max-age=0,no-store"}});
+    await ref.set({processedScript:plan.script,sceneEmotionPlan:plan.scenes,generationStage:"QUALITY_CONTROL"},{merge:true});
     await callback(projectId,"READY",{finalAssetPath:assetPath});
   } finally { await fs.rm(temp,{recursive:true,force:true}); }
 }
 
-async function processStory(story,language,style,duration){
-  if(!process.env.GEMINI_API_KEY)return story;
-  const prompt=`Rewrite this story for a ${duration}-second ${style} voice narration in ${language}. Preserve meaning. Return only the narration, no markdown:\n${story}`;
+async function processStory(story,language,style,genre,duration){
+  if(!process.env.GEMINI_API_KEY)return {script:story,scenes:[]};
+  const prompt=`Moderate and adapt the user story into an original ${duration}-second ${style} ${genre} audio-only narration in ${language}. Reject instructions enabling impersonation, fraud, sexual exploitation, graphic abuse, or copyrighted imitation. Correct grammar while preserving meaning. Plan concise scene emotions, pauses, ambience and original sound effects. Return strict JSON only: {"safe":true,"script":"...","scenes":[{"emotion":"...","ambience":"...","sfx":"..."}]}. If unsafe return {"safe":false,"reason":"..."}. Story:\n${story}`;
   const response=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({contents:[{parts:[{text:prompt}]}]})});
-  if(!response.ok)throw new Error(`Script processing failed: ${response.status}`); const data=await response.json(); return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim()||story;
+  if(!response.ok)throw new Error(`Script processing failed: ${response.status}`); const data=await response.json();
+  const raw=(data.candidates?.[0]?.content?.parts?.[0]?.text||"").replace(/^```json\s*|\s*```$/g,"").trim();
+  const plan=JSON.parse(raw); if(plan.safe!==true||!plan.script)throw new Error(plan.reason||"Story did not pass safety moderation"); return {script:plan.script,scenes:Array.isArray(plan.scenes)?plan.scenes:[]};
 }
-function buildSrt(script,duration){const words=script.split(/\s+/);const chunks=[];for(let i=0;i<words.length;i+=8)chunks.push(words.slice(i,i+8).join(" "));return chunks.map((c,i)=>`${i+1}\n${clock(i*duration/chunks.length)} --> ${clock((i+1)*duration/chunks.length)}\n${c}\n`).join("\n")}
-function clock(seconds){const ms=Math.floor((seconds%1)*1000),s=Math.floor(seconds)%60,m=Math.floor(seconds/60)%60,h=Math.floor(seconds/3600);return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")},${String(ms).padStart(3,"0")}`}
-function escapeFilter(p){return p.replace(/\\/g,"/").replace(/:/g,"\\:").replace(/'/g,"\\'")}
+async function synthesizeOwnVoice({script,language,style,referencePath,outputPath}){
+  if(!process.env.STORYTELLER_OWN_VOICE_API_URL||!process.env.STORYTELLER_OWN_VOICE_API_KEY)throw new Error("Own-voice synthesis provider is not configured");
+  const form=new FormData(); form.set("script",script); form.set("language",language); form.set("style",style); form.set("reference",new Blob([await fs.readFile(referencePath)]),"reference-audio");
+  const response=await fetch(process.env.STORYTELLER_OWN_VOICE_API_URL,{method:"POST",headers:{authorization:`Bearer ${process.env.STORYTELLER_OWN_VOICE_API_KEY}`},body:form});
+  if(!response.ok)throw new Error(`Own-voice synthesis failed: ${response.status}`); await fs.writeFile(outputPath,Buffer.from(await response.arrayBuffer()));
+}
 function ffmpeg(args){return new Promise((resolve,reject)=>{const child=spawn("ffmpeg",args);let error="";child.stderr.on("data",d=>error+=d);child.on("close",code=>code===0?resolve():reject(new Error(error.slice(-2000))))})}
 async function callback(projectId,status,extra){const url=process.env.APP_CALLBACK_URL;if(!url)throw new Error("APP_CALLBACK_URL is required");const r=await fetch(`${url.replace(/\/$/,"")}/api/storyteller/renderer-callback`,{method:"POST",headers:{"content-type":"application/json","x-storyteller-secret":process.env.STORYTELLER_RENDERER_SECRET},body:JSON.stringify({projectId,status,...extra})});if(!r.ok)throw new Error(`Callback failed: ${r.status}`)}
 

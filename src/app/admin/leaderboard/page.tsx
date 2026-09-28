@@ -26,6 +26,10 @@ interface LeaderboardEntry {
   parentId?: string;
   isRewarded?: boolean;
   rewardedAt?: string;
+  accessType: string;
+  rankingEligible: boolean;
+  perTestCashPrizeEligible: boolean;
+  monthlyCashPrizeEligible: boolean;
 }
 
 interface ScheduledTestSummary {
@@ -124,7 +128,11 @@ export default function AdminLeaderboardPage() {
               createdAt: data.createdAt || data.date || new Date().toISOString(),
               parentId: data.parentId || "",
               isRewarded: data.isRewarded || false,
-              rewardedAt: data.rewardedAt || ""
+              rewardedAt: data.rewardedAt || "",
+              accessType: data.accessType || 'LEGACY_REVIEW_REQUIRED',
+              rankingEligible: data.rankingEligible === true,
+              perTestCashPrizeEligible: data.perTestCashPrizeEligible === true,
+              monthlyCashPrizeEligible: data.monthlyCashPrizeEligible === true,
           };
       });
 
@@ -147,7 +155,7 @@ export default function AdminLeaderboardPage() {
   const mockTestRankings = (() => {
     if (!allEntries || !selectedTestId) return [];
     return allEntries
-      .filter(entry => entry.testId === selectedTestId)
+      .filter(entry => entry.testId === selectedTestId && entry.rankingEligible)
       .sort((a, b) => {
           if (b.score !== a.score) return b.score - a.score;
           return a.time.localeCompare(b.time);
@@ -165,7 +173,8 @@ export default function AdminLeaderboardPage() {
 
       const currentMonthEntries = allEntries.filter(entry => {
           const entryDate = new Date(entry.createdAt);
-          return entryDate.getFullYear() === currentYear && entryDate.getMonth() === currentMonth;
+          return entry.monthlyCashPrizeEligible &&
+            entryDate.getFullYear() === currentYear && entryDate.getMonth() === currentMonth;
       });
 
       const studentBestMap: Record<string, LeaderboardEntry> = {};
@@ -203,7 +212,9 @@ export default function AdminLeaderboardPage() {
 
     try {
       const top5 = mockTestRankings.slice(0, 5);
-      const pendingRewards = top5.filter(entry => !entry.isRewarded && entry.accuracy >= 80);
+      const pendingRewards = top5.filter(entry =>
+        !entry.isRewarded && entry.accuracy >= 80 && entry.perTestCashPrizeEligible
+      );
 
       if (pendingRewards.length === 0) {
         toast({ title: "No Pending Rewards", description: "No top 5 rankers with 80%+ accuracy require cash prize finalization." });
@@ -232,10 +243,8 @@ export default function AdminLeaderboardPage() {
 
         const parentIdStr = parentId;
 
-        const parentUserDoc = await getDoc(doc(db, "users", parentIdStr));
-        const purchasedMockTest = parentUserDoc.exists() && parentUserDoc.data()?.purchasedMockTest === true;
-        if (!purchasedMockTest) {
-          logs.push(`Rank ${ranker.rank} (${ranker.name}): Skipped (Parent has not purchased mock test; free trial users not eligible for cash rewards)`);
+        if (ranker.accessType !== 'PAID_SUBSCRIPTION' || !ranker.perTestCashPrizeEligible) {
+          logs.push(`Rank ${ranker.rank} (${ranker.name}): Skipped (Attempt was not paid and reward-eligible at test time)`);
           continue;
         }
 
@@ -315,11 +324,9 @@ export default function AdminLeaderboardPage() {
         const parentIdStr = parentId;
 
         if (prizeAmount > 0) {
-          const parentUserDoc = await getDoc(doc(db, "users", parentIdStr));
-          const purchasedMockTest = parentUserDoc.exists() && parentUserDoc.data()?.purchasedMockTest === true;
-          if (!purchasedMockTest) {
+          if (ranker.accessType !== 'PAID_SUBSCRIPTION' || !ranker.monthlyCashPrizeEligible) {
             prizeAmount = 0;
-            logs.push(`Rank ${ranker.rank} (${ranker.name}): Monthly cash reward skipped (Parent has not purchased mock test; free trial user), only AI access granted.`);
+            logs.push(`Rank ${ranker.rank} (${ranker.name}): Monthly cash reward skipped (attempt was not paid and eligible at test time).`);
           }
         }
 

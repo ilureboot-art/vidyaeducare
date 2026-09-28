@@ -28,6 +28,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import { addMinutes } from 'date-fns';
 import { getMockTestAccess } from '@/lib/mock-test-access';
+import { getMockTestRewardEligibility, type MockTestRewardEligibility } from '@/lib/mock-test-rewards';
 
 type TestState = "loading" | "in_progress" | "completed" | "review";
 
@@ -48,6 +49,7 @@ function MockTestContent() {
     const [answers, setAnswers] = useState<{ [key: string]: { en: string; mr: string; } }>({});
     const [score, setScore] = useState(0);
     const [isLiveTest, setIsLiveTest] = useState(false);
+    const [rewardEligibility, setRewardEligibility] = useState<MockTestRewardEligibility | null>(null);
 
     const [isAiSolving, setIsAiSolving] = useState<string | null>(null);
     const [aiExplanation, setAiExplanation] = useState<SolveDoubtOutput | null>(null);
@@ -115,7 +117,13 @@ function MockTestContent() {
                         router.push('/profile');
                         return;
                     }
-                    setIsLiveTest(now >= startsAt && now < endsAt);
+                    const isLive = now >= startsAt && now < endsAt;
+                    setIsLiveTest(isLive);
+                    setRewardEligibility(getMockTestRewardEligibility({
+                        accessType: access.accessType,
+                        test: scheduledTestData,
+                        now,
+                    }));
                     setScheduledTest(scheduledTestData);
                     
                     const durationInSeconds = (scheduledTestData.duration || 30) * 60;
@@ -217,7 +225,18 @@ function MockTestContent() {
                 answers: answers,
                 timeTaken: timeString,
                 date: new Date().toISOString(),
-                isLive: isLiveTest
+                isLive: isLiveTest,
+                accessType: rewardEligibility?.accessType || 'BACKDATED_PRACTICE',
+                testWindowStatus: rewardEligibility?.testWindowStatus || 'COMPLETED',
+                rankingEligible: rewardEligibility?.rankingEligible === true,
+                perTestCashPrizeEligible: rewardEligibility?.perTestCashPrizeEligible === true,
+                monthlyCashPrizeEligible: rewardEligibility?.monthlyCashPrizeEligible === true,
+                eligibilityReason: rewardEligibility?.reasonCode || 'COMPLETED_PRACTICE_ONLY',
+                subscriptionSnapshot: {
+                    isPaid: rewardEligibility?.accessType === 'PAID_SUBSCRIPTION',
+                    accessType: rewardEligibility?.accessType || 'BACKDATED_PRACTICE',
+                    evaluatedAt: new Date().toISOString(),
+                },
             };
 
             await setDoc(resultDocRef, resultData).catch(async (e) => {
@@ -227,8 +246,9 @@ function MockTestContent() {
                 throw e;
             });
 
-            // CRITICAL: Only save to leaderboard if the session is LIVE and student is subscribed
-            if (isLiveTest && studentProfile.mockTestSubscribed) {
+            // Only a paid student who started inside the live window can enter
+            // either the per-test or monthly cash-prize leaderboard.
+            if (rewardEligibility?.rankingEligible === true) {
                 const leaderboardDocRef = doc(db, "leaderboard", resultId);
                 const leaderboardData = {
                     name: studentProfile.name,
@@ -241,7 +261,18 @@ function MockTestContent() {
                     testName: scheduledTest.testSetName,
                     studentId: studentProfile.id,
                     parentId: studentProfile.parentId || "",
-                    createdAt: new Date().toISOString()
+                    createdAt: new Date().toISOString(),
+                    accessType: rewardEligibility.accessType,
+                    testWindowStatus: rewardEligibility.testWindowStatus,
+                    rankingEligible: true,
+                    perTestCashPrizeEligible: rewardEligibility.perTestCashPrizeEligible,
+                    monthlyCashPrizeEligible: rewardEligibility.monthlyCashPrizeEligible,
+                    eligibilityReason: rewardEligibility.reasonCode,
+                    subscriptionSnapshot: {
+                        isPaid: true,
+                        accessType: rewardEligibility.accessType,
+                        evaluatedAt: new Date().toISOString(),
+                    },
                 };
                 await setDoc(leaderboardDocRef, leaderboardData).catch(async (e) => {
                     if (e.code === 'permission-denied') {
@@ -272,9 +303,9 @@ function MockTestContent() {
             setTestState("completed");
             toast({
                 title: timeLeft <= 0 ? "Time's Up!" : (isLiveTest ? "Live Session Submitted!" : "Practice Session Submitted!"),
-                description: isLiveTest 
-                    ? `Results synced with Global Leaderboard. Accuracy: ${finalAccuracy.toFixed(0)}%`
-                    : `Practice performance updated. Accuracy: ${finalAccuracy.toFixed(0)}%`
+                description: rewardEligibility?.rankingEligible
+                    ? `Paid competition result synced with the leaderboard. Accuracy: ${finalAccuracy.toFixed(0)}%`
+                    : `Practice result saved. This attempt does not qualify for ranking or cash prizes. Accuracy: ${finalAccuracy.toFixed(0)}%`
             });
         } catch (error) {
             console.error("Failed to save test results:", error);
@@ -479,28 +510,23 @@ function MockTestContent() {
             <>
             <Card className="w-full max-w-2xl text-center">
                 <CardHeader>
-                    <CardTitle className="text-3xl text-primary">{isLiveTest ? "Live Arena Results" : "Practice Results"}: {scheduledTest.testSetName}</CardTitle>
+                    <CardTitle className="text-3xl text-primary">{rewardEligibility?.rankingEligible ? "Paid Live Arena Results" : "Practice Results"}: {scheduledTest.testSetName}</CardTitle>
                     <CardDescription>For {studentProfile?.name}</CardDescription>
                     <div className="flex justify-center my-4">
                         <div className="relative">
-                            <Trophy className={cn("w-16 h-16", isLiveTest ? "text-yellow-500" : "text-muted-foreground opacity-50")} />
-                            {!isLiveTest && <div className="absolute inset-0 flex items-center justify-center font-black text-[10px] text-white uppercase bg-black/60 rounded-full">PRACTICE</div>}
+                            <Trophy className={cn("w-16 h-16", rewardEligibility?.rankingEligible ? "text-yellow-500" : "text-muted-foreground opacity-50")} />
+                            {!rewardEligibility?.rankingEligible && <div className="absolute inset-0 flex items-center justify-center font-black text-[10px] text-white uppercase bg-black/60 rounded-full">PRACTICE</div>}
                         </div>
                     </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <p className="text-4xl font-bold">Accuracy: {score.toFixed(0)}%</p>
                     
-                    {isLiveTest ? (
-                        !studentProfile.mockTestSubscribed ? (
+                    {rewardEligibility?.rankingEligible ? (
+                        score < 80 ? (
                             <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-3 text-amber-800 text-sm font-medium">
                                 <Info size={18}/>
-                                <span>June Free Access: Purchase a Mock Test package to be eligible for cash rewards.</span>
-                            </div>
-                        ) : score < 80 ? (
-                            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-3 text-amber-800 text-sm font-medium">
-                                <Info size={18}/>
-                                <span>Score 80%+ required for reward eligibility.</span>
+                                <span>Score 80%+ required for cash-prize eligibility.</span>
                             </div>
                         ) : (
                             <div className="p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3 text-green-800 text-sm font-black uppercase tracking-tight">
@@ -511,7 +537,9 @@ function MockTestContent() {
                     ) : (
                          <div className="p-3 bg-muted border rounded-lg flex items-center gap-3 text-muted-foreground text-sm font-medium">
                             <Info size={18}/>
-                            <span>This was a backdated practice session. Rewards are only available for live mock tests.</span>
+                            <span>{rewardEligibility?.accessType === 'JUNE_FREE_PROMOTION'
+                                ? 'June Free Promotional Test: score and performance only. Rankings and cash prizes are exclusively for paid students.'
+                                : 'Practice result only. Completed tests do not qualify for rankings or cash prizes.'}</span>
                         </div>
                     )}
                     

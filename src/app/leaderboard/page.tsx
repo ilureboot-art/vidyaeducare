@@ -32,6 +32,9 @@ type UserEntry = {
   totalQuestions: number;
   time: string;
   createdAt: string;
+  accessType: string;
+  rankingEligible: boolean;
+  monthlyCashPrizeEligible: boolean;
 };
 
 type ScheduledTestSummary = {
@@ -162,7 +165,10 @@ export default function LeaderboardPage() {
                     accuracy,
                     totalQuestions,
                     time: data.time || "00:00",
-                    createdAt: data.createdAt || data.date || new Date().toISOString()
+                    createdAt: data.createdAt || data.date || new Date().toISOString(),
+                    accessType: data.accessType || 'LEGACY_REVIEW_REQUIRED',
+                    rankingEligible: data.rankingEligible === true,
+                    monthlyCashPrizeEligible: data.monthlyCashPrizeEligible === true,
                 };
             });
 
@@ -185,7 +191,7 @@ export default function LeaderboardPage() {
     if (!allEntries || selectedTestId === "all") return [];
     
     return allEntries
-      .filter(entry => entry.testId === selectedTestId)
+      .filter(entry => entry.testId === selectedTestId && entry.rankingEligible)
       .sort((a, b) => {
           if (b.score !== a.score) return b.score - a.score;
           return a.time.localeCompare(b.time); // faster time is better
@@ -204,7 +210,8 @@ export default function LeaderboardPage() {
       // Filter to current month
       const currentMonthEntries = allEntries.filter(entry => {
           const entryDate = new Date(entry.createdAt);
-          return entryDate.getFullYear() === currentYear && entryDate.getMonth() === currentMonth;
+          return entry.monthlyCashPrizeEligible &&
+            entryDate.getFullYear() === currentYear && entryDate.getMonth() === currentMonth;
       });
 
       // Group by studentId and choose best score
@@ -285,8 +292,8 @@ export default function LeaderboardPage() {
             </CardTitle>
             <CardDescription className="text-center font-bold uppercase tracking-widest text-xs mt-2 text-primary">
               {activeTab === "mockTest" 
-                ? "Mock Test Rankings • 80%+ Accuracy Required for Cash Rewards"
-                : `Monthly Rankings for ${currentMonthName} • Top 5 gets AI Tools Access`}
+                ? "Paid Student Rankings • Live Attempts • 80%+ Accuracy for Cash Rewards"
+                : `Paid Student Monthly Rankings for ${currentMonthName}`}
             </CardDescription>
             
             {/* Mock Test Selector Dropdown */}
@@ -478,7 +485,7 @@ export default function LeaderboardPage() {
               <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase">
                   <Info size={14} className="text-primary"/>
                   {activeTab === "mockTest" 
-                    ? "Cash prize rewards require top 5 rank AND 80% accuracy for each test"
+                    ? "Paid students only: live top-5 attempts with 80%+ accuracy qualify. Completed tests never qualify."
                     : `Rank 1 receives ₹${(storeConfig?.monthlyFirstRankerReward ?? 1000).toLocaleString()} Cash + 30 days of free AI Tools access. Ranks 2-5 receive 30 days of free AI Tools access.`}
               </div>
           </CardFooter>

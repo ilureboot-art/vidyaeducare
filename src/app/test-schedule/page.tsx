@@ -249,7 +249,7 @@ export default function TestSchedulePage() {
                         <div className="p-3 bg-primary/10 rounded-full text-primary"><Trophy className="w-6 h-6"/></div>
                         <div>
                             <h3 className="font-bold">Prize Eligibility Rules</h3>
-                            <p className="text-sm text-muted-foreground">Cash prizes and leaderboard rankings are only available during the <b>Live</b> window of a mock test. Backdated tests can be taken anytime for practice, but will not qualify for rewards.</p>
+                            <p className="text-sm text-muted-foreground">Cash prizes and rankings are exclusively for <b>Active Paid Students</b>. Paid upcoming tests are reward-enabled when their live window opens. June free-promotion students may practise and view results, but do not qualify for rankings or cash prizes. Completed tests are practice-only and never qualify.</p>
                         </div>
                     </CardContent>
                 </Card>

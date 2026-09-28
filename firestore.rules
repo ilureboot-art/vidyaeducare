@@ -29,6 +29,11 @@ service cloud.firestore {
         get(/databases/$(database)/documents/students/$(studentId)).data.parentId == request.auth.uid;
     }
 
+    function isPaidStudent(studentId) {
+      return ownsStudent(studentId) &&
+        get(/databases/$(database)/documents/students/$(studentId)).data.mockTestSubscribed == true;
+    }
+
     function isScheduledTestLive(testId) {
       let scheduledTest = get(/databases/$(database)/documents/scheduledTests/$(testId)).data;
       return !('startsAt' in scheduledTest) ||
@@ -123,16 +128,33 @@ service cloud.firestore {
         ownsStudent(request.resource.data.studentId) &&
         request.resource.data.testId is string &&
         request.resource.data.isLive is bool &&
-        (!request.resource.data.isLive || isScheduledTestLive(request.resource.data.testId));
+        (!request.resource.data.isLive || isScheduledTestLive(request.resource.data.testId)) &&
+        request.resource.data.rankingEligible is bool &&
+        request.resource.data.perTestCashPrizeEligible is bool &&
+        request.resource.data.monthlyCashPrizeEligible is bool &&
+        request.resource.data.accessType is string &&
+        (!request.resource.data.rankingEligible || (
+          isPaidStudent(request.resource.data.studentId) &&
+          request.resource.data.isLive == true &&
+          request.resource.data.accessType == 'PAID_SUBSCRIPTION' &&
+          request.resource.data.perTestCashPrizeEligible == true &&
+          request.resource.data.monthlyCashPrizeEligible == true
+        ));
     }
 
     match /leaderboard/{id} {
       allow read, list: if true;
       allow create: if signedIn() &&
-        ownsStudent(request.resource.data.studentId) &&
+        isPaidStudent(request.resource.data.studentId) &&
         request.resource.data.testId is string &&
         isScheduledTestLive(request.resource.data.testId) &&
-        get(/databases/$(database)/documents/testResults/$(id)).data.isLive == true;
+        get(/databases/$(database)/documents/testResults/$(id)).data.isLive == true &&
+        request.resource.data.accessType == 'PAID_SUBSCRIPTION' &&
+        request.resource.data.testWindowStatus == 'LIVE' &&
+        request.resource.data.rankingEligible == true &&
+        request.resource.data.perTestCashPrizeEligible == true &&
+        request.resource.data.monthlyCashPrizeEligible == true &&
+        get(/databases/$(database)/documents/testResults/$(id)).data.rankingEligible == true;
       allow update, delete: if isAdmin();
     }
 

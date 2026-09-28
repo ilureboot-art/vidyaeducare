@@ -1,4 +1,5 @@
 import type { ScheduledTest } from './test-schedule';
+import type { MockTestAccessType } from './mock-test-rewards';
 
 export const FREE_MOCK_TEST_MONTH = 6;
 export const MOCK_TEST_ACCESS_TIME_ZONE = 'Asia/Kolkata';
@@ -6,6 +7,8 @@ export const MOCK_TEST_ACCESS_TIME_ZONE = 'Asia/Kolkata';
 export type MockTestAccess = {
   hasAccess: boolean;
   reason: 'subscribed' | 'free-month' | 'purchase-required';
+  accessType: MockTestAccessType;
+  isPaid: boolean;
 };
 
 export function scheduledMonthInIndia(dateTime: string): number | null {
@@ -29,7 +32,11 @@ export function getMockTestAccess(
   subscribed: boolean | undefined,
   test: Pick<ScheduledTest, 'dateTime'>,
 ): MockTestAccess {
-  if (subscribed === true) return { hasAccess: true, reason: 'subscribed' };
-  if (isFreeMonthMockTest(test)) return { hasAccess: true, reason: 'free-month' };
-  return { hasAccess: false, reason: 'purchase-required' };
+  if (subscribed === true) {
+    return { hasAccess: true, reason: 'subscribed', accessType: 'PAID_SUBSCRIPTION', isPaid: true };
+  }
+  if (isFreeMonthMockTest(test)) {
+    return { hasAccess: true, reason: 'free-month', accessType: 'JUNE_FREE_PROMOTION', isPaid: false };
+  }
+  return { hasAccess: false, reason: 'purchase-required', accessType: 'PURCHASE_REQUIRED', isPaid: false };
 }

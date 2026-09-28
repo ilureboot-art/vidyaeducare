@@ -16,6 +16,8 @@ describe('MCQ scheduled-month access', () => {
     expect(getMockTestAccess(false, { dateTime: '2026-05-31T12:30:00.000Z' })).toEqual({
       hasAccess: false,
       reason: 'purchase-required',
+      accessType: 'PURCHASE_REQUIRED',
+      isPaid: false,
     });
     expect(getMockTestAccess(false, { dateTime: '2026-07-01T12:30:00.000Z' }).hasAccess).toBe(false);
   });
@@ -24,6 +26,8 @@ describe('MCQ scheduled-month access', () => {
     expect(getMockTestAccess(true, { dateTime: '2026-12-01T04:30:00.000Z' })).toEqual({
       hasAccess: true,
       reason: 'subscribed',
+      accessType: 'PAID_SUBSCRIPTION',
+      isPaid: true,
     });
   });
 

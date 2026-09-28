@@ -28,6 +28,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { type AcademicConfig, defaultAcademicConfig } from "@/lib/academic-config";
 import { type StoreConfig, defaultStoreConfig } from "@/lib/store-config";
 import { getMockTestAccess, isFreeMonthMockTest } from "@/lib/mock-test-access";
+import { getMockTestRewardEligibility } from "@/lib/mock-test-rewards";
 
 const BADGE_COLORS = {
     'Platinum': 'text-slate-400 fill-slate-100',
@@ -408,7 +409,8 @@ function ProfilePageContent() {
         const duration = test.duration || 30;
         const expiryDate = addMinutes(testDate, duration);
         
-        // Reward eligibility logic: Only tests happening right now qualify for rewards
+        // Upcoming tests cannot be attempted early. Paid students enter the
+        // competitive leaderboard only when they submit inside the live window.
         const isLive = isAfter(now, testDate) && isBefore(now, expiryDate);
         
         router.push(`/mock-test?studentId=${selectedStudentForTest.id}&testId=${test.id}&isLive=${isLive}`);
@@ -699,7 +701,8 @@ function ProfilePageContent() {
                                     <GraduationCap size={16} className="text-primary"/> {student.academic.standard} Standard
                                 </p>
                                 <p className="text-sm font-bold text-muted-foreground flex items-center gap-1.5">
-                                    <Star size={16} className="text-yellow-500 fill-yellow-500"/> Global Rank #4
+                                    <Star size={16} className={student.mockTestSubscribed ? "text-yellow-500 fill-yellow-500" : "text-muted-foreground"}/>
+                                    {student.mockTestSubscribed ? "Paid Ranking Eligible" : "Free Practice • Not Ranked"}
                                 </p>
                             </div>
                         </div>
@@ -794,9 +797,49 @@ function ProfilePageContent() {
                                 <span className="text-sm font-black text-primary">{student.stats?.testsTaken || 0}</span>
                             </div>
                              <div className="flex justify-between items-center p-3 bg-primary/10 rounded-xl border border-primary/10">
-                                <span className="text-xs font-black text-primary uppercase">Current Standing</span>
-                                <span className="text-sm font-black text-primary">#4 / 1,240</span>
+                                <span className="text-xs font-black text-primary uppercase">Competition Access</span>
+                                <span className="text-sm font-black text-primary">{student.mockTestSubscribed ? "PAID • ELIGIBLE" : "FREE • PRACTICE"}</span>
+                             </div>
+                        </div>
+                    </div>
+
+                    <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 border-t">
+                        <div className="p-5 rounded-2xl border bg-card space-y-3">
+                            <h3 className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                                <Trophy size={15}/> Reward Eligibility Centre
+                            </h3>
+                            <Badge className={student.mockTestSubscribed ? "bg-green-600" : "bg-slate-500"}>
+                                {student.mockTestSubscribed ? "Paid Competition Access" : "June Free Practice Access"}
+                            </Badge>
+                            <p className="text-xs text-muted-foreground leading-relaxed">
+                                {student.mockTestSubscribed
+                                    ? "Live paid attempts qualify for rankings. Top-5 students with 80%+ accuracy may receive cash prizes. Upcoming sessions become rankable when live."
+                                    : "Free promotional attempts provide scores and analytics only. They never enter per-test or monthly rankings and receive no cash prize."}
+                            </p>
+                        </div>
+
+                        <div className="p-5 rounded-2xl border bg-card space-y-3">
+                            <h3 className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                                <Target size={15}/> Personal Study Insights
+                            </h3>
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                                <div className="rounded-xl bg-muted/40 p-3"><p className="text-muted-foreground">Accuracy</p><p className="font-black text-lg">{student.stats?.avgScore || 0}%</p></div>
+                                <div className="rounded-xl bg-muted/40 p-3"><p className="text-muted-foreground">Tests</p><p className="font-black text-lg">{student.stats?.testsTaken || 0}</p></div>
                             </div>
+                            <p className="text-xs text-muted-foreground">
+                                {(student.stats?.avgScore || 0) >= 80
+                                    ? "Strong accuracy. Focus next on speed and consistency."
+                                    : "Recommended goal: revise weak subjects and reach 80% accuracy."}
+                            </p>
+                        </div>
+
+                        <div className="p-5 rounded-2xl border bg-card space-y-3">
+                            <h3 className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                                <ScrollText size={15}/> Profile & Reports
+                            </h3>
+                            <p className="text-xs text-muted-foreground">Board: <b>{student.academic.board}</b> • Standard: <b>{student.academic.standard}</b></p>
+                            <p className="text-xs text-muted-foreground">Subjects: <b>{student.academic.subjects?.length || 0}</b> • Badges: <b>{student.badges?.length || 0}</b></p>
+                            <p className="text-[11px] text-muted-foreground">Detailed test history, mistake notebook, goals, downloadable reports and privacy controls use this verified student workspace as their source.</p>
                         </div>
                     </div>
                 </CardContent>
@@ -914,6 +957,12 @@ function ProfilePageContent() {
                                         
                                         const isUpcoming = isBefore(now, testDate);
                                         const isLive = isAfter(now, testDate) && isBefore(now, expiryDate);
+                                        const access = getMockTestAccess(selectedStudentForTest?.mockTestSubscribed, test);
+                                        const eligibility = getMockTestRewardEligibility({
+                                            accessType: access.accessType,
+                                            test,
+                                            now,
+                                        });
                                         
                                         return (
                                             <div key={test.id} className={cn(
@@ -924,7 +973,8 @@ function ProfilePageContent() {
                                                     <p className="font-black text-sm leading-none text-primary">{test.testSetName}</p>
                                                     <div className="flex items-center gap-2">
                                                         <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">{format(testDate, "PPP p")}</p>
-                                                        {isLive && <Badge className="h-4 px-1 text-[8px] animate-pulse bg-red-500 hover:bg-red-500 border-none">LIVE REWARDS</Badge>}
+                                                        {eligibility.rankingEligible && <Badge className="h-4 px-1 text-[8px] animate-pulse bg-red-500 hover:bg-red-500 border-none">PAID LIVE REWARDS</Badge>}
+                                                        {isUpcoming && access.isPaid && <Badge className="h-4 px-1 text-[8px] bg-emerald-600 hover:bg-emerald-600 border-none">UPCOMING PAID REWARDS</Badge>}
                                                     </div>
                                                 </div>
                                                 <div className="flex flex-col items-end gap-2">
@@ -933,8 +983,11 @@ function ProfilePageContent() {
                                                     </Badge>
                                                     {!selectedStudentForTest?.mockTestSubscribed && (
                                                         <Badge variant={isFreeMonthMockTest(test) ? "secondary" : "destructive"} className="text-[8px] font-bold uppercase">
-                                                            {isFreeMonthMockTest(test) ? "June Free" : "Purchase Required"}
+                                                            {isFreeMonthMockTest(test) ? "June Free • No Rank • No Cash" : "Purchase Required"}
                                                         </Badge>
+                                                    )}
+                                                    {!isUpcoming && !isLive && (
+                                                        <Badge variant="outline" className="text-[8px] font-bold uppercase">Completed • Practice Only</Badge>
                                                     )}
                                                     <Button 
                                                         size="sm" 

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { adminDb } from "@/firebase/admin-init";
 import { RequestAuthError, verifyRequester } from "@/lib/server-auth";
-import { defaultStorytellerConfig, SANJAY_CUSTOM_VOICE_ID, STORYTELLER_CONFIG_ID, StorytellerConfig, StorytellerInput, validateStorytellerInput } from "@/lib/storyteller";
+import { defaultStorytellerConfig, STORYTELLER_CONFIG_ID, StorytellerConfig, StorytellerInput, storytellerPriceForDuration, validateStorytellerInput } from "@/lib/storyteller";
 import { dispatchStorytellerRenderer } from "@/lib/storyteller-renderer";
 
 export async function POST(request: NextRequest) {
@@ -16,12 +16,12 @@ export async function POST(request: NextRequest) {
     if (!config.voiceProviderEnabled) return NextResponse.json({ error: "Audio-reel narration is currently unavailable." }, { status: 503 });
     if (!process.env.STORYTELLER_RENDERER_URL || !process.env.STORYTELLER_RENDERER_SECRET) return NextResponse.json({ error: "StoryTeller rendering is not configured. No payment was deducted." }, { status: 503 });
     const autoDuration = String(body.duration) === "AUTO";
-    const input: StorytellerInput = { title: body.title, story: body.story, language: body.language, voice: body.voice, voiceStyle: body.voiceStyle, duration: autoDuration && config.allowAutoDuration ? config.maxDuration : Number(body.duration), music: body.music, template: body.template };
+    const input: StorytellerInput = { title: body.title, story: body.story, language: body.language, voiceReferenceId: body.voiceReferenceId, voiceStyle: body.voiceStyle, duration: autoDuration && config.allowAutoDuration ? config.maxDuration : Number(body.duration), music: body.music, genre: body.genre, consentAccepted: body.consentAccepted, consentVersion: body.consentVersion };
     const errors = validateStorytellerInput(input, config);
     if (errors.length) return NextResponse.json({ error: errors.join(" ") }, { status: 400 });
-    if (input.voice === SANJAY_CUSTOM_VOICE_ID && process.env.STORYTELLER_CUSTOM_VOICE_READY !== "true") {
-      return NextResponse.json({ error: "The selected custom narrator is not ready for this language. No payment was deducted." }, { status: 503 });
-    }
+    const voiceReference = await adminDb.collection("storytellerVoiceReferences").doc(input.voiceReferenceId).get();
+    if (!voiceReference.exists || voiceReference.data()?.userId !== user.uid || voiceReference.data()?.status !== "UPLOADED") return NextResponse.json({ error: "Own-voice reference is missing or unavailable." }, { status: 400 });
+    const price = storytellerPriceForDuration(config, input.duration);
 
     const requestRef = adminDb.collection("storytellerPurchaseRequests").doc(`${user.uid}_${body.idempotencyKey}`);
     const adminUid = await resolveHeadAdminUid();
@@ -42,18 +42,18 @@ export async function POST(request: NextRequest) {
         return;
       }
       const balance = Number(wallet.data()?.balance || 0);
-      if (balance < config.reelPrice) throw new InsufficientFundsError(config.reelPrice, balance);
-      tx.update(walletRef, { balance: balance - config.reelPrice });
+      if (balance < price) throw new InsufficientFundsError(price, balance);
+      tx.update(walletRef, { balance: balance - price });
       if (adminWalletRef) {
-        tx.set(adminWalletRef, { balance: Number(adminWallet?.data()?.balance || 0) + config.reelPrice }, { merge: true });
-        tx.create(adminDb.collection("transactions").doc(), { user: adminUid, orderId: orderRef.id, projectId: projectRef.id, amount: config.reelPrice, currency: config.currency, date: FieldValue.serverTimestamp(), description: "Revenue: StoryTeller AI Reel", status: "Completed", type: "deposit" });
+        tx.set(adminWalletRef, { balance: Number(adminWallet?.data()?.balance || 0) + price }, { merge: true });
+        tx.create(adminDb.collection("transactions").doc(), { user: adminUid, orderId: orderRef.id, projectId: projectRef.id, amount: price, currency: config.currency, date: FieldValue.serverTimestamp(), description: "Revenue: StoryTeller AI Audio Reel", status: "Completed", type: "deposit" });
       }
-      tx.create(projectRef, { ...input, requestedDuration: autoDuration ? "AUTO" : input.duration, userId: user.uid, orderId: orderRef.id, amountPaid: config.reelPrice, currency: config.currency, paymentStatus: "PAID", generationStatus: "QUEUED", generationStage: "PAYMENT_CONFIRMED", attemptCount: 0, finalAssetPath: null, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
-      tx.create(orderRef, { userId: user.uid, projectId: projectRef.id, configuredPriceAtCheckout: config.reelPrice, amountPaid: config.reelPrice, currency: config.currency, walletTransactionId: walletTxRef.id, revenueRecipientUid: adminUid, paymentStatus: "PAID", paidAt: FieldValue.serverTimestamp() });
-      tx.create(walletTxRef, { user: user.uid, orderId: orderRef.id, projectId: projectRef.id, amount: -config.reelPrice, currency: config.currency, referenceId: `STORYTELLER_REEL_${orderRef.id}`, date: FieldValue.serverTimestamp(), description: "StoryTeller AI Reel Purchase", status: "Completed", type: "Purchase" });
+      tx.create(projectRef, { ...input, voiceReferenceAssetPath: voiceReference.data()!.assetPath, requestedDuration: input.duration, userId: user.uid, orderId: orderRef.id, amountPaid: price, currency: config.currency, paymentStatus: "PAID", generationStatus: "QUEUED", generationStage: "PAYMENT_CONFIRMED", attemptCount: 0, finalAssetPath: null, consent: { accepted: true, version: input.consentVersion, acceptedAt: FieldValue.serverTimestamp(), userId: user.uid, purpose: "SINGLE_AUDIO_REEL_SYNTHESIS", trainingAllowed: false }, pipeline: { moderation: true, sceneEmotionPlan: true, scriptCorrection: true, ownVoiceSynthesis: true, soundDesign: config.soundEffectsEnabled, dynamicDucking: config.dynamicDuckingEnabled, qualityControl: true, output: "PRIVATE_AUDIO" }, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+      tx.create(orderRef, { userId: user.uid, projectId: projectRef.id, configuredPriceAtCheckout: price, durationAtCheckout: input.duration, amountPaid: price, currency: config.currency, walletTransactionId: walletTxRef.id, revenueRecipientUid: adminUid, paymentStatus: "PAID", paidAt: FieldValue.serverTimestamp() });
+      tx.create(walletTxRef, { user: user.uid, orderId: orderRef.id, projectId: projectRef.id, amount: -price, currency: config.currency, referenceId: `STORYTELLER_REEL_${orderRef.id}`, date: FieldValue.serverTimestamp(), description: "StoryTeller AI Audio Reel Purchase", status: "Completed", type: "Purchase" });
       tx.create(jobRef, { userId: user.uid, projectId: projectRef.id, orderId: orderRef.id, status: "QUEUED", attemptCount: 0, maxRetries: config.automaticRetryCount, failurePolicy: config.failurePolicy, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
       tx.create(requestRef, { userId: user.uid, projectId: projectRef.id, orderId: orderRef.id, createdAt: FieldValue.serverTimestamp() });
-      tx.set(analyticsRef, { checkoutStarted: FieldValue.increment(1), successfulPurchases: FieldValue.increment(1), totalRevenue: FieldValue.increment(config.reelPrice), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+      tx.set(analyticsRef, { checkoutStarted: FieldValue.increment(1), successfulPurchases: FieldValue.increment(1), totalRevenue: FieldValue.increment(price), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
     });
 
     const result = replay || { projectId: projectRef.id, orderId: orderRef.id };

@@ -769,6 +769,7 @@ export default function HomePage() {
                     className="w-full"
                     controls
                     controlsList="nodownload"
+                    onContextMenu={(event) => event.preventDefault()}
                     preload="metadata"
                     src={storyteller.demoAssetPath}
                   />

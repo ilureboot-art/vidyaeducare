@@ -50,7 +50,7 @@ export const defaultStorytellerConfig: StorytellerConfig = {
   reelPrice: 19,
   currency: "INR",
   demoEnabled: true,
-  demoAssetPath: "/storyteller/demos/bed-khali-kon-aahe-cinematic-demo-v1.m4a",
+  demoAssetPath: "/api/storyteller/fixed-demo",
   demoThumbnail: "",
   demoTitle: "बेड खाली कोण आहे? – Cinematic Audio Demo",
   demoDescription: "हा fixed StoryTeller AI cinematic audio demo ऐका; त्यानंतर तुमची स्वतःची paid story-to-audio reel तयार करा.",

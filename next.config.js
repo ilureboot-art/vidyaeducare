@@ -1,6 +1,11 @@
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  experimental: {
+    outputFileTracingIncludes: {
+      '/api/storyteller/fixed-demo': ['./private-assets/storyteller/**'],
+    },
+  },
   async redirects() {
     return [
       {

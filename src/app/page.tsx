@@ -765,12 +765,11 @@ export default function HomePage() {
               {storyteller.demoEnabled && storyteller.demoAssetPath ? (
                 <div className="space-y-4">
                   <p className="font-black">{storyteller.demoTitle || "StoryTeller AI Demo"}</p>
-                  <video
-                    className="w-full max-h-[28rem] rounded-xl bg-black"
+                  <audio
+                    className="w-full"
                     controls
                     controlsList="nodownload"
-                    disablePictureInPicture
-                    poster={storyteller.demoThumbnail || undefined}
+                    preload="metadata"
                     src={storyteller.demoAssetPath}
                   />
                   <p className="text-sm text-muted-foreground">

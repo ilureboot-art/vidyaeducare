@@ -4,10 +4,17 @@ import { defaultStorytellerConfig, publicStorytellerConfig, SANJAY_CUSTOM_VOICE_
 
 export const dynamic = "force-dynamic";
 
+const FIXED_DEMO = {
+  demoEnabled: true,
+  demoAssetPath: "/storyteller/demos/bed-khali-kon-aahe-cinematic-demo-v1.m4a",
+  demoTitle: "बेड खाली कोण आहे? – Cinematic Audio Demo",
+  demoDescription: "हा fixed StoryTeller AI cinematic audio demo ऐका; त्यानंतर तुमची स्वतःची paid story-to-audio reel तयार करा.",
+};
+
 export async function GET() {
   const snap = await adminDb.collection("configs").doc(STORYTELLER_CONFIG_ID).get();
   const config = snap.exists ? { ...defaultStorytellerConfig, ...snap.data() } as StorytellerConfig : defaultStorytellerConfig;
-  const safe = publicStorytellerConfig(config);
+  const safe = { ...publicStorytellerConfig(config), ...FIXED_DEMO };
   if (process.env.STORYTELLER_CUSTOM_VOICE_READY !== "true") safe.voices = safe.voices.filter(voice => voice.id !== SANJAY_CUSTOM_VOICE_ID);
   if (safe.demoAssetPath.startsWith("storyteller/demo/")) safe.demoAssetPath = "/api/storyteller/demo";
   return NextResponse.json({ config: safe });

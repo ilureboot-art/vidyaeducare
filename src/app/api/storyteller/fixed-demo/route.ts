@@ -12,9 +12,13 @@ const DEMO_PATH = join(
 );
 
 export async function GET(request: Request) {
-  const requestUrl = new URL(request.url);
   const referer = request.headers.get("referer");
-  if (!referer || new URL(referer).origin !== requestUrl.origin) {
+  const allowedHosts = new Set(
+    [request.headers.get("host"), request.headers.get("x-forwarded-host")]
+      .filter(Boolean)
+      .flatMap((host) => String(host).split(",").map((value) => value.trim())),
+  );
+  if (!referer || !allowedHosts.has(new URL(referer).host)) {
     return NextResponse.json(
       { error: "Direct demo downloads are not allowed." },
       { status: 403 },

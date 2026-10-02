@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import type { AppNotification } from "@/lib/notifications";
 import { useAuth, useDb } from "@/firebase";
-import { collection, query, where, orderBy, onSnapshot, Timestamp } from "firebase/firestore";
+import { collection, doc, query, where, orderBy, onSnapshot, serverTimestamp, Timestamp, writeBatch } from "firebase/firestore";
 
 
 export function UserNotifications() {
@@ -41,15 +41,29 @@ export function UserNotifications() {
     return () => unsubscribe();
   }, [user, db]);
 
-  const markAllAsRead = () => {
-    // In a real app, this would be an API call to update Firestore
-    setUserNotifications(prev => prev.map(n => ({ ...n, status: 'read' as const })));
+  const markAllAsRead = async () => {
+    if (!db) return;
+    const unreadNotifications = userNotifications.filter(notification => notification.status === 'unread').slice(0, 450);
+    if (unreadNotifications.length === 0) return;
+
+    const batch = writeBatch(db);
+    unreadNotifications.forEach(notification => {
+      batch.update(doc(db, 'notifications', notification.id), {
+        status: 'read',
+        readAt: serverTimestamp(),
+      });
+    });
+    try {
+      await batch.commit();
+    } catch (error) {
+      console.error('Unable to mark notifications as read:', error);
+    }
   };
 
   const handleOpenChange = (open: boolean) => {
     if (open && unreadCount > 0) {
         setTimeout(() => {
-            markAllAsRead();
+            void markAllAsRead();
         }, 500);
     }
   }
@@ -97,7 +111,7 @@ export function UserNotifications() {
         </div>
          {userNotifications.length > 0 && (
             <div className="flex justify-end mt-2">
-                <Button variant="link" size="sm" onClick={markAllAsRead}>
+                <Button variant="link" size="sm" onClick={() => void markAllAsRead()}>
                     <CheckCheck className="mr-2 h-4 w-4" />
                     Mark all as read
                 </Button>

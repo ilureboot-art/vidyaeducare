@@ -76,7 +76,26 @@ export async function POST(request: NextRequest) {
         });
       });
     } else {
-      await adminDb.collection('transactions').add(txData);
+      const txRef = adminDb.collection('transactions').doc();
+      const notificationRef = adminDb.collection('notifications').doc();
+      const batch = adminDb.batch();
+
+      batch.set(txRef, txData);
+      batch.set(notificationRef, {
+        userId: 'admin',
+        type: 'deposit_request',
+        title: 'New deposit request',
+        message: `A fund deposit request of ₹${depositAmount.toFixed(2)} is waiting for approval.`,
+        status: 'unread',
+        timestamp: FieldValue.serverTimestamp(),
+        priority: 'high',
+        actionUrl: `/admin/transactions?status=pending&type=student_deposit&id=${txRef.id}`,
+        entityType: 'transaction',
+        entityId: txRef.id,
+        createdBy: uid,
+      });
+
+      await batch.commit();
     }
 
     return NextResponse.json({ success: true, autoApproved: isAutoApprove });

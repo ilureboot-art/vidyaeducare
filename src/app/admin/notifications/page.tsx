@@ -11,6 +11,8 @@ import { useDb } from "@/firebase";
 import { collection, query, where, orderBy, Timestamp, getDocs } from "firebase/firestore";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 const getIconForType = (type: string) => {
     switch(type) {
@@ -92,6 +94,11 @@ export default function AdminNotificationsPage() {
                                             {format(new Date(notif.timestamp), 'P p')}
                                         </p>
                                     </div>
+                                    {notif.actionUrl && (
+                                        <Button asChild variant="outline" size="sm">
+                                            <Link href={notif.actionUrl}>Review request</Link>
+                                        </Button>
+                                    )}
                                     {notif.status && <Badge variant={notif.status === 'read' ? 'secondary' : 'default'}>{notif.status}</Badge>}
                                 </div>
                             ))}

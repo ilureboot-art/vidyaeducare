@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { User, Mail, Calendar, Phone, GraduationCap, Trash2, PlusCircle, BookOpen, Loader2, BarChart2, Users, BrainCircuit, Sparkles, ScrollText, ArrowRight, Trophy, Award, IndianRupee, Star, Target, Search, AlertCircle, Clock, Info } from "lucide-react";
+import { User, Mail, Calendar, Phone, GraduationCap, Trash2, PlusCircle, BookOpen, Loader2, BarChart2, Users, BrainCircuit, Sparkles, ScrollText, ArrowRight, Trophy, Award, IndianRupee, Star, Target, Search, AlertCircle, Clock, Info, History, ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -29,6 +29,7 @@ import { type AcademicConfig, defaultAcademicConfig } from "@/lib/academic-confi
 import { type StoreConfig, defaultStoreConfig } from "@/lib/store-config";
 import { getMockTestAccess, isFreeMonthMockTest } from "@/lib/mock-test-access";
 import { getMockTestRewardEligibility } from "@/lib/mock-test-rewards";
+import { getProfileAccessSummary, sortProfileTestHistory, type ProfileTestResult } from "@/lib/profile-insights";
 
 const BADGE_COLORS = {
     'Platinum': 'text-slate-400 fill-slate-100',
@@ -67,6 +68,9 @@ function ProfilePageContent() {
     const [isManageSubjectsOpen, setIsManageSubjectsOpen] = useState(false);
     const [selectedStudentForManageSubjects, setSelectedStudentForManageSubjects] = useState<StudentProfile | null>(null);
     const [selectedSubjectsForManage, setSelectedSubjectsForManage] = useState<string[]>([]);
+    const [testHistoryByStudent, setTestHistoryByStudent] = useState<Record<string, ProfileTestResult[]>>({});
+    const [selectedStudentForHistory, setSelectedStudentForHistory] = useState<StudentProfile | null>(null);
+    const [isHistoryLoading, setIsHistoryLoading] = useState(false);
 
     const [newStudentStandard, setNewStudentStandard] = useState<string>("");
     const [subjectsByStandard, setSubjectsByStandard] = useState<Record<string, string[]>>({});
@@ -196,6 +200,37 @@ function ProfilePageContent() {
             clearTimeout(timeout);
         };
     }, [user, db, isResolved]);
+
+    useEffect(() => {
+        if (!db || students.length === 0) {
+            setTestHistoryByStudent({});
+            return;
+        }
+
+        let active = true;
+        setIsHistoryLoading(true);
+
+        Promise.all(students.map(async student => {
+            const resultsQuery = query(collection(db, "testResults"), where("studentId", "==", student.id));
+            const snapshot = await getDocs(resultsQuery);
+            const results = snapshot.docs.map(resultDoc => ({ id: resultDoc.id, ...resultDoc.data() } as ProfileTestResult));
+            return [student.id, sortProfileTestHistory(results).slice(0, 25)] as const;
+        }))
+            .then(entries => {
+                if (active) setTestHistoryByStudent(Object.fromEntries(entries));
+            })
+            .catch(error => {
+                console.error("Test history sync failed:", error);
+                if (active) setTestHistoryByStudent({});
+            })
+            .finally(() => {
+                if (active) setIsHistoryLoading(false);
+            });
+
+        return () => {
+            active = false;
+        };
+    }, [db, students]);
 
     useEffect(() => {
         const expiredStudentId = searchParams?.get('expiredStudentId');
@@ -835,11 +870,21 @@ function ProfilePageContent() {
 
                         <div className="p-5 rounded-2xl border bg-card space-y-3">
                             <h3 className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                                <ScrollText size={15}/> Profile & Reports
+                                <ShieldCheck size={15}/> Subscription & Access
                             </h3>
-                            <p className="text-xs text-muted-foreground">Board: <b>{student.academic.board}</b> • Standard: <b>{student.academic.standard}</b></p>
-                            <p className="text-xs text-muted-foreground">Subjects: <b>{student.academic.subjects?.length || 0}</b> • Badges: <b>{student.badges?.length || 0}</b></p>
-                            <p className="text-[11px] text-muted-foreground">Detailed test history, mistake notebook, goals, downloadable reports and privacy controls use this verified student workspace as their source.</p>
+                            {(() => {
+                                const access = getProfileAccessSummary(student.mockTestSubscribed === true);
+                                return (
+                                    <div className="space-y-2 text-xs">
+                                        <Badge className={access.tone === "active" ? "bg-green-600" : "bg-slate-500"}>{access.plan}</Badge>
+                                        <p className="text-muted-foreground"><b>Ranking:</b> {access.ranking}</p>
+                                        <p className="text-muted-foreground"><b>Rewards:</b> {access.rewards}</p>
+                                    </div>
+                                );
+                            })()}
+                            <Button variant="outline" size="sm" className="w-full font-black" onClick={() => setSelectedStudentForHistory(student)}>
+                                <History className="mr-2 h-4 w-4" /> View Test History ({testHistoryByStudent[student.id]?.length || 0})
+                            </Button>
                         </div>
                     </div>
                 </CardContent>
@@ -1060,6 +1105,51 @@ function ProfilePageContent() {
                 </div>
             </DialogContent>
        </Dialog>
+
+        <Dialog open={Boolean(selectedStudentForHistory)} onOpenChange={(open) => !open && setSelectedStudentForHistory(null)}>
+            <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2"><History className="text-primary" /> Test History: {selectedStudentForHistory?.name}</DialogTitle>
+                    <DialogDescription>Latest MockArena attempts, access type and reward eligibility.</DialogDescription>
+                </DialogHeader>
+                {isHistoryLoading ? (
+                    <div className="flex justify-center py-12"><Loader2 className="animate-spin text-primary" /></div>
+                ) : selectedStudentForHistory && (testHistoryByStudent[selectedStudentForHistory.id]?.length || 0) > 0 ? (
+                    <div className="space-y-3">
+                        {testHistoryByStudent[selectedStudentForHistory.id].map(result => (
+                            <div key={result.id} className="grid gap-3 rounded-2xl border p-4 md:grid-cols-[1fr_auto] md:items-center">
+                                <div>
+                                    <p className="font-black">{result.testName || "MockArena Test"}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                        {result.date ? format(new Date(result.date), "PP p") : "Date unavailable"} • {result.timeTaken || "Time unavailable"}
+                                    </p>
+                                    <div className="mt-2 flex flex-wrap gap-2">
+                                        <Badge variant="outline">{result.isLive ? "Live attempt" : "Practice attempt"}</Badge>
+                                        <Badge variant="outline">{result.accessType || "Practice access"}</Badge>
+                                        <Badge className={result.rankingEligible ? "bg-green-600" : "bg-slate-500"}>
+                                            {result.rankingEligible ? "Ranking eligible" : "Not ranked"}
+                                        </Badge>
+                                    </div>
+                                </div>
+                                <div className="rounded-xl bg-primary/10 px-5 py-3 text-center">
+                                    <p className="text-2xl font-black text-primary">{Math.round(result.score || 0)}%</p>
+                                    <p className="text-[10px] font-bold text-muted-foreground">
+                                        {typeof result.rawScore === "number" && typeof result.totalQuestions === "number"
+                                            ? `${result.rawScore}/${result.totalQuestions} correct`
+                                            : "Accuracy"}
+                                    </p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="rounded-2xl border-2 border-dashed p-12 text-center text-muted-foreground">
+                        <History className="mx-auto mb-3 h-10 w-10 opacity-30" />
+                        <p className="font-bold">No test history yet.</p>
+                    </div>
+                )}
+            </DialogContent>
+        </Dialog>
 
         {/* Activate Student Dialog */}
         <Dialog open={isActivateDialogOpen} onOpenChange={(isOpen) => {

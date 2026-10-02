@@ -25,4 +25,10 @@ export type StudentProfile = {
   badges: ('Platinum' | 'Gold' | 'Silver' | 'Bronze')[];
   createdAt?: string;
   mockTestSubscribed?: boolean;
+  studyGoals?: {
+    targetAccuracy: number;
+    weeklyTests: number;
+    focusSubject: string;
+    updatedAt?: string;
+  };
 };

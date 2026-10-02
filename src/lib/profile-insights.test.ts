@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getProfileAccessSummary, sortProfileTestHistory } from "./profile-insights";
+import { getMistakeNotebookSummary, getProfileAccessSummary, normalizeStudyGoals, sortProfileTestHistory } from "./profile-insights";
 
 describe("profile insights", () => {
   it("sorts test history newest first", () => {
@@ -16,5 +16,18 @@ describe("profile insights", () => {
 
   it("keeps free users outside rankings and prizes", () => {
     expect(getProfileAccessSummary(false)).toMatchObject({ ranking: "Not eligible for rankings", rewards: "No cash-prize eligibility", tone: "practice" });
+  });
+
+  it("summarizes incorrect answers from completed attempts", () => {
+    const summary = getMistakeNotebookSummary([
+      { id: "a", studentId: "s1", score: 80, rawScore: 8, totalQuestions: 10 },
+      { id: "b", studentId: "s1", score: 100, rawScore: 10, totalQuestions: 10 },
+    ]);
+    expect(summary.totalIncorrectAnswers).toBe(2);
+    expect(summary.attempts).toHaveLength(1);
+  });
+
+  it("keeps study goals inside supported limits", () => {
+    expect(normalizeStudyGoals(120, 0, "  Maths  ")).toEqual({ targetAccuracy: 100, weeklyTests: 3, focusSubject: "Maths" });
   });
 });

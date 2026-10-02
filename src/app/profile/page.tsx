@@ -29,7 +29,7 @@ import { type AcademicConfig, defaultAcademicConfig } from "@/lib/academic-confi
 import { type StoreConfig, defaultStoreConfig } from "@/lib/store-config";
 import { getMockTestAccess, isFreeMonthMockTest } from "@/lib/mock-test-access";
 import { getMockTestRewardEligibility } from "@/lib/mock-test-rewards";
-import { getProfileAccessSummary, sortProfileTestHistory, type ProfileTestResult } from "@/lib/profile-insights";
+import { getMistakeNotebookSummary, getProfileAccessSummary, normalizeStudyGoals, sortProfileTestHistory, type ProfileTestResult } from "@/lib/profile-insights";
 
 const BADGE_COLORS = {
     'Platinum': 'text-slate-400 fill-slate-100',
@@ -71,6 +71,12 @@ function ProfilePageContent() {
     const [testHistoryByStudent, setTestHistoryByStudent] = useState<Record<string, ProfileTestResult[]>>({});
     const [selectedStudentForHistory, setSelectedStudentForHistory] = useState<StudentProfile | null>(null);
     const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+    const [selectedStudentForMistakes, setSelectedStudentForMistakes] = useState<StudentProfile | null>(null);
+    const [selectedStudentForGoals, setSelectedStudentForGoals] = useState<StudentProfile | null>(null);
+    const [goalAccuracy, setGoalAccuracy] = useState(80);
+    const [goalWeeklyTests, setGoalWeeklyTests] = useState(3);
+    const [goalFocusSubject, setGoalFocusSubject] = useState("");
+    const [isSavingGoals, setIsSavingGoals] = useState(false);
 
     const [newStudentStandard, setNewStudentStandard] = useState<string>("");
     const [subjectsByStandard, setSubjectsByStandard] = useState<Record<string, string[]>>({});
@@ -382,6 +388,33 @@ function ProfilePageContent() {
         setSelectedStudentForManageSubjects(student);
         setSelectedSubjectsForManage(student.academic.subjects || []);
         setIsManageSubjectsOpen(true);
+    };
+
+    const openStudyGoals = (student: StudentProfile) => {
+        setSelectedStudentForGoals(student);
+        setGoalAccuracy(student.studyGoals?.targetAccuracy || 80);
+        setGoalWeeklyTests(student.studyGoals?.weeklyTests || 3);
+        setGoalFocusSubject(student.studyGoals?.focusSubject || "");
+    };
+
+    const handleSaveStudyGoals = async () => {
+        if (!db || !selectedStudentForGoals) return;
+        const goals = {
+            ...normalizeStudyGoals(goalAccuracy, goalWeeklyTests, goalFocusSubject),
+            updatedAt: new Date().toISOString(),
+        };
+
+        setIsSavingGoals(true);
+        try {
+            await updateDoc(doc(db, "students", selectedStudentForGoals.id), { studyGoals: goals });
+            toast({ title: "Study Goals Saved", description: `${selectedStudentForGoals.name}'s learning targets were updated.` });
+            setSelectedStudentForGoals(null);
+        } catch (error) {
+            console.error("Study goals update failed:", error);
+            toast({ variant: "destructive", title: "Unable to Save Goals", description: "Please try again." });
+        } finally {
+            setIsSavingGoals(false);
+        }
     };
     
     const handleDeleteStudent = async (studentId: string) => {
@@ -885,6 +918,14 @@ function ProfilePageContent() {
                             <Button variant="outline" size="sm" className="w-full font-black" onClick={() => setSelectedStudentForHistory(student)}>
                                 <History className="mr-2 h-4 w-4" /> View Test History ({testHistoryByStudent[student.id]?.length || 0})
                             </Button>
+                            <div className="grid grid-cols-2 gap-2">
+                                <Button variant="outline" size="sm" className="font-black text-[10px]" onClick={() => setSelectedStudentForMistakes(student)}>
+                                    Mistake Notebook
+                                </Button>
+                                <Button variant="outline" size="sm" className="font-black text-[10px]" onClick={() => openStudyGoals(student)}>
+                                    Study Goals
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 </CardContent>
@@ -1148,6 +1189,67 @@ function ProfilePageContent() {
                         <p className="font-bold">No test history yet.</p>
                     </div>
                 )}
+            </DialogContent>
+        </Dialog>
+
+        <Dialog open={Boolean(selectedStudentForMistakes)} onOpenChange={(open) => !open && setSelectedStudentForMistakes(null)}>
+            <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2"><BookOpen className="text-primary" /> Mistake Notebook: {selectedStudentForMistakes?.name}</DialogTitle>
+                    <DialogDescription>Attempts containing incorrect answers, using saved MockArena result totals.</DialogDescription>
+                </DialogHeader>
+                {selectedStudentForMistakes && (() => {
+                    const summary = getMistakeNotebookSummary(testHistoryByStudent[selectedStudentForMistakes.id] || []);
+                    return summary.attempts.length > 0 ? (
+                        <div className="space-y-4">
+                            <div className="rounded-2xl bg-amber-500/10 p-4 text-center">
+                                <p className="text-3xl font-black text-amber-700">{summary.totalIncorrectAnswers}</p>
+                                <p className="text-xs font-bold text-muted-foreground">Incorrect answers to revise</p>
+                            </div>
+                            {summary.attempts.map(result => (
+                                <div key={result.id} className="flex items-center justify-between gap-4 rounded-xl border p-4">
+                                    <div>
+                                        <p className="font-black">{result.testName || "MockArena Test"}</p>
+                                        <p className="text-xs text-muted-foreground">{result.date ? format(new Date(result.date), "PP") : "Date unavailable"}</p>
+                                    </div>
+                                    <Badge variant="destructive">{result.incorrectAnswers} to revise</Badge>
+                                </div>
+                            ))}
+                            <p className="text-[11px] text-muted-foreground">Question-level explanations will appear here after detailed answer snapshots are enabled. This summary does not invent missing question data.</p>
+                        </div>
+                    ) : (
+                        <div className="rounded-2xl border-2 border-dashed p-12 text-center text-muted-foreground">
+                            <Trophy className="mx-auto mb-3 h-10 w-10 text-green-600" />
+                            <p className="font-bold">No saved mistakes found.</p>
+                        </div>
+                    );
+                })()}
+            </DialogContent>
+        </Dialog>
+
+        <Dialog open={Boolean(selectedStudentForGoals)} onOpenChange={(open) => !open && setSelectedStudentForGoals(null)}>
+            <DialogContent className="max-w-md">
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2"><Target className="text-primary" /> Study Goals: {selectedStudentForGoals?.name}</DialogTitle>
+                    <DialogDescription>Set practical weekly targets for the student workspace.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="goalAccuracy">Target accuracy (%)</Label>
+                        <Input id="goalAccuracy" type="number" min={1} max={100} value={goalAccuracy} onChange={event => setGoalAccuracy(Number(event.target.value))} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="goalWeeklyTests">Tests per week</Label>
+                        <Input id="goalWeeklyTests" type="number" min={1} max={14} value={goalWeeklyTests} onChange={event => setGoalWeeklyTests(Number(event.target.value))} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="goalFocusSubject">Focus subject</Label>
+                        <Input id="goalFocusSubject" maxLength={80} value={goalFocusSubject} onChange={event => setGoalFocusSubject(event.target.value)} placeholder="e.g. Mathematics" />
+                    </div>
+                    <Button className="w-full font-black" onClick={() => void handleSaveStudyGoals()} disabled={isSavingGoals}>
+                        {isSavingGoals && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save Study Goals
+                    </Button>
+                </div>
             </DialogContent>
         </Dialog>
 

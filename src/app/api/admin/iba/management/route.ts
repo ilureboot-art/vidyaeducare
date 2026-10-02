@@ -148,6 +148,20 @@ export async function POST(request: NextRequest) {
         changedBy: admin.uid, changedAt: FieldValue.serverTimestamp(),
         policyId: policyDoc?.id || null, policyVersion: policyDoc?.data()?.version || null,
       });
+      batch.create(adminDb.collection("notifications").doc(), {
+        userId: body.ibaUid,
+        type: "iba_remuneration_updated",
+        message: body.active
+          ? "Your Fixed Monthly Remuneration eligibility has been activated by management."
+          : "Your Fixed Monthly Remuneration eligibility has been deactivated by management.",
+        status: "unread",
+        priority: "high",
+        actionUrl: "/iba/earnings",
+        entityType: "ibaEligibility",
+        entityId: body.ibaUid,
+        createdBy: admin.uid,
+        timestamp: FieldValue.serverTimestamp(),
+      });
       await batch.commit();
       return NextResponse.json({ success: true });
     }
@@ -213,6 +227,24 @@ export async function POST(request: NextRequest) {
         remarks: String(body.remarks || ""),
         changedBy: admin.uid,
         changedAt: FieldValue.serverTimestamp(),
+      });
+      const eligibilityMessages: Record<string, string> = {
+        APPROVED: "Management has approved your IBA eligibility review.",
+        NOT_ELIGIBLE: "Your IBA eligibility review was not approved. Check your dashboard for the current requirements.",
+        SUSPENDED: "Your IBA eligibility has been suspended by management.",
+        ELIGIBLE_PENDING_APPROVAL: "Your IBA eligibility is pending management approval.",
+      };
+      batch.create(adminDb.collection("notifications").doc(), {
+        userId: body.ibaUid,
+        type: "iba_eligibility_updated",
+        message: eligibilityMessages[body.status],
+        status: "unread",
+        priority: body.status === "SUSPENDED" ? "critical" : "high",
+        actionUrl: "/iba/dashboard",
+        entityType: "ibaEligibility",
+        entityId: body.ibaUid,
+        createdBy: admin.uid,
+        timestamp: FieldValue.serverTimestamp(),
       });
       await batch.commit();
       return NextResponse.json({ success: true });
@@ -582,15 +614,6 @@ export async function POST(request: NextRequest) {
             },
           );
         }
-        if ((current.data()?.matrimonialCommissionIds || []).length)
-          batch.create(adminDb.collection("notifications").doc(), {
-            userId: current.data()?.ibaUid,
-            type: "matrimonial_commission_paid",
-            message:
-              "Your approved matrimonial referral commission was included in a paid IBA payout.",
-            status: "unread",
-            timestamp: FieldValue.serverTimestamp(),
-          });
       }
       if (body.status === "REJECTED") {
         for (const commissionId of current.data()?.matrimonialCommissionIds ||
@@ -614,6 +637,25 @@ export async function POST(request: NextRequest) {
         remarks: String(body.remarks || ""),
         changedBy: admin.uid,
         changedAt: FieldValue.serverTimestamp(),
+      });
+      const payoutMessages: Record<string, string> = {
+        PENDING_REVIEW: "Your IBA payout is pending management review.",
+        APPROVED: "Your IBA payout has been approved.",
+        PAID: "Your IBA payout has been marked as paid. Open Earnings to view the payment details.",
+        ON_HOLD: "Your IBA payout has been placed on hold for review.",
+        REJECTED: "Your IBA payout was rejected after management review.",
+      };
+      batch.create(adminDb.collection("notifications").doc(), {
+        userId: current.data()?.ibaUid,
+        type: "iba_payout_updated",
+        message: payoutMessages[body.status],
+        status: "unread",
+        priority: ["ON_HOLD", "REJECTED"].includes(body.status) ? "high" : "normal",
+        actionUrl: "/iba/earnings",
+        entityType: "ibaPayout",
+        entityId: ref.id,
+        createdBy: admin.uid,
+        timestamp: FieldValue.serverTimestamp(),
       });
       await batch.commit();
       return NextResponse.json({ success: true });

@@ -3,7 +3,18 @@
 
 export type AppNotification = {
     id: string;
-    type: 'new_user' | 'deposit_request' | 'withdrawal_request' | 'deposit_received' | 'withdrawal_approved' | 'deposit_rejected' | 'withdrawal_rejected';
+    type:
+      | 'new_user'
+      | 'deposit_request'
+      | 'withdrawal_request'
+      | 'deposit_received'
+      | 'withdrawal_approved'
+      | 'deposit_rejected'
+      | 'withdrawal_rejected'
+      | 'iba_eligibility_updated'
+      | 'iba_remuneration_updated'
+      | 'iba_payout_updated'
+      | 'matrimonial_commission_paid';
     message: string;
     timestamp: string;
     status: 'read' | 'unread';

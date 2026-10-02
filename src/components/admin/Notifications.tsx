@@ -13,7 +13,7 @@ import { Bell, CheckCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import type { AppNotification } from "@/lib/notifications";
-import { collection, query, where, onSnapshot, orderBy, Timestamp } from "firebase/firestore";
+import { collection, doc, query, where, onSnapshot, orderBy, serverTimestamp, Timestamp, writeBatch } from "firebase/firestore";
 import { useDb } from "@/firebase";
 
 export function Notifications() {
@@ -39,17 +39,29 @@ export function Notifications() {
     return () => unsubscribe();
   }, [db]);
   
-  const markAllAsRead = () => {
-    // In a real app, this would be an API call to update Firestore docs
-    if (adminNotifications) {
-        setAdminNotifications(adminNotifications.map(n => ({...n, status: 'read' as const})));
+  const markAllAsRead = async () => {
+    if (!db || !adminNotifications) return;
+    const unreadNotifications = adminNotifications.filter(notification => notification.status === 'unread').slice(0, 450);
+    if (unreadNotifications.length === 0) return;
+
+    const batch = writeBatch(db);
+    unreadNotifications.forEach(notification => {
+      batch.update(doc(db, 'notifications', notification.id), {
+        status: 'read',
+        readAt: serverTimestamp(),
+      });
+    });
+    try {
+      await batch.commit();
+    } catch (error) {
+      console.error('Unable to mark admin notifications as read:', error);
     }
   };
 
   const handleOpenChange = (open: boolean) => {
     if (open && unreadCount > 0) {
         setTimeout(() => {
-            markAllAsRead();
+            void markAllAsRead();
         }, 500);
     }
   }
@@ -90,12 +102,12 @@ export function Notifications() {
                 adminNotifications.slice(0, 5).map(notif => (
                     <div key={notif.id} className="grid grid-cols-[25px_1fr] items-start pb-4 last:mb-0 last:pb-0">
                         {notif.status === 'unread' && <span className="flex h-2 w-2 translate-y-1 rounded-full bg-sky-500" />}
-                        <div className={`grid gap-1 ${notif.status === 'read' ? 'col-span-2' : ''}`}>
+                        <Link href={notif.actionUrl || "/admin/notifications"} className={`grid gap-1 rounded-sm hover:text-primary ${notif.status === 'read' ? 'col-span-2' : ''}`}>
                             <p className="text-sm font-medium">{notif.message}</p>
                             <p className="text-sm text-muted-foreground">
                                {format(new Date(notif.timestamp), 'P p')}
                             </p>
-                        </div>
+                        </Link>
                     </div>
                 ))
             ) : (
@@ -105,7 +117,7 @@ export function Notifications() {
         </div>
          {adminNotifications.length > 0 && (
             <div className="flex justify-end mt-2">
-                <Button variant="link" size="sm" onClick={markAllAsRead}>
+                <Button variant="link" size="sm" onClick={() => void markAllAsRead()}>
                     <CheckCheck className="mr-2 h-4 w-4" />
                     Mark all as read
                 </Button>

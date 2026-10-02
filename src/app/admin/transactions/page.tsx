@@ -101,6 +101,21 @@ export default function TransactionsPage() {
   const [utrDialogOpen, setUtrDialogOpen] = useState(false);
   const [selectedTxForUtr, setSelectedTxForUtr] = useState<string | null>(null);
   const [utrNumber, setUtrNumber] = useState("");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get('status');
+    const type = params.get('type');
+    const transactionId = params.get('id');
+
+    if (status === 'pending' || status === 'completed' || status === 'rejected') {
+      setStatusFilter(status);
+    }
+    if (type === 'credit' || type === 'debit' || type === 'student_deposit') {
+      setTypeFilter(type);
+    }
+    if (transactionId) setSearchTerm(transactionId);
+  }, []);
   
   const fetchTransactions = useCallback(async (manual = false) => {
     if (!db) return;

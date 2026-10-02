@@ -53,6 +53,21 @@ export async function POST(request: NextRequest) {
         paymentMethod: upiId,
         user: uid
       });
+
+      const notificationRef = adminDb.collection('notifications').doc();
+      transaction.set(notificationRef, {
+        userId: 'admin',
+        type: 'withdrawal_request',
+        title: 'New withdrawal request',
+        message: `A withdrawal request of ₹${withdrawAmount.toFixed(2)} is waiting for approval.`,
+        status: 'unread',
+        timestamp: FieldValue.serverTimestamp(),
+        priority: 'high',
+        actionUrl: `/admin/transactions?status=pending&type=debit&id=${txRef.id}`,
+        entityType: 'transaction',
+        entityId: txRef.id,
+        createdBy: uid,
+      });
     });
 
     return NextResponse.json({ success: true, amount: withdrawAmount });

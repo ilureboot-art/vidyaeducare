@@ -289,7 +289,7 @@ export default function AdminManagementPage() {
                              <Label>Role</Label>
                              <Select name="role" required value={newAdminRole} onValueChange={(value) => setNewAdminRole(value as AdminRole)}>
                                 <SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger>
-                                <SelectContent><SelectItem value="Head Admin">Head Admin</SelectItem><SelectItem value="Sub-admin">Sub-admin</SelectItem></SelectContent>
+                                <SelectContent><SelectItem value="Head Admin">Head Admin</SelectItem><SelectItem value="Sub-admin">Sub-admin</SelectItem><SelectItem value="Finance Admin">Finance Admin</SelectItem><SelectItem value="Academic Admin">Academic Admin</SelectItem><SelectItem value="Support Admin">Support Admin</SelectItem></SelectContent>
                             </Select>
                         </div>
                         <DialogFooter><Button type="submit" disabled={isCreating}>{isCreating && <Loader2 className="animate-spin mr-2"/>} Create</Button></DialogFooter>

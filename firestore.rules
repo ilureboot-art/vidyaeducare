@@ -17,8 +17,18 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return signedIn() && (isMaster() || exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+      return signedIn() && (isMaster() || (exists(/databases/$(database)/documents/admins/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.status == 'Active' &&
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role in ['Head Admin', 'Sub-admin', 'Finance Admin', 'Academic Admin', 'Support Admin']));
     }
+
+    function hasRole(roles) {
+      return isAdmin() && (isMaster() || get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role in roles);
+    }
+    function financeAdmin() { return hasRole(['Head Admin', 'Sub-admin', 'Finance Admin']); }
+    function academicAdmin() { return hasRole(['Head Admin', 'Sub-admin', 'Academic Admin']); }
+    function configurationAdmin() { return hasRole(['Head Admin', 'Sub-admin']); }
+    function headAdmin() { return hasRole(['Head Admin']); }
 
     function isOwner(uid) {
       return signedIn() && request.auth.uid == uid;
@@ -47,7 +57,7 @@ service cloud.firestore {
     // Public for system consistency (Pricing, Bank Details, Academic Rules)
     match /configs/{document=**} {
       allow read: if true; 
-      allow write: if isAdmin();
+      allow write: if configurationAdmin();
     }
 
     // --- USER PROFILE & ACCESS ---
@@ -65,14 +75,14 @@ service cloud.firestore {
 
     match /aiAccess/{uid} {
       allow read: if isOwner(uid) || isAdmin();
-      allow write: if isAdmin();
+      allow write: if configurationAdmin();
     }
 
     match /wallets/{uid} {
-      allow read: if isOwner(uid) || isAdmin();
-      allow list: if isAdmin(); 
-      allow create: if isOwner(uid);
-      allow update: if isAdmin();
+      allow read: if isOwner(uid) || financeAdmin();
+      allow list: if financeAdmin(); 
+      allow create: if isOwner(uid) && request.resource.data.balance == 0 && request.resource.data.coins == 0;
+      allow update: if financeAdmin();
     }
 
     match /activationCodes/{uid} {
@@ -81,7 +91,8 @@ service cloud.firestore {
 
     match /admins/{uid} {
       allow read: if signedIn();
-      allow write: if isMaster();
+      allow write: if headAdmin() && request.resource.data.role in ['Head Admin', 'Sub-admin', 'Finance Admin', 'Academic Admin', 'Support Admin'] && request.resource.data.status in ['Active', 'Pending', 'Rejected'];
+      allow delete: if headAdmin();
     }
 
     match /chats/{uid} {
@@ -103,23 +114,27 @@ service cloud.firestore {
     }
     
     match /transactions/{id} {
-      allow read, list: if signedIn() && (isAdmin() || (resource != null && resource.data.user == request.auth.uid));
-      allow create: if isAdmin();
-      allow update: if isAdmin();
+      allow read, list: if signedIn() && (financeAdmin() || resource.data.user == request.auth.uid);
+      // Existing prize/purchase entries remain supported. Deposit/withdrawal decisions are server-only.
+      allow create: if financeAdmin() && !(request.resource.data.type in ['deposit', 'withdrawal']);
+      allow update, delete: if false;
     }
+    match /paymentUtrClaims/{id} { allow read, write: if false; }
+    match /adminBulkPreviews/{id} { allow read, write: if false; }
+    match /adminAuditLogs/{id} { allow read: if financeAdmin(); allow write: if false; }
 
     match /testSets/{id} {
       allow read, list: if true;
-      allow create: if isAdmin();
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      allow create: if academicAdmin();
+      allow update: if academicAdmin();
+      allow delete: if academicAdmin();
     }
 
     match /scheduledTests/{id} {
       allow read, list: if true;
-      allow create: if isAdmin();
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      allow create: if academicAdmin();
+      allow update: if academicAdmin();
+      allow delete: if false;
     }
 
     match /testResults/{id} {
@@ -160,7 +175,7 @@ service cloud.firestore {
 
     match /quizClashTournaments/{id} {
       allow read, list: if true;
-      allow write: if isAdmin();
+      allow write: if configurationAdmin();
     }
 
     match /quizClashResults/{id} {
@@ -181,7 +196,7 @@ service cloud.firestore {
     
     match /clients/{id} {
       allow read, list: if isAdmin() || (signedIn() && resource.data.referrerId == request.auth.uid);
-      allow write: if isAdmin();
+      allow write: if configurationAdmin();
     }
 
     // Remuneration policy and financial source-of-truth records are written only
@@ -292,7 +307,8 @@ service cloud.firestore {
 
     // --- MASTER OVERRIDE ---
     match /{allPaths=**} {
-      allow read, write: if isMaster();
+      allow read: if isMaster();
     }
   }
 }
+

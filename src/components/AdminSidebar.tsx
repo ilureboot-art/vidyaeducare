@@ -55,6 +55,8 @@ const adminNavItems = [
     icon: HeartHandshake,
   },
   { href: "/admin/transactions", label: "Transactions", icon: CreditCard },
+  { href: "/admin/audit", label: "Audit Trail", icon: Shield },
+  { href: "/admin/reward-eligibility", label: "Reward Eligibility", icon: Trophy },
   { href: "/admin/chat", label: "Support Chat", icon: MessageSquare },
   {
     href: "/admin/question-bank",

@@ -735,7 +735,7 @@ export default function HomePage() {
               <p className="text-3xl font-black text-primary">
                 ₹{storyteller.reelPrice} / Reel
               </p>
-              {!storyteller.enabled && <p className="text-sm text-muted-foreground">Demo available to watch. Paid reel generation is currently unavailable.</p>}
+              {!storyteller.enabled && <p className="text-sm text-muted-foreground">Demo available to listen to. Paid reel generation is currently unavailable.</p>}
               <div className="flex flex-wrap gap-3">
                 {storyteller.demoEnabled && storyteller.demoAssetPath && (
                   <Button variant="outline" asChild>
@@ -781,8 +781,7 @@ export default function HomePage() {
                 <div className="space-y-3">
                   <p className="font-black">STORY → SOUND DESIGN → AUDIO REEL</p>
                   <p className="text-muted-foreground">
-                    Story → natural voice → synchronized subtitles → animated
-                    typography → private MP4 download.
+                    Story → narration → sound design → audio reel with a fixed cover.
                   </p>
                   <Button variant="outline" asChild>
                     <Link href="/storyteller">
@@ -1060,3 +1059,4 @@ export default function HomePage() {
     </main>
   );
 }
+

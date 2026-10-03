@@ -347,11 +347,12 @@ export default function AdminStoreSettingsPage() {
                       <Label htmlFor="auto-approve-toggle" className="font-bold flex items-center gap-2">
                           <Zap size={14} className="text-primary fill-primary"/> Auto-Approve Deposits
                       </Label>
-                      <p className="text-xs text-muted-foreground max-w-md">When enabled, user payment requests are instantly credited without manual admin verification.</p>
+                      <p className="text-xs text-muted-foreground max-w-md">Deposits require bank-statement verification. Automatic credit is unavailable until a verified bank integration is configured.</p>
                   </div>
                   <Switch 
                     id="auto-approve-toggle" 
-                    checked={storeConfig.autoApproveDeposits} 
+                    checked={false}
+                    disabled 
                     onCheckedChange={(checked) => setStoreConfig(prev => prev ? ({...prev, autoApproveDeposits: checked}) : null)} 
                   />
               </div>
@@ -569,3 +570,4 @@ export default function AdminStoreSettingsPage() {
     </div>
   );
 }
+

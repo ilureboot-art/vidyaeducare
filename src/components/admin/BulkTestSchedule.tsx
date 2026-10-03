@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Papa from 'papaparse';
 import { collection, doc, runTransaction, serverTimestamp, Timestamp, writeBatch, type Firestore } from 'firebase/firestore';
+import { useAuth } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -26,6 +27,8 @@ function downloadCsv(filename: string, records: Record<string, string>[], column
 
 export function BulkTestSchedule({ db, uid, sets, schedules, onComplete }: Props) {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const [rawRows, setRawRows] = useState<Record<string, string>[]>([]);
   const [mode, setMode] = useState<Mode>('schedule');
   const [selected, setSelected] = useState<string[]>([]);
   const initialized = useRef(false);
@@ -48,6 +51,7 @@ export function BulkTestSchedule({ db, uid, sets, schedules, onComplete }: Props
   const parseRows = (rows: Record<string, string>[], nextMode: Mode) => {
     const result = validateScheduleRows(rows, nextMode, sets, schedules);
     setDrafts(result);
+    setRawRows(rows);
     toast({ title: 'CSV validated', description: `${result.length} rows; ${result.filter(item => item.errors.length).length} with errors.` });
   };
 
@@ -123,45 +127,21 @@ export function BulkTestSchedule({ db, uid, sets, schedules, onComplete }: Props
   };
 
   const confirm = async () => {
-    if (!drafts.length || drafts.some(item => item.errors.length) || !uid || busy) return;
-    if (!window.confirm(`Confirm ${mode} for ${drafts.length} MCQ test sessions?`)) return;
+    if (!drafts.length || drafts.some(item => item.errors.length) || !user || busy) return;
     setBusy(true);
-    let saved = 0;
     try {
-      // Recheck the schedule version before each batch so stale downloads cannot overwrite newer edits.
-      for (let offset = 0; offset < drafts.length; offset += 200) {
-        const part = drafts.slice(offset, offset + 200);
-        const confirmError = validateConfirmableDrafts(part, mode);
-        if (confirmError) throw new Error(confirmError);
-        if (mode === 'reschedule') {
-          await runTransaction(db, async transaction => {
-            const latest = await Promise.all(part.map(draft => transaction.get(doc(db, 'scheduledTests', draft.schedule!.id))));
-            latest.forEach((snapshot, index) => {
-              if (!snapshot.exists() || snapshot.data().dateTime !== part[index].schedule!.dateTime || snapshot.data().duration !== part[index].schedule!.duration || new Date(snapshot.data().dateTime) <= new Date()) throw new Error(`Session ${part[index].schedule!.id} changed or started; refresh and upload again.`);
-            });
-            part.forEach(draft => transaction.update(doc(db, 'scheduledTests', draft.schedule!.id), {
-              dateTime: draft.dateTime, startsAt: Timestamp.fromDate(new Date(draft.dateTime)), duration: draft.duration,
-              updatedAt: serverTimestamp(), lastModifiedBy: uid,
-            }));
-          });
-          saved += part.length;
-          continue;
-        }
-        const batch = writeBatch(db);
-        for (const draft of part) {
-            const ref = doc(collection(db, 'scheduledTests'));
-            batch.set(ref, { id: ref.id, testSetId: draft.testSet.id, testSetName: draft.testSet.name,
-              board: draft.testSet.board, standard: draft.testSet.standard, subject: draft.testSet.subject,
-              dateTime: draft.dateTime, startsAt: Timestamp.fromDate(new Date(draft.dateTime)), duration: draft.duration,
-              createdAt: serverTimestamp(), lastModifiedBy: uid });
-        }
-        await batch.commit();
-        saved += part.length;
-      }
-      toast({ title: 'Bulk operation completed', description: `${saved} sessions ${mode === 'schedule' ? 'scheduled' : 'rescheduled'}.` });
+      const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${await user.getIdToken()}` };
+      const response = await fetch('/api/admin/schedules/bulk', { method: 'POST', headers, body: JSON.stringify({ mode, rows: rawRows }) });
+      const preview = await response.json();
+      if (!response.ok) throw new Error(preview.error || preview.errors?.join('\n') || 'Preview failed.');
+      if (!window.confirm(`Server preview: ${preview.affected} sessions will be ${mode === 'schedule' ? 'created' : 'rescheduled'}, ${preview.blocked} blocked. All changes commit together and are audited. Confirm?`)) return;
+      const commit = await fetch('/api/admin/schedules/bulk', { method: 'POST', headers, body: JSON.stringify({ previewId: preview.previewId }) });
+      const result = await commit.json();
+      if (!commit.ok) throw new Error(result.error);
+      toast({ title: 'Bulk operation completed', description: `${result.affected} sessions saved. Audit trail recorded.` });
       setDrafts([]); setSelected([]); await onComplete();
     } catch (error) {
-      toast({ variant: 'destructive', title: 'Bulk operation stopped', description: `${saved} saved. ${error instanceof Error ? error.message : 'Try again.'} Refresh before retrying.` });
+      toast({ variant: 'destructive', title: 'Bulk operation stopped', description: error instanceof Error ? error.message : 'Refresh and try again.' });
       await onComplete();
     } finally { setBusy(false); }
   };
@@ -183,3 +163,4 @@ export function BulkTestSchedule({ db, uid, sets, schedules, onComplete }: Props
     {drafts.length > 0 && <div className="space-y-2"><p className="font-medium">Preview: {drafts.length} rows, {drafts.filter(item => item.errors.length).length} errors</p><div className="max-h-60 overflow-auto border rounded-md text-sm">{drafts.map(item => <div className="border-b p-2" key={item.row}>Row {item.row}: {item.testSet?.name || 'Unknown set'} · {item.schedule?.id || 'New session'} · {item.dateTime || 'Invalid time'} · {item.duration} min {item.errors.length ? <span className="text-destructive">— {item.errors.join('; ')}</span> : null}</div>)}</div><Button disabled={busy || !uid || drafts.some(item => item.errors.length)} onClick={confirm}>{busy ? 'Saving…' : `Confirm ${mode} (${drafts.length})`}</Button></div>}
   </div>;
 }
+

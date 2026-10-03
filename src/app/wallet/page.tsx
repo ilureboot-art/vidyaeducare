@@ -1,5 +1,6 @@
 
 "use client";
+import { PageInstructions } from "@/components/PageInstructions";
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
@@ -478,6 +479,7 @@ function WalletPageContent() {
 
   return (
     <div className="w-full max-w-2xl mx-auto space-y-6">
+      <PageInstructions kind="wallet" />
       <div className="space-y-4 mb-6">
         {pendingCount > 0 && activeView === 'main' && (
             <Alert className="bg-primary/5 border-primary/20 shadow-sm">
@@ -1250,3 +1252,4 @@ export default function WalletPage() {
         </ProtectedRoute>
     );
 }
+

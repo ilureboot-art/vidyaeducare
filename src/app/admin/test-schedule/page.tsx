@@ -244,24 +244,19 @@ export default function TestSchedulePage() {
     };
 
     const deleteSelectedSchedules = async (ids: string[]) => {
-        if (!db || !ids.length || !confirm(`Delete ${ids.length} selected scheduled sessions? Sessions with results will be kept.`)) return;
+        if (!user || !ids.length) return;
         try {
-            const deletable: string[] = [];
-            const blocked: string[] = [];
-            for (const id of ids) {
-                const results = await getDocs(query(collection(db, 'testResults'), where('testId', '==', id)));
-                const leaderboard = await getDocs(query(collection(db, 'leaderboard'), where('testId', '==', id)));
-                if (results.empty && leaderboard.empty) deletable.push(id);
-                else blocked.push(id);
-            }
-            for (let offset = 0; offset < deletable.length; offset += 200) {
-                const batch = writeBatch(db);
-                deletable.slice(offset, offset + 200).forEach(id => batch.delete(doc(db, 'scheduledTests', id)));
-                await batch.commit();
-            }
-            setSelectedSchedules(blocked);
+            const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${await user.getIdToken()}` };
+            const response = await fetch('/api/admin/schedules/bulk', { method: 'POST', headers, body: JSON.stringify({ mode: 'delete', ids }) });
+            const preview = await response.json();
+            if (!response.ok) throw new Error(preview.error || preview.errors?.join('\n') || 'Preview failed.');
+            if (!window.confirm(`Delete ${preview.affected} upcoming sessions? ${preview.blocked} blocked. Full session backups are retained in the server audit trail.\n${preview.items.map((item: any) => item.name).join('\n')}`)) return;
+            const commit = await fetch('/api/admin/schedules/bulk', { method: 'POST', headers, body: JSON.stringify({ previewId: preview.previewId }) });
+            const result = await commit.json();
+            if (!commit.ok) throw new Error(result.error);
+            setSelectedSchedules([]);
             await fetchPageData(true);
-            toast({ title: `${deletable.length} sessions deleted`, description: `${blocked.length} kept because results exist.` });
+            toast({ title: `${result.affected} sessions deleted`, description: 'Audit backup saved.' });
         } catch (error) {
             toast({ variant: 'destructive', title: 'Bulk delete failed', description: error instanceof Error ? error.message : 'Refresh and try again.' });
             await fetchPageData(true);
@@ -480,3 +475,4 @@ export default function TestSchedulePage() {
         </div>
     );
 }
+

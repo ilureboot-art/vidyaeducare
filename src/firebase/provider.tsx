@@ -6,6 +6,7 @@ import { onAuthStateChanged, type Auth, type User } from 'firebase/auth';
 import { doc, getDoc, type Firestore, type DocumentSnapshot } from 'firebase/firestore';
 import { Loader2, Shield } from 'lucide-react';
 import { getFirebaseServices } from './client-init';
+import { adminPermissions } from '@/lib/admin-permissions';
 import type { Admin } from '@/lib/admin-data';
 import { usePathname, useRouter } from 'next/navigation';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
@@ -23,7 +24,7 @@ const AuthContext = createContext<AuthState | undefined>(undefined);
 const DbContext = createContext<Firestore | undefined>(undefined);
 const AuthServiceContext = createContext<Auth | undefined>(undefined);
 
-const ROLE_CACHE_KEY = 'vidya_auth_role_v22_instant';
+const ROLE_CACHE_KEY = 'vidya_auth_role_v23_active';
 const MASTER_ADMIN_EMAIL = 'admin@vidyaeducare.com';
 
 const getCachedRoles = () => {
@@ -61,13 +62,13 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   const processSnap = useCallback((snap: DocumentSnapshot | null, user: User) => {
       let roles = { isAdmin: false, isHeadAdmin: false };
       
-      if (user.email?.toLowerCase() === MASTER_ADMIN_EMAIL) {
+      if ([MASTER_ADMIN_EMAIL, 'headadmin@vidyaeducare.com'].includes(user.email?.toLowerCase() || '')) {
           roles = { isAdmin: true, isHeadAdmin: true };
       } else if (snap && snap.exists()) {
         const adminData = snap.data() as Admin;
         roles = {
-            isAdmin: adminData.status === 'Active' || adminData.role === 'Head Admin',
-            isHeadAdmin: adminData.role === 'Head Admin'
+            isAdmin: adminPermissions(adminData.role, adminData.status).length > 0,
+            isHeadAdmin: adminData.status === 'Active' && adminData.role === 'Head Admin'
         };
       }
       
@@ -83,7 +84,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       return { isAdmin: false, isHeadAdmin: false };
     }
 
-    if (user.email?.toLowerCase() === MASTER_ADMIN_EMAIL) {
+    if ([MASTER_ADMIN_EMAIL, 'headadmin@vidyaeducare.com'].includes(user.email?.toLowerCase() || '')) {
         const roles = { isAdmin: true, isHeadAdmin: true };
         if (typeof window !== 'undefined') {
             sessionStorage.setItem(ROLE_CACHE_KEY, JSON.stringify({ ...roles, uid: user.uid }));
@@ -92,9 +93,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     }
 
     const cached = getCachedRoles();
-    if (cached && cached.uid === user.uid) {
-        return { isAdmin: cached.isAdmin, isHeadAdmin: cached.isHeadAdmin };
-    }
+
 
     try {
       const rolePromise = (async () => {
@@ -130,10 +129,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       }
 
       const cached = getCachedRoles();
-      if (cached && cached.uid === user.uid) {
-          setAuthState({ user, loading: false, isAdmin: cached.isAdmin, isHeadAdmin: cached.isHeadAdmin, isResolved: true });
-          return;
-      }
+
 
       setAuthState(prev => ({ ...prev, user, loading: false, isResolved: false }));
 
@@ -230,3 +226,4 @@ export const useAuth = (): AuthState => {
 
 export const useDb = (): Firestore | undefined => useContext(DbContext);
 export const useAuthService = (): Auth | undefined => useContext(AuthServiceContext);
+

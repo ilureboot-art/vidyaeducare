@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb, adminAuth } from '@/firebase/admin-init';
+import { paymentAmount } from '@/lib/payment-validation';
 import { FieldValue } from 'firebase-admin/firestore';
 
 export async function POST(request: NextRequest) {
@@ -20,13 +21,14 @@ export async function POST(request: NextRequest) {
     }
 
     const { amount, upiId } = await request.json();
-    const withdrawAmount = parseFloat(amount);
+    let withdrawAmount: number;
+    try { withdrawAmount = paymentAmount(amount); } catch (e) { return NextResponse.json({ error: (e as Error).message }, { status: 400 }); }
 
     if (isNaN(withdrawAmount) || withdrawAmount < 650) {
       return NextResponse.json({ error: 'Minimum withdrawal amount is ₹650.' }, { status: 400 });
     }
 
-    if (!upiId || upiId.trim() === '') {
+    if (typeof upiId !== 'string' || !/^[a-zA-Z0-9._-]{2,100}@[a-zA-Z0-9.-]{2,100}$/.test(upiId.trim())) {
       return NextResponse.json({ error: 'Receiving UPI ID is required.' }, { status: 400 });
     }
 
@@ -76,3 +78,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message || 'Withdrawal processing failed.' }, { status: 500 });
   }
 }
+

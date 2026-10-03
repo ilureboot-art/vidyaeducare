@@ -1,4 +1,5 @@
 "use client";
+import { PageInstructions } from "@/components/PageInstructions";
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -600,7 +601,7 @@ function ProfilePageContent() {
                         <PlusCircle className="mr-2 h-5 w-5"/> Add Student
                     </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>{isCodeVerified ? "Add Student Details" : "Enter Activation Code"}</DialogTitle>
                         <DialogDescription>
@@ -609,6 +610,7 @@ function ProfilePageContent() {
                                 : "A product activation code is required to create a student workspace."}
                         </DialogDescription>
                     </DialogHeader>
+                    <PageInstructions kind="registration" />
                     {!isCodeVerified ? (
                         <div className="space-y-4 pt-4">
                             <div className="space-y-2">
@@ -1356,3 +1358,4 @@ export default function ProfilePage() {
         </ProtectedRoute>
     );
 }
+

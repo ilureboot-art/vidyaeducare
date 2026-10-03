@@ -60,6 +60,9 @@ export default function UserManagementPage() {
   const [students, setStudents] = useState<StudentProfile[] | null>(null);
   const [isLoadingStudents, setIsLoadingStudents] = useState(false);
   const [showAllStandards, setShowAllStandards] = useState(false);
+  const [studentGroup, setStudentGroup] = useState<{ standard: string; paid: boolean } | null>(null);
+  const [studentSearch, setStudentSearch] = useState('');
+  const groupedStudents = (students || []).filter(s => studentGroup && (s.academic?.standard || 'Not specified') === studentGroup.standard && (s.mockTestSubscribed === true) === studentGroup.paid && `${s.name} ${s.id}`.toLowerCase().includes(studentSearch.toLowerCase())).sort((a,b) => a.name.localeCompare(b.name));
   
   const [selectedParent, setSelectedParent] = useState<UserSummary | null>(null);
   const [parentStudents, setParentStudents] = useState<StudentProfile[] | null>(null);
@@ -154,7 +157,7 @@ export default function UserManagementPage() {
     let grandMockTestCount = 0;
 
     students.forEach((s) => {
-      const std = s.academic?.standard;
+      const std = s.academic?.standard || "Not specified";
       if (std) {
         if (!stats[std]) {
           stats[std] = { total: 0, mockTestCount: 0 };
@@ -445,7 +448,8 @@ export default function UserManagementPage() {
                           </div>
                           <div className="space-y-1.5">
                             <div className="flex justify-between text-xs text-muted-foreground">
-                              <span>Subscribed: <strong>{data.mockTestCount}</strong></span>
+                              <button className="underline text-primary" onClick={() => { setStudentSearch(''); setStudentGroup({ standard: std, paid: true }); }}>Paid: <strong>{data.mockTestCount}</strong></button>
+                              <button className="underline" onClick={() => { setStudentSearch(''); setStudentGroup({ standard: std, paid: false }); }}>Unpaid: <strong>{data.total - data.mockTestCount}</strong></button>
                               <span>Total: <strong>{data.total}</strong></span>
                             </div>
                             <Progress value={percentage} className="h-2 bg-muted-foreground/10" />
@@ -561,6 +565,13 @@ export default function UserManagementPage() {
           </Table>
         </CardContent>
       </Card>
+
+      <Dialog open={!!studentGroup} onOpenChange={open => { if (!open) setStudentGroup(null); }}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto"><DialogHeader><DialogTitle>{studentGroup?.standard} — {studentGroup?.paid ? 'Subscribed / Paid' : 'Unsubscribed / Unpaid'} Students</DialogTitle><DialogDescription>Mock Test subscription status recorded on the student profile. This list does not certify reward eligibility.</DialogDescription></DialogHeader>
+        <Input aria-label="Search student name or ID" placeholder="Search student name or ID" value={studentSearch} onChange={e => setStudentSearch(e.target.value)} />
+        <p className="text-sm">{groupedStudents.length} students</p><Table><TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Student ID</TableHead><TableHead>Board</TableHead></TableRow></TableHeader><TableBody>{groupedStudents.map(s => <TableRow key={s.id}><TableCell>{s.name}</TableCell><TableCell>{s.id}</TableCell><TableCell>{s.academic?.board || '—'}</TableCell></TableRow>)}{!groupedStudents.length && <TableRow><TableCell colSpan={3}>No students found.</TableCell></TableRow>}</TableBody></Table>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -733,3 +744,4 @@ export default function UserManagementPage() {
     </div>
   );
 }
+

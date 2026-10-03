@@ -1,5 +1,6 @@
 
 "use client";
+import { PageInstructions } from "@/components/PageInstructions";
 
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -158,6 +159,7 @@ function SignupForm() {
         </h1>
         <p className="text-muted-foreground font-medium uppercase text-xs tracking-widest">Start Your Academic Journey</p>
       </div>
+      <PageInstructions kind="registration" />
       <Card className="w-full border-primary/10 shadow-xl">
         <form onSubmit={handleSignup}>
           <CardHeader>
@@ -239,3 +241,4 @@ export default function SignupPage() {
     </Suspense>
   );
 }
+

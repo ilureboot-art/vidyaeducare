@@ -39,6 +39,7 @@ import { useAuthService } from "@/firebase";
 import { signOut } from "firebase/auth";
 
 const adminNavItems = [
+  { href: "/admin/page-instructions", label: "Page Instructions", icon: BookCopy },
   { href: "/admin/analytics", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/notifications", label: "Notifications", icon: Bell },
   { href: "/admin/approval-inbox", label: "Approval Inbox", icon: Landmark },

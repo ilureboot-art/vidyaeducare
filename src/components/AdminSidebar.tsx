@@ -41,6 +41,7 @@ import { signOut } from "firebase/auth";
 const adminNavItems = [
   { href: "/admin/analytics", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/notifications", label: "Notifications", icon: Bell },
+  { href: "/admin/approval-inbox", label: "Approval Inbox", icon: Landmark },
   { href: "/admin/users", label: "User Management", icon: Users },
   {
     href: "/admin/iba-management",
@@ -138,3 +139,4 @@ export const AdminSidebar = React.memo(function AdminSidebar() {
     </Sidebar>
   );
 });
+

@@ -21,3 +21,12 @@ Status: implementation prepared; production release blocked until Firestore rule
 - Publish and verify rules for named database `vidyaeducaredatabase`, then merge/deploy the matching app commit while preventing legacy browser approvals during the transition.
 - Verify backend `studio` in `us-central1` shows this exact merge commit Current / Release succeeded.
 - Live read-only smoke checks: Finance report/audit access; Academic denied payment APIs; Pending denied admin APIs; old direct payment status updates denied; bulk preview validation. Do not approve real payments or award prizes as smoke tests.
+
+## Subscription referral rewards
+
+- First successful paid Mock Test subscription credits ₹5 each to the buyer and recorded referrer, atomically with purchase and an immutable per-buyer claim. Registration, free purchases, deposits and renewals do not trigger it.
+- Referral and IBA inputs use the same normalized wallet code and resolver. Invalid, ambiguous, inactive, self and duplicate primary/secondary codes are rejected. Existing codes are retained; ambiguous legacy codes require administrator resolution.
+- Registration retries preserve existing profile, wallet and attribution. Existing signup rewards are preserved and excluded from a second subscription reward.
+- Pending/Credited status and finance-authorized paginated reports are available. Premium ReferBolt cycle progress moves to the qualifying paid referral; renewal fees cannot overdraw the wallet.
+- Validation: 144 tests across 21 files passed; TypeScript and production build passed. Purchase tests use serialized in-memory transactions, not live Firestore.
+- CLI login check remains No authorized accounts. Publish named database rules and verify deployed permissions before merging this app release.

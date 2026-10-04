@@ -15,7 +15,7 @@ export function adminPermissions(role: unknown, status: unknown, master = false)
   return permissions[role as AdminRoleName];
 }
 export function permissionForAdminPath(path: string): AdminPermission {
-  if (/\/payments|\/transactions|\/iba|\/reward-eligibility|\/approval-inbox/.test(path)) return 'payments';
+  if (/\/payments|\/transactions|\/iba|\/reward-eligibility|\/referral-rewards|\/approval-inbox/.test(path)) return 'payments';
   if (/\/audit/.test(path)) return 'audit';
   if (/\/roles|\/admin-management/.test(path)) return 'roles';
   if (/\/schedule|\/question-bank|\/leaderboard/.test(path)) return 'academic';

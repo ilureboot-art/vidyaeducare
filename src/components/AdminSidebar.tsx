@@ -25,6 +25,7 @@ import {
   BriefcaseBusiness,
   Mic2,
   HeartHandshake,
+  Gift,
 } from "lucide-react";
 import {
   Sidebar,
@@ -39,6 +40,7 @@ import { useAuthService } from "@/firebase";
 import { signOut } from "firebase/auth";
 
 const adminNavItems = [
+  { href: "/admin/referral-rewards", label: "Referral Rewards", icon: Gift },
   { href: "/admin/page-instructions", label: "Page Instructions", icon: BookCopy },
   { href: "/admin/analytics", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/notifications", label: "Notifications", icon: Bell },

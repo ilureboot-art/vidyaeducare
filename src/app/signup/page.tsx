@@ -124,10 +124,10 @@ function SignupForm() {
           throw new Error(errData.error || 'Failed to complete registration profile.');
         }
 
-        const calculatedBonus = referralBonus || 5;
+        const calculatedBonus = 5;
         toast({
             title: "Account Created Successfully!",
-            description: `Welcome to Vidya EduCare! ${cleanRefCode ? `Your ₹${calculatedBonus} bonus has been applied.` : ''} Redirecting...`,
+            description: `Welcome to Vidya EduCare! ${cleanRefCode ? `Your referral is recorded. ₹${calculatedBonus} will be credited after your first paid Mock Test subscription.` : ''} Redirecting...`,
         });
         router.push("/login");
       } catch (regError: any) {

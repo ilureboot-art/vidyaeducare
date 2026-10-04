@@ -67,7 +67,7 @@ service cloud.firestore {
       allow create: if true;
       allow update: if isAdmin() || (isOwner(uid) &&
         !request.resource.data.diff(resource.data).affectedKeys().hasAny([
-          'purchasedMockTest', 'commission_rate', 'accountStatus', 'subscriptionStatus',
+          'referredBy', 'referralRewardStatus', 'purchasedMockTest', 'commission_rate', 'accountStatus', 'subscriptionStatus',
           'remunerationEligibilityStatus', 'managementApprovalStatus'
         ]));
       allow delete: if isAdmin();
@@ -119,6 +119,7 @@ service cloud.firestore {
       allow create: if financeAdmin() && !(request.resource.data.type in ['deposit', 'withdrawal']);
       allow update, delete: if false;
     }
+    match /referralRewardClaims/{uid} { allow read: if isOwner(uid) || financeAdmin(); allow write: if false; }
     match /paymentUtrClaims/{id} { allow read, write: if false; }
     match /adminBulkPreviews/{id} { allow read, write: if false; }
     match /adminAuditLogs/{id} { allow read: if financeAdmin(); allow write: if false; }

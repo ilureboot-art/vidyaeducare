@@ -6,6 +6,11 @@ export type StorytellerStatus = "PAYMENT_PENDING" | "PAID" | "QUEUED" | "GENERAT
 
 export interface StorytellerConfig {
   enabled: boolean;
+  aiNarratorEnabled: boolean;
+  ownVoiceEnabled: boolean;
+  aiDurationPrices: Record<string, number>;
+  aiVoice: string;
+  aiModel: string;
   loginRequired: true;
   productName: string;
   tagline: string;
@@ -43,6 +48,11 @@ export interface StorytellerConfig {
 
 export const defaultStorytellerConfig: StorytellerConfig = {
   enabled: false,
+  aiNarratorEnabled: true,
+  ownVoiceEnabled: false,
+  aiDurationPrices: { "30": 19, "60": 29, "90": 39, "120": 49 },
+  aiVoice: "Kore",
+  aiModel: "gemini-2.5-flash-preview-tts",
   loginRequired: true,
   productName: "StoryTeller AI",
   tagline: "Turn Your Story into an AI Audio Reel",
@@ -81,6 +91,7 @@ export const defaultStorytellerConfig: StorytellerConfig = {
 };
 
 export interface StorytellerInput {
+  narrationMode?: "AI" | "OWN_VOICE";
   title: string;
   story: string;
   language: string;
@@ -95,7 +106,8 @@ export interface StorytellerInput {
 
 export const STORYTELLER_CONSENT_VERSION = "2026-09-28";
 
-export function storytellerPriceForDuration(config: StorytellerConfig, duration: number) {
+export function storytellerPriceForDuration(config: StorytellerConfig, duration: number, mode: "AI" | "OWN_VOICE" = "OWN_VOICE") {
+  if (mode === "AI") return Number(config.aiDurationPrices?.[String(duration)] ?? config.reelPrice);
   return Number(config.durationPrices?.[String(duration)] ?? config.reelPrice);
 }
 
@@ -104,6 +116,9 @@ export function validateStorytellerConfig(value: StorytellerConfig): string[] {
   if (!value.productName.trim()) errors.push("Product name is required.");
   if (!Number.isFinite(value.reelPrice) || value.reelPrice <= 0) errors.push("Price must be greater than zero.");
   if (value.durations.some(duration => !Number.isFinite(storytellerPriceForDuration(value, duration)) || storytellerPriceForDuration(value, duration) <= 0)) errors.push("Every duration must have a price greater than zero.");
+  if (value.durations.some(d => !Number.isFinite(storytellerPriceForDuration(value,d,"AI")) || storytellerPriceForDuration(value,d,"AI") <= 0)) errors.push("Every AI duration must have a positive price.");
+  if (value.aiModel !== "gemini-2.5-flash-preview-tts") errors.push("Unsupported AI narration model.");
+  if (!["Kore","Puck","Charon","Fenrir","Aoede"].includes(value.aiVoice)) errors.push("Unsupported AI voice.");
   if (value.currency !== "INR") errors.push("Only INR is currently supported by the wallet.");
   if (!Number.isInteger(value.maxDuration) || value.maxDuration < 15 || value.maxDuration > 300) errors.push("Maximum duration must be between 15 and 300 seconds.");
   if (!value.languages.length) errors.push("At least one language is required.");
@@ -124,7 +139,9 @@ export function validateStorytellerInput(input: StorytellerInput, config: Storyt
   if (!config.voiceStyles.includes(input.voiceStyle)) errors.push("Narration tone is not enabled.");
   if (!config.genres.includes(input.genre)) errors.push("Genre is not enabled.");
   if (!config.musicCategories.includes(input.music)) errors.push("Music category is not enabled.");
-  if (!/^[A-Za-z0-9_-]{10,120}$/.test(input.voiceReferenceId || "")) errors.push("A valid own-voice reference is required.");
+  if (input.narrationMode === "AI" && !config.aiNarratorEnabled) errors.push("AI narrator is disabled.");
+  if (input.narrationMode === "OWN_VOICE" && !config.ownVoiceEnabled) errors.push("Own voice is disabled.");
+  if (input.narrationMode !== "AI" && !/^[A-Za-z0-9_-]{10,120}$/.test(input.voiceReferenceId || "")) errors.push("A valid own-voice reference is required.");
   if (input.consentAccepted !== true || input.consentVersion !== STORYTELLER_CONSENT_VERSION) errors.push("Current voice ownership and synthesis consent is required.");
   return errors;
 }
@@ -133,3 +150,4 @@ export function publicStorytellerConfig(config: StorytellerConfig) {
   const { voiceProvider: _provider, voiceModel: _model, ...safe } = config;
   return safe;
 }
+

@@ -44,10 +44,16 @@ async function render(projectId) {
     await ref.set({generationStage:"SCENE_EMOTION_PLAN_READY"},{merge:true});
     const voiceReference=path.join(temp,"voice-reference");
     const narration=path.join(temp,"narration.wav"), output=path.join(temp,"audio-reel.mp3"), musicFile=path.join(temp,"music.mp3");
+    const config=(await db.collection("configs").doc("storyteller").get()).data()||{};
+    if(project.narrationMode === "AI") {
+      if(config.aiNarratorEnabled !== true) throw new Error("AI narrator is disabled");
+      await synthesizeGoogleVoice({script:plan.script,language:project.language,style:project.voiceStyle,voice:config.aiVoice||"Kore",outputPath:narration});
+    } else {
+    if(config.ownVoiceEnabled !== true) throw new Error("Own voice is disabled");
     await bucket.file(project.voiceReferenceAssetPath).download({destination:voiceReference});
     await synthesizeOwnVoice({script:plan.script,language:project.language,style:project.voiceStyle,referencePath:voiceReference,outputPath:narration});
-    await ref.set({generationStage:"OWN_VOICE_NARRATION_READY"},{merge:true});
-    const config=(await db.collection("configs").doc("storyteller").get()).data()||{};
+    }
+    await ref.set({generationStage:"NARRATION_READY"},{merge:true});
     const musicPath=config.musicAssets?.[project.music];
     const args=["-y","-i",narration];
     if(musicPath){
@@ -72,6 +78,19 @@ async function processStory(story,language,style,genre,duration){
   const raw=(data.candidates?.[0]?.content?.parts?.[0]?.text||"").replace(/^```json\s*|\s*```$/g,"").trim();
   const plan=JSON.parse(raw); if(plan.safe!==true||!plan.script)throw new Error(plan.reason||"Story did not pass safety moderation"); return {script:plan.script,scenes:Array.isArray(plan.scenes)?plan.scenes:[]};
 }
+async function synthesizeGoogleVoice({script,language,style,voice,outputPath}) {
+  const key=process.env.STORYTELLER_GOOGLE_TTS_API_KEY;
+  if(!key) throw new Error("Google TTS is not configured");
+  const response=await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent",{method:"POST",headers:{"content-type":"application/json","x-goog-api-key":key},body:JSON.stringify({contents:[{parts:[{text:`Narrate in ${language}, with ${style} expression and natural story pauses. Read only the story below:\n${script}`}]}],generationConfig:{responseModalities:["AUDIO"],speechConfig:{voiceConfig:{prebuiltVoiceConfig:{voiceName:voice}}}}})});
+  if(!response.ok) throw new Error(`Google TTS failed: ${response.status}`);
+  const data=await response.json();
+  const audio=data.candidates?.[0]?.content?.parts?.find(p=>p.inlineData?.mimeType?.startsWith("audio/"))?.inlineData;
+  if(!audio?.data || !audio.mimeType.includes("rate=24000")) throw new Error("Google TTS returned unsupported audio");
+  const pcm=outputPath+".pcm";
+  await fs.writeFile(pcm,Buffer.from(audio.data,"base64"));
+  await ffmpeg(["-y","-f","s16le","-ar","24000","-ac","1","-i",pcm,outputPath]);
+}
+
 async function synthesizeOwnVoice({script,language,style,referencePath,outputPath}){
   if(!process.env.STORYTELLER_OWN_VOICE_API_URL||!process.env.STORYTELLER_OWN_VOICE_API_KEY)throw new Error("Own-voice synthesis provider is not configured");
   const form=new FormData(); form.set("script",script); form.set("language",language); form.set("style",style); form.set("reference",new Blob([await fs.readFile(referencePath)]),"reference-audio");
@@ -82,3 +101,4 @@ function ffmpeg(args){return new Promise((resolve,reject)=>{const child=spawn("f
 async function callback(projectId,status,extra){const url=process.env.APP_CALLBACK_URL;if(!url)throw new Error("APP_CALLBACK_URL is required");const r=await fetch(`${url.replace(/\/$/,"")}/api/storyteller/renderer-callback`,{method:"POST",headers:{"content-type":"application/json","x-storyteller-secret":process.env.STORYTELLER_RENDERER_SECRET},body:JSON.stringify({projectId,status,...extra})});if(!r.ok)throw new Error(`Callback failed: ${r.status}`)}
 
 app.listen(process.env.PORT||8080);
+

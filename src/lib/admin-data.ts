@@ -1,7 +1,7 @@
 
 'use client';
 
-export type AdminRole = "Head Admin" | "Sub-admin";
+export type AdminRole = "Head Admin" | "Sub-admin" | "Finance Admin" | "Academic Admin" | "Support Admin";
 export type AdminStatus = "Active" | "Pending" | "Rejected";
 
 export type Admin = {
@@ -18,3 +18,4 @@ export type AdminData = {
     admins: Admin[];
     requests: Admin[];
 };
+

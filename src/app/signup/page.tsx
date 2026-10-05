@@ -1,5 +1,6 @@
 
 "use client";
+import { PageInstructions } from "@/components/PageInstructions";
 
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -123,10 +124,10 @@ function SignupForm() {
           throw new Error(errData.error || 'Failed to complete registration profile.');
         }
 
-        const calculatedBonus = referralBonus || 5;
+        const calculatedBonus = 5;
         toast({
             title: "Account Created Successfully!",
-            description: `Welcome to Vidya EduCare! ${cleanRefCode ? `Your ₹${calculatedBonus} bonus has been applied.` : ''} Redirecting...`,
+            description: `Welcome to Vidya EduCare! ${cleanRefCode ? `Your referral is recorded. ₹${calculatedBonus} will be credited after your first paid Mock Test subscription.` : ''} Redirecting...`,
         });
         router.push("/login");
       } catch (regError: any) {
@@ -158,6 +159,7 @@ function SignupForm() {
         </h1>
         <p className="text-muted-foreground font-medium uppercase text-xs tracking-widest">Start Your Academic Journey</p>
       </div>
+      <PageInstructions kind="registration" />
       <Card className="w-full border-primary/10 shadow-xl">
         <form onSubmit={handleSignup}>
           <CardHeader>
@@ -239,3 +241,4 @@ export default function SignupPage() {
     </Suspense>
   );
 }
+

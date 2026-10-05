@@ -9,11 +9,14 @@ export const runtime = "nodejs";
 export async function POST(request: NextRequest) {
   try {
     const user = await verifyRequester(request);
+    const account = await adminDb.collection("storytellerAccounts").doc(user.uid).get();
+    if (account.data()?.status !== "ACTIVE" || account.data()?.adultVerified !== true) return NextResponse.json({error:"Verified adult StoryTeller account required."},{status:403});
     const form = await request.formData();
     const file = form.get("file");
     if (!(file instanceof File)) return NextResponse.json({ error: "Voice reference file is required." }, { status: 400 });
     const configSnap = await adminDb.collection("configs").doc(STORYTELLER_CONFIG_ID).get();
     const config = configSnap.exists ? { ...defaultStorytellerConfig, ...configSnap.data() } as StorytellerConfig : defaultStorytellerConfig;
+    if (!config.ownVoiceEnabled) return NextResponse.json({error:"Own voice is disabled."},{status:503});
     if (!config.allowedVoiceMimeTypes.includes(file.type)) return NextResponse.json({ error: "Only MP3, WAV and M4A voice references are accepted." }, { status: 415 });
     if (file.size <= 0 || file.size > config.maxVoiceUploadMb * 1024 * 1024) return NextResponse.json({ error: `Voice reference must be smaller than ${config.maxVoiceUploadMb} MB.` }, { status: 413 });
 
@@ -31,3 +34,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Voice reference upload failed." }, { status });
   }
 }
+

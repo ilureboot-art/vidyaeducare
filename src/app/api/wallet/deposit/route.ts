@@ -1,106 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb, adminAuth } from '@/firebase/admin-init';
+import { adminDb } from '@/firebase/admin-init';
 import { FieldValue } from 'firebase-admin/firestore';
-import { defaultStoreConfig, StoreConfig } from '@/lib/store-config';
+import { createHash } from 'node:crypto';
+import { verifyRequester, RequestAuthError } from '@/lib/server-auth';
+import { normalizeUtr, paymentAmount } from '@/lib/payment-validation';
 
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized: Missing or invalid token' }, { status: 401 });
-    }
-    const token = authHeader.split('Bearer ')[1];
-    
-    let uid: string;
-    try {
-      const decodedToken = await adminAuth.verifyIdToken(token);
-      uid = decodedToken.uid;
-    } catch (authError) {
-      console.error('Token verification failed:', authError);
-      return NextResponse.json({ error: 'Unauthorized: Invalid authentication' }, { status: 401 });
-    }
-
-    const { amount, referenceId, receiptUrl } = await request.json();
-    const depositAmount = parseFloat(amount);
-
-    if (isNaN(depositAmount) || depositAmount <= 0) {
-      return NextResponse.json({ error: 'Amount must be a positive number.' }, { status: 400 });
-    }
-
-    if (!referenceId || referenceId.trim() === '') {
-      return NextResponse.json({ error: 'Transaction ID / UTR is required.' }, { status: 400 });
-    }
-
-    // Fetch Store Config from Firestore to check auto-approve flag
-    const storeConfigRef = adminDb.collection('configs').doc('store');
-    const storeConfigDoc = await storeConfigRef.get();
-    const storeConfig: StoreConfig = storeConfigDoc.exists 
-      ? (storeConfigDoc.data() as StoreConfig) 
-      : defaultStoreConfig;
-
-    const isAutoApprove = storeConfig.autoApproveDeposits || false;
-    const walletRef = adminDb.collection('wallets').doc(uid);
-
-    const txData = {
-      type: 'deposit',
-      description: 'Fund Deposit Request',
-      amount: depositAmount,
-      date: FieldValue.serverTimestamp(),
-      status: isAutoApprove ? 'Completed' : 'Pending',
-      referenceId: referenceId,
-      user: uid,
-      receiptUrl: receiptUrl || null,
-    };
-
-    if (isAutoApprove) {
-      await adminDb.runTransaction(async (transaction) => {
-        const walletDoc = await transaction.get(walletRef);
-        const currentBalance = walletDoc.exists ? (walletDoc.data()?.balance || 0) : 0;
-        
-        transaction.set(walletRef, { 
-          balance: currentBalance + depositAmount,
-          coins: walletDoc.exists ? (walletDoc.data()?.coins || 0) : 0,
-          referralCode: walletDoc.exists ? (walletDoc.data()?.referralCode || `REF${uid.slice(0, 6).toUpperCase()}`) : `REF${uid.slice(0, 6).toUpperCase()}`
-        }, { merge: true });
-        
-        const txRef = adminDb.collection('transactions').doc();
-        transaction.set(txRef, txData);
-
-        const notificationRef = adminDb.collection('notifications').doc();
-        transaction.set(notificationRef, {
-          userId: uid,
-          type: 'deposit_received',
-          message: `₹${depositAmount.toFixed(2)} has been instantly credited to your wallet via auto-approval.`,
-          status: 'unread',
-          timestamp: FieldValue.serverTimestamp(),
-        });
-      });
-    } else {
-      const txRef = adminDb.collection('transactions').doc();
-      const notificationRef = adminDb.collection('notifications').doc();
-      const batch = adminDb.batch();
-
-      batch.set(txRef, txData);
-      batch.set(notificationRef, {
-        userId: 'admin',
-        type: 'deposit_request',
-        title: 'New deposit request',
-        message: `A fund deposit request of ₹${depositAmount.toFixed(2)} is waiting for approval.`,
-        status: 'unread',
-        timestamp: FieldValue.serverTimestamp(),
-        priority: 'high',
-        actionUrl: `/admin/transactions?status=pending&type=student_deposit&id=${txRef.id}`,
-        entityType: 'transaction',
-        entityId: txRef.id,
-        createdBy: uid,
-      });
-
-      await batch.commit();
-    }
-
-    return NextResponse.json({ success: true, autoApproved: isAutoApprove });
-  } catch (error: any) {
-    console.error('Deposit processing failed:', error);
-    return NextResponse.json({ error: error.message || 'Deposit processing failed.' }, { status: 500 });
+    const { uid } = await verifyRequester(request);
+    const body = await request.json();
+    let amount: number, referenceId: string;
+    try { amount = paymentAmount(body.amount); referenceId = normalizeUtr(body.referenceId); }
+    catch (error) { return NextResponse.json({ error: (error as Error).message }, { status: 400 }); }
+    const receiptUrl = typeof body.receiptUrl === 'string' ? body.receiptUrl.slice(0, 2048) : null;
+    // Global incoming namespace is server-owned; clients cannot select a scope to bypass duplicate detection.
+    const claimRef = adminDb.collection('paymentUtrClaims').doc(createHash('sha256').update(`incoming:${referenceId}`).digest('hex'));
+    const txRef = adminDb.collection('transactions').doc();
+    const result = await adminDb.runTransaction(async tx => {
+      const claim = await tx.get(claimRef);
+      if (claim.exists) {
+        if (claim.data()?.userId === uid && claim.data()?.amount === amount) return { transactionId: claim.data()!.transactionId, replayed: true };
+        throw new RequestAuthError('Duplicate UTR: this reference was already submitted.', 409);
+      }
+      const legacy = await tx.get(adminDb.collection('transactions'));
+      if (legacy.docs.some(doc => doc.data().type === 'deposit' && typeof doc.data().referenceId === 'string' && doc.data().referenceId.trim().toUpperCase().replace(/\s+/g, '') === referenceId)) throw new RequestAuthError('Duplicate UTR: this reference is already recorded.', 409);
+      tx.create(claimRef, { transactionId: txRef.id, userId: uid, amount, normalizedUtr: referenceId, namespace: 'incoming', claimedAt: FieldValue.serverTimestamp() });
+      // User-entered references are not proof of payment. Auto-credit requires a verified bank integration.
+      tx.create(txRef, { type: 'deposit', description: 'Fund Deposit Request', amount, date: FieldValue.serverTimestamp(), status: 'Pending', referenceId, user: uid, receiptUrl, bankVerified: false });
+      tx.create(adminDb.collection('notifications').doc(), { userId: 'admin', type: 'deposit_request', title: 'New deposit request', message: `A fund deposit request of ₹${amount.toFixed(2)} is waiting for bank verification.`, status: 'unread', timestamp: FieldValue.serverTimestamp(), priority: 'high', actionUrl: `/admin/transactions?status=pending&type=student_deposit&id=${txRef.id}`, entityType: 'transaction', entityId: txRef.id, createdBy: uid });
+      return { transactionId: txRef.id, replayed: false };
+    });
+    return NextResponse.json({ success: true, autoApproved: false, ...result });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Deposit processing failed.' }, { status: error instanceof RequestAuthError ? error.status : error instanceof SyntaxError ? 400 : 500 });
   }
 }

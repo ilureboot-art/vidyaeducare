@@ -18,7 +18,8 @@ function ReferAndEarnPageContent() {
     const { user } = useAuth();
     const db = useDb();
     
-    const [referralBonus, setReferralBonus] = useState<number | null>(null);
+    const [referralBonus, setReferralBonus] = useState<number | null>(5);
+    const [rewardStatus, setRewardStatus] = useState('NOT_APPLICABLE');
     const [referralCode, setReferralCode] = useState<string | null>(null);
     const [referralShareMessage, setReferralShareMessage] = useState<string | null>(null);
     
@@ -34,7 +35,7 @@ function ReferAndEarnPageContent() {
                     throw e;
                 });
                 if(storeConfigDoc.exists()) {
-                    setReferralBonus(storeConfigDoc.data().referralBonus);
+                    setReferralBonus(5);
                     setReferralShareMessage(storeConfigDoc.data().referralShareMessage || null);
                 }
             } catch (e) {
@@ -44,6 +45,7 @@ function ReferAndEarnPageContent() {
 
         const fetchUserRefCode = async () => {
             if (user && db) {
+                getDoc(doc(db, 'users', user.uid)).then(s => setRewardStatus(s.data()?.referralRewardStatus || 'NOT_APPLICABLE')).catch(() => {});
                 const walletDocRef = doc(db, "wallets", user.uid);
                 try {
                     const walletDoc = await getDoc(walletDocRef).catch(async (e) => {
@@ -83,7 +85,7 @@ function ReferAndEarnPageContent() {
       .replace(/{share_url}/g, url)
       .replace(/{referral_code}/g, referralCode)
       .replace(/{bonus_amount}/g, String(bonusAmount))
-      .replace(/{faq_url}/g, faqUrl);
+      .replace(/{faq_url}/g, faqUrl) + '\n₹5 each is credited once, after the referred user completes their first paid Mock Test subscription. Registration alone does not qualify.';
 
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
@@ -131,6 +133,8 @@ function ReferAndEarnPageContent() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-8 pt-8">
+                    <p className="text-sm">Your reward: {rewardStatus === 'CREDITED' ? 'Credited' : rewardStatus === 'PENDING_SUBSCRIPTION' ? 'Pending first paid subscription' : 'No qualifying referral recorded'}.</p>
+                    <p className="text-sm">₹5 each, once per referred user, after a successful paid Mock Test subscription. Free registration, trials, wallet deposits and renewals do not qualify. Your Referral Code and IBA Code are the same.</p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <Card className="border-primary/20 bg-primary/[0.02] relative overflow-hidden">
                             <CardHeader className="pb-2">
@@ -138,7 +142,7 @@ function ReferAndEarnPageContent() {
                             </CardHeader>
                             <CardContent>
                                 <p className="text-5xl font-black text-primary tracking-tighter">₹{referralBonus}</p>
-                                <p className="text-[10px] font-black uppercase text-muted-foreground mt-2 tracking-widest">Successful Referral Credit</p>
+                                <p className="text-[10px] font-black uppercase text-muted-foreground mt-2 tracking-widest">After their first paid Mock Test subscription</p>
                             </CardContent>
                         </Card>
                         <Card className="border-accent/20 bg-accent/[0.02] relative overflow-hidden">
@@ -147,7 +151,7 @@ function ReferAndEarnPageContent() {
                             </CardHeader>
                             <CardContent>
                                 <p className="text-5xl font-black text-accent tracking-tighter">₹{referralBonus}</p>
-                                <p className="text-[10px] font-black uppercase text-muted-foreground mt-2 tracking-widest">Instant Welcome Bonus</p>
+                                <p className="text-[10px] font-black uppercase text-muted-foreground mt-2 tracking-widest">After your first paid Mock Test subscription</p>
                             </CardContent>
                         </Card>
                     </div>
@@ -186,3 +190,4 @@ export default function ReferAndEarnPage() {
         </ProtectedRoute>
     );
 }
+

@@ -28,3 +28,18 @@ describe("StoryTeller policy", () => {
     expect(validateStorytellerInput({ ...validInput, voiceReferenceId: "" }, defaultStorytellerConfig)).toContain("A valid own-voice reference is required.");
   });
 });
+
+
+describe("Independent narrator controls", () => {
+  it("keeps own voice off and permits AI without uploading a voice sample", () => {
+    expect(defaultStorytellerConfig.ownVoiceEnabled).toBe(false);
+    expect(validateStorytellerInput({...validInput,narrationMode:"AI",voiceReferenceId:""},defaultStorytellerConfig)).toEqual([]);
+    expect(validateStorytellerInput({...validInput,narrationMode:"OWN_VOICE"},defaultStorytellerConfig)).toContain("Own voice is disabled.");
+  });
+  it("uses separate admin pricing and rejects disabled AI", () => {
+    const config={...defaultStorytellerConfig,aiNarratorEnabled:false,aiDurationPrices:{"30":25}};
+    expect(storytellerPriceForDuration(config,30,"AI")).toBe(25);
+    expect(storytellerPriceForDuration(config,30,"OWN_VOICE")).toBe(19);
+    expect(validateStorytellerInput({...validInput,narrationMode:"AI"},config)).toContain("AI narrator is disabled.");
+  });
+});

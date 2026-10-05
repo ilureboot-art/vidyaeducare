@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminDb, adminAuth } from '@/firebase/admin-init';
 import { FieldValue } from 'firebase-admin/firestore';
 import { defaultStoreConfig, StoreConfig, MockTestPackage, ReferboltSubscription } from '@/lib/store-config';
+import { resolveReferralCode } from '@/lib/referral-code';
 import { IbaRemunerationPolicy, getIndiaWeekRange } from '@/lib/iba-remuneration';
 
 export async function POST(request: NextRequest) {
@@ -166,25 +167,13 @@ export async function POST(request: NextRequest) {
       let ibaUid: string | null = null;
       let ibaUid2: string | null = null;
       
-      if (referralCode && referralCode.trim() !== '') {
-        const walletsSnap = await adminDb.collection('wallets')
-          .where('referralCode', '==', referralCode.trim())
-          .get();
-        if (!walletsSnap.empty) {
-          ibaUid = walletsSnap.docs[0].id;
-          referralDiscount = (mockItem.referralDiscount || 0) / 100;
-        }
-      }
-
-      if (referralCode2 && referralCode2.trim() !== '') {
-        const walletsSnap2 = await adminDb.collection('wallets')
-          .where('referralCode', '==', referralCode2.trim())
-          .get();
-        if (!walletsSnap2.empty) {
-          ibaUid2 = walletsSnap2.docs[0].id;
-          referralDiscount = (mockItem.referralDiscount || 0) / 100;
-        }
-      }
+      const registeredWallet = typeof buyerData?.referredBy === 'string' ? await adminDb.collection('wallets').doc(buyerData.referredBy).get() : null;
+      const primary = await resolveReferralCode(referralCode || registeredWallet?.data()?.referralCode, uid);
+      if (primary && buyerData?.referredBy && primary.uid !== buyerData.referredBy) return NextResponse.json({error:'Referral attribution is already recorded. Contact support to review it.'},{status:400});
+      const secondary = await resolveReferralCode(referralCode2, uid);
+      if (primary && secondary && primary.uid === secondary.uid) return NextResponse.json({error:'Primary and secondary IBA codes must belong to different users.'},{status:400});
+      ibaUid = primary?.uid || null; ibaUid2 = secondary?.uid || null;
+      if (primary || secondary) referralDiscount = (mockItem.referralDiscount || 0) / 100;
 
       // Check user-specific discount override
       let specialDiscount = (mockItem.specialDiscount || 0) / 100;
@@ -318,13 +307,27 @@ export async function POST(request: NextRequest) {
         ibaUserDoc2 = await transaction.get(adminDb.collection('users').doc(priceDetails.ibaUid2));
       }
 
+      const rewardRef = adminDb.collection('referralRewardClaims').doc(uid);
+      const reward = await transaction.get(rewardRef);
+      const registeredReferrer = buyerUserDocTrans.data()?.referredBy;
+      const rewardUid = typeof registeredReferrer === 'string' ? registeredReferrer : priceDetails.ibaUid;
+      const rewardWalletRef = rewardUid && rewardUid !== uid ? adminDb.collection('wallets').doc(rewardUid) : null;
+      const rewardWallet = rewardWalletRef ? await transaction.get(rewardWalletRef) : null;
+      const rewardOwner = rewardUid ? await transaction.get(adminDb.collection('users').doc(rewardUid)) : null;
+      const legacyReward = await transaction.get(adminDb.collection('transactions').where('user','==',uid).where('type','==','Welcome Bonus').limit(1));
+      const referrerReferboltDoc = rewardUid ? await transaction.get(adminDb.collection('referbolt').doc(rewardUid)) : null;
+      const firstPaid = productType === 'mock' && priceDetails.finalPrice > 0 && buyerUserDocTrans.data()?.purchasedMockTest !== true;
+      const creditReward = firstPaid && !reward.exists && legacyReward.empty && rewardWallet?.exists && rewardOwner?.exists && !['Banned','Inactive'].includes(rewardOwner.data()?.status) && rewardUid !== uid;
+      const walletWrites = new Map<string, {ref: FirebaseFirestore.DocumentReference; data: Record<string, any>}>();
+      function queueWallet(ref: FirebaseFirestore.DocumentReference, data: Record<string, any>, _options?: unknown) { walletWrites.set(ref.id,{ref,data:{...walletWrites.get(ref.id)?.data,...data}}); }
+
       // 2. Business Logic and Writes
       const currentBalance = walletDoc.data()?.balance || 0;
       if (currentBalance < priceDetails.finalPrice) {
         throw new Error('Insufficient wallet balance. Please add funds.');
       }
 
-      transaction.update(studentWalletRef, { balance: currentBalance - priceDetails.finalPrice });
+      queueWallet(studentWalletRef, { balance: currentBalance - priceDetails.finalPrice });
 
       // Mark user as having purchased a mock test
       if (productType === 'mock') {
@@ -348,7 +351,7 @@ export async function POST(request: NextRequest) {
         const adminWalletRef = adminDb.collection('wallets').doc(adminUid);
         const adminCurrentBalance = adminWalletDoc && adminWalletDoc.exists ? (adminWalletDoc.data()?.balance || 0) : 0;
         
-        transaction.set(adminWalletRef, { 
+        queueWallet(adminWalletRef, { 
           balance: adminCurrentBalance + priceDetails.finalPrice,
           coins: adminWalletDoc && adminWalletDoc.exists ? (adminWalletDoc.data()?.coins || 0) : 0,
           referralCode: adminWalletDoc && adminWalletDoc.exists ? (adminWalletDoc.data()?.referralCode || 'HEADADMIN') : 'HEADADMIN'
@@ -412,7 +415,7 @@ export async function POST(request: NextRequest) {
               createPolicySale(transaction, purchaseTxRef.id, priceDetails.ibaUid, 'PRIMARY', uid, selectedProduct.name, priceDetails.basePrice, priceDetails.finalPrice, splitFactor, isIbaPaid, activePolicy, purchaseTime);
             } else {
               const amountForIba = priceDetails.basePrice * (rate / 100) * splitFactor;
-              transaction.update(ibaWalletRef, { balance: ibaCurrentBalance + amountForIba });
+              queueWallet(ibaWalletRef, { balance: ibaCurrentBalance + amountForIba });
               const ibaTxRef = adminDb.collection('transactions').doc();
               transaction.set(ibaTxRef, {
                 user: priceDetails.ibaUid, amount: amountForIba, date: FieldValue.serverTimestamp(),
@@ -439,7 +442,7 @@ export async function POST(request: NextRequest) {
               createPolicySale(transaction, purchaseTxRef.id, priceDetails.ibaUid2, 'SECONDARY', uid, selectedProduct.name, priceDetails.basePrice, priceDetails.finalPrice, splitFactor, isIbaPaid2, activePolicy, purchaseTime);
             } else {
               const amountForIba2 = priceDetails.basePrice * (rate2 / 100) * splitFactor;
-              transaction.update(ibaWalletRef2, { balance: ibaCurrentBalance2 + amountForIba2 });
+              queueWallet(ibaWalletRef2, { balance: ibaCurrentBalance2 + amountForIba2 });
               const ibaTxRef2 = adminDb.collection('transactions').doc();
               transaction.set(ibaTxRef2, {
                 user: priceDetails.ibaUid2, amount: amountForIba2, date: FieldValue.serverTimestamp(),
@@ -545,6 +548,179 @@ export async function POST(request: NextRequest) {
           transaction.set(aiAccessRef, { notesGeneratorExpiresAt: newExpiry }, { merge: true });
         }
       }
+
+      if (creditReward && rewardWalletRef && rewardUid) {
+        const buyerBalance = walletWrites.get(uid)?.data.balance ?? currentBalance - priceDetails.finalPrice;
+        queueWallet(studentWalletRef,{balance:buyerBalance + 5});
+        const referrerBalance = walletWrites.get(rewardUid)?.data.balance ?? rewardWallet?.data()?.balance ?? 0;
+        queueWallet(rewardWalletRef,{balance:referrerBalance + 5});
+        transaction.create(rewardRef,{buyerUid:uid,referrerUid:rewardUid,purchaseTransactionId:purchaseTxRef.id,amountEach:5,createdAt:FieldValue.serverTimestamp(),status:'CREDITED'});
+        transaction.set(buyerUserRef,{referralRewardStatus:'CREDITED'},{merge:true});
+        for (const [recipient,kind] of [[uid,'Welcome Bonus'],[rewardUid,'Referral Bonus']]) {
+          transaction.create(adminDb.collection('transactions').doc(`referral_${uid}_${recipient}`),{user:recipient,amount:5,type:kind,status:'Completed',description:'First paid Mock Test subscription referral reward',date:FieldValue.serverTimestamp(),purchaseTransactionId:purchaseTxRef.id});
+          transaction.create(adminDb.collection('notifications').doc(),{userId:recipient,type:'referral_reward',message:'₹5 referral reward credited after the first paid Mock Test subscription.',status:'unread',timestamp:FieldValue.serverTimestamp(),actionUrl:'/wallet'});
+        }
+        transaction.create(adminDb.collection('adminAuditLogs').doc(),{action:'REFERRAL_REWARD_CREDITED',actorUid:uid,buyerUid:uid,referrerUid:rewardUid,amountEach:5,purchaseTransactionId:purchaseTxRef.id,createdAt:FieldValue.serverTimestamp()});
+      }
+      // Existing premium ReferBolt cycle rules now advance only on qualified paid referrals.
+      if (creditReward && rewardUid && rewardWalletRef && referrerReferboltDoc) {
+        const referrerId = rewardUid, referrerWalletRef = rewardWalletRef;
+        const referrerReferboltRef = adminDb.collection('referbolt').doc(referrerId);
+        const referrerBalance = walletWrites.get(referrerId)?.data.balance ?? rewardWallet?.data()?.balance ?? 0;
+        const referralBonus = 0, name = userName; // ₹5 was already queued above.
+        if (referrerReferboltDoc.exists) {
+                    const rData = referrerReferboltDoc.data() || {};
+                    if (rData.isSubscribed === true) {
+                      const currentProgress = rData.cycleProgress || 0;
+                      const goal = rData.cycleGoal || 3;
+                      const newProgress = currentProgress + 1;
+        
+                      const updatedReferbolt: any = {
+                        totalReferrals: (rData.totalReferrals || 0) + 1,
+                        referralHistory: FieldValue.arrayUnion({
+                          id: uid,
+                          name: name,
+                          date: new Date().toISOString(),
+                          commission: 5
+                        })
+                      };
+        
+                      if (newProgress >= goal) {
+                        // Cycle completed! Reset progress and increment completed cycles
+                        updatedReferbolt.cycleProgress = 0;
+                        const completedCycles = (rData.cyclesCompleted || 0) + 1;
+                        updatedReferbolt.cyclesCompleted = completedCycles;
+        
+                        const isNoCommissionRound = completedCycles % 4 === 0;
+                        const ibaBonus = isNoCommissionRound ? 0 : (storeConfig.referboltSettings?.ibaBonusCommission || 5);
+                        updatedReferbolt.totalCommissions = (rData.totalCommissions || 0) + ibaBonus;
+        
+                        const referboltSub = storeConfig.referboltSubscription || { price: 100, gstRate: 18 };
+                        const subPrice = referboltSub.price || 100;
+                        const subGstRate = referboltSub.gstRate || 0;
+                        const rejoiningFee = subPrice + (subPrice * (subGstRate / 100));
+        
+                        if (isNoCommissionRound && referrerBalance >= rejoiningFee) {
+                          // Rule 2: User must purchase the ticket for every 4th round (rejoining fee for 5th/next round paid from wallet)
+                          // Even if autoRenew is false, they are forced to purchase and pay from wallet.
+                          queueWallet(referrerWalletRef, { balance: referrerBalance + referralBonus - rejoiningFee });
+        
+                          // Keep subscribed for the next round
+                          updatedReferbolt.isSubscribed = true;
+        
+                          // User transaction logs: Debit for auto-renewal fee (ticket fee)
+                          const renewTxRef = adminDb.collection('transactions').doc();
+                          transaction.set(renewTxRef, {
+                            user: referrerId,
+                            amount: -rejoiningFee,
+                            date: FieldValue.serverTimestamp(),
+                            description: `ReferBolt Ticket Purchase for Round ${completedCycles + 1}`,
+                            status: "Completed",
+                            type: "Purchase"
+                          });
+        
+                          // Route rejoining fee to Head Admin wallet
+                          if (adminUid) {
+                            const adminWalletRef = adminDb.collection('wallets').doc(adminUid);
+                            // Admin wallet snapshot was read before all writes.
+                            const adminCurrentBalance = walletWrites.get(adminUid)?.data.balance ?? (adminWalletDoc?.data()?.balance || 0);
+        
+                            queueWallet(adminWalletRef, {
+                              balance: adminCurrentBalance + rejoiningFee,
+                              coins: adminWalletDoc?.exists ? (adminWalletDoc.data()?.coins || 0) : 0,
+                              referralCode: adminWalletDoc?.exists ? (adminWalletDoc.data()?.referralCode || 'HEADADMIN') : 'HEADADMIN'
+                            }, { merge: true });
+        
+                            const adminRevenueTxRef = adminDb.collection('transactions').doc();
+                            transaction.set(adminRevenueTxRef, {
+                              user: adminUid,
+                              amount: rejoiningFee,
+                              date: FieldValue.serverTimestamp(),
+                              description: `Revenue: ReferBolt Ticket Purchase for user ${referrerId} (Round ${completedCycles + 1})`,
+                              status: 'Completed',
+                              type: 'deposit'
+                            });
+                          }
+                        } else {
+                          // Standard round (1, 2, 3, 5, 6, 7...)
+                          if (rData.autoRenew === true && referrerBalance + ibaBonus >= rejoiningFee) {
+                            // Credit cycle bonus & deduct rejoining fee
+                            queueWallet(referrerWalletRef, { balance: referrerBalance + referralBonus + ibaBonus - rejoiningFee });
+        
+                            // Keep subscribed
+                            updatedReferbolt.isSubscribed = true;
+        
+                            // User transaction logs: Credit for cycle bonus, Debit for auto-renewal fee
+                            const cycleTxRef = adminDb.collection('transactions').doc();
+                            transaction.set(cycleTxRef, {
+                              user: referrerId,
+                              amount: ibaBonus,
+                              date: FieldValue.serverTimestamp(),
+                              description: "ReferBolt Success Cycle Bonus",
+                              status: "Completed",
+                              type: "Commission"
+                            });
+        
+                            const renewTxRef = adminDb.collection('transactions').doc();
+                            transaction.set(renewTxRef, {
+                              user: referrerId,
+                              amount: -rejoiningFee,
+                              date: FieldValue.serverTimestamp(),
+                              description: "ReferBolt Auto-Renewal Subscription Fee",
+                              status: "Completed",
+                              type: "Purchase"
+                            });
+        
+                            // Route rejoining fee to Head Admin wallet
+                            if (adminUid) {
+                              const adminWalletRef = adminDb.collection('wallets').doc(adminUid);
+                              // Admin wallet snapshot was read before all writes.
+                              const adminCurrentBalance = walletWrites.get(adminUid)?.data.balance ?? (adminWalletDoc?.data()?.balance || 0);
+        
+                              queueWallet(adminWalletRef, {
+                                balance: adminCurrentBalance + rejoiningFee,
+                                coins: adminWalletDoc?.exists ? (adminWalletDoc.data()?.coins || 0) : 0,
+                                referralCode: adminWalletDoc?.exists ? (adminWalletDoc.data()?.referralCode || 'HEADADMIN') : 'HEADADMIN'
+                              }, { merge: true });
+        
+                              const adminRevenueTxRef = adminDb.collection('transactions').doc();
+                              transaction.set(adminRevenueTxRef, {
+                                user: adminUid,
+                                amount: rejoiningFee,
+                                date: FieldValue.serverTimestamp(),
+                                description: `Revenue: ReferBolt Auto-Renewal for user ${referrerId}`,
+                                status: 'Completed',
+                                type: 'deposit'
+                              });
+                            }
+                          } else {
+                            // Auto-renew disabled: unsubscribe the user since cycle has completed
+                            updatedReferbolt.isSubscribed = false;
+        
+                            // Credit cycle bonus only
+                            queueWallet(referrerWalletRef, { balance: referrerBalance + referralBonus + ibaBonus });
+        
+                            // User transaction logs: Credit for cycle bonus
+                            const cycleTxRef = adminDb.collection('transactions').doc();
+                            transaction.set(cycleTxRef, {
+                              user: referrerId,
+                              amount: ibaBonus,
+                              date: FieldValue.serverTimestamp(),
+                              description: "ReferBolt Success Cycle Bonus",
+                              status: "Completed",
+                              type: "Commission"
+                            });
+                          }
+                        }
+                      } else {
+                        updatedReferbolt.cycleProgress = newProgress;
+                      }
+        
+                      transaction.update(referrerReferboltRef, updatedReferbolt);
+                    }
+                  }
+      }
+      for (const entry of walletWrites.values()) transaction.set(entry.ref,entry.data,{merge:true});
 
       if (requestRef) {
         transaction.create(requestRef, {

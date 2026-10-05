@@ -19,8 +19,8 @@ import { type Transaction } from "@/lib/user-data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { format, startOfDay, endOfDay } from "date-fns";
-import { collection, getDocs, doc, runTransaction, Timestamp, orderBy, query, serverTimestamp } from "firebase/firestore";
-import { useDb } from "@/firebase";
+import { collection, getDocs, Timestamp, orderBy, query } from "firebase/firestore";
+import { useDb, useAuth } from "@/firebase";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import Papa from "papaparse";
@@ -90,6 +90,8 @@ const getAdminTransactionStyle = (tx: Transaction) => {
 export default function TransactionsPage() {
   const { toast } = useToast();
   const db = useDb();
+  const { user } = useAuth();
+  const [decisionBusy, setDecisionBusy] = useState(false);
 
   const [transactions, setTransactions] = useState<Transaction[] | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -167,82 +169,24 @@ export default function TransactionsPage() {
 
 
   const handleTransactionStatus = async (id: string, newStatus: "Completed" | "Rejected", referenceId?: string) => {
-    if (!transactions || !db) return;
-
-    const txToUpdate = transactions.find(tx => tx.id === id);
-    if (!txToUpdate || txToUpdate.status !== "Pending") {
-        toast({ title: "Action not allowed", description: "This transaction has already been processed."});
-        return;
-    }
-
-    const txDocRef = doc(db, "transactions", id);
-
+    if (!user || decisionBusy) return;
+    const reason = window.prompt(`Reason for marking this request ${newStatus}:`);
+    if (!reason || reason.trim().length < 3) return;
+    const bankVerified = newStatus === 'Completed' && window.confirm('Have you verified the amount and UTR against the bank statement?');
+    if (newStatus === 'Completed' && !bankVerified) return;
+    setDecisionBusy(true);
     try {
-        await runTransaction(db, async (transaction) => {
-            const userWalletRef = txToUpdate.user ? doc(db, "wallets", txToUpdate.user) : null;
-            let userWalletDoc = null;
-            
-            if (userWalletRef) {
-                userWalletDoc = await transaction.get(userWalletRef);
-            }
-
-            if (userWalletDoc && userWalletDoc.exists()) {
-                const walletData = userWalletDoc.data();
-                
-                if (newStatus === 'Completed') {
-                    if (txToUpdate.type === 'deposit') {
-                        const newBalance = (walletData.balance || 0) + txToUpdate.amount;
-                        transaction.update(userWalletRef!, { balance: newBalance });
-                    } else if (txToUpdate.type === 'withdrawal') {
-                        const newBalance = (walletData.balance || 0) - Math.abs(txToUpdate.amount);
-                        if (newBalance < 200) {
-                            throw new Error("Student has insufficient balance to complete this withdrawal.");
-                        }
-                        transaction.update(userWalletRef!, { balance: newBalance });
-                    }
-                }
-            }
-            
-            transaction.update(txDocRef, { 
-                status: newStatus,
-                ...(referenceId ? { referenceId } : {})
-            });
-
-            if (txToUpdate.user) {
-                const notificationRef = doc(collection(db, "notifications"));
-                const notificationType = txToUpdate.type === 'deposit' 
-                    ? (newStatus === 'Completed' ? 'deposit_received' : 'deposit_rejected')
-                    : (newStatus === 'Completed' ? 'withdrawal_approved' : 'withdrawal_rejected');
-                
-                const amountStr = `₹${Math.abs(txToUpdate.amount).toFixed(2)}`;
-                const msg = newStatus === 'Completed'
-                    ? `Your ${txToUpdate.type} request of ${amountStr} was approved.`
-                    : `Your ${txToUpdate.type} request of ${amountStr} was rejected.`;
-
-                transaction.set(notificationRef, {
-                    userId: txToUpdate.user,
-                    type: notificationType,
-                    message: msg,
-                    status: 'unread',
-                    timestamp: serverTimestamp(),
-                });
-            }
-        }).catch(async (e) => {
-             const permissionError = new FirestorePermissionError({
-                path: txDocRef.path,
-                operation: 'update',
-                requestResourceData: { status: newStatus },
-            } satisfies SecurityRuleContext);
-            errorEmitter.emit('permission-error', permissionError);
-            throw e;
-        });
-
-        toast({ title: "Transaction Updated", description: `Transaction marked as ${newStatus}.` });
-        fetchTransactions(true);
-    } catch(error: any) {
-        console.error("Transaction Update Error:", error);
-        toast({ variant: "destructive", title: "Action Failed", description: error.message || "Failed to update transaction status." });
-    }
+      const response = await fetch('/api/admin/payments/decision', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await user.getIdToken()}` },
+        body: JSON.stringify({ transactionId: id, status: newStatus, referenceId, reason, bankVerified }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Decision failed.');
+      toast({ title: 'Transaction Updated', description: `Marked ${newStatus}. Audit record saved.` });
+      await fetchTransactions(true);
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Action Failed', description: error instanceof Error ? error.message : 'Decision failed.' });
+    } finally { setDecisionBusy(false); }
   };
 
   const filteredTransactions = useMemo(() => {
@@ -578,3 +522,4 @@ export default function TransactionsPage() {
     </div>
   );
 }
+

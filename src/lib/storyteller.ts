@@ -9,6 +9,8 @@ export interface StorytellerConfig {
   aiNarratorEnabled: boolean;
   ownVoiceEnabled: boolean;
   aiDurationPrices: Record<string, number>;
+  paidFallbackEnabled: boolean;
+  maxPaidJobUsdMicros: number;
   aiVoice: string;
   aiModel: string;
   loginRequired: true;
@@ -51,7 +53,9 @@ export const defaultStorytellerConfig: StorytellerConfig = {
   aiNarratorEnabled: true,
   ownVoiceEnabled: false,
   aiDurationPrices: { "30": 19, "60": 29, "90": 39, "120": 49 },
-  aiVoice: "Kore",
+  paidFallbackEnabled: false,
+  maxPaidJobUsdMicros: 0,
+  aiVoice: "Charon",
   aiModel: "gemini-2.5-flash-preview-tts",
   loginRequired: true,
   productName: "StoryTeller AI",
@@ -117,6 +121,9 @@ export function validateStorytellerConfig(value: StorytellerConfig): string[] {
   if (!Number.isFinite(value.reelPrice) || value.reelPrice <= 0) errors.push("Price must be greater than zero.");
   if (value.durations.some(duration => !Number.isFinite(storytellerPriceForDuration(value, duration)) || storytellerPriceForDuration(value, duration) <= 0)) errors.push("Every duration must have a price greater than zero.");
   if (value.durations.some(d => !Number.isFinite(storytellerPriceForDuration(value,d,"AI")) || storytellerPriceForDuration(value,d,"AI") <= 0)) errors.push("Every AI duration must have a positive price.");
+  if (typeof value.paidFallbackEnabled !== "boolean") errors.push("Paid fallback setting must be boolean.");
+  if (!Number.isSafeInteger(value.maxPaidJobUsdMicros) || value.maxPaidJobUsdMicros < 0 || value.maxPaidJobUsdMicros > 10000000) errors.push("Paid job budget must be 0 to 10,000,000 micro-USD.");
+  if (value.paidFallbackEnabled && value.maxPaidJobUsdMicros <= 0) errors.push("Paid fallback requires a positive job budget.");
   if (value.aiModel !== "gemini-2.5-flash-preview-tts") errors.push("Unsupported AI narration model.");
   if (!["Kore","Puck","Charon","Fenrir","Aoede"].includes(value.aiVoice)) errors.push("Unsupported AI voice.");
   if (value.currency !== "INR") errors.push("Only INR is currently supported by the wallet.");

@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import type { AppNotification } from "@/lib/notifications";
 import { useAuth, useDb } from "@/firebase";
-import { collection, doc, query, where, orderBy, onSnapshot, serverTimestamp, Timestamp, writeBatch } from "firebase/firestore";
+import { collection, doc, query, where, orderBy, limit, onSnapshot, serverTimestamp, Timestamp, writeBatch } from "firebase/firestore";
 
 
 export function UserNotifications() {
@@ -22,12 +22,17 @@ export function UserNotifications() {
   const db = useDb();
   const [userNotifications, setUserNotifications] = useState<AppNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [markingRead, setMarkingRead] = useState(false);
+  const [notificationError, setNotificationError] = useState<string | null>(null);
 
   useEffect(() => {
+    setUserNotifications([]);
+    setUnreadCount(0);
+    setNotificationError(null);
     if (!user || !db) return;
 
     const notifsRef = collection(db, "notifications");
-    const q = query(notifsRef, where("userId", "==", user.uid), orderBy("timestamp", "desc"));
+    const q = query(notifsRef, where("userId", "==", user.uid), orderBy("timestamp", "desc"), limit(50));
     
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
         const notifications = querySnapshot.docs.map(doc => {
@@ -37,14 +42,14 @@ export function UserNotifications() {
         });
         setUserNotifications(notifications);
         setUnreadCount(notifications.filter(n => n.status === 'unread').length);
-    });
+    }, () => setNotificationError('Notifications could not be loaded. Please try again.'));
 
     return () => unsubscribe();
   }, [user, db]);
 
   const markAllAsRead = async () => {
-    if (!db) return;
-    const unreadNotifications = userNotifications.filter(notification => notification.status === 'unread').slice(0, 450);
+    if (!db || markingRead) return;
+    const unreadNotifications = userNotifications.filter(notification => notification.status === 'unread');
     if (unreadNotifications.length === 0) return;
 
     const batch = writeBatch(db);
@@ -54,25 +59,22 @@ export function UserNotifications() {
         readAt: serverTimestamp(),
       });
     });
+    setMarkingRead(true);
+    setNotificationError(null);
     try {
       await batch.commit();
     } catch (error) {
       console.error('Unable to mark notifications as read:', error);
+      setNotificationError('Notifications could not be marked as read. Please try again.');
+    } finally {
+      setMarkingRead(false);
     }
   };
 
-  const handleOpenChange = (open: boolean) => {
-    if (open && unreadCount > 0) {
-        setTimeout(() => {
-            void markAllAsRead();
-        }, 500);
-    }
-  }
-
   return (
-    <Popover onOpenChange={handleOpenChange}>
+    <Popover>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
+        <Button variant="ghost" size="icon" className="relative" aria-label={`Notifications: ${unreadCount} unread recent updates`}>
           <Bell className="h-6 w-6" />
           {unreadCount > 0 && (
             <Badge
@@ -89,12 +91,13 @@ export function UserNotifications() {
           <div className="space-y-2">
             <h4 className="font-medium leading-none">Notifications</h4>
             <p className="text-sm text-muted-foreground">
-              Your recent updates and alerts.
+              Your latest 50 updates and alerts. Opening this list does not mark them as read.
             </p>
           </div>
-          <div className="grid gap-2">
+          {notificationError && <p role="alert" className="text-sm text-destructive">{notificationError}</p>}
+          <div className="grid gap-2 max-h-80 overflow-y-auto">
             {userNotifications.length > 0 ? (
-                userNotifications.slice(0, 5).map(notif => (
+                userNotifications.map(notif => (
                     <div key={notif.id} className="grid grid-cols-[25px_1fr] items-start pb-4 last:mb-0 last:pb-0">
                         {notif.status === 'unread' && <span className="flex h-2 w-2 translate-y-1 rounded-full bg-sky-500" />}
                         <Link href={notif.actionUrl || "/profile"} className={`grid gap-1 rounded-sm hover:text-primary ${notif.status === 'read' ? 'col-span-2' : ''}`}>
@@ -112,9 +115,9 @@ export function UserNotifications() {
         </div>
          {userNotifications.length > 0 && (
             <div className="flex justify-end mt-2">
-                <Button variant="link" size="sm" onClick={() => void markAllAsRead()}>
+                <Button variant="link" size="sm" disabled={markingRead || unreadCount === 0} onClick={() => void markAllAsRead()}>
                     <CheckCheck className="mr-2 h-4 w-4" />
-                    Mark all as read
+                    {markingRead ? 'Marking as read…' : 'Mark recent as read'}
                 </Button>
             </div>
          )}

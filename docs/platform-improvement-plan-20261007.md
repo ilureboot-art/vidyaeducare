@@ -100,3 +100,13 @@ Only entries with implemented code, passing acceptance tests and verified live r
 ## Next isolated release: notification list reliability
 
 N02 partial implementation bounds the recent-notification subscription to 50 records, displays every loaded record in a scrollable list, scopes the unread badge and explicit read action to those recent records, removes automatic bulk marking when the popover opens, clears another account's state on sign-out/account switch and displays load/write failures. Older notifications remain stored. Full history pagination, admin lists, global unread counts and FCM remain pending. This partial release is not N02 completion.
+
+## Wallet and authentication release candidate
+
+- Server admin authentication and withdrawal authentication check revoked tokens. Master email bypass requires a verified email. Active database roles still use the existing capability matrix.
+- New withdrawal requests atomically move money from available `balance` to `reservedBalance`. All existing purchase routes spend only available balance. Approval consumes the reservation without a second debit; rejection restores available funds once. Existing unreserved requests retain the old decision path. No legacy requests or balances are silently migrated.
+- The wallet form sends a stable request ID across retries of the same payload. Matching repeated server requests return the same transaction; conflicting payloads cannot reuse the key. Legacy callers without a key remain compatible but do not gain retry idempotency.
+- The wallet shows available and reserved funds separately. Decision audit records include reserved balances before/after.
+- Finance-authorized `/api/admin/payments/reconciliation` paginates wallets and compares reservation totals with held pending withdrawals. Each account scan is bounded; incomplete scans explicitly require review rather than claiming a match. This is a reservation report API, not full bank/ledger reconciliation or a finished report UI.
+- Tests cover concurrent duplicate withdrawals, insufficient parallel reservations, rejection release, held approval without double debit, revoked/unverified-master authentication, financial role denial and incomplete-report handling. TypeScript/build and transaction-mock tests pass; emulator and staging acceptance remain required before production release.
+- Full server scoring, answer-key migration, entitlement migration, restrictive student rules, integer-paise global ledger, cancellation flow, bank reconciliation and complete reports remain pending. No completed-tracker entry is added for this candidate.

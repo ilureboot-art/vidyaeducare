@@ -9,9 +9,9 @@ export async function verifyRequester(request: NextRequest, requireAdmin = false
   const header = request.headers.get("authorization");
   if (!header?.startsWith("Bearer ")) throw new RequestAuthError("Authentication is required.", 401);
   try {
-    const decoded = await adminAuth.verifyIdToken(header.slice(7));
+    const decoded = await adminAuth.verifyIdToken(header.slice(7), true);
     const email = (decoded.email ?? "").toLowerCase();
-    const isMaster = email === "admin@vidyaeducare.com" || email === "headadmin@vidyaeducare.com";
+    const isMaster = decoded.email_verified === true && (email === "admin@vidyaeducare.com" || email === "headadmin@vidyaeducare.com");
     const adminDocument = isMaster ? null : await adminDb.collection("admins").doc(decoded.uid).get();
     const data = adminDocument?.data();
     const permissions = adminPermissions(data?.role, data?.status, isMaster);
@@ -30,4 +30,3 @@ export class RequestAuthError extends Error {
     super(message);
   }
 }
-

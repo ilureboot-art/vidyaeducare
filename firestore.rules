@@ -12,7 +12,7 @@ service cloud.firestore {
     }
 
     function isMaster() {
-      return signedIn() && 
+      return signedIn() && request.auth.token.email_verified == true &&
         (request.auth.token.email.lower() == 'admin@vidyaeducare.com' || request.auth.token.email.lower() == 'headadmin@vidyaeducare.com');
     }
 
@@ -68,11 +68,12 @@ service cloud.firestore {
     match /users/{uid} {
       allow list: if isAdmin();
       allow get: if isOwner(uid) || isAdmin();
-      allow create: if true;
+      // Registration uses the authenticated server endpoint (Admin SDK).
+      allow create: if configurationAdmin();
       allow update: if isAdmin() || (isOwner(uid) &&
         !request.resource.data.diff(resource.data).affectedKeys().hasAny([
           'referredBy', 'referralRewardStatus', 'purchasedMockTest', 'commission_rate', 'accountStatus', 'subscriptionStatus',
-          'remunerationEligibilityStatus', 'managementApprovalStatus'
+          'remunerationEligibilityStatus', 'managementApprovalStatus', 'mockTestSubscription', 'role', 'permissions', 'isAdmin'
         ]));
       allow delete: if isAdmin();
     }
@@ -108,13 +109,18 @@ service cloud.firestore {
 
     match /referbolt/{uid} {
       allow read, list: if isOwner(uid) || isAdmin();
-      allow write: if isOwner(uid) || isAdmin();
-      allow create: if isOwner(uid);
+      allow create, delete: if false;
+      allow update: if (isOwner(uid) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['autoRenew']) &&
+        request.resource.data.autoRenew is bool);
     }
 
     match /students/{id} {
-      allow read, list: if signedIn();
-      allow write: if isAdmin() || (resource != null && resource.data.parentId == request.auth.uid) || (request.resource != null && request.resource.data.parentId == request.auth.uid);
+      allow read, list: if isAdmin() || (signedIn() && resource.data.parentId == request.auth.uid);
+      allow create: if isAdmin() || (signedIn() && request.resource.data.parentId == request.auth.uid);
+      allow update: if isAdmin() || (signedIn() && resource.data.parentId == request.auth.uid &&
+        request.resource.data.parentId == resource.data.parentId);
+      allow delete: if isAdmin() || (signedIn() && resource.data.parentId == request.auth.uid);
     }
     
     match /transactions/{id} {
@@ -316,4 +322,3 @@ service cloud.firestore {
     }
   }
 }
-

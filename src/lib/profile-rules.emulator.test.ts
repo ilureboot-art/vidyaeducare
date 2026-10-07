@@ -1,0 +1,53 @@
+import { beforeAll, afterAll, describe, expect, it } from 'vitest';
+import { initializeApp as initializeAdmin, deleteApp as deleteAdmin } from 'firebase-admin/app';
+import { getFirestore as adminFirestore } from 'firebase-admin/firestore';
+import { initializeApp, deleteApp, type FirebaseApp } from 'firebase/app';
+import { getFirestore, connectFirestoreEmulator, doc, getDoc, setDoc, updateDoc, terminate, type Firestore } from 'firebase/firestore';
+const enabled = process.env.RUN_PROFILE_RULES_EMULATOR === '1' && process.env.FIRESTORE_EMULATOR_HOST === '127.0.0.1:9081';
+describe.skipIf(!enabled)('isolated profile and ReferBolt rules enforcement', () => {
+  const clients: { app: FirebaseApp; db: Firestore }[] = [];
+  let adminApp: ReturnType<typeof initializeAdmin>;
+  let adminDb: ReturnType<typeof adminFirestore>;
+  const client = (uid: string, email = `${uid}@test.invalid`, verified = true) => {
+    const app = initializeApp({ projectId: 'demo-vidya-profile-rules', apiKey: 'demo-key' }, `${uid}-${clients.length}`);
+    const db = getFirestore(app);
+    connectFirestoreEmulator(db, '127.0.0.1', 9081, { mockUserToken: { sub: uid, user_id: uid, email, email_verified: verified } });
+    clients.push({ app, db }); return db;
+  };
+  beforeAll(async () => {
+    adminApp = initializeAdmin({ projectId: 'demo-vidya-profile-rules' }, 'profile-rules-tests');
+    adminDb = adminFirestore(adminApp);
+    await adminDb.doc('students/student1').set({ parentId: 'parent1', name: 'Test student', mockTestSubscribed: false });
+    await adminDb.doc('users/parent1').set({ name: 'Test parent', purchasedMockTest: false });
+    await adminDb.doc('referbolt/parent1').set({ autoRenew: false, isSubscribed: false, totalCommissions: 0 });
+  }, 20000);
+  afterAll(async () => {
+    await Promise.all(clients.map(async c => { await terminate(c.db); await deleteApp(c.app); }));
+    await adminDb.terminate(); await deleteAdmin(adminApp);
+  });
+  it('allows parent reads and ordinary edits, denies other parents and ownership changes', async () => {
+    const owner = client('parent1'), other = client('parent2');
+    expect((await getDoc(doc(owner, 'students/student1'))).exists()).toBe(true);
+    await expect(getDoc(doc(other, 'students/student1'))).rejects.toMatchObject({ code: 'permission-denied' });
+    await updateDoc(doc(owner, 'students/student1'), { name: 'Updated test student' });
+    await expect(updateDoc(doc(other, 'students/student1'), { parentId: 'parent2' })).rejects.toMatchObject({ code: 'permission-denied' });
+    await expect(updateDoc(doc(owner, 'students/student1'), { parentId: 'parent2' })).rejects.toMatchObject({ code: 'permission-denied' });
+  });
+  it('allows boolean autoRenew only, denies subscription and commission forgery', async () => {
+    const db = client('parent1');
+    await updateDoc(doc(db, 'referbolt/parent1'), { autoRenew: true });
+    for (const values of [{ isSubscribed: true }, { totalCommissions: 9999 }, { autoRenew: 'yes' }]) {
+      await expect(updateDoc(doc(db, 'referbolt/parent1'), values)).rejects.toMatchObject({ code: 'permission-denied' });
+    }
+  });
+  it('denies client user creation and paid/role forgery, preserves profile edits', async () => {
+    const db = client('parent1');
+    await updateDoc(doc(db, 'users/parent1'), { name: 'New name' });
+    for (const values of [{ purchasedMockTest: true }, { mockTestSubscription: { status: 'ACTIVE' } }, { role: 'Head Admin' }]) {
+      await expect(updateDoc(doc(db, 'users/parent1'), values)).rejects.toMatchObject({ code: 'permission-denied' });
+    }
+    await expect(setDoc(doc(db, 'users/forged'), { purchasedMockTest: true })).rejects.toMatchObject({ code: 'permission-denied' });
+    const unverified = client('fakeadmin', 'admin@vidyaeducare.com', false);
+    await expect(getDoc(doc(unverified, 'students/student1'))).rejects.toMatchObject({ code: 'permission-denied' });
+  });
+});

@@ -48,7 +48,7 @@ Small isolated PRs; focused tests; application typecheck/build when runtime code
 - Phases 1–10 pending. No production rules, paid entitlements, money movement, prices or product settings changed in this delivery.
 - External prerequisites: authenticated Firebase/Google Cloud deployment access, staging/emulator credentials, real provider project/quota verification, push credentials and device test access. Existing Cloud Run Console access was unavailable; do not assume it has recovered.
 
-## Delivery tracker — no recommendation is silently dropped
+## Implementation backlog — no recommendation is silently dropped
 
 Every item below requires implementation evidence, its acceptance tests, an exact release commit and production verification before it is marked complete. “Code tested” is not “live”. Phase order above controls dependencies; independent fixes may ship earlier.
 
@@ -92,3 +92,11 @@ Every item below requires implementation evidence, its acceptance tests, an exac
 Previously delivered payment decisions/audit, duplicate UTR checks, approval inbox, bulk-action preview, paid reward logic, standard-wise student lists, editable registration/wallet instructions, study goals and ₹5 referral/canonical code changes remain in scope for regression verification. Their earlier delivery does not substitute for V01/R04 or full production end-to-end checks. Own Voice and generation remain OFF until their release prerequisites pass.
 
 ST01 test coverage: simultaneous READY callbacks count once; late FAILED/GENERATING cannot regress READY; refunded output cannot be resurrected or refunded twice; aborted transaction attempts cannot dispatch a retry; malformed/missing-asset/negative-cost requests make no writes. These are transaction-mock regression tests, not a substitute for real-provider or emulator acceptance.
+
+## Completed release tracker
+
+Only entries with implemented code, passing acceptance tests and verified live release belong here. This is separate from the implementation backlog above. No new phase is marked completed yet.
+
+## Next isolated release: notification list reliability
+
+N02 partial implementation bounds the recent-notification subscription to 50 records, displays every loaded record in a scrollable list, scopes the unread badge and explicit read action to those recent records, removes automatic bulk marking when the popover opens, clears another account's state on sign-out/account switch and displays load/write failures. Older notifications remain stored. Full history pagination, admin lists, global unread counts and FCM remain pending. This partial release is not N02 completion.

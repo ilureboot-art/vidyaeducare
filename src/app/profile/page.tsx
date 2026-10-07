@@ -1,7 +1,7 @@
 "use client";
 import { PageInstructions } from "@/components/PageInstructions";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -19,7 +19,7 @@ import { format, addMinutes, isAfter, isBefore } from "date-fns";
 import type { StudentProfile } from "@/lib/student-data";
 import type { ScheduledTest } from "@/lib/test-schedule";
 import { useAuth, useDb } from "@/firebase";
-import { doc, setDoc, collection, getDocs, deleteDoc, updateDoc, query, where, DocumentData, onSnapshot } from "firebase/firestore";
+import { doc, collection, getDocs, query, where, DocumentData, onSnapshot } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import UserLayout from "@/components/UserLayout";
 import { cn } from "@/lib/utils";
@@ -49,6 +49,14 @@ function ProfilePageContent() {
     const [parentProfile, setParentProfile] = useState<DocumentData | null>(null);
     const [students, setStudents] = useState<StudentProfile[]>([]);
     const [validCodes, setValidCodes] = useState<string[]>([]);
+    const registrationRequest = useRef<{ payload: string; id: string } | null>(null);
+    const studentAction = async (body: Record<string, unknown>) => {
+        if (!user) throw new Error("Please sign in.");
+        const response = await fetch("/api/students", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${await user.getIdToken()}` }, body: JSON.stringify(body) });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Student update failed.");
+        return data;
+    };
     const [isLoading, setIsLoading] = useState(true);
     const [studentSearchTerm, setStudentSearchTerm] = useState("");
     
@@ -157,7 +165,7 @@ function ProfilePageContent() {
         const q = query(studentsColRef, where("parentId", "==", user.uid));
         const unsubStudents = onSnapshot(q, (snapshot) => {
             const studentList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentProfile));
-            setStudents(studentList);
+            setStudents(studentList.filter(s => !(s as StudentProfile & { archived?: boolean }).archived));
             setIsLoading(false);
         }, async (error) => {
             console.warn("Student fetch sync delay.");
@@ -251,138 +259,64 @@ function ProfilePageContent() {
         }
     }, [searchParams, students, router]);
 
-    useEffect(() => {
-        if (!db || !user || !parentProfile) return;
-        if (parentProfile.purchasedMockTest === true) return;
-
-        const hasUnusedCodes = validCodes.length > 0;
-        const hasSubscribedStudents = students.some(s => s.mockTestSubscribed === true);
-
-        if (hasUnusedCodes || hasSubscribedStudents) {
-            const parentDocRef = doc(db, "users", user.uid);
-            updateDoc(parentDocRef, { purchasedMockTest: true }).catch(err => {
-                console.error("Auto-migration of purchasedMockTest failed:", err);
-            });
-        }
-    }, [parentProfile, students, validCodes, user, db]);
-
     const filteredStudents = useMemo(() => {
         return students.filter(s => s.name.toLowerCase().includes(studentSearchTerm.toLowerCase()));
     }, [students, studentSearchTerm]);
 
-    const handleVerifyCode = () => {
-        if (validCodes.includes(activationCode)) {
+    const handleVerifyCode = async () => {
+        try {
+            await studentAction({ action: 'verify-code', code: activationCode });
             setIsCodeVerified(true);
             toast({ title: "Code Verified!", description: "You can now add the student's details." });
-        } else {
-            toast({ variant: 'destructive', title: "Invalid Code", description: "The activation code is incorrect or has already been used." });
+        } catch (error) {
+            setIsCodeVerified(false);
+            toast({ variant: 'destructive', title: "Code verification failed", description: error instanceof Error ? error.message : "Please retry." });
         }
     };
 
     const handleActivateStudent = async () => {
-        if (!studentToActivate || !db || !user) return;
-        
-        if (validCodes.includes(activationCodeForExisting)) {
-            try {
-                const studentRef = doc(db, "students", studentToActivate.id);
-                await updateDoc(studentRef, {
-                    mockTestSubscribed: true
-                });
-                
-                const updatedCodes = validCodes.filter(c => c !== activationCodeForExisting);
-                const codesDocRef = doc(db, "activationCodes", user.uid);
-                await updateDoc(codesDocRef, { codes: updatedCodes });
-                
-                toast({ title: "Student Activated!", description: `${studentToActivate.name} now has unlimited access to MockArena.` });
-                setIsActivateDialogOpen(false);
-                setIsPurchasePopupOpen(false);
-                setActivationCodeForExisting("");
-                setStudentToActivate(null);
-            } catch (e) {
-                toast({ variant: 'destructive', title: "Activation Failed", description: "Failed to update subscription status. Please try again." });
-            }
-        } else {
-            toast({ variant: 'destructive', title: "Invalid Code", description: "The activation code you entered is invalid or has already been used." });
+        if (!studentToActivate || !user) return;
+        try {
+            await studentAction({ action: 'activate', studentId: studentToActivate.id, code: activationCodeForExisting });
+            toast({ title: "Student Activated!", description: `${studentToActivate.name}'s subscription is active.` });
+            setIsActivateDialogOpen(false); setIsPurchasePopupOpen(false);
+            setActivationCodeForExisting(""); setStudentToActivate(null);
+        } catch (error) {
+            toast({ variant: 'destructive', title: "Activation Failed", description: error instanceof Error ? error.message : "Please retry." });
         }
     };
-    
+
     const handleAddStudent = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        if (!user || !db) return;
-
+        if (!user) return;
         const formData = new FormData(e.currentTarget);
-        const studentName = formData.get('name') as string;
-        const newStudentId = `STU-${String(Date.now()).slice(-6)}`;
-        
-        const newStudent: StudentProfile = {
-            id: newStudentId,
-            parentId: user.uid,
-            name: studentName,
-            dob: formData.get('dob') as string,
-            avatarUrl: `https://picsum.photos/seed/${newStudentId}/100/100`,
-            academic: {
-                standard: formData.get('standard') as string,
-                board: formData.get('board') as "CBSE" | "ICSE" | "SSC",
-                stream: formData.get('stream') as string,
-                language: 'English',
-                academicYear: '2024-2025',
-                subjects: selectedSubjectsForNewStudent.length > 0 ? selectedSubjectsForNewStudent : ['Maths', 'Science', 'English', 'History', 'General Knowledge'],
-            },
-            stats: {
-                totalEarnings: 0,
-                testsTaken: 0,
-                avgScore: 0,
-                performance: [],
-                recentActivity: [],
-            },
-            badges: [],
-            createdAt: new Date().toISOString(),
-            mockTestSubscribed: !isTrialSignup
-        };
-        
-        const studentDocRef = doc(db, "students", newStudentId);
-        setDoc(studentDocRef, newStudent)
-            .then(async () => {
-                if (!isTrialSignup) {
-                    const updatedCodes = validCodes.filter(c => c !== activationCode);
-                    const codesDocRef = doc(db, "activationCodes", user.uid);
-                    await updateDoc(codesDocRef, { codes: updatedCodes });
-                }
-                toast({ title: isTrialSignup ? "Trial Workspace Created!" : "Student Added!", description: `${newStudent.name}'s profile has been created.`});
-                setIsAddStudentOpen(false);
-                setActivationCode("");
-                setIsCodeVerified(false);
-                setIsTrialSignup(false);
-                setSelectedSubjectsForNewStudent([]);
-                setNewStudentStandard("");
-            })
-            .catch(async (e) => {
-                const permissionError = new FirestorePermissionError({
-                    path: studentDocRef.path,
-                    operation: 'create',
-                    requestResourceData: newStudent,
-                } satisfies SecurityRuleContext);
-                errorEmitter.emit('permission-error', permissionError);
-            });
-    }
+        const student = { name: formData.get('name'), dob: formData.get('dob'), academic: {
+            standard: formData.get('standard'), board: formData.get('board'), stream: formData.get('stream') || '',
+            language: 'English', academicYear: `${new Date().getFullYear()}-${new Date().getFullYear() + 1}`,
+            subjects: selectedSubjectsForNewStudent.length ? selectedSubjectsForNewStudent : ['Maths', 'Science', 'English', 'History', 'General Knowledge'],
+        } };
+        const code = isTrialSignup ? '' : activationCode;
+        const payload = JSON.stringify({ student, code });
+        if (!registrationRequest.current || registrationRequest.current.payload !== payload) registrationRequest.current = { payload, id: crypto.randomUUID() };
+        try {
+            await studentAction({ action: 'create', student, code, requestId: registrationRequest.current.id });
+            toast({ title: isTrialSignup ? "Trial Workspace Created!" : "Student Added!", description: `${student.name}'s profile has been created.` });
+            registrationRequest.current = null;
+            setIsAddStudentOpen(false); setActivationCode(""); setIsCodeVerified(false); setIsTrialSignup(false);
+            setSelectedSubjectsForNewStudent([]); setNewStudentStandard("");
+        } catch (error) {
+            toast({ variant: 'destructive', title: "Student creation failed", description: error instanceof Error ? error.message : "Please retry." });
+        }
+    };
 
     const handleUpdateSubjects = async (studentId: string, updatedSubjects: string[]) => {
-        if (!db) return;
-        const studentRef = doc(db, "students", studentId);
-        updateDoc(studentRef, {
-            "academic.subjects": updatedSubjects
-        })
-        .then(() => {
+        try {
+            await studentAction({ action: 'subjects', studentId, subjects: updatedSubjects });
             toast({ title: "Subjects Updated", description: "The student's subjects have been saved." });
             setIsManageSubjectsOpen(false);
-        })
-        .catch(async (e) => {
-            const permissionError = new FirestorePermissionError({
-                path: studentRef.path,
-                operation: 'update',
-            } satisfies SecurityRuleContext);
-            errorEmitter.emit('permission-error', permissionError);
-        });
+        } catch (error) {
+            toast({ variant: 'destructive', title: "Unable to save subjects", description: error instanceof Error ? error.message : "Please retry." });
+        }
     };
 
     const openManageSubjectsDialog = (student: StudentProfile) => {
@@ -407,7 +341,7 @@ function ProfilePageContent() {
 
         setIsSavingGoals(true);
         try {
-            await updateDoc(doc(db, "students", selectedStudentForGoals.id), { studyGoals: goals });
+            await studentAction({ action: "goals", studentId: selectedStudentForGoals.id, goals });
             toast({ title: "Study Goals Saved", description: `${selectedStudentForGoals.name}'s learning targets were updated.` });
             setSelectedStudentForGoals(null);
         } catch (error) {
@@ -419,23 +353,15 @@ function ProfilePageContent() {
     };
     
     const handleDeleteStudent = async (studentId: string) => {
-        if (!db) return;
-        if (!confirm("Are you sure you want to remove this student profile?")) return;
-        
-        const studentDocRef = doc(db, "students", studentId);
-        deleteDoc(studentDocRef)
-            .then(() => {
-                toast({ title: "Student Removed", description: "The student profile has been deleted." });
-            })
-            .catch(async (e) => {
-                const permissionError = new FirestorePermissionError({
-                    path: studentDocRef.path,
-                    operation: 'delete',
-                } satisfies SecurityRuleContext);
-                errorEmitter.emit('permission-error', permissionError);
-            });
-    }
-    
+        if (!confirm("Remove this student profile from your workspace?")) return;
+        try {
+            await studentAction({ action: 'delete', studentId });
+            toast({ title: "Student Removed", description: "The profile was archived and its access revoked." });
+        } catch (error) {
+            toast({ variant: 'destructive', title: "Unable to remove student", description: error instanceof Error ? error.message : "Please retry." });
+        }
+    };
+
     const openTestDialog = async (student: StudentProfile) => {
         if (!db) return;
         setSelectedStudentForTest(student);
@@ -466,7 +392,7 @@ function ProfilePageContent() {
     const handleStartTest = (test: ScheduledTest) => {
         if (!selectedStudentForTest) return;
         
-        const access = getMockTestAccess(selectedStudentForTest.mockTestSubscribed, test);
+        const access = getMockTestAccess(selectedStudentForTest.mockTestSubscribed, test, selectedStudentForTest.mockTestEntitlement);
         if (!access.hasAccess) {
             setStudentToActivate(selectedStudentForTest);
             setIsPurchasePopupOpen(true);
@@ -1045,7 +971,7 @@ function ProfilePageContent() {
                                         
                                         const isUpcoming = isBefore(now, testDate);
                                         const isLive = isAfter(now, testDate) && isBefore(now, expiryDate);
-                                        const access = getMockTestAccess(selectedStudentForTest?.mockTestSubscribed, test);
+                                        const access = getMockTestAccess(selectedStudentForTest?.mockTestSubscribed, test, selectedStudentForTest?.mockTestEntitlement);
                                         const eligibility = getMockTestRewardEligibility({
                                             accessType: access.accessType,
                                             test,

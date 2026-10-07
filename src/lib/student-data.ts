@@ -25,6 +25,17 @@ export type StudentProfile = {
   badges: ('Platinum' | 'Gold' | 'Silver' | 'Bronze')[];
   createdAt?: string;
   mockTestSubscribed?: boolean;
+  archived?: boolean;
+  mockTestEntitlement?: {
+    version: number;
+    status: string;
+    accessType: 'PAID_SUBSCRIPTION' | 'ADMIN_COMPLIMENTARY';
+    verifiedPaid: boolean;
+    startsAt: string;
+    expiresAt: string;
+    purchaseTransactionId: string;
+    productId: string;
+  };
   studyGoals?: {
     targetAccuracy: number;
     weeklyTests: number;

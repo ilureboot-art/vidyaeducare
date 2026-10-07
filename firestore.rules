@@ -91,7 +91,13 @@ service cloud.firestore {
     }
 
     match /activationCodes/{uid} {
-      allow read, write: if isOwner(uid) || isAdmin();
+      allow read: if isOwner(uid) || financeAdmin();
+      allow write: if false;
+    }
+    match /studentActivationClaims/{id} { allow read, write: if false; }
+    match /studentEntitlements/{id} {
+      allow read: if financeAdmin() || (signedIn() && resource.data.parentId == request.auth.uid);
+      allow write: if false;
     }
 
     match /admins/{uid} {
@@ -117,10 +123,9 @@ service cloud.firestore {
 
     match /students/{id} {
       allow read, list: if isAdmin() || (signedIn() && resource.data.parentId == request.auth.uid);
-      allow create: if isAdmin() || (signedIn() && request.resource.data.parentId == request.auth.uid);
-      allow update: if isAdmin() || (signedIn() && resource.data.parentId == request.auth.uid &&
-        request.resource.data.parentId == resource.data.parentId);
-      allow delete: if isAdmin() || (signedIn() && resource.data.parentId == request.auth.uid);
+      allow create, delete: if false;
+      allow update: if (isAdmin() || (signedIn() && resource.data.parentId == request.auth.uid)) &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['parentId', 'mockTestSubscribed', 'mockTestEntitlement', 'registrationFingerprint', 'archived', 'archivedAt']);
     }
     
     match /transactions/{id} {

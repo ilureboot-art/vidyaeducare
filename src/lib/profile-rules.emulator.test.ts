@@ -32,6 +32,10 @@ describe.skipIf(!enabled)('isolated profile and ReferBolt rules enforcement', ()
     await updateDoc(doc(owner, 'students/student1'), { name: 'Updated test student' });
     await expect(updateDoc(doc(other, 'students/student1'), { parentId: 'parent2' })).rejects.toMatchObject({ code: 'permission-denied' });
     await expect(updateDoc(doc(owner, 'students/student1'), { parentId: 'parent2' })).rejects.toMatchObject({ code: 'permission-denied' });
+    await expect(updateDoc(doc(owner, 'students/student1'), { mockTestSubscribed: true })).rejects.toMatchObject({ code: 'permission-denied' });
+    await expect(updateDoc(doc(owner, 'students/student1'), { mockTestEntitlement: { verifiedPaid: true } })).rejects.toMatchObject({ code: 'permission-denied' });
+    await expect(setDoc(doc(owner, 'students/forged'), { parentId: 'parent1', mockTestSubscribed: true })).rejects.toMatchObject({ code: 'permission-denied' });
+    await expect(setDoc(doc(owner, 'activationCodes/parent1'), { codes: ['FORGED'] })).rejects.toMatchObject({ code: 'permission-denied' });
   });
   it('allows boolean autoRenew only, denies subscription and commission forgery', async () => {
     const db = client('parent1');

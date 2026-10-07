@@ -1,5 +1,6 @@
 import type { ScheduledTest } from './test-schedule';
 import type { MockTestAccessType } from './mock-test-rewards';
+import type { StudentProfile } from './student-data';
 
 export const FREE_MOCK_TEST_MONTH = 6;
 export const MOCK_TEST_ACCESS_TIME_ZONE = 'Asia/Kolkata';
@@ -31,8 +32,16 @@ export function isFreeMonthMockTest(test: Pick<ScheduledTest, 'dateTime'>): bool
 export function getMockTestAccess(
   subscribed: boolean | undefined,
   test: Pick<ScheduledTest, 'dateTime'>,
+  entitlement?: StudentProfile['mockTestEntitlement'],
+  now = new Date(),
 ): MockTestAccess {
-  if (subscribed === true) {
+  if (entitlement) {
+    const active = entitlement.status === 'ACTIVE' && new Date(entitlement.startsAt) <= now && new Date(entitlement.expiresAt) > now;
+    if (active && ['PAID_SUBSCRIPTION', 'ADMIN_COMPLIMENTARY'].includes(entitlement.accessType)) {
+      const paid = entitlement.accessType === 'PAID_SUBSCRIPTION' && entitlement.verifiedPaid === true;
+      return { hasAccess: true, reason: 'subscribed', accessType: paid ? 'PAID_SUBSCRIPTION' : 'ADMIN_COMPLIMENTARY', isPaid: paid };
+    }
+  } else if (subscribed === true) {
     return { hasAccess: true, reason: 'subscribed', accessType: 'PAID_SUBSCRIPTION', isPaid: true };
   }
   if (isFreeMonthMockTest(test)) {

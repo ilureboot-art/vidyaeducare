@@ -56,6 +56,13 @@ describe('server payment decision atomicity', () => {
     expect(results.filter(r => r.status === 200)).toHaveLength(1);
     expect(state.documents.get('wallets/student1')).toMatchObject({ balance: 350, reservedBalance: 650 });
   });
+  it('preserves the retained balance requirement at held approval', async () => {
+    state.documents.set('wallets/student1', { balance: 1500 });
+    const { transactionId } = await (await requestWithdrawal()).json();
+    state.documents.set('wallets/student1', { balance: 100, reservedBalance: 650 });
+    expect((await decide({ transactionId, referenceId: 'OUT123456' })).status).toBe(409);
+    expect(state.documents.get('wallets/student1')).toMatchObject({ balance: 100, reservedBalance: 650 });
+  });
   it('allows only one of two simultaneous approvals to credit a wallet', async () => {
     const responses = await Promise.all([decide(), decide()]);
     expect(responses.map(response => response.status).sort()).toEqual([200, 409]);

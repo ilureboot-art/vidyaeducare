@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
       if (held) {
         const amount = Math.abs(Number(payment.amount));
         if (!wallet.exists || !Number.isFinite(before) || before < 0 || !Number.isFinite(reservedBefore) || !Number.isFinite(amount) || payment.amount >= 0 || amount < 650 || reservedBefore < amount) throw new RequestAuthError('Withdrawal reservation mismatch; review the wallet.', 409);
+        if (body.status === 'Completed' && before < 200) throw new RequestAuthError('Withdrawal requires ₹200 retained available balance. Add funds or reject this request.', 409);
         reservedAfter = Math.round((reservedBefore - amount) * 100) / 100;
         if (body.status === 'Rejected') after = Math.round((before + amount) * 100) / 100;
       }

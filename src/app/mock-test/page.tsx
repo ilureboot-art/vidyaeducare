@@ -83,6 +83,7 @@ function MockTestContent() {
                 let studentData: StudentProfile;
                 if (studentDoc.exists()) {
                     studentData = studentDoc.data() as StudentProfile;
+                    if (studentData.archived) throw new Error('This student profile has been removed.');
                     setStudentProfile(studentData);
                 } else {
                     throw new Error("Student profile not found");
@@ -98,7 +99,7 @@ function MockTestContent() {
 
                 if (scheduledTestDoc.exists()) {
                     const scheduledTestData = scheduledTestDoc.data() as ScheduledTest;
-                    const access = getMockTestAccess(studentData.mockTestSubscribed, scheduledTestData);
+                    const access = getMockTestAccess(studentData.mockTestSubscribed, scheduledTestData, studentData.mockTestEntitlement);
                     if (!access.hasAccess) {
                         toast({
                             variant: 'destructive',

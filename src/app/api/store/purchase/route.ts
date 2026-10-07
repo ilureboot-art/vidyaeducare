@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb, adminAuth } from '@/firebase/admin-init';
+import { randomBytes } from 'node:crypto';
+import { activationClaimId } from '@/lib/student-entitlement';
 import { FieldValue } from 'firebase-admin/firestore';
 import { defaultStoreConfig, StoreConfig, MockTestPackage, ReferboltSubscription } from '@/lib/store-config';
 import { resolveReferralCode } from '@/lib/referral-code';
@@ -17,7 +19,7 @@ export async function POST(request: NextRequest) {
     let userEmail: string;
     let userName: string;
     try {
-      const decodedToken = await adminAuth.verifyIdToken(token);
+      const decodedToken = await adminAuth.verifyIdToken(token, true);
       uid = decodedToken.uid;
       userEmail = decodedToken.email || 'student@vidyaeducare.com';
       userName = decodedToken.name || 'Vidya EduCare Student';
@@ -457,7 +459,16 @@ export async function POST(request: NextRequest) {
       // Handle Student Entitlements (Activation Codes & ReferBolt Subscriptions)
       if (productType === 'mock') {
         const mockItem = selectedProduct as MockTestPackage;
-        activationCode = `PROD-${Date.now().toString().slice(-6)}`;
+        activationCode = `PROD-${randomBytes(16).toString('hex').toUpperCase()}`;
+        const expiresAt = new Date(purchaseTime);
+        expiresAt.setUTCMonth(expiresAt.getUTCMonth() + mockItem.months);
+        transaction.create(adminDb.collection('studentActivationClaims').doc(activationClaimId(uid, activationCode)), {
+          parentId: uid, status: 'AVAILABLE', purchaseTransactionId: purchaseTxRef.id,
+          productId: mockItem.months === 12 ? 'mock-arena-annual' : `mock-arena-${mockItem.months}-month`,
+          startsAt: purchaseTime, expiresAt,
+          accessType: priceDetails.finalPrice > 0 ? 'PAID_SUBSCRIPTION' : 'ADMIN_COMPLIMENTARY',
+          createdAt: FieldValue.serverTimestamp(),
+        });
         const activationCodesRef = adminDb.collection('activationCodes').doc(uid);
         transaction.set(activationCodesRef, { codes: FieldValue.arrayUnion(activationCode) }, { merge: true });
 

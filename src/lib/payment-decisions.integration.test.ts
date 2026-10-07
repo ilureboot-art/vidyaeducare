@@ -22,16 +22,47 @@ vi.mock('@/firebase/admin-init', () => {
       } finally { release(); }
     },
   };
-  return { adminDb: db, adminAuth: { verifyIdToken: vi.fn() } };
+  return { adminDb: db, adminAuth: { verifyIdToken: vi.fn(async () => ({ uid: 'student1' })) } };
 });
 vi.mock('@/lib/server-auth', () => {
   class RequestAuthError extends Error { constructor(message: string, public status: number) { super(message); } }
   return { RequestAuthError, verifyRequester: async () => { if (!state.allowed) throw new RequestAuthError('Forbidden', 403); return { uid: 'finance1', email: 'finance@example.com', isAdmin: true }; } };
 });
 import { POST } from '@/app/api/admin/payments/decision/route';
+import { POST as withdraw } from '@/app/api/wallet/withdraw/route';
+const requestWithdrawal = (requestId = 'request1234567890', amount = 650) => withdraw(new NextRequest('http://localhost/api/wallet/withdraw', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test' }, body: JSON.stringify({ requestId, amount, upiId: 'student@bank' }) }));
 const decide = (overrides: any = {}) => POST(new NextRequest('http://localhost/api/admin/payments/decision', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ transactionId: 'p1', status: 'Completed', reason: 'Bank statement checked', bankVerified: true, ...overrides }) }));
 beforeEach(() => { state.documents = new Map([['transactions/p1', { type: 'deposit', status: 'Pending', amount: 650, user: 'student1', referenceId: 'UTR123456' }], ['wallets/student1', { balance: 200 }]]); state.allowed = true; state.queue = Promise.resolve(); });
 describe('server payment decision atomicity', () => {
+  it('reserves a retried withdrawal once and releases it once on rejection', async () => {
+    state.documents.set('wallets/student1', { balance: 1500 });
+    const results = await Promise.all([requestWithdrawal(), requestWithdrawal()]);
+    expect(results.map(r => r.status)).toEqual([200, 200]);
+    const { transactionId } = await results[0].json();
+    expect(state.documents.get('wallets/student1')).toMatchObject({ balance: 850, reservedBalance: 650 });
+    expect((await decide({ transactionId, status: 'Rejected' })).status).toBe(200);
+    expect(state.documents.get('wallets/student1')).toMatchObject({ balance: 1500, reservedBalance: 0 });
+    expect((await decide({ transactionId, status: 'Rejected' })).status).toBe(409);
+  });
+  it('settles held funds without debiting available balance twice', async () => {
+    state.documents.set('wallets/student1', { balance: 1500 });
+    const { transactionId } = await (await requestWithdrawal()).json();
+    expect((await decide({ transactionId, referenceId: 'OUT123456' })).status).toBe(200);
+    expect(state.documents.get('wallets/student1')).toMatchObject({ balance: 850, reservedBalance: 0 });
+  });
+  it('rejects concurrent requests exceeding available funds', async () => {
+    state.documents.set('wallets/student1', { balance: 1000 });
+    const results = await Promise.all([requestWithdrawal(), requestWithdrawal('another1234567890')]);
+    expect(results.filter(r => r.status === 200)).toHaveLength(1);
+    expect(state.documents.get('wallets/student1')).toMatchObject({ balance: 350, reservedBalance: 650 });
+  });
+  it('preserves the retained balance requirement at held approval', async () => {
+    state.documents.set('wallets/student1', { balance: 1500 });
+    const { transactionId } = await (await requestWithdrawal()).json();
+    state.documents.set('wallets/student1', { balance: 100, reservedBalance: 650 });
+    expect((await decide({ transactionId, referenceId: 'OUT123456' })).status).toBe(409);
+    expect(state.documents.get('wallets/student1')).toMatchObject({ balance: 100, reservedBalance: 650 });
+  });
   it('allows only one of two simultaneous approvals to credit a wallet', async () => {
     const responses = await Promise.all([decide(), decide()]);
     expect(responses.map(response => response.status).sort()).toEqual([200, 409]);

@@ -64,6 +64,7 @@ const formatCurrency = (amount: number) => {
 
 type WalletInfo = {
   balance: number;
+  reservedBalance?: number;
   coins: number;
   referralCode: string;
 }
@@ -97,6 +98,7 @@ function WalletPageContent() {
   const [activeView, setActiveView] = useState<WalletView>('main');
   const [successAmount, setSuccessAmount] = useState<number>(0);
   const [successType, setSuccessType] = useState<'deposit' | 'withdrawal' | null>(null);
+  const withdrawalRequest = useRef<{ payload: string; id: string } | null>(null);
 
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   const [viewingInvoice, setViewingInvoice] = useState<any | null>(null);
@@ -391,6 +393,8 @@ function WalletPageContent() {
     
     try {
         const idToken = await user.getIdToken();
+        const payload = JSON.stringify({ uid: user.uid, amount, upiId: upiId.trim() });
+        if (withdrawalRequest.current?.payload !== payload) withdrawalRequest.current = { payload, id: crypto.randomUUID() };
         const response = await fetch('/api/wallet/withdraw', {
             method: 'POST',
             headers: {
@@ -399,7 +403,8 @@ function WalletPageContent() {
             },
             body: JSON.stringify({
                 amount: amount,
-                upiId: upiId
+                upiId: upiId,
+                requestId: withdrawalRequest.current.id
             })
         });
 
@@ -409,6 +414,7 @@ function WalletPageContent() {
         }
 
         setSuccessAmount(amount);
+        withdrawalRequest.current = null;
         setSuccessType('withdrawal');
         setActiveView('success');
         form.reset();
@@ -514,6 +520,7 @@ function WalletPageContent() {
                 <div>
                     <p className="text-[10px] font-black text-primary tracking-widest uppercase mb-1">AVAILABLE BALANCE</p>
                     <p className="text-6xl font-black text-primary tracking-tighter">₹{formatCurrency(walletInfo.balance)}</p>
+                    <p className="text-sm">Available balance · Reserved for withdrawals: ₹{formatCurrency(walletInfo.reservedBalance || 0)}</p>
                 </div>
                 
                 <div className="pt-4 border-t border-primary/10">
@@ -1252,4 +1259,3 @@ export default function WalletPage() {
         </ProtectedRoute>
     );
 }
-

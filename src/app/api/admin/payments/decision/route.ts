@@ -25,6 +25,16 @@ export async function POST(request: NextRequest) {
       const wallet = await tx.get(walletRef);
       const before = wallet.exists ? Number(wallet.data()?.balance ?? 0) : 0;
       let after = before;
+      const reservedBefore = Number(wallet.data()?.reservedBalance || 0);
+      let reservedAfter = reservedBefore;
+      const held = payment.type === 'withdrawal' && payment.reservationApplied === true;
+      if (held) {
+        const amount = Math.abs(Number(payment.amount));
+        if (!wallet.exists || !Number.isFinite(before) || before < 0 || !Number.isFinite(reservedBefore) || !Number.isFinite(amount) || payment.amount >= 0 || amount < 650 || reservedBefore < amount) throw new RequestAuthError('Withdrawal reservation mismatch; review the wallet.', 409);
+        if (body.status === 'Completed' && before < 200) throw new RequestAuthError('Withdrawal requires ₹200 retained available balance. Add funds or reject this request.', 409);
+        reservedAfter = Math.round((reservedBefore - amount) * 100) / 100;
+        if (body.status === 'Rejected') after = Math.round((before + amount) * 100) / 100;
+      }
       let referenceId = payment.referenceId || null;
       if (body.status === 'Completed') {
         try { referenceId = normalizeUtr(payment.type === 'withdrawal' ? body.referenceId : payment.referenceId); } catch (e) { throw new RequestAuthError((e as Error).message, 400); }
@@ -34,12 +44,13 @@ export async function POST(request: NextRequest) {
         const claim = await tx.get(claimRef);
         const legacy = await tx.get(adminDb.collection('transactions'));
         if (claim.exists && claim.data()?.transactionId !== ref.id || legacy.docs.some(doc => doc.id !== ref.id && doc.data().type === payment.type && typeof doc.data().referenceId === 'string' && doc.data().referenceId.trim().toUpperCase().replace(/\s+/g, '') === referenceId)) throw new RequestAuthError('Duplicate UTR: another transaction already uses this reference.', 409);
-        try { after = walletAfterDecision(before, payment.amount, payment.type); } catch (e) { throw new RequestAuthError((e as Error).message, 409); }
+        if (!held) { try { after = walletAfterDecision(before, payment.amount, payment.type); } catch (e) { throw new RequestAuthError((e as Error).message, 409); } }
         tx.set(claimRef, { transactionId: ref.id, userId: payment.user, normalizedUtr: referenceId, namespace, claimedAt: FieldValue.serverTimestamp() }, { merge: true });
-        tx.set(walletRef, { balance: after, ...(!wallet.exists ? { coins: 0, referralCode: `REF${payment.user.slice(0, 6).toUpperCase()}` } : {}) }, { merge: true });
+        tx.set(walletRef, { balance: after, ...(held ? { reservedBalance: reservedAfter } : {}), ...(!wallet.exists ? { coins: 0, referralCode: `REF${payment.user.slice(0, 6).toUpperCase()}` } : {}) }, { merge: true });
       }
+      if (held && body.status === 'Rejected') tx.set(walletRef, { balance: after, reservedBalance: reservedAfter }, { merge: true });
       tx.update(ref, { status: body.status, referenceId, decisionReason: reason, decidedBy: actor.uid, decidedAt: FieldValue.serverTimestamp(), bankVerified: body.status === 'Completed' });
-      tx.create(audit, { action: 'payment_decision', entityId: ref.id, actorUid: actor.uid, actorEmail: actor.email, reason, previousStatus: 'Pending', newStatus: body.status, walletBefore: before, walletAfter: after, amount: payment.amount, type: payment.type, referenceId, createdAt: FieldValue.serverTimestamp() });
+      tx.create(audit, { action: 'payment_decision', entityId: ref.id, actorUid: actor.uid, actorEmail: actor.email, reason, previousStatus: 'Pending', newStatus: body.status, walletBefore: before, walletAfter: after, reservedBefore, reservedAfter, amount: payment.amount, type: payment.type, referenceId, createdAt: FieldValue.serverTimestamp() });
       tx.create(notification, { userId: payment.user, type: payment.type === 'deposit' ? (body.status === 'Completed' ? 'deposit_received' : 'deposit_rejected') : (body.status === 'Completed' ? 'withdrawal_approved' : 'withdrawal_rejected'), message: `Your ${payment.type} request of ₹${Math.abs(payment.amount).toFixed(2)} was ${body.status === 'Completed' ? 'approved' : 'rejected'}. ${reason}`, status: 'unread', timestamp: FieldValue.serverTimestamp(), entityType: 'transaction', entityId: ref.id, actionUrl: '/transactions' });
       return { status: body.status, auditId: audit.id };
     });

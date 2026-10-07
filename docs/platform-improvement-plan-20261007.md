@@ -47,3 +47,48 @@ Small isolated PRs; focused tests; application typecheck/build when runtime code
 - Validation on the available combined local working copy: application tests 146/146; Node renderer tests 5/5.
 - Phases 1–10 pending. No production rules, paid entitlements, money movement, prices or product settings changed in this delivery.
 - External prerequisites: authenticated Firebase/Google Cloud deployment access, staging/emulator credentials, real provider project/quota verification, push credentials and device test access. Existing Cloud Run Console access was unavailable; do not assume it has recovered.
+
+## Delivery tracker — no recommendation is silently dropped
+
+Every item below requires implementation evidence, its acceptance tests, an exact release commit and production verification before it is marked complete. “Code tested” is not “live”. Phase order above controls dependencies; independent fixes may ship earlier.
+
+| ID | Deliverable | Phase | Current state |
+| --- | --- | --- | --- |
+| V01 | Emulator authorization and staging multi-role checks | 0 | Pending environment setup |
+| S01 | Authenticated student CRUD and owner-bound registration | 1 | Pending |
+| S02 | Atomic activation redemption and server-owned entitlement | 1 | Pending |
+| S03 | Legacy entitlement dry run and evidence review | 1 | Pending |
+| S04 | Private student reads; immutable owner/paid fields; safe user creation | 1 | Pending compatible client migration |
+| T01 | Private answer keys and test-set migration | 2 | Pending |
+| T02 | Server attempt, remaining deadline, autosave/resume | 2 | Pending |
+| T03 | Server score, duplicate protection, atomic results/ranking/stats | 2 | Pending |
+| R01 | Server-owned ReferBolt subscription/cycle/commission | 3 | Pending |
+| R02 | Canonical IBA/referral code collision report and migration | 3 | Pending |
+| R03 | Server QuizClash scoring and private writes | 3 | Pending |
+| R04 | Finance/Academic/Support/Head permission matrix | 3 | Pending enforcement tests |
+| A01 | Authenticated tutor/notes/question gateway and bounded guest trial | 4 | Pending |
+| A02 | Atomic AI usage limits, budgets, image/input limits, safe errors | 4 | Pending |
+| W01 | Withdrawal reservations and idempotent decisions/retries | 5 | Pending |
+| W02 | Indexed normalized UTR legacy migration and collision report | 5 | Pending |
+| W03 | Integer-paise ledger, audit correlations and reconciliation | 5 | Pending |
+| N01 | FCM tokens, background worker, deep links and deduplication | 6 | Pending credentials and device checks |
+| N02 | Paginated admin/notification lists and indexed filters | 6 | Pending |
+| N03 | Role-aware operations dashboard | 6 | Pending |
+| P01 | Explicit promotion campaign dates/year/timezone | 7 | Pending business dates |
+| P02 | Final privacy/terms, consent versioning, retention/refund rules | 7 | Pending final policy text |
+| P03 | Verified deployment health, backups and restore exercise | 7 | Pending |
+| I01 | Order-level IBA splits, reversals, ReferBolt and payout statements | 8 | Pending |
+| I02 | Financial exceptions and approval workflow | 8 | Pending |
+| I03 | Paid reward eligibility report, disputes, rank freeze, payout tracking | 8 | Pending |
+| E01 | Weak-topic weekly plans extending goals/mistake notebook | 9 | Pending |
+| E02 | Opt-in parent weekly summaries | 9 | Pending |
+| E03 | Duplicate/answer/translation question review with human approval | 9 | Pending |
+| ST01 | Terminal callback guards: duplicate READY and late FAILED protection | 10 | Code tested; deployment verification pending |
+| ST02 | Per-attempt callback identity, stale retry protection and durable dispatch | 10 | Pending; ST01 does not cover separate retry attempts |
+| ST03 | PR #19 renderer, secrets, Tasks IAM, verified free project/quota and budgeted fallback | 10 | Pending external setup and acceptance |
+| ST04 | Independent adult registration/login/origin | 10 | Pending |
+| ST05 | Marathi/Hindi/English listening QA, 120-second demo, protected homepage playback | 10 | Pending actual generated audio |
+
+Previously delivered payment decisions/audit, duplicate UTR checks, approval inbox, bulk-action preview, paid reward logic, standard-wise student lists, editable registration/wallet instructions, study goals and ₹5 referral/canonical code changes remain in scope for regression verification. Their earlier delivery does not substitute for V01/R04 or full production end-to-end checks. Own Voice and generation remain OFF until their release prerequisites pass.
+
+ST01 test coverage: simultaneous READY callbacks count once; late FAILED/GENERATING cannot regress READY; refunded output cannot be resurrected or refunded twice; aborted transaction attempts cannot dispatch a retry; malformed/missing-asset/negative-cost requests make no writes. These are transaction-mock regression tests, not a substitute for real-provider or emulator acceptance.

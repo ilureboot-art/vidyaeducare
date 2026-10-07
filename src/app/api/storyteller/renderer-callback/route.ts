@@ -2,28 +2,43 @@ import { NextRequest, NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { adminDb } from "@/firebase/admin-init";
 import { dispatchStorytellerRenderer } from "@/lib/storyteller-renderer";
+import { z } from "zod";
+
+const callbackSchema = z.object({
+  projectId: z.string().min(1).max(200).regex(/^[^/]+$/),
+  status: z.enum(["GENERATING", "READY", "FAILED"]),
+  finalAssetPath: z.string().min(1).max(1000).optional(),
+  error: z.string().max(2000).optional(),
+  estimatedVoiceCost: z.number().finite().nonnegative().optional(),
+  estimatedRenderingCost: z.number().finite().nonnegative().optional(),
+}).refine(body => body.status !== "READY" || Boolean(body.finalAssetPath), { message: "Ready callbacks require an asset." });
 
 export async function POST(request: NextRequest) {
   if (!process.env.STORYTELLER_RENDERER_SECRET || request.headers.get("x-storyteller-secret") !== process.env.STORYTELLER_RENDERER_SECRET) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const body = await request.json() as { projectId: string; status: "GENERATING" | "READY" | "FAILED"; finalAssetPath?: string; error?: string; estimatedVoiceCost?: number; estimatedRenderingCost?: number };
-  if (!body.projectId || !["GENERATING", "READY", "FAILED"].includes(body.status)) return NextResponse.json({ error: "Invalid callback." }, { status: 400 });
+  const parsed = callbackSchema.safeParse(await request.json().catch(() => null));
+  if (!parsed.success) return NextResponse.json({ error: "Invalid callback." }, { status: 400 });
+  const body = parsed.data;
   const projectRef = adminDb.collection("storytellerProjects").doc(body.projectId);
   const jobRef = adminDb.collection("storytellerJobs").doc(body.projectId);
   const analyticsRef = adminDb.collection("storytellerAnalytics").doc("totals");
-  let retry = false;
-  await adminDb.runTransaction(async tx => {
+  const retry = await adminDb.runTransaction(async tx => {
     const project = await tx.get(projectRef);
-    if (!project.exists || project.data()?.paymentStatus !== "PAID") throw new Error("Paid project not found.");
-    if (project.data()?.generationStatus === "REFUNDED") throw new Error("Refunded projects cannot be rendered.");
+    if (!project.exists) throw new Error("Paid project not found.");
+    // Terminal outcomes are acknowledged without mutations, including late failures.
+    // Checking inside the transaction also protects simultaneous READY deliveries.
+    if (["READY", "REFUNDED"].includes(project.data()?.generationStatus)) return false;
+    if (project.data()?.paymentStatus !== "PAID") throw new Error("Paid project not found.");
     const job = await tx.get(jobRef);
+    if (!job.exists) throw new Error("Generation job not found.");
+    if (["READY", "REFUNDED"].includes(job.data()?.status)) return false;
+    if (project.data()?.generationStatus === "FAILED" && body.status === "FAILED") return false;
     const attemptCount = Number(job.data()?.attemptCount || 0) + (body.status === "FAILED" ? 1 : 0);
     const maxRetries = Number(job.data()?.maxRetries || 0);
     const failurePolicy = String(job.data()?.failurePolicy || "RETRY_THEN_REFUND");
     if (body.status === "FAILED" && attemptCount <= maxRetries && failurePolicy !== "REFUND") {
-      retry = true;
       tx.set(projectRef, { generationStatus: "QUEUED", lastError: body.error || "Generation failed", updatedAt: FieldValue.serverTimestamp() }, { merge: true });
       tx.set(jobRef, { status: "QUEUED", attemptCount, lastError: body.error || null, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-      return;
+      return true;
     }
     if (body.status === "FAILED" && failurePolicy !== "RETRY_ONLY") {
       const walletRef = adminDb.collection("wallets").doc(project.data()!.userId);
@@ -42,12 +57,13 @@ export async function POST(request: NextRequest) {
       }
       tx.set(projectRef, { paymentStatus: "REFUNDED", generationStatus: "REFUNDED", lastError: body.error || null, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
       tx.set(jobRef, { status: "REFUNDED", attemptCount, lastError: body.error || null, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-      return;
+      return false;
     }
     tx.set(projectRef, { generationStatus: body.status, generationStage: body.status === "READY" ? "READY" : body.status, finalAssetPath: body.status === "READY" ? body.finalAssetPath : project.data()?.finalAssetPath || null, lastError: body.error || null, estimatedVoiceCost: body.estimatedVoiceCost || null, estimatedRenderingCost: body.estimatedRenderingCost || null, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
     tx.set(jobRef, { status: body.status, attemptCount, lastError: body.error || null, updatedAt: FieldValue.serverTimestamp(), completedAt: body.status === "READY" ? FieldValue.serverTimestamp() : null }, { merge: true });
     if (body.status === "READY") tx.set(analyticsRef, { paidReelsGenerated: FieldValue.increment(1), estimatedVoiceCost: FieldValue.increment(body.estimatedVoiceCost || 0), estimatedRenderingCost: FieldValue.increment(body.estimatedRenderingCost || 0), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
     if (body.status === "FAILED") tx.set(analyticsRef, { failedGenerations: FieldValue.increment(1), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    return false;
   });
   if (retry) {
     await dispatchStorytellerRenderer(body.projectId);

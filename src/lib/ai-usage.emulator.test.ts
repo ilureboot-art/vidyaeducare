@@ -5,7 +5,7 @@ const enabled = process.env.RUN_PROFILE_RULES_EMULATOR === '1' && process.env.FI
 const h = vi.hoisted(() => ({ db: null as any, cookie: '11111111-1111-1111-1111-111111111111', verify: vi.fn() }));
 vi.mock('@/firebase/admin-init', () => ({ get adminDb() { return h.db; }, adminAuth: { verifyIdToken: h.verify } }));
 vi.mock('next/headers', () => ({ cookies: () => ({ get: () => ({ value: h.cookie }), set: (_: string, v: string) => { h.cookie = v; } }), headers: () => ({ get: () => '127.0.0.7' }) }));
-import { withAiUsage } from './ai-usage';
+import { withAiUsage, readAiUsage } from './ai-usage';
 describe.skipIf(!enabled)('persisted AI usage enforcement', () => {
   let app: ReturnType<typeof initializeApp>, db: ReturnType<typeof getFirestore>;
   const input = { userDoubt: 'Explain addition' };
@@ -23,6 +23,7 @@ describe.skipIf(!enabled)('persisted AI usage enforcement', () => {
     for (let i = 0; i < 5; i++) { await resetThrottle(); expect(await call(`guest_request_number_${i}`)).toEqual({ explanation: 'Answer' }); }
     await resetThrottle(); await expect(call('guest_request_number_6')).rejects.toThrow('five trial');
     expect(await call('guest_request_number_0')).toEqual({ explanation: 'Answer' });
+    expect(await readAiUsage('doubt', {})).toMatchObject({ mode: 'TRIAL', remaining: 0 });
   });
   it('checks revoked login, Academic role and paid expiry; paid quota cannot be exceeded', async () => {
     await expect(call('revoked_request_id_1', 'revoked')).rejects.toThrow('sign-in');
@@ -30,6 +31,7 @@ describe.skipIf(!enabled)('persisted AI usage enforcement', () => {
     await expect(call('nonacademic_request_1', 'ai_paid', 'questions')).rejects.toThrow('Academic');
     for (let i = 0; i < 2; i++) { await resetThrottle(); await call(`paid_request_number_${i}`, 'ai_paid'); }
     await resetThrottle(); await expect(call('paid_request_number_3', 'ai_paid')).rejects.toThrow('fair-use');
+    expect(await readAiUsage('doubt', {token:'ai_paid'})).toMatchObject({mode:'PAID',remaining:0});
     await db.doc('aiAccess/ai_paid').update({ doubtSolverExpiresAt: '2020-01-01' });
     await resetThrottle(); await call('expired_request_number_1', 'ai_paid');
     const requests = await db.collection('aiUsageCounters').get();

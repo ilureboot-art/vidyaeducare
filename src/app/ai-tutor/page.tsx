@@ -35,87 +35,32 @@ function AiTutorPageContent() {
     const [hasActivePackage, setHasActivePackage] = useState(false);
     
     const [trialCount, setTrialCount] = useState(0);
+    const [quotaInfo, setQuotaInfo] = useState<{mode:string;remaining:number;enabled:boolean}|null>(null);
+    const refreshUsage = async () => {
+        const response = await fetch('/api/ai/usage', {method:'POST', headers:{'Content-Type':'application/json', ...(user?{Authorization:`Bearer ${await user.getIdToken()}`}:{})}, body:JSON.stringify({feature:'doubt',studentId:selectedStudentId||undefined})});
+        const state = await response.json(); if (!response.ok) throw new Error(state.error);
+        setQuotaInfo(state); setHasActivePackage(state.enabled && state.remaining > 0); setTrialCount(state.mode === 'TRIAL' ? state.used : 0);
+    };
 
     useEffect(() => {
-        if (typeof window !== 'undefined' && !user) {
-            const count = parseInt(localStorage.getItem('trial_ai_tutor_count') || '0');
-            setTrialCount(count);
-        }
-    }, [user]);
-
-    useEffect(() => {
-        if (!db) return;
-
-        if (user) {
-            setIsLoadingAccess(true);
-            
-            const checkAccess = async () => {
-                try {
-                    const studentsColRef = collection(db, "students");
-                    const q = query(studentsColRef, where("parentId", "==", user.uid));
-                    const studentSnap = await getDocs(q);
-                    
-                    const codesDocRef = doc(db, "activationCodes", user.uid);
-                    const storeConfigRef = doc(db, "configs", "store");
-                    const aiAccessRef = doc(db, "aiAccess", user.uid);
-
-                    const unsubCodes = onSnapshot(codesDocRef, async (codeSnap) => {
-                        try {
-                            const hasCodes = codeSnap.exists() && codeSnap.data().codes?.length > 0;
-                            const hasStudents = !studentSnap.empty;
-                            const hasMockArena = hasStudents || hasCodes;
-
-                            const [configSnap, aiAccessSnap] = await Promise.all([
-                                getDoc(storeConfigRef),
-                                getDoc(aiAccessRef)
-                            ]);
-
-                            const isFreeAccessAllowed = configSnap.exists() && (configSnap.data() as any).grantFreeAiToolsWithMockArena;
-                             
-                             let hasActiveSubscription = false;
-                             if (aiAccessSnap.exists()) {
-                                 const data = aiAccessSnap.data() as any;
-                                 if (data.hasDoubtSolver === true) {
-                                     hasActiveSubscription = true;
-                                 } else if (data.doubtSolverExpiresAt) {
-                                     const expiry = data.doubtSolverExpiresAt.toDate ? data.doubtSolverExpiresAt.toDate() : new Date(data.doubtSolverExpiresAt);
-                                     if (expiry > new Date()) {
-                                         hasActiveSubscription = true;
-                                     }
-                                 }
-                             }
-
-                             setHasActivePackage(hasActiveSubscription || (!!isFreeAccessAllowed && hasMockArena));
-                            
-                            if (hasStudents) {
-                                const list = studentSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentProfile));
-                                setStudents(list);
-                                if (list.length > 0) setSelectedStudentId(list[0].id);
-                            }
-                        } catch (err) {
-                            console.error("Access check details error:", err);
-                        } finally {
-                            setIsLoadingAccess(false);
-                        }
-                    }, () => {
-                        setHasActivePackage(!studentSnap.empty);
-                        setIsLoadingAccess(false);
-                    });
-
-                    return unsubCodes;
-                } catch (e) {
-                    setIsLoadingAccess(false);
+        let active = true;
+        setIsLoadingAccess(true);
+        const check = async () => {
+            try {
+                const response = await fetch('/api/ai/usage', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(user ? { Authorization: `Bearer ${await user.getIdToken()}` } : {}) }, body: JSON.stringify({ feature: 'doubt', studentId: selectedStudentId || undefined }) });
+                const state = await response.json();
+                if (!response.ok) throw new Error(state.error);
+                if (active) { setQuotaInfo(state); setHasActivePackage(state.enabled && state.remaining > 0); setTrialCount(state.mode === 'TRIAL' ? state.used : 0); }
+                if (user && db) {
+                    const snapshot = await getDocs(query(collection(db, 'students'), where('parentId', '==', user.uid)));
+                    if (active) { const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as StudentProfile)); setStudents(list); if (!selectedStudentId && list.length) setSelectedStudentId(list[0].id); }
                 }
-            };
-            
-            const cleanup = checkAccess();
-            return () => {
-                cleanup.then(unsub => unsub && unsub());
-            }
-        } else {
-            setIsLoadingAccess(false);
-        }
-    }, [user, db]);
+            } catch (e) { if (active) { setHasActivePackage(false); setTrialCount(GUEST_TRIAL_LIMIT); } }
+            finally { if (active) setIsLoadingAccess(false); }
+        };
+        void check();
+        return () => { active = false; };
+    }, [user, db, selectedStudentId]);
 
     const handleDownloadPdf = () => {
         if (!result) return;
@@ -196,13 +141,13 @@ function AiTutorPageContent() {
                 if (!user) {
                     const newCount = trialCount + 1;
                     setTrialCount(newCount);
-                    localStorage.setItem('trial_ai_tutor_count', newCount.toString());
                 }
             }
         } catch (error) {
             toast({ variant: 'destructive', title: "Doubt Solver Error", description: "Vidya AI could not process your question right now." });
         } finally {
             setIsSolving(false);
+            void refreshUsage().catch(() => {});
         }
     };
 
@@ -215,7 +160,7 @@ function AiTutorPageContent() {
         );
     }
 
-    if (user && !hasActivePackage) {
+    if (user && !hasActivePackage && !result) {
         return (
             <div className="w-full max-w-2xl mx-auto py-12">
                 <Card className="text-center p-12 border-none shadow-2xl ring-1 ring-primary/10 overflow-hidden rounded-[3rem]">
@@ -237,14 +182,14 @@ function AiTutorPageContent() {
                         </Button>
                     </CardContent>
                     <CardFooter className="justify-center">
-                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Unlock unlimited AI assistance today</p>
+                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Get AI assistance with daily fair-use limits</p>
                     </CardFooter>
                 </Card>
             </div>
         );
     }
 
-    const isLocked = !user && trialCount >= GUEST_TRIAL_LIMIT;
+    const isLocked = !hasActivePackage;
 
     return (
         <div className="w-full max-w-3xl mx-auto space-y-6">
@@ -256,6 +201,8 @@ function AiTutorPageContent() {
                     <Link href="/"><ArrowLeft className="mr-2 h-4 w-4" /> Home</Link>
                 </Button>
             </div>
+
+            {quotaInfo && <p className="text-sm">{quotaInfo.mode === 'PAID' ? 'Daily AI allowance' : 'Free trial allowance'}: {quotaInfo.remaining} requests remaining. {!quotaInfo.enabled && 'AI service is paused.'}</p>}
 
             {!user && (
                 <Alert className={isLocked ? "bg-red-50 border-red-200 print:hidden" : "bg-accent/5 border-accent/20 print:hidden"}>

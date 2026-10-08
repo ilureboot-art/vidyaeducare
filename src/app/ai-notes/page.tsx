@@ -36,87 +36,32 @@ function AiNotesPageContent() {
     const [hasActivePackage, setHasActivePackage] = useState(false);
 
     const [trialCount, setTrialCount] = useState(0);
+    const [quotaInfo, setQuotaInfo] = useState<{mode:string;remaining:number;enabled:boolean}|null>(null);
+    const refreshUsage = async () => {
+        const response = await fetch('/api/ai/usage', {method:'POST', headers:{'Content-Type':'application/json', ...(user?{Authorization:`Bearer ${await user.getIdToken()}`}:{})}, body:JSON.stringify({feature:'notes',studentId:selectedStudentId||undefined})});
+        const state = await response.json(); if (!response.ok) throw new Error(state.error);
+        setQuotaInfo(state); setHasActivePackage(state.enabled && state.remaining > 0); setTrialCount(state.mode === 'TRIAL' ? state.used : 0);
+    };
 
     useEffect(() => {
-        if (typeof window !== 'undefined' && !user) {
-            const count = parseInt(localStorage.getItem('trial_ai_notes_count') || '0');
-            setTrialCount(count);
-        }
-    }, [user]);
-
-    useEffect(() => {
-        if (!db) return;
-
-        if (user) {
-            setIsLoadingAccess(true);
-            
-            const checkAccess = async () => {
-                try {
-                    const studentsColRef = collection(db, "students");
-                    const q = query(studentsColRef, where("parentId", "==", user.uid));
-                    const studentSnap = await getDocs(q);
-                    
-                    const codesDocRef = doc(db, "activationCodes", user.uid);
-                    const storeConfigRef = doc(db, "configs", "store");
-                    const aiAccessRef = doc(db, "aiAccess", user.uid);
-
-                    const unsubCodes = onSnapshot(codesDocRef, async (codeSnap) => {
-                        try {
-                            const hasCodes = codeSnap.exists() && codeSnap.data().codes?.length > 0;
-                            const hasStudents = !studentSnap.empty;
-                            const hasMockArena = hasStudents || hasCodes;
-
-                            const [configSnap, aiAccessSnap] = await Promise.all([
-                                getDoc(storeConfigRef),
-                                getDoc(aiAccessRef)
-                            ]);
-
-                            const isFreeAccessAllowed = configSnap.exists() && (configSnap.data() as any).grantFreeAiToolsWithMockArena;
-                             
-                             let hasActiveSubscription = false;
-                             if (aiAccessSnap.exists()) {
-                                 const data = aiAccessSnap.data() as any;
-                                 if (data.hasNotesGenerator === true) {
-                                     hasActiveSubscription = true;
-                                 } else if (data.notesGeneratorExpiresAt) {
-                                     const expiry = data.notesGeneratorExpiresAt.toDate ? data.notesGeneratorExpiresAt.toDate() : new Date(data.notesGeneratorExpiresAt);
-                                     if (expiry > new Date()) {
-                                         hasActiveSubscription = true;
-                                     }
-                                 }
-                             }
-
-                             setHasActivePackage(hasActiveSubscription || (!!isFreeAccessAllowed && hasMockArena));
-                            
-                            if (hasStudents) {
-                                const list = studentSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentProfile));
-                                setStudents(list);
-                                if (list.length > 0) setSelectedStudentId(list[0].id);
-                            }
-                        } catch (err) {
-                            console.error("Access check details error:", err);
-                        } finally {
-                            setIsLoadingAccess(false);
-                        }
-                    }, () => {
-                        setHasActivePackage(!studentSnap.empty);
-                        setIsLoadingAccess(false);
-                    });
-
-                    return unsubCodes;
-                } catch (e) {
-                    setIsLoadingAccess(false);
+        let active = true;
+        setIsLoadingAccess(true);
+        const check = async () => {
+            try {
+                const response = await fetch('/api/ai/usage', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(user ? { Authorization: `Bearer ${await user.getIdToken()}` } : {}) }, body: JSON.stringify({ feature: 'notes', studentId: selectedStudentId || undefined }) });
+                const state = await response.json();
+                if (!response.ok) throw new Error(state.error);
+                if (active) { setQuotaInfo(state); setHasActivePackage(state.enabled && state.remaining > 0); setTrialCount(state.mode === 'TRIAL' ? state.used : 0); }
+                if (user && db) {
+                    const snapshot = await getDocs(query(collection(db, 'students'), where('parentId', '==', user.uid)));
+                    if (active) { const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as StudentProfile)); setStudents(list); if (!selectedStudentId && list.length) setSelectedStudentId(list[0].id); }
                 }
-            };
-            
-            const cleanup = checkAccess();
-            return () => {
-                cleanup.then(unsub => unsub && unsub());
-            }
-        } else {
-            setIsLoadingAccess(false);
-        }
-    }, [user, db]);
+            } catch (e) { if (active) { setHasActivePackage(false); setTrialCount(GUEST_TRIAL_LIMIT); } }
+            finally { if (active) setIsLoadingAccess(false); }
+        };
+        void check();
+        return () => { active = false; };
+    }, [user, db, selectedStudentId]);
 
     const handleDownloadPdf = () => {
         if (!result) return;
@@ -196,7 +141,6 @@ function AiNotesPageContent() {
                 if (!user) {
                     const newCount = trialCount + 1;
                     setTrialCount(newCount);
-                    localStorage.setItem('trial_ai_notes_count', newCount.toString());
                 }
                 toast({ title: "QuickNotes Ready!", description: "Your bilingual study summary is ready." });
             }
@@ -205,6 +149,7 @@ function AiNotesPageContent() {
             toast({ variant: 'destructive', title: "QuickNotes Error", description: "The AI was unable to process this material right now." });
         } finally {
             setIsGenerating(false);
+            void refreshUsage().catch(() => {});
         }
     };
 
@@ -218,7 +163,7 @@ function AiNotesPageContent() {
     }
 
     // Registered user check
-    if (user && !hasActivePackage) {
+    if (user && !hasActivePackage && !result) {
         return (
             <div className="w-full max-w-2xl mx-auto py-12">
                 <Card className="text-center p-12 border-none shadow-2xl ring-1 ring-primary/10 overflow-hidden rounded-[3rem]">
@@ -247,7 +192,7 @@ function AiNotesPageContent() {
         );
     }
 
-    const isLocked = !user && trialCount >= GUEST_TRIAL_LIMIT;
+    const isLocked = !hasActivePackage;
 
     return (
         <div className="w-full max-w-4xl mx-auto space-y-6">
@@ -259,6 +204,8 @@ function AiNotesPageContent() {
                     <Link href="/"><ArrowLeft className="mr-2 h-4 w-4" /> Home</Link>
                 </Button>
             </div>
+
+            {quotaInfo && <p className="text-sm">{quotaInfo.mode === 'PAID' ? 'Daily AI allowance' : 'Free trial allowance'}: {quotaInfo.remaining} requests remaining. {!quotaInfo.enabled && 'AI service is paused.'}</p>}
 
             {!user && (
                 <Alert className={isLocked ? "bg-red-50 border-red-200 print:hidden" : "bg-primary/5 border-primary/20 print:hidden"}>
@@ -434,7 +381,7 @@ function AiNotesPageContent() {
                         <Card className="bg-accent text-white text-center shadow-2xl border-none rounded-[3rem] p-4">
                             <CardHeader>
                                 <CardTitle className="text-3xl font-black italic uppercase tracking-tighter">Loved QuickNotes?</CardTitle>
-                                <CardDescription className="text-white/80 font-bold text-lg">Join Vidya EduCare today to generate unlimited personalized QuickNotes for all your subjects and standards.</CardDescription>
+                                <CardDescription className="text-white/80 font-bold text-lg">Join Vidya EduCare today to generate daily fair-use personalized QuickNotes for all your subjects and standards.</CardDescription>
                             </CardHeader>
                             <CardFooter className="justify-center pt-4">
                                 <Button asChild variant="secondary" size="lg" className="font-black px-12 py-10 text-2xl rounded-2xl shadow-2xl hover:scale-105 transition-transform">

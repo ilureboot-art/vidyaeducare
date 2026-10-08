@@ -102,3 +102,25 @@ export async function withAiUsage<T>(feature: AiFeature, input: unknown, access:
     throw new AiUsageError('AI service could not complete this request. Please try again later.');
   }
 }
+
+/** Read-only quota display. Provider actions independently recheck/reserve in a transaction. */
+export async function readAiUsage(feature: 'doubt' | 'notes', access: { token?: string; studentId?: string }) {
+ let uid: string | null = null, academic = false;
+ if (access.token) {
+  try { const token = await adminAuth.verifyIdToken(access.token, true); uid = token.uid; const master=token.email_verified===true && ['admin@vidyaeducare.com','headadmin@vidyaeducare.com'].includes((token.email||'').toLowerCase());const a=master?null:(await adminDb.doc(`admins/${uid}`).get()).data();academic=adminPermissions(a?.role,a?.status,master).includes('academic'); }
+  catch {throw new AiUsageError('Your sign-in expired. Sign in again.');}
+ }
+ const [account, entitlement, store, config] = await Promise.all([uid?adminDb.doc(`users/${uid}`).get():null,uid?adminDb.doc(`aiAccess/${uid}`).get():null,adminDb.doc('configs/store').get(),adminDb.doc('configs/aiUsage').get()]);
+ if(uid && !academic && (!account?.exists || ['Banned','Inactive'].includes(account.data()?.status))) throw new AiUsageError('Account access is unavailable.');
+ let paid=academic || future(entitlement?.data()?.[feature==='doubt'?'doubtSolverExpiresAt':'notesGeneratorExpiresAt'],Date.now());
+ if(!paid && uid && access.studentId && /^[A-Za-z0-9_-]{1,150}$/.test(access.studentId) && store.data()?.grantFreeAiToolsWithMockArena===true) {
+  const [student, entitlement] = await Promise.all([adminDb.doc(`students/${access.studentId}`).get(),adminDb.doc(`studentEntitlements/${access.studentId}`).get()]);const e=entitlement.data();const order=e?.purchaseTransactionId && /^[A-Za-z0-9_-]{1,150}$/.test(e.purchaseTransactionId)?(await adminDb.doc(`transactions/${e.purchaseTransactionId}`).get()).data():null;
+  try {paid=student.data()?.parentId===uid && !student.data()?.archived && e?.status==='ACTIVE' && assertActivationEvidence(e,order,uid).verifiedPaid;} catch {paid=false;}
+ }
+ const cs=cookies();let guest=cs.get('vidya_ai_trial')?.value;
+ if(!uid && (!guest || !/^[a-f0-9-]{36}$/.test(guest))) {guest=randomUUID();cs.set('vidya_ai_trial',guest,{httpOnly:true,secure:process.env.NODE_ENV==='production',sameSite:'strict',maxAge:31536000,path:'/'});}
+ const identity=hash(uid?`user:${uid}`:`guest:${guest}`), day=new Date().toISOString().slice(0,10);
+ const quota=await adminDb.doc(`aiUsageCounters/${identity}-${feature}-${paid?day:'trial'}`).get();const policy=config.data()||{};
+ const limit=paid && Number.isInteger(policy.paidDailyRequests) && policy.paidDailyRequests>0?Math.min(policy.paidDailyRequests,500):paid?100:5;
+ return {mode:paid?'PAID':'TRIAL',limit,used:quota.data()?.count||0,remaining:Math.max(0,limit-(quota.data()?.count||0)),enabled:policy.enabled!==false,period:paid?'UTC_DAY':'LIFETIME'};
+}

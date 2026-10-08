@@ -82,6 +82,9 @@ service cloud.firestore {
       allow read: if isOwner(uid) || isAdmin();
       allow write: if configurationAdmin();
     }
+    match /questionRepairBackups/{id} { allow read, write: if false; }
+    match /aiUsageRequests/{id} { allow read, write: if false; }
+    match /aiUsageCounters/{id} { allow read, write: if false; }
 
     match /wallets/{uid} {
       allow read: if isOwner(uid) || financeAdmin();

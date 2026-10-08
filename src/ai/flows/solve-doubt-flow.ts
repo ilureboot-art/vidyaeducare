@@ -8,6 +8,7 @@
  */
 
 import { ai, z } from '@/ai/genkit';
+import { withAiUsage, AiUsageError, type AiRequestAccess } from '@/lib/ai-usage';
 
 const SolveDoubtInputSchema = z.object({
     question: z.object({
@@ -34,7 +35,7 @@ const SolveDoubtOutputSchema = z.object({
 });
 export type SolveDoubtOutput = z.infer<typeof SolveDoubtOutputSchema>;
 
-export const solveDoubtFlow = ai.defineFlow(
+const solveDoubtFlow = ai.defineFlow(
   {
     name: 'solveDoubtFlow',
     inputSchema: SolveDoubtInputSchema,
@@ -99,6 +100,7 @@ Student's Doubt: ${input.userDoubt}\n`;
 
     const response = await ai.generate({
       prompt: promptParts,
+      config: { maxOutputTokens: 4096 },
       output: {
         schema: SolveDoubtOutputSchema,
       }
@@ -112,18 +114,17 @@ Student's Doubt: ${input.userDoubt}\n`;
   }
 );
 
-export async function solveDoubt(input: SolveDoubtInput): Promise<SolveDoubtOutput & { error?: string }> {
+export async function solveDoubt(input: SolveDoubtInput, access?: AiRequestAccess): Promise<SolveDoubtOutput & { error?: string }> {
   try {
     if (!process.env.GEMINI_API_KEY && !process.env.GOOGLE_GENAI_API_KEY && !process.env.GOOGLE_API_KEY) {
       return {
-        error: "GEMINI_API_KEY is not defined in the Firebase App Hosting environment. Please configure it in Secret Manager."
+        error: "AI service is not configured yet. Please contact support."
       } as any;
     }
-    return await solveDoubtFlow(input);
+    const parsed = SolveDoubtInputSchema.parse(input);
+    return await withAiUsage('doubt', parsed, access, () => solveDoubtFlow(parsed));
   } catch (error: any) {
-    console.error("❌ Error in solveDoubt Server Action:", error);
-    return {
-      error: error.message || "An unexpected error occurred in the AI Doubt Solver."
-    } as any;
+    return { error: error instanceof AiUsageError ? error.message : "Unable to process this material. Check the input and try again." } as any;
   }
 }
+

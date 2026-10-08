@@ -5,6 +5,7 @@
  */
 
 import { ai, z } from '@/ai/genkit';
+import { withAiUsage, AiUsageError, type AiRequestAccess } from '@/lib/ai-usage';
 
 const GenerateNotesInputSchema = z.object({
     subject: z.string().describe('The academic subject.'),
@@ -51,14 +52,14 @@ Maintain pedagogical accuracy for the specific board and grade level provided.`,
   Task: Generate 3 structured sections with headings, summaries, and key points in both languages.`,
 });
 
-export const generateStudyNotesFlow = ai.defineFlow(
+const generateStudyNotesFlow = ai.defineFlow(
   {
     name: 'generateStudyNotesFlow',
     inputSchema: GenerateNotesInputSchema,
     outputSchema: GenerateNotesOutputSchema,
   },
   async (input) => {
-    const { output } = await generateNotesPrompt(input);
+    const { output } = await generateNotesPrompt(input, { config: { maxOutputTokens: 4096 } });
     if (!output) {
       throw new Error('Failed to generate academic study notes.');
     }
@@ -66,19 +67,18 @@ export const generateStudyNotesFlow = ai.defineFlow(
   }
 );
 
-export async function generateStudyNotes(input: GenerateNotesInput): Promise<GenerateNotesOutput & { error?: string }> {
+export async function generateStudyNotes(input: GenerateNotesInput, access?: AiRequestAccess): Promise<GenerateNotesOutput & { error?: string }> {
   try {
     if (!process.env.GEMINI_API_KEY && !process.env.GOOGLE_GENAI_API_KEY && !process.env.GOOGLE_API_KEY) {
       return {
-        error: "GEMINI_API_KEY is not defined in the Firebase App Hosting environment. Please configure it in Secret Manager."
+        error: "AI service is not configured yet. Please contact support."
       } as any;
     }
-    return await generateStudyNotesFlow(input);
+    const parsed = GenerateNotesInputSchema.parse(input);
+    return await withAiUsage('notes', parsed, access, () => generateStudyNotesFlow(parsed));
   } catch (error: any) {
-    console.error("❌ Error in generateStudyNotes Server Action:", error);
-    return {
-      error: error.message || "An unexpected error occurred in the AI Notes Generator."
-    } as any;
+    return { error: error instanceof AiUsageError ? error.message : "Unable to process this material. Check the input and try again." } as any;
   }
 }
+
 

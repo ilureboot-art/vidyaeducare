@@ -187,7 +187,7 @@ function AiNotesPageContent() {
                 subject: 'Academic General',
                 standard: academic.standard,
                 board: academic.board,
-            });
+            }, { token: user ? await user.getIdToken() : undefined, requestId: crypto.randomUUID(), studentId: selectedStudentId || undefined });
             
             if (response && 'error' in response) {
                 toast({ variant: 'destructive', title: "QuickNotes Error", description: response.error as string });
@@ -268,7 +268,7 @@ function AiNotesPageContent() {
                     </AlertTitle>
                     <AlertDescription className="text-xs">
                         {isLocked 
-                            ? "You have reached the 5-page trial limit. Upgrade to use QuickNotes without limits." 
+                            ? "You have reached the 5-page trial limit. Upgrade to use QuickNotes with daily fair-use limits." 
                             : "No registration required. Instantly convert textbooks into bilingual structured summaries."}
                         <Link href="/signup" className="ml-2 underline font-bold">Sign up for full access.</Link>
                     </AlertDescription>
@@ -475,3 +475,4 @@ export default function AiNotesPage() {
         </UserLayout>
     );
 }
+

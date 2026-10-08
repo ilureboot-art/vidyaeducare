@@ -187,7 +187,7 @@ function AiTutorPageContent() {
                 userDoubt: queryText,
                 context: context,
                 image: undefined
-            });
+            }, { token: user ? await user.getIdToken() : undefined, requestId: crypto.randomUUID(), studentId: selectedStudentId || undefined });
             if (response && 'error' in response) {
                 toast({ variant: 'destructive', title: "Doubt Solver Error", description: response.error as string });
             } else {
@@ -265,7 +265,7 @@ function AiTutorPageContent() {
                     </AlertTitle>
                     <AlertDescription className="text-xs">
                         {isLocked 
-                            ? "You have used your 5 free trial queries. Please join Vidya EduCare for unlimited AI Doubt Solver access." 
+                            ? "You have used your 5 free trial queries. Please join Vidya EduCare for paid AI Doubt Solver access with daily fair-use limits." 
                             : "No registration required. Get instant conceptual clarity for your academic doubts."}
                         <Link href="/signup" className="ml-2 underline font-bold">Sign up now.</Link>
                     </AlertDescription>
@@ -432,3 +432,4 @@ export default function AiTutorPage() {
         </UserLayout>
     );
 }
+

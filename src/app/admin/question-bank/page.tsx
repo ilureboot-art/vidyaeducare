@@ -31,7 +31,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { type TestSet, type Question } from "@/lib/question-bank";
 import { type AcademicConfig, defaultAcademicConfig } from "@/lib/academic-config";
-import { useDb } from "@/firebase";
+import { useDb, useAuth } from "@/firebase";
 import { collection, getDocs, doc, setDoc, deleteDoc, getDoc } from "firebase/firestore";
 import Papa from "papaparse";
 import { generateQuestions, type GenerateQuestionsInput } from "@/ai/flows/generate-questions-flow";
@@ -74,6 +74,7 @@ const sanitizeData = (obj: any): any => {
 export default function TestSetManagementPage() {
   const { toast } = useToast();
   const db = useDb();
+  const { user } = useAuth();
   const router = useRouter();
   const [testSets, setTestSets] = useState<TestSet[]>([]);
   const [academicConfig, setAcademicConfig] = useState<AcademicConfig>(defaultAcademicConfig);
@@ -313,7 +314,7 @@ const handleAiGenerate = async (e: React.FormEvent) => {
     setIsGenerating(true);
 
     try {
-        const result = await generateQuestions(aiInput);
+        const result = await generateQuestions(aiInput, { token: await user!.getIdToken(), requestId: crypto.randomUUID() });
         if (result && 'error' in result) {
             toast({ variant: 'destructive', title: "AI Generation Failed", description: result.error as string });
             return;
@@ -709,3 +710,4 @@ const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     </div>
   );
 }
+

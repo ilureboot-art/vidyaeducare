@@ -5,13 +5,14 @@
  */
 
 import { ai, z } from '@/ai/genkit';
+import { withAiUsage, AiUsageError, type AiRequestAccess } from '@/lib/ai-usage';
 
 const GenerateQuestionsInputSchema = z.object({
     topic: z.string().describe('The topic or chapter name to generate questions about.'),
     board: z.string().describe('The educational board (e.g., CBSE, SSC).'),
     standard: z.string().describe('The grade or standard (e.g., 10th).'),
     subject: z.string().describe('The subject (e.g., Science, History).'),
-    numQuestions: z.number().describe('The number of questions to generate.'),
+    numQuestions: z.number().int().min(1).max(25).describe('The number of questions to generate.'),
 });
 export type GenerateQuestionsInput = z.infer<typeof GenerateQuestionsInputSchema>;
 
@@ -60,7 +61,7 @@ const generateQuestionsFlow = ai.defineFlow(
     outputSchema: GenerateQuestionsOutputSchema,
   },
   async (input) => {
-    const { output } = await generateQuestionsPrompt(input);
+    const { output } = await generateQuestionsPrompt(input, { config: { maxOutputTokens: 8192 } });
     if (!output) {
       throw new Error('Failed to generate academic questions.');
     }
@@ -68,19 +69,18 @@ const generateQuestionsFlow = ai.defineFlow(
   }
 );
 
-export async function generateQuestions(input: GenerateQuestionsInput): Promise<GenerateQuestionsOutput & { error?: string }> {
+export async function generateQuestions(input: GenerateQuestionsInput, access?: AiRequestAccess): Promise<GenerateQuestionsOutput & { error?: string }> {
   try {
     if (!process.env.GEMINI_API_KEY && !process.env.GOOGLE_GENAI_API_KEY && !process.env.GOOGLE_API_KEY) {
       return {
-        error: "GEMINI_API_KEY is not defined in the Firebase App Hosting environment. Please configure it in Secret Manager."
+        error: "AI service is not configured yet. Please contact support."
       } as any;
     }
-    return await generateQuestionsFlow(input);
+    const parsed = GenerateQuestionsInputSchema.parse(input);
+    return await withAiUsage('questions', parsed, access, () => generateQuestionsFlow(parsed));
   } catch (error: any) {
-    console.error("❌ Error in generateQuestions Server Action:", error);
-    return {
-      error: error.message || "An unexpected error occurred in the AI Questions Generator."
-    } as any;
+    return { error: error instanceof AiUsageError ? error.message : "Unable to process this material. Check the input and try again." } as any;
   }
 }
+
 

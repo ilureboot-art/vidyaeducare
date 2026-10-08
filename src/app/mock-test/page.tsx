@@ -182,7 +182,7 @@ function MockTestContent() {
                     standard: scheduledTest.standard,
                     board: scheduledTest.board
                 }
-            });
+            }, { token: await user!.getIdToken(), requestId: crypto.randomUUID(), studentId: searchParams.get('studentId') || undefined });
             if (explanation && 'error' in explanation) {
                 toast({ variant: 'destructive', title: "AI Doubt Solver Failed", description: explanation.error as string });
                 setIsAiDialogOpen(false);
@@ -218,7 +218,7 @@ function MockTestContent() {
                 board: scheduledTest.board,
                 performanceContext: score < 100 ? `The student struggled with these specific concepts: ${incorrectTopics}` : "The student performed well, generate advanced summary notes.",
                 topics: [scheduledTest.testSetName]
-            });
+            }, { token: await user!.getIdToken(), requestId: crypto.randomUUID(), studentId: searchParams.get('studentId') || undefined });
             if (notes && 'error' in notes) {
                 toast({ variant: 'destructive', title: "Notes Generation Failed", description: notes.error as string });
                 setIsNotesDialogOpen(false);

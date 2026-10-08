@@ -1,0 +1,14 @@
+import { describe, it, expect } from 'vitest';
+import { proposeQuestionRepair } from './question-repair';
+const q = { id: 'Q1', text: { en: 'Question', mr: 'प्रश्न' }, options: { en: ['First', 'Second'], mr: ['पहिला', 'दुसरा'] }, correctAnswer: { en: 'Option B', mr: 'Option B' } };
+describe('evidence-preserving question repair', () => {
+ it('maps agreeing bilingual option markers without changing order or IDs', () => { const r = proposeQuestionRepair([q]); expect(r.ready).toBe(true); expect(r.questions[0].correctAnswer).toEqual({ en: 'Second', mr: 'दुसरा' }); expect(r.questions[0].options).toEqual(q.options); });
+ it('repairs only a recognizable full-stem CSV column shift', () => {expect(proposeQuestionRepair([{...q,correctAnswer:{en:q.text.mr,mr:'Second'}}]).ready).toBe(true);expect(proposeQuestionRepair([{...q,correctAnswer:{en:'unrelated',mr:'Second'}}]).ready).toBe(false);});
+ it('does not report changed questions merely because object field order differs', () => {const original={correctAnswer:{en:'Second',mr:'दुसरा'},options:q.options,text:q.text,id:q.id};expect(proposeQuestionRepair([original]).changed).toBe(0);});
+ it('maps documented Marathi markers and language labels', () => { expect(proposeQuestionRepair([{...q, correctAnswer: {en: 'Option B', mr: 'पर्याय ब'}}]).ready).toBe(true); expect(proposeQuestionRepair([{...q, correctAnswer: {en: 'Option B (Eng)', mr: 'Option B (Mar)'}}]).ready).toBe(true); });
+ it('rejects contradictory suffixes, keys and missing keys', () => { for (const key of [{ en: 'Option B: First', mr: 'B' }, { en: 'A', mr: 'B' }, { en: 'B', mr: '' }]) expect(proposeQuestionRepair([{ ...q, correctAnswer: key }]).ready).toBe(false); });
+ it('uses literal A option before treating it as a marker', () => { expect(proposeQuestionRepair([{ ...q, options: { en: ['Other', 'A'], mr: ['इतर', 'अ'] }, correctAnswer: { en: 'A', mr: 'अ' } }]).ready).toBe(true); });
+ it('collapses identical bilingual pairs while keeping original marker meaning', () => {const r=proposeQuestionRepair([{...q, options:{en:['First','First','Second'],mr:['पहिला','पहिला','दुसरा']},correctAnswer:{en:'Option C',mr:'पर्याय क'}}]);expect(r.ready).toBe(true);expect(r.questions[0].correctAnswer.en).toBe('Second');expect(r.questions[0].options.en).toEqual(['First','Second']);});
+ it('blocks duplicates with different translations and sets with one remaining choice', () => {for(const options of [{en:['First','First'],mr:['पहिला','दुसरा']},{en:['First','First'],mr:['पहिला','पहिला']}]) expect(proposeQuestionRepair([{...q,options}]).ready).toBe(false);});
+ it('normalizes surrounding whitespace but preserves input and rejects repeated IDs', () => { const input = [{ ...q, text: { en: ' Question ', mr: 'प्रश्न' } }]; expect(proposeQuestionRepair(input).questions[0].text.en).toBe('Question'); expect(input[0].text.en).toBe(' Question '); expect(proposeQuestionRepair([q,q]).ready).toBe(false); });
+});

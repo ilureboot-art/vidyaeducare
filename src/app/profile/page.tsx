@@ -96,20 +96,21 @@ function ProfilePageContent() {
             try {
                 const mapping: Record<string, Set<string>> = {};
                 
-                // Query test sets
-                const testSetsCol = collection(db, "testSets");
-                const testSetsSnap = await getDocs(testSetsCol).catch(() => null);
-                if (testSetsSnap) {
-                    testSetsSnap.docs.forEach(docSnap => {
-                        const data = docSnap.data();
-                        if (data.standard && data.subject) {
-                            if (!mapping[data.standard]) {
-                                mapping[data.standard] = new Set();
-                            }
-                            mapping[data.standard].add(data.subject);
+                // Only server-filtered metadata; the browser never reads private answer keys.
+                if (!user) return;
+                let cursor: string | null = null;
+                do {
+                    const response: Response = await fetch(`/api/test-catalog${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`, { headers: { Authorization: `Bearer ${await user.getIdToken()}` } });
+                    const data: { sets: { standard: string; subject: string }[]; nextCursor: string | null; error?: string } = await response.json();
+                    if (!response.ok) throw new Error(data.error || 'Academic catalog unavailable.');
+                    for (const set of data.sets) {
+                        if (set.standard && set.subject) {
+                            if (!mapping[set.standard]) mapping[set.standard] = new Set();
+                            mapping[set.standard].add(set.subject);
                         }
-                    });
-                }
+                    }
+                    cursor = data.nextCursor;
+                } while (cursor);
 
                 // Query scheduled tests
                 const scheduledCol = collection(db, "scheduledTests");
@@ -137,7 +138,7 @@ function ProfilePageContent() {
             }
         };
         fetchAdminSubjects();
-    }, [db]);
+    }, [db, user?.uid]);
 
     const [isActivateDialogOpen, setIsActivateDialogOpen] = useState(false);
     const [studentToActivate, setStudentToActivate] = useState<StudentProfile | null>(null);
@@ -1284,4 +1285,5 @@ export default function ProfilePage() {
         </ProtectedRoute>
     );
 }
+
 

@@ -20,6 +20,10 @@ describe.skipIf(!enabled)('isolated profile and ReferBolt rules enforcement', ()
     await adminDb.doc('students/student1').set({ parentId: 'parent1', name: 'Test student', mockTestSubscribed: false });
     await adminDb.doc('users/parent1').set({ name: 'Test parent', purchasedMockTest: false });
     await adminDb.doc('referbolt/parent1').set({ autoRenew: false, isSubscribed: false, totalCommissions: 0 });
+    await adminDb.doc('testSets/private').set({ questions: [{ correctAnswer: 'secret' }] });
+    await adminDb.doc('testResults/owned').set({ studentId: 'student1', score: 10 });
+    await adminDb.doc('admins/academic').set({ role: 'Academic Admin', status: 'Active' });
+    await adminDb.doc('admins/finance').set({ role: 'Finance Admin', status: 'Active' });
   }, 20000);
   afterAll(async () => {
     await Promise.all(clients.map(async c => { await terminate(c.db); await deleteApp(c.app); }));
@@ -44,6 +48,16 @@ describe.skipIf(!enabled)('isolated profile and ReferBolt rules enforcement', ()
       await expect(updateDoc(doc(db, 'referbolt/parent1'), values)).rejects.toMatchObject({ code: 'permission-denied' });
     }
   });
+  it('denies key leaks, fake scores and student statistics; allows authorized academic reads', async () => {
+    const owner = client('parent1'), other = client('parent2');
+    await expect(getDoc(doc(owner, 'testSets/private'))).rejects.toMatchObject({ code: 'permission-denied' });
+    await expect(getDoc(doc(client('finance'), 'testSets/private'))).rejects.toMatchObject({ code: 'permission-denied' });
+    expect((await getDoc(doc(client('academic'), 'testSets/private'))).exists()).toBe(true);
+    expect((await getDoc(doc(owner, 'testResults/owned'))).exists()).toBe(true);
+    await expect(getDoc(doc(other, 'testResults/owned'))).rejects.toMatchObject({ code: 'permission-denied' });
+    await expect(updateDoc(doc(owner, 'students/student1'), { stats: { avgScore: 100 } })).rejects.toMatchObject({ code: 'permission-denied' });
+    for (const path of ['testResults/fake', 'leaderboard/fake', 'quizClashResults/fake', 'mockTestAttempts/fake', 'quizClashAttempts/fake']) await expect(setDoc(doc(owner, path), { studentId: 'student1', score: 100 })).rejects.toMatchObject({ code: 'permission-denied' });
+  });
   it('denies client user creation and paid/role forgery, preserves profile edits', async () => {
     const db = client('parent1');
     await updateDoc(doc(db, 'users/parent1'), { name: 'New name' });
@@ -55,3 +69,4 @@ describe.skipIf(!enabled)('isolated profile and ReferBolt rules enforcement', ()
     await expect(getDoc(doc(unverified, 'students/student1'))).rejects.toMatchObject({ code: 'permission-denied' });
   });
 });
+

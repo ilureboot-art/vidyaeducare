@@ -315,6 +315,7 @@ export default function AdminQuizClashPage() {
             <Card>
                 <CardHeader>
                     <CardTitle>Scheduled Tournaments</CardTitle>
+                    <a href="/admin/payments/quiz-clash" className="text-primary underline">Finance settlement preview</a>
                 </CardHeader>
                 <CardContent>
                     <Table>

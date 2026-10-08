@@ -58,6 +58,8 @@ function QuizClashResultsContent() {
     const [tournament, setTournament] = useState<QuizClashTournament | null>(null);
     const [results, setResults] = useState<Result[] | null>(null);
     const [userResult, setUserResult] = useState<Result | null>(null);
+    const [isFinal, setIsFinal] = useState(false);
+    const [loadError, setLoadError] = useState<string | null>(null);
 
     useEffect(() => {
         if (!tournamentId || !db) {
@@ -66,111 +68,21 @@ function QuizClashResultsContent() {
         }
 
         const processResults = async () => {
-            const tournamentDocRef = doc(db, "quizClashTournaments", tournamentId);
-            const tournamentSnap = await getDoc(tournamentDocRef).catch(async (serverError) => {
-                if (serverError.code === 'permission-denied') {
-                    errorEmitter.emit('permission-error', new FirestorePermissionError({ path: tournamentDocRef.path, operation: 'get' }));
-                }
-                throw serverError;
-            });
-            if (!tournamentSnap.exists()) { router.push('/quiz-clash'); return; }
-            
-            const tourneyData = tournamentSnap.data() as QuizClashTournament;
-            setTournament(tourneyData);
-
-            if (tourneyData.status === 'completed') {
-                const resultsColRef = collection(db, "quizClashResults");
-                const q = query(resultsColRef, where("tournamentId", "==", tournamentId), orderBy("rank", "asc"));
-                const resultsSnap = await getDocs(q).catch(async (serverError) => {
-                    if (serverError.code === 'permission-denied') {
-                        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: resultsColRef.path, operation: 'list' }));
-                    }
-                    throw serverError;
-                });
-                const resultsData = resultsSnap.docs.map(d => d.data() as Result);
-                setResults(resultsData);
-                const currentUserResult = resultsData.find(r => r.userId === user?.uid);
-                setUserResult(currentUserResult || null);
-            } else {
-                const resultsColRef = collection(db, "quizClashResults");
-                const q = query(resultsColRef, where("tournamentId", "==", tournamentId), orderBy("score", "desc"), orderBy("timeTaken", "asc"));
-                const resultsSnap = await getDocs(q).catch(async (serverError) => {
-                    if (serverError.code === 'permission-denied') {
-                        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: resultsColRef.path, operation: 'list' }));
-                    }
-                    throw serverError;
-                });
-                const fetchedResults = resultsSnap.docs.map(d => ({...d.data(), id: d.id}) as Result & { id: string });
-
-                for (let result of fetchedResults) {
-                    const userDoc = await getDoc(doc(db, "users", result.userId)).catch(() => null);
-                    result.userName = userDoc && userDoc.exists() ? userDoc.data().name : "Unknown User";
-                }
-
-                let finalResults: Result[] = [];
-
-                if (tourneyData.type === 'Pro') {
-                    const distributablePool = tourneyData.prizePool * 0.80;
-                    const prizeDistribution = [0.40, 0.30, 0.20, 0.10];
-                    const winners = fetchedResults.slice(0, 4);
-
-                    winners.forEach((winner, index) => {
-                        winner.prize = distributablePool * prizeDistribution[index];
-                        winner.rank = index + 1;
-                    });
-                    
-                    finalResults = fetchedResults.map((r, i) => ({ ...r, rank: r.rank || i + 1 }));
-
-                    await runTransaction(db, async (transaction) => {
-                        for (const winner of winners) {
-                            if (winner.prize && winner.prize > 0) {
-                                const userWalletRef = doc(db, "wallets", winner.userId);
-                                const userWalletDoc = await transaction.get(userWalletRef);
-                                const currentBalance = userWalletDoc.exists() ? userWalletDoc.data()?.balance || 0 : 0;
-                                transaction.update(userWalletRef, { balance: currentBalance + winner.prize });
-                            
-                                const prizeTxRef = doc(collection(db, "transactions"));
-                                transaction.set(prizeTxRef, {
-                                    user: winner.userId,
-                                    amount: winner.prize,
-                                    date: serverTimestamp(),
-                                    description: `Prize for Quiz Clash: ${tourneyData.title} (Rank #${winner.rank})`,
-                                    status: "Completed",
-                                    type: "Prize",
-                                });
-
-                                // --- SYNC EARNINGS TO STUDENT PROFILE ---
-                                if (winner.studentId) {
-                                    const studentRef = doc(db, "students", winner.studentId);
-                                    const studentSnap = await transaction.get(studentRef);
-                                    if (studentSnap.exists()) {
-                                        const currentEarnings = studentSnap.data().stats?.totalEarnings || 0;
-                                        transaction.update(studentRef, { "stats.totalEarnings": currentEarnings + winner.prize });
-                                    }
-                                }
-                            }
-                        }
-                        transaction.update(tournamentDocRef, { status: "completed" });
-                    }).catch(async (serverError) => {
-                         if (serverError.code === 'permission-denied') {
-                            errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'multi-path-transaction', operation: 'write' }));
-                        }
-                        throw serverError;
-                    });
-                } else {
-                    finalResults = fetchedResults.map((r, i) => ({ ...r, rank: i + 1 }));
-                    await updateDoc(tournamentDocRef, { status: "completed" }).catch(() => null);
-                }
-
-                setResults(finalResults);
-                const currentUserResult = finalResults.find(r => r.userId === user?.uid);
-                setUserResult(currentUserResult || null);
-            }
+            if (!user) return;
+            try {
+                const response = await fetch(`/api/quiz-clash/standings?tournamentId=${encodeURIComponent(tournamentId)}`, { headers: { Authorization: `Bearer ${await user.getIdToken()}` } });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Standings unavailable.');
+                setTournament(data.tournament);
+                setResults(data.results);
+                setUserResult(data.results.find((r: Result) => r.userId === user.uid) || null);
+                setIsFinal(data.final);
+            } catch (error) { setLoadError(error instanceof Error ? error.message : 'Please retry.'); }
         };
-
         processResults();
-    }, [tournamentId, router, user, db]);
+    }, [tournamentId, router, user?.uid, db]);
 
+    if (loadError) return <Card><CardContent><p role="alert">{loadError}</p><Button asChild><Link href="/quiz-clash">Back to Quiz Clash</Link></Button></CardContent></Card>;
     if (!results || !tournament) {
         return (
             <div className="flex flex-col gap-4 justify-center items-center h-screen bg-primary/90">
@@ -187,8 +99,8 @@ function QuizClashResultsContent() {
                 <Card className="shadow-2xl border-none ring-1 ring-primary/10 text-center mt-4 overflow-hidden">
                     <CardHeader className="bg-primary/5 pb-8 border-b">
                         <Trophy className="w-16 h-16 mx-auto text-yellow-500 mb-2"/>
-                        <CardTitle className="text-3xl font-black text-primary uppercase italic tracking-tight">Final Standings</CardTitle>
-                        <CardDescription className="font-bold">{tournament.title} • {tournament.type} Clash</CardDescription>
+                        <CardTitle className="text-3xl font-black text-primary uppercase italic tracking-tight">{isFinal ? 'Final Standings' : 'Provisional Standings'}</CardTitle>
+                        <CardDescription className="font-bold">{tournament.title} • {tournament.type} Clash{!isFinal && " · Prizes await finance review and settlement"}</CardDescription>
                     </CardHeader>
                     <CardContent className="p-8">
                         {userResult ? (
@@ -273,3 +185,4 @@ export default function QuizClashResultsPage() {
         </Suspense>
     );
 }
+

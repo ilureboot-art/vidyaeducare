@@ -138,6 +138,7 @@ service cloud.firestore {
       allow update, delete: if false;
     }
     match /referralRewardClaims/{uid} { allow read: if isOwner(uid) || financeAdmin(); allow write: if false; }
+    match /paymentMigrations/{id} { allow read, write: if false; }
     match /paymentUtrClaims/{id} { allow read, write: if false; }
     match /adminBulkPreviews/{id} { allow read, write: if false; }
     match /adminAuditLogs/{id} { allow read: if financeAdmin(); allow write: if false; }

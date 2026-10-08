@@ -125,7 +125,7 @@ service cloud.firestore {
       allow read, list: if isAdmin() || (signedIn() && resource.data.parentId == request.auth.uid);
       allow create, delete: if false;
       allow update: if (isAdmin() || (signedIn() && resource.data.parentId == request.auth.uid)) &&
-        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['parentId', 'mockTestSubscribed', 'mockTestEntitlement', 'registrationFingerprint', 'archived', 'archivedAt']);
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'avatarUrl']);
     }
     
     match /transactions/{id} {
@@ -140,7 +140,8 @@ service cloud.firestore {
     match /adminAuditLogs/{id} { allow read: if financeAdmin(); allow write: if false; }
 
     match /testSets/{id} {
-      allow read, list: if true;
+      // Existing answer-containing documents are the private academic source.
+      allow read, list: if academicAdmin();
       allow create: if academicAdmin();
       allow update: if academicAdmin();
       allow delete: if academicAdmin();
@@ -153,40 +154,17 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /mockTestAttempts/{id} { allow read, write: if false; }
+    match /quizClashAttempts/{id} { allow read, write: if false; }
+    match /quizClashEnrollments/{id} { allow read, write: if false; }
     match /testResults/{id} {
-      allow read, list: if signedIn();
-      allow create: if signedIn() &&
-        ownsStudent(request.resource.data.studentId) &&
-        request.resource.data.testId is string &&
-        request.resource.data.isLive is bool &&
-        (!request.resource.data.isLive || isScheduledTestLive(request.resource.data.testId)) &&
-        request.resource.data.rankingEligible is bool &&
-        request.resource.data.perTestCashPrizeEligible is bool &&
-        request.resource.data.monthlyCashPrizeEligible is bool &&
-        request.resource.data.accessType is string &&
-        (!request.resource.data.rankingEligible || (
-          isPaidStudent(request.resource.data.studentId) &&
-          request.resource.data.isLive == true &&
-          request.resource.data.accessType == 'PAID_SUBSCRIPTION' &&
-          request.resource.data.perTestCashPrizeEligible == true &&
-          request.resource.data.monthlyCashPrizeEligible == true
-        ));
+      allow read, list: if academicAdmin() || financeAdmin() || ownsStudent(resource.data.studentId);
+      allow write: if false;
     }
-
     match /leaderboard/{id} {
       allow read, list: if true;
-      allow create: if signedIn() &&
-        isPaidStudent(request.resource.data.studentId) &&
-        request.resource.data.testId is string &&
-        isScheduledTestLive(request.resource.data.testId) &&
-        get(/databases/$(database)/documents/testResults/$(id)).data.isLive == true &&
-        request.resource.data.accessType == 'PAID_SUBSCRIPTION' &&
-        request.resource.data.testWindowStatus == 'LIVE' &&
-        request.resource.data.rankingEligible == true &&
-        request.resource.data.perTestCashPrizeEligible == true &&
-        request.resource.data.monthlyCashPrizeEligible == true &&
-        get(/databases/$(database)/documents/testResults/$(id)).data.rankingEligible == true;
-      allow update, delete: if isAdmin();
+      allow create: if false;
+      allow update, delete: if academicAdmin();
     }
 
     match /quizClashTournaments/{id} {
@@ -196,7 +174,7 @@ service cloud.firestore {
 
     match /quizClashResults/{id} {
       allow read, list: if true;
-      allow write: if true;
+      allow write: if false;
     }
     
     match /notifications/{id} {
@@ -327,3 +305,4 @@ service cloud.firestore {
     }
   }
 }
+

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -19,7 +19,7 @@ import type { Question, TestSet } from "@/lib/question-bank";
 import type { ScheduledTest } from "@/lib/test-schedule";
 import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import { useDb } from "@/firebase";
+import { useAuth } from "@/firebase";
 import UserLayout from "@/components/UserLayout";
 import { solveDoubt, type SolveDoubtOutput } from "@/ai/flows/solve-doubt-flow";
 import { generateStudyNotes, type GenerateNotesOutput } from "@/ai/flows/generate-notes-flow";
@@ -36,13 +36,21 @@ function MockTestContent() {
     const { toast } = useToast();
     const router = useRouter();
     const searchParams = useSearchParams();
-    const db = useDb();
+    const { user } = useAuth();
 
     const [testState, setTestState] = useState<TestState>("loading");
     const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(null);
     const [scheduledTest, setScheduledTest] = useState<ScheduledTest | null>(null);
 
-    const [activeQuestions, setActiveQuestions] = useState<Question[]>([]);
+    const [activeQuestions, setActiveQuestions] = useState<(Omit<Question, "correctAnswer"> & { correctAnswer?: Question["correctAnswer"] })[]>([]);
+    const revision = useRef(0);
+    const syncQueue = useRef<Promise<unknown>>(Promise.resolve());
+    const deadline = useRef(0);
+    const clockOffset = useRef(0);
+    const submitted = useRef(false);
+    const autoSubmitted = useRef(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [syncError, setSyncError] = useState<string | null>(null);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [timeLeft, setTimeLeft] = useState(1800); 
     const [initialDuration, setInitialDuration] = useState(1800);
@@ -59,263 +67,104 @@ function MockTestContent() {
     const [aiNotes, setAiNotes] = useState<GenerateNotesOutput | null>(null);
     const [isNotesDialogOpen, setIsNotesDialogOpen] = useState(false);
     
+    const callTest = async (action: string, extra: Record<string, unknown> = {}) => {
+        if (!user) throw new Error("Sign in to sync your attempt.");
+        const response = await fetch('/api/mock-test', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await user.getIdToken()}` }, body: JSON.stringify({ action, studentId: searchParams.get('studentId'), testId: searchParams.get('testId'), ...extra }) });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Unable to sync your attempt.');
+        return data;
+    };
+    const acceptResult = (result: any) => {
+        submitted.current = true;
+        setScore(result.score);
+        setRewardEligibility({ accessType: result.accessType, testWindowStatus: result.testWindowStatus, rankingEligible: result.rankingEligible, perTestCashPrizeEligible: result.perTestCashPrizeEligible, monthlyCashPrizeEligible: result.monthlyCashPrizeEligible, reasonCode: result.eligibilityReason });
+        setAnswers(result.answers);
+        setTestState('completed');
+    };
     useEffect(() => {
-        if (!db) return;
-
-        const studentId = searchParams.get('studentId');
-        const testId = searchParams.get('testId');
-        if (!studentId || !testId) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Missing student or test ID.' });
+        if (!user) return;
+        let cancelled = false;
+        callTest('start').then(data => {
+            if (cancelled) return;
+            setStudentProfile(data.student);
+            setScheduledTest(data.test);
+            setActiveQuestions(data.questions);
+            revision.current = data.revision;
+            deadline.current = data.deadline;
+            clockOffset.current = data.serverNow - Date.now();
+            setInitialDuration(data.test.duration * 60);
+            setTimeLeft(Math.max(0, Math.ceil((data.deadline - data.serverNow) / 1000)));
+            setIsLiveTest(data.live);
+            setRewardEligibility(data.rewardEligibility || null);
+            setAnswers(Object.fromEntries(Object.entries(data.selections || {}).map(([id, index]) => {
+                const q = data.questions.find((q: Question) => q.id === id);
+                return [id, { en: q.options.en[index as number], mr: q.options.mr[index as number] }];
+            })));
+            if (data.status === 'SUBMITTED') acceptResult(data.result);
+            else setTestState('in_progress');
+        }).catch(error => {
+            if (cancelled) return;
+            toast({ variant: 'destructive', title: 'Unable to start test', description: error.message });
             router.push('/profile');
-            return;
-        }
-        
-        const fetchData = async () => {
-            try {
-                const studentDocRef = doc(db, 'students', studentId);
-                const studentDoc = await getDoc(studentDocRef).catch(async (e) => {
-                    if (e.code === 'permission-denied') {
-                        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: studentDocRef.path, operation: 'get' }));
-                    }
-                    throw e;
-                });
-
-                let studentData: StudentProfile;
-                if (studentDoc.exists()) {
-                    studentData = studentDoc.data() as StudentProfile;
-                    if (studentData.archived) throw new Error('This student profile has been removed.');
-                    setStudentProfile(studentData);
-                } else {
-                    throw new Error("Student profile not found");
-                }
-
-                const scheduledTestDocRef = doc(db, 'scheduledTests', testId);
-                const scheduledTestDoc = await getDoc(scheduledTestDocRef).catch(async (e) => {
-                    if (e.code === 'permission-denied') {
-                        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: scheduledTestDocRef.path, operation: 'get' }));
-                    }
-                    throw e;
-                });
-
-                if (scheduledTestDoc.exists()) {
-                    const scheduledTestData = scheduledTestDoc.data() as ScheduledTest;
-                    const access = getMockTestAccess(studentData.mockTestSubscribed, scheduledTestData, studentData.mockTestEntitlement);
-                    if (!access.hasAccess) {
-                        toast({
-                            variant: 'destructive',
-                            title: 'Purchase Required',
-                            description: 'Only June MCQ mock tests are free. Purchase MockArena access for tests scheduled in other months.',
-                        });
-                        router.push(`/profile?expiredStudentId=${studentId}`);
-                        return;
-                    }
-
-                    const now = new Date();
-                    const startsAt = new Date(scheduledTestData.dateTime);
-                    const endsAt = addMinutes(startsAt, scheduledTestData.duration || 30);
-                    if (now < startsAt) {
-                        toast({ variant: 'destructive', title: 'Test Not Started', description: 'This test is upcoming. Please return when the scheduled session begins.' });
-                        router.push('/profile');
-                        return;
-                    }
-                    const isLive = now >= startsAt && now < endsAt;
-                    setIsLiveTest(isLive);
-                    setRewardEligibility(getMockTestRewardEligibility({
-                        accessType: access.accessType,
-                        test: scheduledTestData,
-                        now,
-                    }));
-                    setScheduledTest(scheduledTestData);
-                    
-                    const durationInSeconds = (scheduledTestData.duration || 30) * 60;
-                    setTimeLeft(durationInSeconds);
-                    setInitialDuration(durationInSeconds);
-
-                    const testSetDocRef = doc(db, 'testSets', scheduledTestData.testSetId);
-                    const testSetDoc = await getDoc(testSetDocRef).catch(async (e) => {
-                        if (e.code === 'permission-denied') {
-                            errorEmitter.emit('permission-error', new FirestorePermissionError({ path: testSetDocRef.path, operation: 'get' }));
-                        }
-                        throw e;
-                    });
-
-                    if (testSetDoc.exists()) {
-                        const testSetData = testSetDoc.data() as TestSet;
-                        setActiveQuestions(testSetData.questions);
-                        setTestState("in_progress");
-                    } else {
-                        throw new Error("Test set not found");
-                    }
-                } else {
-                    throw new Error("Scheduled test not found");
-                }
-            } catch (error: any) {
-                console.warn("Test arena sync issue.");
-                if (error.code !== 'permission-denied') {
-                    toast({ variant: 'destructive', title: 'Failed to load test', description: error.message });
-                    router.push('/profile');
-                }
-            }
-        };
-
-        fetchData();
-    }, [searchParams, router, toast, db]);
-
+        });
+        return () => { cancelled = true; };
+    }, [user?.uid, searchParams, router, toast]);
+    const selections = () => Object.fromEntries(Object.entries(answers).map(([id, value]) => [id, activeQuestions.find(q => q.id === id)!.options.en.indexOf(value.en)]));
     useEffect(() => {
-        if (testState !== "in_progress") return;
-
-        if (timeLeft <= 0) {
-            handleSubmitTest();
-            return;
-        }
-
-        const timer = setInterval(() => {
-            setTimeLeft((prevTime) => prevTime - 1);
-        }, 1000);
-
+        if (testState !== 'in_progress' || isSubmitting) return;
+        const snapshot = selections();
+        const timer = setTimeout(() => {
+            syncQueue.current = syncQueue.current.catch(() => {}).then(async () => {
+                if (submitted.current) return;
+                const data = await callTest('save', { answers: snapshot, revision: revision.current });
+                revision.current = data.revision;
+                setSyncError(null);
+            }).catch(error => { setSyncError(error.message); });
+        }, 750);
+        return () => clearTimeout(timer);
+    }, [answers, testState, isSubmitting]);
+    useEffect(() => {
+        if (testState !== 'in_progress') return;
+        const timer = setInterval(() => setTimeLeft(Math.max(0, Math.ceil((deadline.current - Date.now() - clockOffset.current) / 1000))), 500);
         return () => clearInterval(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [testState, timeLeft]);
-
-
+    }, [testState]);
+    useEffect(() => { if (testState === 'in_progress' && timeLeft <= 0 && !isSubmitting && !autoSubmitted.current) { autoSubmitted.current = true; void handleSubmitTest(); } }, [testState, timeLeft, isSubmitting]);
     const handleAnswerSelect = (questionId: string, answerEn: string, answerMr: string) => {
+        if (isSubmitting) return;
         setAnswers(prev => ({ ...prev, [questionId]: { en: answerEn, mr: answerMr } }));
     };
-
-    const handleNextQuestion = () => {
-        if (currentQuestionIndex < activeQuestions.length - 1) {
-            setCurrentQuestionIndex(prev => prev + 1);
-        }
-    };
-
-    const handlePrevQuestion = () => {
-        if (currentQuestionIndex > 0) {
-            setCurrentQuestionIndex(prev => prev - 1);
-        }
-    };
-
+    const handleNextQuestion = () => { if (currentQuestionIndex < activeQuestions.length - 1) setCurrentQuestionIndex(prev => prev + 1); };
+    const handlePrevQuestion = () => { if (currentQuestionIndex > 0) setCurrentQuestionIndex(prev => prev - 1); };
     const handleSubmitTest = async () => {
-        if (!scheduledTest || !studentProfile || !db) return;
-
-        let correctAnswers = 0;
-        activeQuestions.forEach(q => {
-            if (answers[q.id]?.en === q.correctAnswer.en) {
-                correctAnswers++;
-            }
-        });
-        
-        const finalAccuracy = (correctAnswers / activeQuestions.length) * 100;
-        setScore(finalAccuracy);
-        
-        const timeTaken = initialDuration - timeLeft;
-        const minutes = Math.floor(timeTaken / 60);
-        const seconds = timeTaken % 60;
-        const timeString = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-
+        if (!scheduledTest || !studentProfile || submitted.current || isSubmitting) return;
+        setIsSubmitting(true);
         try {
-            const resultId = `${studentProfile.id}-${scheduledTest.id}`;
-            const resultDocRef = doc(db, "testResults", resultId);
-            const resultData = {
-                studentId: studentProfile.id,
-                studentName: studentProfile.name,
-                testId: scheduledTest.id,
-                testName: scheduledTest.testSetName,
-                score: finalAccuracy,
-                rawScore: correctAnswers,
-                totalQuestions: activeQuestions.length,
-                answers: answers,
-                timeTaken: timeString,
-                date: new Date().toISOString(),
-                isLive: isLiveTest,
-                accessType: rewardEligibility?.accessType || 'BACKDATED_PRACTICE',
-                testWindowStatus: rewardEligibility?.testWindowStatus || 'COMPLETED',
-                rankingEligible: rewardEligibility?.rankingEligible === true,
-                perTestCashPrizeEligible: rewardEligibility?.perTestCashPrizeEligible === true,
-                monthlyCashPrizeEligible: rewardEligibility?.monthlyCashPrizeEligible === true,
-                eligibilityReason: rewardEligibility?.reasonCode || 'COMPLETED_PRACTICE_ONLY',
-                subscriptionSnapshot: {
-                    isPaid: rewardEligibility?.accessType === 'PAID_SUBSCRIPTION',
-                    accessType: rewardEligibility?.accessType || 'BACKDATED_PRACTICE',
-                    evaluatedAt: new Date().toISOString(),
-                },
-            };
-
-            await setDoc(resultDocRef, resultData).catch(async (e) => {
-                if (e.code === 'permission-denied') {
-                    errorEmitter.emit('permission-error', new FirestorePermissionError({ path: resultDocRef.path, operation: 'create', requestResourceData: resultData }));
-                }
-                throw e;
-            });
-
-            // Only a paid student who started inside the live window can enter
-            // either the per-test or monthly cash-prize leaderboard.
-            if (rewardEligibility?.rankingEligible === true) {
-                const leaderboardDocRef = doc(db, "leaderboard", resultId);
-                const leaderboardData = {
-                    name: studentProfile.name,
-                    avatar: studentProfile.name.charAt(0),
-                    score: correctAnswers, 
-                    accuracy: finalAccuracy, 
-                    totalQuestions: activeQuestions.length,
-                    time: timeString,
-                    testId: scheduledTest.id,
-                    testName: scheduledTest.testSetName,
-                    studentId: studentProfile.id,
-                    parentId: studentProfile.parentId || "",
-                    createdAt: new Date().toISOString(),
-                    accessType: rewardEligibility.accessType,
-                    testWindowStatus: rewardEligibility.testWindowStatus,
-                    rankingEligible: true,
-                    perTestCashPrizeEligible: rewardEligibility.perTestCashPrizeEligible,
-                    monthlyCashPrizeEligible: rewardEligibility.monthlyCashPrizeEligible,
-                    eligibilityReason: rewardEligibility.reasonCode,
-                    subscriptionSnapshot: {
-                        isPaid: true,
-                        accessType: rewardEligibility.accessType,
-                        evaluatedAt: new Date().toISOString(),
-                    },
-                };
-                await setDoc(leaderboardDocRef, leaderboardData).catch(async (e) => {
-                    if (e.code === 'permission-denied') {
-                        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: leaderboardDocRef.path, operation: 'create', requestResourceData: leaderboardData }));
-                    }
-                    throw e;
-                });
-            }
-
-            const studentRef = doc(db, "students", studentProfile.id);
-            const currentStats = studentProfile.stats || { totalEarnings: 0, testsTaken: 0, avgScore: 0, performance: [], recentActivity: [] };
-            
-            const newTestsTaken = (currentStats.testsTaken || 0) + 1;
-            const newAvgScore = Math.round(((currentStats.avgScore || 0) * (currentStats.testsTaken || 0) + finalAccuracy) / newTestsTaken);
-            const newPerformance = [...(currentStats.performance || []), { name: scheduledTest.testSetName, score: Math.round(finalAccuracy) }].slice(-10);
-            
-            await updateDoc(studentRef, {
-                "stats.testsTaken": newTestsTaken,
-                "stats.avgScore": newAvgScore,
-                "stats.performance": newPerformance,
-            }).catch(async (e) => {
-                if (e.code === 'permission-denied') {
-                    errorEmitter.emit('permission-error', new FirestorePermissionError({ path: studentRef.path, operation: 'update' }));
-                }
-                throw e;
-            });
-
-            setTestState("completed");
-            toast({
-                title: timeLeft <= 0 ? "Time's Up!" : (isLiveTest ? "Live Session Submitted!" : "Practice Session Submitted!"),
-                description: rewardEligibility?.rankingEligible
-                    ? `Paid competition result synced with the leaderboard. Accuracy: ${finalAccuracy.toFixed(0)}%`
-                    : `Practice result saved. This attempt does not qualify for ranking or cash prizes. Accuracy: ${finalAccuracy.toFixed(0)}%`
-            });
+            await syncQueue.current;
+            const data = await callTest('submit', { answers: selections(), revision: revision.current });
+            revision.current = data.revision;
+            acceptResult(data.result);
+            setSyncError(null);
+            toast({ title: 'Server result saved', description: data.result.rankingEligible ? 'Verified paid live result entered the leaderboard.' : 'This result does not qualify for ranking or cash prizes.' });
         } catch (error) {
-            console.error("Failed to save test results:", error);
-            toast({ variant: 'destructive', title: "Error", description: "Could not save your test results." });
+            const message = error instanceof Error ? error.message : 'Please retry.';
+            setSyncError(message);
+            toast({ variant: 'destructive', title: 'Submission not confirmed', description: message });
+        } finally { setIsSubmitting(false); }
+    };
+    const loadReview = async () => {
+        try {
+            const data = await callTest('review');
+            setActiveQuestions(data.questions);
+            return data.questions as Question[];
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Answer review unavailable', description: error instanceof Error ? error.message : 'Please retry.' });
+            return null;
         }
     };
+    const handleReview = async () => { if (await loadReview()) setTestState('review'); };
 
-    const handleAskAi = async (question: Question) => {
-        if (!scheduledTest) return;
+    const handleAskAi = async (question: Omit<Question, "correctAnswer"> & { correctAnswer?: Question["correctAnswer"] }) => {
+        if (!scheduledTest || !question.correctAnswer) return;
         setIsAiSolving(question.id);
         setAiExplanation(null);
         setIsAiDialogOpen(true);
@@ -350,12 +199,14 @@ function MockTestContent() {
 
     const handleGenerateNotes = async () => {
         if (!scheduledTest) return;
+        const reviewed = await loadReview();
+        if (!reviewed) return;
         setIsGeneratingNotes(true);
         setAiNotes(null);
         setIsNotesDialogOpen(true);
 
-        const incorrectTopics = activeQuestions
-            .filter(q => answers[q.id]?.en !== q.correctAnswer.en)
+        const incorrectTopics = reviewed
+            .filter(q => answers[q.id]?.en !== q.correctAnswer?.en)
             .map(q => q.text.en)
             .slice(0, 5)
             .join(", ");
@@ -407,7 +258,7 @@ function MockTestContent() {
                         <div className="space-y-6">
                             {activeQuestions.map((q, index) => {
                                 const userAnswer = answers[q.id];
-                                const isCorrect = userAnswer?.en === q.correctAnswer.en;
+                                const isCorrect = userAnswer?.en === q.correctAnswer?.en;
                                 return (
                                 <div key={q.id} className="p-4 border rounded-xl space-y-4">
                                     <div className="flex items-start justify-between gap-4">
@@ -429,7 +280,7 @@ function MockTestContent() {
                                         {q.options.mr.map((optionMr, optionIndex) => {
                                             const optionEn = q.options.en[optionIndex];
                                             const isUserAnswer = userAnswer?.mr === optionMr;
-                                            const isCorrectAnswer = q.correctAnswer.mr === optionMr;
+                                            const isCorrectAnswer = q.correctAnswer?.mr === optionMr;
                                             return (
                                                 <div key={optionMr} className={cn(
                                                     "p-3 rounded-lg border text-sm transition-colors",
@@ -550,7 +401,7 @@ function MockTestContent() {
                             GENERATE AI STUDY NOTES
                         </Button>
                         <div className="grid grid-cols-2 gap-3">
-                            <Button onClick={() => setTestState('review')} variant="outline" className="gap-2">
+                            <Button onClick={handleReview} variant="outline" className="gap-2">
                                 <BrainCircuit className="w-4 h-4"/> Review Answers
                             </Button>
                             <Button asChild variant="outline">
@@ -678,6 +529,7 @@ function MockTestContent() {
                 </div>
             </CardHeader>
             <CardContent className="space-y-6">
+                    {syncError && <div><p role="alert" className="text-destructive">{syncError} Your submission is not confirmed. Retry or reload to resume saved answers.</p><Button disabled={isSubmitting} onClick={handleSubmitTest}>Retry submission</Button></div>}
                 <div className="space-y-2">
                     <p className="text-2xl font-bold leading-tight">{currentQuestion.text.mr}</p>
                     <p className="text-lg font-medium text-muted-foreground italic">{currentQuestion.text.en}</p>
@@ -709,7 +561,7 @@ function MockTestContent() {
                         <ArrowLeft className="mr-2" /> Previous
                     </Button>
                      {currentQuestionIndex === activeQuestions.length - 1 ? (
-                         <Button onClick={handleSubmitTest} className="bg-accent text-accent-foreground hover:bg-accent/90 px-10 font-black">SUBMIT TEST</Button>
+                         <Button onClick={handleSubmitTest} disabled={isSubmitting} className="bg-accent text-accent-foreground hover:bg-accent/90 px-10 font-black">SUBMIT TEST</Button>
                      ) : (
                         <Button onClick={handleNextQuestion} className="px-10 font-black">
                             NEXT
@@ -737,3 +589,4 @@ export default function MockTestPage() {
         </Suspense>
     )
 }
+

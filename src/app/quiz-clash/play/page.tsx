@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -36,7 +36,13 @@ function QuizClashGameContent() {
     
     const [gameState, setGameState] = useState<GameState>("loading");
     const [tournament, setTournament] = useState<QuizClashTournament | null>(null);
-    const [questions, setQuestions] = useState<Question[]>([]);
+    const [questions, setQuestions] = useState<Omit<Question, "correctAnswer">[]>([]);
+    const revision = useRef(0);
+    const deadline = useRef(0);
+    const clockOffset = useRef(0);
+    const autoFinished = useRef(false);
+    const [questionNumber, setQuestionNumber] = useState(1);
+    const [questionCount, setQuestionCount] = useState(1);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [selectedOption, setSelectedOption] = useState<string | null>(null);
     const [isAnswerLocked, setIsAnswerLocked] = useState(false);
@@ -49,158 +55,83 @@ function QuizClashGameContent() {
     const tournamentId = searchParams.get('tournamentId');
     const studentId = searchParams.get('studentId');
 
+    const callQuiz = async (action: string, extra: Record<string, unknown> = {}) => {
+        if (!user) throw new Error('Sign in to play.');
+        const response = await fetch('/api/quiz-clash', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await user.getIdToken()}` }, body: JSON.stringify({ action, tournamentId, studentId, revision: revision.current, questionId: questions[0]?.id, ...extra }) });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Quiz sync failed.');
+        return data;
+    };
+    const applyServer = (data: any) => {
+        revision.current = data.revision;
+        deadline.current = data.deadline;
+        clockOffset.current = data.serverNow - Date.now();
+        setTournament(data.tournament);
+        setQuestions(data.question ? [data.question] : []);
+        setCurrentQuestionIndex(0);
+        setQuestionNumber(data.questionNumber);
+        setQuestionCount(data.questionCount);
+        setFinalScore(data.score);
+        setUsedLifelines(data.usedLifelines);
+        setTimeLeft(Math.max(0, Math.ceil((data.deadline - data.serverNow) / 1000)));
+        setSelectedOption(null);
+        autoFinished.current = false;
+        setGameState(data.status === 'FINISHED' ? 'finished' : 'playing');
+        if (data.status === 'FINISHED') router.push(`/quiz-clash/results?tournamentId=${tournamentId}&studentId=${studentId}`);
+        setHiddenIndices(data.hiddenIndices || []);
+    };
+    const [hiddenIndices, setHiddenIndices] = useState<number[]>([]);
     useEffect(() => {
-        if (!tournamentId || !user || !db) {
-            if(!tournamentId || !user) router.push('/quiz-clash');
-            return;
-        }
-
-        const fetchGameData = async () => {
-            try {
-                const tournamentDocRef = doc(db, "quizClashTournaments", tournamentId);
-                const tournamentSnap = await getDoc(tournamentDocRef).catch(async (e) => {
-                    if (e.code === 'permission-denied') {
-                        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: tournamentDocRef.path, operation: 'get' }));
-                    }
-                    throw e;
-                });
-
-                if (!tournamentSnap.exists()) {
-                    toast({ variant: 'destructive', title: "Tournament not found." });
-                    router.push('/quiz-clash');
-                    return;
-                }
-                const tourneyData = tournamentSnap.data() as QuizClashTournament;
-                setTournament(tourneyData);
-
-                const testSetDocRef = doc(db, "testSets", tourneyData.testSetId);
-                const testSetSnap = await getDoc(testSetDocRef).catch(async (e) => {
-                    if (e.code === 'permission-denied') {
-                        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: testSetDocRef.path, operation: 'get' }));
-                    }
-                    throw e;
-                });
-
-                if (!testSetSnap.exists()) {
-                    toast({ variant: 'destructive', title: "Question set not found." });
-                    router.push('/quiz-clash');
-                    return;
-                }
-                const testSetData = testSetSnap.data() as TestSet;
-                setQuestions(testSetData.questions);
-                setGameState("playing");
-            } catch (error) {
-                console.error("Game data sync error.");
-                router.push('/quiz-clash');
-            }
-        };
-
-        fetchGameData();
-    }, [tournamentId, user, router, toast, db]);
-
+        if (!user || !tournamentId || !studentId) return;
+        let cancelled = false;
+        callQuiz('start').then(data => { if (!cancelled) applyServer(data); }).catch(error => {
+            if (cancelled) return;
+            toast({ variant: 'destructive', title: 'Unable to start quiz', description: error.message });
+            router.push('/quiz-clash');
+        });
+        return () => { cancelled = true; };
+    }, [user?.uid, tournamentId, studentId]);
     useEffect(() => {
-        if (gameState !== "playing" || isAnswerLocked) return;
-
-        if (timeLeft <= 0) {
-            handleGameOver("Time's up!");
-            return;
-        }
-
-        const timer = setInterval(() => {
-            setTimeLeft(prev => prev - 1);
-            setFinalTime(prev => prev + 1);
-        }, 1000);
-
+        if (gameState !== 'playing') return;
+        const timer = setInterval(() => setTimeLeft(Math.max(0, Math.ceil((deadline.current - Date.now() - clockOffset.current) / 1000))), 500);
         return () => clearInterval(timer);
-    }, [timeLeft, isAnswerLocked, gameState]);
-
-    const handleOptionSelect = (option: string) => {
-        if (isAnswerLocked) return;
-        setSelectedOption(option);
-    };
-    
-    const handleLockAnswer = () => {
-        if (!selectedOption) return;
+    }, [gameState]);
+    useEffect(() => {
+        if (gameState === 'playing' && timeLeft <= 0 && !isAnswerLocked && !autoFinished.current) {
+            autoFinished.current = true;
+            void handleGameOver("Time's up!");
+        }
+    }, [gameState, timeLeft, isAnswerLocked]);
+    const handleOptionSelect = (option: string) => { if (!isAnswerLocked) setSelectedOption(option); };
+    const handleLockAnswer = async () => {
+        if (!selectedOption || isAnswerLocked) return;
         setIsAnswerLocked(true);
-        
-        const currentQuestion = questions[currentQuestionIndex];
-        const isCorrect = selectedOption === currentQuestion.correctAnswer.mr || selectedOption === currentQuestion.correctAnswer.en;
-        
-        setTimeout(() => {
-            if (isCorrect) {
-                setFinalScore(prev => prev + 1);
-                 if (currentQuestionIndex === questions.length - 1) {
-                    handleGameOver("Congratulations! You finished the quiz!");
-                } else {
-                    setCurrentQuestionIndex(prev => prev + 1);
-                    setSelectedOption(null);
-                    setIsAnswerLocked(false);
-                    setTimeLeft(30);
-                }
-            } else {
-                 handleGameOver("That was the wrong answer.");
-            }
-        }, 2000);
-    };
-
-    const handleGameOver = async (reason: string) => {
-        if (gameState === 'finished' || !user || !tournamentId || !db) return;
-
-        setGameState("finished");
-        
         try {
-            const resultsColRef = collection(db, "quizClashResults");
-            const resultData = {
-                tournamentId: tournamentId,
-                userId: user.uid,
-                studentId: studentId || "Unknown",
-                score: finalScore,
-                timeTaken: finalTime,
-                timestamp: serverTimestamp(),
-            };
-
-            await addDoc(resultsColRef, resultData).catch(async (e) => {
-                if (e.code === 'permission-denied') {
-                    errorEmitter.emit('permission-error', new FirestorePermissionError({ path: resultsColRef.path, operation: 'create', requestResourceData: resultData }));
-                }
-                throw e;
-            });
-            
-            toast({ title: "Quiz Finished!", description: `${reason} Syncing results with profile...`, duration: 5000 });
-
-            setTimeout(() => {
-                router.push(`/quiz-clash/results?tournamentId=${tournamentId}&studentId=${studentId}`);
-            }, 2000);
-
+            const data = await callQuiz('answer', { optionIndex: questions[0].options.mr.indexOf(selectedOption) });
+            applyServer(data);
+            if (data.feedback) toast({ title: data.feedback.correct ? 'Correct answer' : 'Incorrect answer' });
         } catch (error) {
-             toast({ variant: 'destructive', title: "Submission Failed" });
-             router.push('/quiz-clash');
-        }
+            toast({ variant: 'destructive', title: 'Answer not confirmed', description: error instanceof Error ? error.message : 'Reload to resume.' });
+        } finally { setIsAnswerLocked(false); }
+    };
+    const handleGameOver = async (reason: string) => {
+        if (gameState === 'finished' || isAnswerLocked) return;
+        setIsAnswerLocked(true);
+        try { applyServer(await callQuiz(reason === "Time's up!" ? 'timeout' : 'quit')); }
+        catch (error) { toast({ variant: 'destructive', title: 'Quiz sync failed', description: error instanceof Error ? error.message : 'Reload to resume.' }); }
+        finally { setIsAnswerLocked(false); }
+    };
+    const useLifeline = async (lifeline: Lifeline) => {
+        if (isAnswerLocked || usedLifelines.includes(lifeline)) return;
+        setIsAnswerLocked(true);
+        try {
+            applyServer(await callQuiz('lifeline', { lifeline }));
+            if (lifeline === 'aiHint') toast({ title: 'Concept hint', description: 'Focus on the logical derivation of the concept.' });
+        } catch (error) { toast({ variant: 'destructive', title: 'Lifeline unavailable', description: error instanceof Error ? error.message : 'Please retry.' }); }
+        finally { setIsAnswerLocked(false); }
     };
 
-    const useLifeline = (lifeline: Lifeline) => {
-        if (usedLifelines.includes(lifeline)) return;
-        setUsedLifelines(prev => [...prev, lifeline]);
-        
-        if (lifeline === 'fiftyFifty') {
-            const currentQuestion = questions[currentQuestionIndex];
-            const incorrectOptions = currentQuestion.options.mr.filter(opt => opt !== currentQuestion.correctAnswer.mr);
-            const optionsToRemove = incorrectOptions.slice(0, 2);
-            
-            const newQuestions = [...questions];
-            const currentOptions = newQuestions[currentQuestionIndex].options;
-            newQuestions[currentQuestionIndex].options.mr = currentOptions.mr.filter(opt => !optionsToRemove.includes(opt));
-            newQuestions[currentQuestionIndex].options.en = currentOptions.en.filter((_, i) => !optionsToRemove.includes(currentOptions.mr[i]));
-            setQuestions(newQuestions);
-        } else if (lifeline === 'switchQuestion') {
-             setCurrentQuestionIndex(prev => (prev < questions.length - 1 ? prev + 1 : 0));
-        } else if (lifeline === 'aiHint') {
-             toast({ title: 'AI Hint', description: "Focus on the logical derivation of the concept."});
-        }
-    };
-
-
-    if (gameState === "loading" || !tournament) {
+    if (gameState === "loading" || !tournament || (gameState === "playing" && !questions.length)) {
         return (
             <div className="flex flex-col items-center justify-center h-screen bg-primary/90 gap-4">
                 <Loader2 className="animate-spin text-white" size={48} />
@@ -243,7 +174,7 @@ function QuizClashGameContent() {
                         </div>
                         <div className="w-24 text-right">
                             <p className="text-xs opacity-70">Question</p>
-                            <p className="font-black text-xl">{currentQuestionIndex + 1}/{questions.length}</p>
+                            <p className="font-black text-xl">{questionNumber}/{questionCount}</p>
                         </div>
                     </div>
                 </CardHeader>
@@ -255,7 +186,7 @@ function QuizClashGameContent() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {currentQuestion.options.mr.map((option, index) => {
                             const isSelected = selectedOption === option;
-                            const isCorrect = option === currentQuestion.correctAnswer.mr;
+                            if (hiddenIndices.includes(index)) return null;
                             const optionEn = currentQuestion.options.en[index] || '';
                             return (
                                 <Button
@@ -266,8 +197,8 @@ function QuizClashGameContent() {
                                         "h-auto py-4 px-6 text-lg whitespace-normal justify-start transition-all duration-300 flex flex-col items-start rounded-2xl",
                                         "bg-black/20 hover:bg-black/40 border-2 border-white/10",
                                         isSelected && !isAnswerLocked && "border-yellow-400 bg-yellow-900/40",
-                                        isAnswerLocked && isCorrect && "bg-green-50 border-green-300 animate-pulse text-white",
-                                        isAnswerLocked && isSelected && !isCorrect && "bg-red-50 border-red-300 text-white",
+                                        isAnswerLocked && isSelected && "border-yellow-400 animate-pulse",
+                                        
                                     )}
                                 >
                                     <div className="flex items-center gap-3">
@@ -292,13 +223,13 @@ function QuizClashGameContent() {
                        {isAnswerLocked ? <Loader2 className="animate-spin" /> : "LOCK FINAL ANSWER"}
                     </Button>
                     <div className="grid grid-cols-3 gap-4 w-full pt-6 border-t border-white/5">
-                        <Button variant="ghost" className="flex-col h-auto py-3 rounded-xl hover:bg-white/5 disabled:opacity-20" onClick={() => useLifeline('fiftyFifty')} disabled={usedLifelines.includes('fiftyFifty')}>
+                        <Button variant="ghost" className="flex-col h-auto py-3 rounded-xl hover:bg-white/5 disabled:opacity-20" onClick={() => useLifeline('fiftyFifty')} disabled={isAnswerLocked || usedLifelines.includes('fiftyFifty')}>
                             <ShieldHalf className="w-6 h-6 mb-1 text-yellow-400"/><span className="text-[10px] font-black uppercase tracking-widest">50:50</span>
                         </Button>
-                         <Button variant="ghost" className="flex-col h-auto py-3 rounded-xl hover:bg-white/5 disabled:opacity-20" onClick={() => useLifeline('switchQuestion')} disabled={usedLifelines.includes('switchQuestion')}>
+                         <Button variant="ghost" className="flex-col h-auto py-3 rounded-xl hover:bg-white/5 disabled:opacity-20" onClick={() => useLifeline('switchQuestion')} disabled={isAnswerLocked || usedLifelines.includes('switchQuestion')}>
                             <RefreshCw className="w-6 h-6 mb-1 text-yellow-400"/><span className="text-[10px] font-black uppercase tracking-widest">Switch</span>
                         </Button>
-                         <Button variant="ghost" className="flex-col h-auto py-3 rounded-xl hover:bg-white/5 disabled:opacity-20" onClick={() => useLifeline('aiHint')} disabled={usedLifelines.includes('aiHint')}>
+                         <Button variant="ghost" className="flex-col h-auto py-3 rounded-xl hover:bg-white/5 disabled:opacity-20" onClick={() => useLifeline('aiHint')} disabled={isAnswerLocked || usedLifelines.includes('aiHint')}>
                             <BrainCircuit className="w-6 h-6 mb-1 text-yellow-400"/><span className="text-[10px] font-black uppercase tracking-widest">AI Hint</span>
                         </Button>
                     </div>

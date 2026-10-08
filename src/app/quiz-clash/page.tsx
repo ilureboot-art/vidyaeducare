@@ -69,7 +69,7 @@ function QuizClashPageContent() {
                     errorEmitter.emit('permission-error', permissionError);
                     throw serverError;
                 });
-                setStudents(snap.docs.map(d => ({ id: d.id, ...d.data() } as StudentProfile)));
+                setStudents(snap.docs.map(d => ({ id: d.id, ...d.data() } as StudentProfile)).filter(s => !s.archived));
             } catch (e) {
                 setStudents([]);
             } finally {
@@ -84,66 +84,16 @@ function QuizClashPageContent() {
     if (!user || !db) return;
 
     try {
-        if (tournament.type === 'Pro') {
-            runTransaction(db, async (transaction) => {
-                const userWalletRef = doc(db, "wallets", user.uid);
-                const tournamentRef = doc(db, "quizClashTournaments", tournament.id);
-
-                const userWalletDoc = await transaction.get(userWalletRef);
-                if (!userWalletDoc.exists() || userWalletDoc.data().balance < tournament.entryFee) {
-                    throw new Error("Insufficient wallet balance.");
-                }
-
-                const newBalance = userWalletDoc.data().balance - tournament.entryFee;
-                transaction.update(userWalletRef, { balance: newBalance });
-
-                transaction.update(tournamentRef, { 
-                    registeredUsers: arrayUnion(user.uid),
-                    prizePool: (tournament.prizePool || 0) + tournament.entryFee,
-                });
-
-                const purchaseTxRef = doc(collection(db, "transactions"));
-                transaction.set(purchaseTxRef, {
-                    user: user.uid,
-                    amount: -tournament.entryFee,
-                    date: serverTimestamp(),
-                    description: `Entry Fee for Quiz Clash: ${tournament.title}`,
-                    status: "Completed",
-                    type: "Purchase",
-                });
-            }).then(() => {
-                toast({ title: "Registration Successful!", description: `You have been registered for ${tournament.title}.` });
-                setIsRegistering(null);
-                router.push(`/quiz-clash/play?tournamentId=${tournament.id}&studentId=${studentId}`);
-            }).catch(async (serverError) => {
-                const permissionError = new FirestorePermissionError({
-                    path: 'quiz-clash-registration-transaction',
-                    operation: 'write',
-                } satisfies SecurityRuleContext);
-                errorEmitter.emit('permission-error', permissionError);
-            });
-        } else {
-            const tournamentRef = doc(db, "quizClashTournaments", tournament.id);
-            updateDoc(tournamentRef, {
-                registeredUsers: arrayUnion(user.uid)
-            }).then(() => {
-                toast({ title: "Registration Successful!", description: `You have been registered for ${tournament.title}.` });
-                setIsRegistering(null);
-                router.push(`/quiz-clash/play?tournamentId=${tournament.id}&studentId=${studentId}`);
-            }).catch(async (serverError) => {
-                const permissionError = new FirestorePermissionError({
-                    path: tournamentRef.path,
-                    operation: 'update',
-                    requestResourceData: { registeredUsers: 'arrayUnion(uid)' },
-                } satisfies SecurityRuleContext);
-                errorEmitter.emit('permission-error', permissionError);
-            });
-        }
-    } catch (error: any) {
-        toast({ variant: "destructive", title: "Registration Failed", description: error.message || "Could not complete registration." });
-    }
+        const response = await fetch('/api/quiz-clash', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await user.getIdToken()}` }, body: JSON.stringify({ action: 'join', tournamentId: tournament.id, studentId }) });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Registration failed.');
+        toast({ title: 'Registration Successful', description: tournament.title });
+        router.push(`/quiz-clash/play?tournamentId=${tournament.id}&studentId=${studentId}`);
+    } catch (error) {
+        toast({ variant: 'destructive', title: 'Registration Failed', description: error instanceof Error ? error.message : 'Please retry.' });
+    } finally { setIsRegistering(null); }
   };
-  
+
   if (tournaments === null) {
     return (
       <div className="w-full max-w-4xl mx-auto flex flex-col items-center justify-center h-96 gap-4">
@@ -266,3 +216,4 @@ export default function QuizClashPage() {
         </ProtectedRoute>
     );
 }
+

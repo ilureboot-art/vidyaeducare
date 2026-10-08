@@ -1,6 +1,6 @@
 # Server test engine rollout — 8 October 2026
 
-Status: candidate under acceptance; not marked completed or live.
+Status: candidate under acceptance; not marked completed or live. Read-only preflight PR #27 is live, Current build `build-2026-10-08-001` at commit `26daa75dab9ecb42f711ab31a592b74340c3ce89`.
 
 ## Release dependency
 
@@ -24,3 +24,9 @@ Visiting results never pays prizes. A Finance-authorized preview and explicit cl
 - Legacy access evidence review completed without inventing paid grants.
 
 AI quotas, full permission alignment, remaining UTR/ledger migration, push-device acceptance, scalable reports and academic weekly plans remain separate pending phases. This candidate does not complete them.
+
+## Production gate findings
+
+All 1,199 sets scanned across 12 pages. 131 sets require Academic review: 79 answer translation alignment failures and 52 format failures. See `question-format-preflight-20261008.md` for every flagged set ID. No source question or key was mutated. Restrictive engine rules remain unpublished and the scoring/QuizClash client replacement must not be merged until this compatibility gate and authorized parent acceptance pass.
+
+Final isolated emulator run: 9/9 tests pass; local application suite: 169 pass and 10 emulator tests skipped in that ordinary run; TypeScript passes; production build previously passed. Resume now rechecks active paid access. QuizClash settlement refuses unmigrated legacy registrations. Production payment/fee tests were not performed.

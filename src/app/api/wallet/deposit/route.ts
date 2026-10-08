@@ -22,8 +22,9 @@ export async function POST(request: NextRequest) {
         if (claim.data()?.userId === uid && claim.data()?.amount === amount) return { transactionId: claim.data()!.transactionId, replayed: true };
         throw new RequestAuthError('Duplicate UTR: this reference was already submitted.', 409);
       }
-      const legacy = await tx.get(adminDb.collection('transactions'));
-      if (legacy.docs.some(doc => doc.data().type === 'deposit' && typeof doc.data().referenceId === 'string' && doc.data().referenceId.trim().toUpperCase().replace(/\s+/g, '') === referenceId)) throw new RequestAuthError('Duplicate UTR: this reference is already recorded.', 409);
+      const migration = await tx.get(adminDb.doc('paymentMigrations/utr'));
+      const legacy = migration.data()?.status === 'COMPLETE' ? null : await tx.get(adminDb.collection('transactions'));
+      if (legacy?.docs.some(doc => doc.data().type === 'deposit' && typeof doc.data().referenceId === 'string' && doc.data().referenceId.trim().toUpperCase().replace(/\s+/g, '') === referenceId)) throw new RequestAuthError('Duplicate UTR: this reference is already recorded.', 409);
       tx.create(claimRef, { transactionId: txRef.id, userId: uid, amount, normalizedUtr: referenceId, namespace: 'incoming', claimedAt: FieldValue.serverTimestamp() });
       // User-entered references are not proof of payment. Auto-credit requires a verified bank integration.
       tx.create(txRef, { type: 'deposit', description: 'Fund Deposit Request', amount, date: FieldValue.serverTimestamp(), status: 'Pending', referenceId, user: uid, receiptUrl, bankVerified: false });

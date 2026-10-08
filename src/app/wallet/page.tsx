@@ -472,6 +472,18 @@ function WalletPageContent() {
       }
   };
 
+  const cancelWithdrawal = async (transactionId: string | number) => {
+    if (!user || isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const res = await fetch('/api/wallet/withdraw/cancel', { method: 'POST', headers: { Authorization: `Bearer ${await user.getIdToken()}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ transactionId: String(transactionId) }) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Unable to cancel.');
+      toast({ title: 'Withdrawal cancelled', description: 'The reserved amount is available again.' });
+    } catch (e) { toast({ variant: 'destructive', title: 'Cancellation failed', description: e instanceof Error ? e.message : 'Please retry.' }); }
+    finally { setIsSubmitting(false); }
+  };
+
   if (!walletInfo || !transactions || !adminPaymentMethods || !storeConfig) {
     return (
       <div className="w-full max-w-2xl mx-auto flex flex-col items-center justify-center h-96 space-y-4">
@@ -733,6 +745,7 @@ function WalletPageContent() {
                                 {tx.amount >= 0 ? '+' : '-'} ₹{formatCurrency(Math.abs(tx.amount))}
                             </p>
                             <Badge variant={getStatusBadgeVariant(tx.status)} className="text-[9px] h-4">{tx.status}</Badge>
+                            {tx.type === 'withdrawal' && tx.status === 'Pending' && (tx as Transaction & { reservationApplied?: boolean }).reservationApplied === true && <Button size="sm" variant="outline" disabled={isSubmitting} onClick={e => { e.stopPropagation(); void cancelWithdrawal(tx.id); }}>Cancel withdrawal</Button>}
                         </div>
                      </div>
                 ))}
